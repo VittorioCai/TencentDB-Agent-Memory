@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "provenance-event.schema.json",
+  "title": "Provenance Event",
+  "description": "One asset's state within one run. Records the producer (producer_*) and the consumer (actor_*) on the same row; this cannot be backfilled, because asset ownership changes and versions roll forward.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "event_id", "state", "session_key",
+    "asset_id", "asset_type",
+    "producer_user_id", "producer_agent_id", "actor_user_id", "actor_agent_id",
+    "relation", "pool_snapshot_at", "excluded_by_snapshot",
+    "observation", "evidence_tier", "proof_refs"
+  ],
+  "properties": {
+    "schema_version": { "const": "provenance-v1" },
+
+    "event_id": {
+      "type": "string", "minLength": 8,
+      "description": "Stable id, referenced by gate-decision.evidence_refs and by receipts. Derived from session_key + asset_id + state + occurred_at."
+    },
+
+    "state": {
+      "type": "string",
+      "enum": ["fetched", "used", "used_soft", "needs_review", "validated", "corrected"],
+      "description": "fetched: the model actually retrieved the content (service-side record). used: hard evidence matched and a fetch preceded it. used_soft: only soft evidence (a model judgement) matched, which is not enough to promote to used. needs_review: a token matched but no fetch preceded it, so the model may have known it from elsewhere. validated: used, and the corresponding acceptance check passed. corrected: counter-evidence exists."
+    },
+
+    "session_key": { "type": "string", "description": "Normalised session id (client prefix such as 'codebuddy:' removed)." },
+    "run_id":      { "type": ["string", "null"], "description": "Run id assigned by the E2E runner; may be null for historical fetch-level events." },
+    "task_id":     { "type": ["string", "null"], "description": "Evaluation task id; generalisation is counted as distinct values of this field." },
+    "occurred_at": { "type": ["string", "null"], "description": "ISO 8601 UTC, taken from the service-side record's timestamp." },
+
+    "asset_id":         { "type": "string" },
+    "asset_type":       { "type": "string", "enum": ["skill", "knowledge", "memory", ""] },
+    "asset_name":       { "type": "string" },
+    "asset_version":    { "type": ["integer", "string", "null"] },
+    "asset_created_at": { "type": "string" },
+
+    "pool_snapshot_at":     { "type": "string", "description": "The instant the asset pool was frozen. Assets created after it must be flagged with excluded_by_snapshot." },
+    "excluded_by_snapshot": { "type": "boolean", "description": "true = the asset was created after the pool was frozen and is excluded from all statistics (answer-leak guard)." },
+
+    "producer_user_id":  { "type": "string", "description": "The asset record's owner_user_id." },
+    "producer_agent_id": { "type": "string", "description": "The asset record's owner_agent_id." },
+    "actor_user_id":     { "type": "string", "description": "The user_id of the session that performed this run." },
+    "actor_agent_id":    { "type": "string", "description": "The agent_id of the session that performed this run." },
+
+    "relation": {
+      "type": "string",
+      "enum": ["self", "cross_agent", "cross_user", "unknown"],
+      "description": "Derived from producer/actor. Reports unknown when either identity is missing; never defaults to self."
+    },
+
+    "observation": {
+      "type": "string",
+      "enum": ["bridge+wire", "bridge_only", "wire_only", "none"],
+      "description": "How the fetch was witnessed. bridge+wire: service-side success plus an asset id parsed from the capture. bridge_only: service-side record only. wire_only: capture only, doubtful. none: no fetch was observed at all (occurs only with needs_review, where a token matched but nothing was ever fetched)."
+    },
+
+    "evidence_tier": {
+      "type": ["string", "null"],
+      "enum": ["hard", "soft", null],
+      "description": "How strong the 'it was used' judgement is. hard: a discriminative token from the asset appears in the run's artifacts. soft: a model judged an asset claim related to the change. Null while state is fetched."
+    },
+
+    "bridge_source":     { "type": "string" },
+    "executed_endpoint": { "type": "string" },
+    "upstream_status":   { "type": "integer", "minimum": 0 },
+
+    "target_type": {
+      "type": ["string", "null"],
+      "enum": ["decision", "tool_call", "code_change", "test_action", "risk_check", "avoided_option", "user_output", null],
+      "description": "Present from state=used onward: what the asset affected."
+    },
+    "target_ref": { "type": ["string", "null"] },
+
+    "proof_refs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/proof_ref" },
+      "description": "Resolvable evidence references; sensitive content is not copied. Must be non-empty from state=used onward."
+    },
+
+    "corrected_reason": {
+      "type": ["string", "null"],
+      "enum": ["wrong", "stale", "superseded", "conflicted", "inapplicable", null],
+      "description": "Set only when state=corrected. Only wrong / stale feed the down-weighting path."
+    },
+
+    "parent_event_ids": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object" }
+  },
+
+  "definitions": {
+    "proof_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["tool_call_id", "session_message", "diff_hunk", "tool_arg", "test_command", "bridge_row", "capture_line", "verify_result"]
+        },
+        "ref":    { "type": "string", "description": "An id, path or hash that resolves back to the original record." },
+        "detail": { "type": "string", "description": "Optional human-readable note, such as the token that matched." }
+      }
+    }
+  }
+}

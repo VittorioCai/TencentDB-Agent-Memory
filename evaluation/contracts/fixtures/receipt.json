@@ -1,0 +1,90 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "sess-pair01-b",
+  "run_id": "run-0001",
+  "task_id": "pair-01-B",
+  "generated_at": "2026-09-08T09:05:30Z",
+  "summary": {
+    "applied_count": 3,
+    "by_status": { "validated": 1, "used": 0, "fetched": 1, "provided": 1 },
+    "soft_only_count": 1
+  },
+  "items": [
+    {
+      "asset_id": "skl-alice-deploy",
+      "name": "deploy-conventions",
+      "asset_type": "skill",
+      "version": 3,
+      "updated_at": "2026-09-05T10:00:00Z",
+      "status": "validated",
+      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "impact": "changed PROXY_UPSTREAM_URL from the container-internal IP to 127.0.0.1:8096",
+      "target_type": "code_change",
+      "evidence": [
+        { "kind": "diff_hunk", "ref": "run-0001:deploy/global-images/.env:@@ -16,1 +16,1 @@", "detail": "discriminative token 8096 matched" },
+        { "kind": "verify_result", "ref": "run-0001:verify.sh:exit=0" }
+      ],
+      "related_tests": [ { "command": "bash evaluation/tasks/pair-01/verify.sh", "passed": true } ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": 0.62
+    },
+    {
+      "asset_id": "kb-bob-routing",
+      "name": "bridge-routing-notes",
+      "asset_type": "knowledge",
+      "version": 1,
+      "updated_at": "2026-09-06T14:00:00Z",
+      "status": "used_soft",
+      "source": { "producer_user_id": "usr-bob", "producer_agent_id": "agt-bob", "relation": "cross_user" },
+      "impact": "claim #2 (bridge routing uses port 8424) relates to the change; soft evidence",
+      "target_type": "decision",
+      "evidence": [
+        { "kind": "session_message", "ref": "run-0002:msg-17", "detail": "cheap model judgement, confidence 0.71" }
+      ],
+      "related_tests": [],
+      "risks": [
+        { "kind": "low_confidence", "detail": "soft evidence only; author has no cross-person validation yet" },
+        { "kind": "gate_pending", "detail": "gate decision pending; handed to a human" }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null
+    },
+    {
+      "asset_id": "mem-alice-timeout",
+      "name": "failure note: curl timed out after 75 s",
+      "asset_type": "memory",
+      "version": null,
+      "updated_at": "2026-08-29T13:53:28Z",
+      "status": "fetched",
+      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        { "kind": "bridge_row", "ref": "tool_call_logs:2026-09-08T09:00:12Z:memory-bridge:atomic/search" }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": 0.62
+    },
+    {
+      "asset_id": "skl-naming-guide",
+      "name": "naming-guide",
+      "asset_type": "skill",
+      "version": 5,
+      "updated_at": "2026-03-02T00:00:00Z",
+      "status": "provided",
+      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "impact": null,
+      "target_type": null,
+      "evidence": [],
+      "related_tests": [],
+      "risks": [
+        { "kind": "stale", "detail": "190 days since last update; review recommended" }
+      ],
+      "gate_decision": null,
+      "author_confidence": 0.62
+    }
+  ]
+}

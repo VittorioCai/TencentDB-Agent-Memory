@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "gate-decision.schema.json",
+  "title": "Gate Decision",
+  "description": "The admission gate's decision for one candidate asset. Every decision must trace back to concrete events (evidence_refs) so a human can review or overturn it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "asset_id", "decided_at", "decision", "reasons", "evidence_refs", "signals", "is_decoy"],
+  "properties": {
+    "schema_version": { "const": "gate-decision-v1" },
+
+    "asset_id":   { "type": "string" },
+    "asset_type": { "type": "string", "enum": ["skill", "knowledge", "memory"] },
+    "asset_name": { "type": "string" },
+    "decided_at": { "type": "string", "description": "ISO 8601 UTC." },
+
+    "decision": {
+      "type": "string",
+      "enum": ["admit", "pending", "reject"],
+      "description": "admit: evidence suffices, the asset enters the pool. pending: evidence is insufficient or signals conflict, so a human decides; manual confirmation is an expensive operation and is reserved for genuinely uncertain cases. reject: a corrected record exists, or the content carries no usable information."
+    },
+
+    "reasons": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Human-readable reasons, one per triggered rule or reported signal."
+    },
+
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_id", "state"],
+        "properties": {
+          "event_id": { "type": "string" },
+          "state":    { "type": "string", "enum": ["fetched", "used", "used_soft", "needs_review", "validated", "corrected"] },
+          "relation": { "type": "string", "enum": ["self", "cross_agent", "cross_user", "unknown"] }
+        }
+      },
+      "description": "Points at provenance event_ids. Must be non-empty for reject and admit; may be empty for pending, since the absence of evidence is exactly why it is pending."
+    },
+
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["online", "author", "offline"],
+      "properties": {
+        "online": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fetched", "used_hard", "used_soft", "validated", "corrected", "distinct_actors", "distinct_tasks", "cross_user_validated"],
+          "properties": {
+            "fetched":              { "type": "integer", "minimum": 0 },
+            "used_hard":            { "type": "integer", "minimum": 0 },
+            "used_soft":            { "type": "integer", "minimum": 0, "description": "Counted separately; never merged into used_hard." },
+            "validated":            { "type": "integer", "minimum": 0 },
+            "corrected":            { "type": "integer", "minimum": 0 },
+            "distinct_actors":      { "type": "integer", "minimum": 0, "description": "How many distinct identities used it." },
+            "distinct_tasks":       { "type": "integer", "minimum": 0, "description": "Generalisation: how many distinct tasks it was successfully used in. Reported as a signal at this stage, not enforced as a threshold." },
+            "cross_user_validated": { "type": "integer", "minimum": 0, "description": "Counts only validated events where relation=cross_user. Self-validation counts as zero." }
+          }
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["user_id", "confidence", "computable"],
+          "properties": {
+            "user_id":    { "type": "string" },
+            "agent_id":   { "type": "string" },
+            "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Author confidence after shrinkage. Null when not computable — never 0." },
+            "computable": { "type": "boolean", "description": "false = the author has no cross-person validation events, so the metric is not computable." },
+            "distinct_tasks": { "type": "integer", "minimum": 0, "description": "How many distinct tasks this author's assets were used in (generalisation)." }
+          }
+        },
+        "offline": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "retrieval_rank_mean":  { "type": ["number", "null"], "description": "Mean rank when retrieved as a candidate; null when there are no retrieval records." },
+            "has_concrete_values":  { "type": ["boolean", "null"], "description": "Content self-check: does it contain anything concrete and actionable (a value, command or path)?" },
+            "duplicate_of":         { "type": ["string", "null"], "description": "Points at the asset_id of an existing pool entry when this one duplicates it." }
+          }
+        }
+      }
+    },
+
+    "is_decoy": {
+      "type": "boolean",
+      "description": "true = a decoy registered in evaluation/fixtures/decoys.json; excluded from headline statistics."
+    },
+    "expected_decision": {
+      "type": ["string", "null"],
+      "enum": ["admit", "pending", "reject", null],
+      "description": "Set for decoys only: the expected decision, used by the separation test."
+    }
+  }
+}

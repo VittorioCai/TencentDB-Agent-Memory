@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "receipt.schema.json",
+  "title": "Asset Receipt",
+  "description": "Receipt: which team assets a run used and in what state. Shows only what the evidence chain can prove, never one level more. Wording rule: render 'related test X passed', never 'verified: test passed' — the latter reads as a causal claim the evidence does not support.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_key", "generated_at", "summary", "items"],
+  "properties": {
+    "schema_version": { "const": "receipt-v1" },
+
+    "session_key": { "type": "string" },
+    "run_id":      { "type": ["string", "null"] },
+    "task_id":     { "type": ["string", "null"] },
+    "generated_at": { "type": "string" },
+
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied_count", "by_status"],
+      "properties": {
+        "applied_count": { "type": "integer", "minimum": 0, "description": "How many assets were applied in this run (records at state fetched or beyond)." },
+        "by_status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["validated", "used", "fetched", "provided"],
+          "properties": {
+            "validated": { "type": "integer", "minimum": 0, "description": "validated" },
+            "used":      { "type": "integer", "minimum": 0, "description": "used (behavioural evidence)" },
+            "fetched":   { "type": "integer", "minimum": 0, "description": "fetched" },
+            "provided":  { "type": "integer", "minimum": 0, "description": "provided only (injected but never fetched)" }
+          }
+        },
+        "soft_only_count": { "type": "integer", "minimum": 0, "description": "Count of soft-evidence-only records. Reported separately; never folded into used." }
+      }
+    },
+
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "name", "asset_type", "status", "source", "evidence", "risks"],
+        "properties": {
+          "asset_id":   { "type": "string" },
+          "name":       { "type": "string" },
+          "asset_type": { "type": "string", "enum": ["skill", "knowledge", "memory"] },
+          "version":    { "type": ["integer", "string", "null"] },
+          "updated_at": { "type": ["string", "null"] },
+
+          "status": {
+            "type": "string",
+            "enum": ["validated", "used", "used_soft", "fetched", "provided"],
+            "description": "Maps to the four status marks. used_soft stands alone and must not be rendered as a plain check mark."
+          },
+
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["producer_user_id", "relation"],
+            "properties": {
+              "producer_user_id":  { "type": "string", "description": "The required 'source' field: who wrote the asset." },
+              "producer_agent_id": { "type": "string" },
+              "relation":          { "type": "string", "enum": ["self", "cross_agent", "cross_user", "unknown"] }
+            }
+          },
+
+          "impact": { "type": ["string", "null"], "description": "Where it was used in this run: what it affected, in human terms." },
+          "target_type": {
+            "type": ["string", "null"],
+            "enum": ["decision", "tool_call", "code_change", "test_action", "risk_check", "avoided_option", "user_output", null]
+          },
+
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "ref"],
+              "properties": {
+                "kind":   { "type": "string", "enum": ["tool_call_id", "session_message", "diff_hunk", "tool_arg", "test_command", "bridge_row", "capture_line", "verify_result"] },
+                "ref":    { "type": "string" },
+                "detail": { "type": "string" }
+              }
+            },
+            "description": "References to the corresponding change or test. May be empty when status=provided."
+          },
+
+          "related_tests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["command", "passed"],
+              "properties": {
+                "command": { "type": "string" },
+                "passed":  { "type": "boolean" }
+              }
+            },
+            "description": "Rendered as 'related test X passed'. Must not be written as 'verified: test passed'."
+          },
+
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "detail"],
+              "properties": {
+                "kind":   { "type": "string", "enum": ["stale", "low_confidence", "conflict", "not_head", "gate_pending", "gate_rejected"] },
+                "detail": { "type": "string" }
+              }
+            },
+            "description": "Conflict, staleness, low confidence, or not admitted by the gate."
+          },
+
+          "gate_decision": {
+            "type": ["string", "null"],
+            "enum": ["admit", "pending", "reject", null]
+          },
+          "author_confidence": {
+            "type": ["number", "null"], "minimum": 0, "maximum": 1,
+            "description": "Null when not computable; rendered as 'no cross-person validation yet', never as 0."
+          }
+        }
+      }
+    }
+  }
+}
