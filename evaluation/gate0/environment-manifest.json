@@ -1,0 +1,43 @@
+{
+  "schema_version": "topic4-gate0-environment-v1",
+  "captured_at": "2026-08-26T14:54:07Z",
+  "status": "preflight",
+  "repository": {
+    "url": "https://github.com/TencentCloud/TencentDB-Agent-Memory",
+    "branch": "worktree-topic4-gate0",
+    "upstream_base_commit": "c0cf94f7e0e27dbb916a35d4fafb66fe4b04ed67",
+    "spec_commit": "675ecf09caac6c1ca3f1eb3f28f37a813800a324"
+  },
+  "host": {
+    "os": "macOS 15.7.3 (24G419)",
+    "architecture": "arm64"
+  },
+  "runtime": {
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "docker_client": "29.4.3",
+    "docker_server": "29.4.3",
+    "codebuddy": "2.139.0"
+  },
+  "images": {
+    "memory_core": "agentmemory/memory-core@sha256:9798254a8cc06276b7c5b3c19df49f136fae25d579564e1f01f9c4b9b8cd2d11",
+    "memory_hub": "agentmemory/memory-hub@sha256:39548fd616f6f211ad2288e33fe5e93870b705cffe0468047520cd786408e657",
+    "memory_proxy": "agentmemory/memory-proxy@sha256:c8de30142787a5df7937c02c167f2ee37f00505b79036357653a6ce78a29fba5"
+  },
+  "model": {
+    "provider": "DeepSeek",
+    "requested_model_id": "deepseek-v4-flash",
+    "route_verified": false,
+    "response_model_id": null,
+    "call_date": null
+  },
+  "gate0": {
+    "codebuddy_logged_in": false,
+    "deepseek_key_configured": false,
+    "memory_core_healthy": true,
+    "memory_hub_healthy": false,
+    "memory_proxy_healthy": false,
+    "real_session_captured": false,
+    "event_schema_frozen": false
+  }
+}
