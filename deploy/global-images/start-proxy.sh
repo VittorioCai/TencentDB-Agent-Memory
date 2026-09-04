@@ -73,6 +73,61 @@ fi
 
 bool() { [[ "$1" == "1" ]] && echo "true" || echo "false"; }
 
+# ── sessionInit.debugForceIdentity（本地联调用）────────────────────────────
+# 部分客户端无法完成交互式会话初始化表单——例如 CodeBuddy CLI 的交互式 TUI
+# 既不转发 `-H` 头（拿不到 headerAutoSelect），又不认 `ask_followup_question`
+# 工具（渲染不了表单），于是卡死。配置本段可让 proxy 在首个带 conversation id
+# 的请求上直接按给定身份注册会话，完全跳过表单。
+#
+# 在 .env 里设 PROXY_FORCE_TEAM_ID / PROXY_FORCE_AGENT_ID / PROXY_FORCE_TASK_ID 启用。
+# ⚠️ 身份不经校验、按原样信任，仅供本地/e2e，生产环境务必留空。
+FORCE_IDENTITY_YAML=""
+if [[ -n "${PROXY_FORCE_TEAM_ID:-}" && -n "${PROXY_FORCE_AGENT_ID:-}" ]]; then
+  FORCE_IDENTITY_YAML="  debugForceIdentity:
+    team_id: \"${PROXY_FORCE_TEAM_ID}\"
+    agent_id: \"${PROXY_FORCE_AGENT_ID}\""
+  if [[ -n "${PROXY_FORCE_TASK_ID:-}" ]]; then
+    FORCE_IDENTITY_YAML="${FORCE_IDENTITY_YAML}
+    task_id: \"${PROXY_FORCE_TASK_ID}\""
+  fi
+  warn "sessionInit.debugForceIdentity 已启用 —— 跳过会话初始化表单（仅限本地联调）"
+fi
+
+# ── 注入给模型的 bridge 基址 ────────────────────────────────────
+# 不配 injection.externalGatewayUrl 时，proxy 会枚举网卡，把**容器内网 IP**
+# （实测 172.21.0.4）嵌进 <skill_tools> / <tdai_memory_tools> 的 curl 模板。
+# 但 coding agent 跑在宿主机上，连不到容器网段 —— 所有资产取用 curl 必然
+# 超时（实测 exit 28，每次白等 75 秒），fetched/used 证据永远采不到。
+#
+# MemoryProxy/src/injection/index.ts:263 的注释称该 fallback "仅单节点 /
+# 本地开发场景可用"，但 server.host 为 0.0.0.0 时它取到的正是容器地址，
+# 因此在官方 Docker 部署下恰好不可用。本地必须显式指向宿主机可达地址。
+EXTERNAL_GATEWAY_URL="${PROXY_EXTERNAL_GATEWAY_URL:-http://127.0.0.1:${PROXY_PORT}}"
+
+# ── ClickHouse 业务埋点 ─────────────────────────────────────────
+# 默认 clickhouse.enabled=false（MemoryProxy/src/config.ts:22），此时
+# usage_logs / session_init_logs / tool_call_logs 三张表一行都不写 ——
+# 代码里有埋点不等于数据落了盘。
+#
+# tool_call_logs 的 kind 字段区分 model_intent（模型在 SSE 里声称要调某工具）
+# 与 bridge_call（bridge 真的转发了，带 upstream_status / elapsed_ms /
+# reject_reason）。这条分界线是资产取用归因的一手证据，且由 proxy 自己写入，
+# 不经过模型输出，抓包侧只能靠解析模型 stdout 反推，不等价。
+#
+# 在 .env 设 PROXY_CLICKHOUSE_URL 启用；库与表由 proxy 自动
+# CREATE DATABASE / TABLE IF NOT EXISTS，无需手工建表。
+CLICKHOUSE_YAML=""
+if [[ -n "${PROXY_CLICKHOUSE_URL:-}" ]]; then
+  CLICKHOUSE_YAML="clickhouse:
+  enabled: true
+  url: \"${PROXY_CLICKHOUSE_URL}\"
+  database: \"${PROXY_CLICKHOUSE_DB:-context_proxy}\"
+  user: \"${PROXY_CLICKHOUSE_USER:-default}\"
+  password: \"${PROXY_CLICKHOUSE_PASSWORD:-}\"
+"
+  info "ClickHouse 埋点已启用 → ${PROXY_CLICKHOUSE_URL}"
+fi
+
 info "生成 proxy config → $CONFIG_FILE  (auth=$(bool $PROXY_ENABLE_AUTH) session-init=$(bool $PROXY_ENABLE_SESSION_INIT) tdai=$(bool $PROXY_ENABLE_TDAI))"
 cat > "$CONFIG_FILE" <<YAML
 # 由 start-proxy.sh 自动生成 —— 每次启动覆盖，请不要手动改。
@@ -123,7 +178,7 @@ sessionInit:
     agentHeader: "x-agent-id"
     taskHeader: "x-task-id"
     onMismatch: "form"
-
+${FORCE_IDENTITY_YAML}
 costGuard:
   enabled: false
 
@@ -131,11 +186,13 @@ costGuard:
 # knowledge 依赖 memory-hub 起来，否则 hook 内部会降级为空块。
 injection:
   enabled: true
+  externalGatewayUrl: "${EXTERNAL_GATEWAY_URL}"
   injectors:
     - skill
     - knowledge
     - tdai-memory
 
+${CLICKHOUSE_YAML}
 redis:
   enabled: false
 YAML

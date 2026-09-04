@@ -65,11 +65,13 @@ __tests__/offload_server/remote-config.json
 
 # start-all.sh 运行时生成，含 admin user_key 与上游 LLM API key
 deploy/global-images/.admin-key
+deploy/global-images/.topic4-user-key
 deploy/global-images/.proxy-config/
 deploy/global-images/.memory-core-config/
 
 # Eval scripts output
 scripts/eval-report.json
+evaluation/gate0/artifacts/
 
 # OS files
 .DS_Store
@@ -136,3 +138,9 @@ coverage/
 # Local-only: parity snapshots & runtime configs (never commit)
 MemoryProxy/.archive-tmp/
 z_config/
+
+# 第一次作业的交付物（PDF / 截图），与任务三开发无关，不入库
+submission/
+
+# provenance 产出物：含真实会话与资产内容，不入库
+evaluation/provenance/artifacts/
