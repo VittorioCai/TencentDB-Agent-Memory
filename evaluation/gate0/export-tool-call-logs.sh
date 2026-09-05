@@ -72,7 +72,8 @@ fi
 read -r -d '' QUERY <<SQL || true
 SELECT timestamp, session_key, turn_seq, space_id, user_id, team_id, agent_id,
        agent_source, kind, bridge_source, initiated_tool, executed_endpoint,
-       upstream_status, elapsed_ms, reject_reason, source_tag
+       upstream_status, elapsed_ms, reject_reason, source_tag,
+       request_body, request_body_hash
 FROM $CH_DB.tool_call_logs
 WHERE $WHERE
 ORDER BY timestamp

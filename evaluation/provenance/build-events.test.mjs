@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildEvents,
+  callTargetsAsset,
   classifyRelation,
   extractAssetMentions,
   normalizeSessionKey,
@@ -50,7 +51,8 @@ function bridgeRow(overrides = {}) {
     user_id: "usr-bob",
     agent_id: "agt-bob",
     bridge_source: "skill-bridge",
-    executed_endpoint: "search",
+    executed_endpoint: "get-by-name",
+    request_body: '{"skill_name":"deploy-conventions","team_id":"t"}',
     upstream_status: 200,
     reject_reason: "",
     timestamp: "2026-09-04T13:00:00Z",
@@ -179,4 +181,37 @@ test("a cross-person count of zero is reported as a finding, not an omission", (
 
 test("parseJsonl skips malformed lines instead of failing the whole file", () => {
   assert.deepEqual(parseJsonl('{"a":1}\nnot json\n\n{"b":2}\n'), [{ a: 1 }, { b: 2 }]);
+});
+
+test("a search hit is not evidence that an asset was fetched", () => {
+  // skill/search returns a list. Appearing in it means the asset was offered,
+  // not that its content was pulled into the session.
+  const asset = { asset_id: "skl-alice", name: "deploy-conventions" };
+  const search = { ok: true, executedEndpoint: "search", requestBody: '{"query":"deploy"}' };
+  assert.equal(callTargetsAsset(search, asset), false);
+});
+
+test("a call is evidence only when it names the asset", () => {
+  const asset = { asset_id: "skl-alice", name: "deploy-conventions" };
+  assert.equal(callTargetsAsset(
+    { ok: true, executedEndpoint: "get", requestBody: '{"skill_id":"skl-alice"}' }, asset), true);
+  assert.equal(callTargetsAsset(
+    { ok: true, executedEndpoint: "get-by-name", requestBody: '{"skill_name":"deploy-conventions"}' }, asset), true);
+  // A successful call for a different asset must not count for this one.
+  assert.equal(callTargetsAsset(
+    { ok: true, executedEndpoint: "get", requestBody: '{"skill_id":"skl-other"}' }, asset), false);
+});
+
+test("an unrelated success in the same session does not mark an asset fetched", () => {
+  // The regression this replaces: any ok call in the session was taken as proof
+  // that every asset mentioned in the capture had been retrieved.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-unrelated"}' })],
+    captureEvents: [captureWithResult("conv-1", '{"skill_id":"skl-alice"}')],
+  });
+
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.observation, "wire_only");
+  assert.match(hit.proof_refs[0].detail, /no service-side call targets it/);
 });

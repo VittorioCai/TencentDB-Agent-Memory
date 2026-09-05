@@ -125,6 +125,39 @@ export function extractAssetMentions(events, assetIds) {
   return mentions;
 }
 
+
+/**
+ * Does this bridge call target the given asset specifically?
+ *
+ * The distinction that matters: `skill/search` returns a list, so an asset
+ * appearing in its results was *offered*, not retrieved. Only a call that names
+ * the asset — by id, or by the name the asset is registered under — is evidence
+ * that its content was actually pulled into the session.
+ *
+ * Without this, any successful call in the session would mark every asset
+ * mentioned anywhere in the capture as fetched, and that error would propagate
+ * into the used judgement built on top of it.
+ */
+export function callTargetsAsset(call, asset) {
+  const body = String(call.requestBody ?? "");
+  if (!body) return false;
+  const id = String(asset.asset_id ?? "");
+  const name = String(asset.name ?? "");
+
+  // Listing endpoints enumerate; they never target one asset.
+  const endpoint = String(call.executedEndpoint ?? "");
+  if (/^(search|list|listing)$/.test(endpoint)) return false;
+
+  if (id && body.includes(id)) return true;
+  // get-by-name and friends carry the registered name rather than the id.
+  if (name && new RegExp(`"(name|skill_name)"\\s*:\\s*"${escapeRegExp(name)}"`).test(body)) return true;
+  return false;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Combine the three inputs into provenance events. */
 export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
   const assets = snapshot?.assets ?? [];
@@ -147,6 +180,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
       rejected,
       bridgeSource: String(row.bridge_source ?? ""),
       executedEndpoint: String(row.executed_endpoint ?? ""),
+      requestBody: String(row.request_body ?? ""),
       actor: { user_id: String(row.user_id ?? ""), agent_id: String(row.agent_id ?? "") },
       teamId: String(row.team_id ?? ""),
       timestamp: String(row.timestamp ?? ""),
@@ -165,15 +199,28 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
 
     for (const sessionKey of sessions) {
       const calls = bridgeBySession.get(sessionKey) ?? [];
-      const success = calls.find((c) => c.ok);
-      const actor = success?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
       const producer = { user_id: asset.producer_user_id, agent_id: asset.producer_agent_id };
+
+      // A successful call somewhere in the session is not evidence that *this*
+      // asset was retrieved. A search that merely returned it in a result list
+      // is not retrieval either. The call must name this asset.
+      const targeted = calls.filter((c) => c.ok && callTargetsAsset(c, asset));
+      const success = targeted[0];
+      const actor = success?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
 
       const occurredAt = success?.timestamp ?? "";
       const observation = success ? "bridge+wire" : "wire_only";
       const proofRefs = success
-        ? [{ kind: "bridge_row", ref: `tool_call_logs:${occurredAt}:${success.bridgeSource}:${success.executedEndpoint}` }]
-        : [{ kind: "session_message", ref: `${sessionKey}:tool_result`, detail: "asset id seen in capture only; no service-side success record" }];
+        ? [{
+            kind: "bridge_row",
+            ref: `tool_call_logs:${occurredAt}:${success.bridgeSource}:${success.executedEndpoint}`,
+            detail: `request names ${asset.asset_id}`,
+          }]
+        : [{
+            kind: "capture_line",
+            ref: `${sessionKey}:tool_result`,
+            detail: "asset id appears in a captured result, but no service-side call targets it",
+          }];
 
       events.push({
         schema_version: "provenance-v1",
