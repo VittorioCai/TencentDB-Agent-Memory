@@ -5,10 +5,14 @@
  * needed is a specific operation: this tool call, at this point in the session,
  * with this result. So everything collected here carries three things:
  *
- *   seq          where it sits in the run. Ordering is what lets the judge say
- *                the content arrived *before* the operation rather than merely
- *                in the same session — and "before" is the whole difference
- *                between influence and coincidence.
+ *   message_index  where it sits in the session's message sequence. This is what
+ *                  ordering is judged on, and it is not the same as time: a
+ *                  model can emit several tool calls in one message, so two
+ *                  calls share a timestamp while the second was written before
+ *                  the first one's result existed. Using the timestamp there
+ *                  reads "the content arrived at 10:01 and the call is stamped
+ *                  10:01" as influence, when the model had not seen a thing.
+ *   seq            position among this session's calls, for display.
  *   call_id      which result belongs to which call. A command and its output
  *                must stay attached: the command carries what was asked for and
  *                the output carries what came back, and the two answer different
@@ -21,11 +25,13 @@
  * the message. Messages accumulate across turns, so the last request holds them
  * all; the first one to contain a message is when it happened.
  *
- * A diff hunk is different and is marked as such. A diff is the end state of a
- * run, not an event within it, so it has no time of its own and gets
- * `occurred_at: null` with `ordering: "end_of_run"`. The judge treats it as
- * following every tool call, which is true, rather than pretending to a
- * precision the artifact does not have.
+ * A diff hunk has no position at all. A diff is the end state of a run, not an
+ * event within it, so it gets `message_index: null` and `ordering:
+ * "end_of_run"` — and "after everything" is *not* good enough to establish that
+ * an asset was read first. A run that edits a file and then reads the asset
+ * leaves the same diff as one that reads first and then edits. The judge
+ * therefore refuses to promote on a diff hunk alone; the edit operation that
+ * produced the change is what carries a position, and that is what gets judged.
  *
  * Usage:
  *   node evaluation/attribution/collect-artifacts.mjs <capture.jsonl ...> \
@@ -181,6 +187,9 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
       operations.push({
         seq,
         kind: TEST_COMMAND.test(call.text) ? "test_command" : "tool_call",
+        // The position the model wrote this call at. Ordering is judged on it,
+        // never on the timestamp — see the note at the top of this file.
+        message_index: call.index,
         occurred_at: call.first_seen_at || null,
         ordering: "observed",
         call_id: call.call_id,
@@ -192,6 +201,7 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
         text: call.text,
         result: result
           ? {
+              message_index: result.index,
               locus: result.locus,
               // Kept apart deliberately: the echoed command says what was asked
               // for and the output says what came back. Scanning them as one
@@ -210,6 +220,10 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
       operations.push({
         seq: operations.length + i,
         kind: "diff_hunk",
+        // No position and no time. "After everything" cannot show the asset was
+        // read before the edit, because a run that edited first and read after
+        // leaves exactly this diff.
+        message_index: null,
         occurred_at: null,
         ordering: "end_of_run",
         call_id: "",
@@ -247,7 +261,7 @@ export function renderArtifacts(sessions) {
     lines.push(`  pre-change files: ${Object.keys(s.pre_change_files).length}`);
     lines.push("");
     for (const op of s.operations.slice(0, 25)) {
-      const when = op.occurred_at ?? op.ordering;
+      const when = op.message_index == null ? op.ordering : `msg[${op.message_index}]`;
       const outcome = op.result
         ? (op.result.exit_code === null ? "" : ` exit=${op.result.exit_code}`)
         : " (no result)";

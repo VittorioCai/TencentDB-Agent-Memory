@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { judgeSession, isContentBearingFetch, precedes } from "./judge-hard.mjs";
+import { judgeSession, isContentBearingFetch, precedes, tokenSet } from "./judge-hard.mjs";
 
 const T = {
   fetchA: "2026-09-05T10:00:00Z",
@@ -36,6 +36,10 @@ function fetched(over = {}) {
     actor_agent_id: "agt-consumer",
     relation: "cross_user",
     observation: "bridge+wire",
+    // The response was inspected and carried the body, at this position in the
+    // message sequence. Both are what make it creditable at all.
+    content_delivered: true,
+    context_entry_index: 1,
     evidence_tier: null,
     executed_endpoint: "get-by-name",
     proof_refs: [{ kind: "bridge_row", ref: "tool_call_logs:...", detail: "request names skl-wrong" }],
@@ -46,8 +50,9 @@ function fetched(over = {}) {
 
 function operation(over = {}) {
   return {
-    seq: 0,
+    seq: 1,
     kind: "tool_call",
+    message_index: 4,
     occurred_at: T.op,
     ordering: "observed",
     call_id: "call-1",
@@ -69,7 +74,9 @@ function run(over = {}) {
   };
 }
 
-const TOKENS = { "skl-wrong": ["10.244.7.19"] };
+// Keyed to the revision the tokens were taken from. A flat array is accepted
+// too, and treated as version-less — see the test at the bottom.
+const TOKENS = { "skl-wrong": { version: 1, tokens: ["10.244.7.19"] } };
 const judge = (events, artifacts, tokensByAsset = TOKENS) =>
   judgeSession({ events, artifacts, tokensByAsset });
 
@@ -93,7 +100,7 @@ test("the right-address asset is judged the same way as the wrong one", () => {
   const { events } = judge(
     [fetched({ event_id: "evt-fetch-2", asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", asset_version: 1 })],
     run({ operations: [operation({ text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search"}' })] }),
-    { "skl-right": ["47318"] },
+    { "skl-right": { version: 1, tokens: ["47318"] } },
   );
   assert.equal(events[0].state, "used");
   assert.equal(events[0].evidence_tier, "hard");
@@ -165,7 +172,7 @@ test("(b) a token already in the files before the change is not evidence", () =>
 // ── the ordering and version clauses ──────────────────────────────
 
 test("a token used before the content arrived is needs_review", () => {
-  const { events } = judge([fetched({ occurred_at: T.late })], run());
+  const { events } = judge([fetched({ context_entry_index: 9 })], run());
   assert.equal(events[0].state, "needs_review");
   assert.equal(events[0].evidence_tier, null);
   assert.equal(events[0].observation, "none");
@@ -179,8 +186,20 @@ test("a token with no fetch at all is needs_review, not used", () => {
 });
 
 test("the event carries the version whose content arrived, not the pool's", () => {
-  const { events } = judge([fetched({ asset_version: 2 })], run());
+  // The tokens came from v2 and v2 is what was delivered, so the event says v2.
+  // Whatever revision the pool holds now does not enter into it.
+  const { events } = judge(
+    [fetched({ asset_version: 2 })],
+    run(),
+    { "skl-wrong": { version: 2, tokens: ["10.244.7.19"] } },
+  );
+  assert.equal(events[0].state, "used");
   assert.equal(events[0].asset_version, 2);
+});
+
+test("tokenSet accepts both shapes and only one of them carries a revision", () => {
+  assert.deepEqual(tokenSet({ version: 3, tokens: ["a"] }), { version: 3, tokens: ["a"] });
+  assert.deepEqual(tokenSet(["a"]), { version: null, tokens: ["a"] });
 });
 
 test("a needs_review event claims no version", () => {
@@ -207,23 +226,42 @@ test("a fetch with no endpoint and no proof establishes nothing", () => {
   assert.equal(isContentBearingFetch(fetched({ proof_refs: [] })), false);
 });
 
-test("a diff hunk follows every timed fetch in the run", () => {
-  // A diff is the end state of a run, not an event within it. It has no time,
-  // so it is ordered after everything observed rather than dropped.
-  const hunk = { ordering: "end_of_run", occurred_at: null };
-  assert.equal(precedes(fetched(), hunk), true);
-  assert.equal(precedes(fetched({ occurred_at: "" }), hunk), false);
+test("a diff hunk alone cannot show the asset was read before the change", () => {
+  // A diff is the end state of a run, not an event within it. "After
+  // everything" is not evidence of order: a run that edited the file and then
+  // read the asset leaves exactly this diff. The edit operation carries a
+  // position; the diff does not, so the diff alone stops at needs_review.
+  const hunk = { ordering: "end_of_run", message_index: null };
+  assert.equal(precedes(fetched(), hunk), false);
 
   const { events } = judge([fetched()], run({
     operations: [operation({
-      kind: "diff_hunk", occurred_at: null, ordering: "end_of_run",
+      kind: "diff_hunk", message_index: null, occurred_at: null, ordering: "end_of_run",
       locus: "diff:deploy/config.yaml:12-18",
       text: "-bridge: http://old\n+bridge: http://10.244.7.19:8096",
     })],
   }));
-  assert.equal(events[0].state, "used");
+  assert.equal(events[0].state, "needs_review");
   assert.equal(events[0].target_type, "code_change");
-  assert.equal(events[0].proof_refs[0].kind, "diff_hunk");
+  assert.match(events[0].proof_refs[0].detail, /a diff has no position in the run/);
+});
+
+test("edit first, read after: the diff must not rescue it", () => {
+  // The reported case. The edit happened at message 2 and the asset's content
+  // only arrived at message 5, so the edit operation is correctly
+  // needs_review — and the diff of that same change must not then come out
+  // `used` on the strength of being at the end.
+  const { events } = judge([fetched({ context_entry_index: 5 })], run({
+    operations: [
+      operation({ seq: 0, message_index: 2, locus: "request(r1):msg[2]:c0:arguments" }),
+      operation({
+        seq: 1, kind: "diff_hunk", message_index: null, occurred_at: null,
+        ordering: "end_of_run", locus: "diff:deploy/config.yaml:12-18",
+        text: "+bridge: http://10.244.7.19:8096",
+      }),
+    ],
+  }));
+  assert.deepEqual(events.map((e) => e.state), ["needs_review", "needs_review"]);
 });
 
 // ── silence is a result ───────────────────────────────────────────
@@ -235,4 +273,90 @@ test("an asset fetched and never referenced stays at fetched", () => {
     operations: [operation({ text: '{"command":"echo done"}' })],
   }));
   assert.deepEqual(events, []);
+});
+
+// ── the three defects found in review ─────────────────────────────
+
+test("two calls in one message: the second is not informed by the first", () => {
+  // A model can emit several tool calls in one assistant message. They share a
+  // timestamp, and the second was written before the first one's result
+  // existed — so ordering on the clock reads "content arrived at 10:01, call
+  // stamped 10:01" as influence when the model had seen nothing.
+  //
+  // Both calls sit at message 2; the result of the first arrives at message 3.
+  const { events } = judge([fetched({ context_entry_index: 3 })], run({
+    operations: [
+      operation({ seq: 0, message_index: 2, locus: "request(r1):msg[2]:read:arguments", text: '{"command":"curl .../get-by-name"}' }),
+      operation({ seq: 1, message_index: 2, locus: "request(r1):msg[2]:use:arguments" }),
+    ],
+  }));
+
+  assert.equal(events.length, 1);
+  assert.equal(events[0].state, "needs_review", "written in the same message as the read");
+  assert.match(events[0].proof_refs[0].detail, /did not arrive before this operation|no delivery/);
+});
+
+test("a call written after the result arrives is used", () => {
+  // The other side of the same test: once the result is behind it, the call
+  // qualifies. Without this the rule would just be "never promote".
+  const { events } = judge([fetched({ context_entry_index: 3 })], run({
+    operations: [operation({ message_index: 4 })],
+  }));
+  assert.equal(events[0].state, "used");
+  assert.match(events[0].proof_refs[0].detail, /entered the context at message 3, before this operation at message 4/);
+});
+
+test("a metadata-only response cannot be credited", () => {
+  // `get` with include_content:false is not an enumeration endpoint and does
+  // name the asset, so an endpoint allow-list passes it. It returns id, name
+  // and version and no body at all.
+  assert.equal(isContentBearingFetch(fetched({ content_delivered: false, context_entry_index: null })), false);
+  const { events } = judge([fetched({ content_delivered: false, context_entry_index: null })], run());
+  assert.equal(events[0].state, "needs_review");
+});
+
+test("an uncaptured response is unknown, and unknown does not promote", () => {
+  assert.equal(isContentBearingFetch(fetched({ content_delivered: null, context_entry_index: null })), false);
+});
+
+test("a token that only exists in v1 is not credited to a read of v2", () => {
+  // Reported case: v1 is read, then v2 is read, then a token belonging only to
+  // v1 is used. Taking the most recent fetch attributes it to v2.
+  const { events } = judge(
+    [
+      fetched({ event_id: "evt-v1", asset_version: 1, context_entry_index: 1 }),
+      fetched({ event_id: "evt-v2", asset_version: 2, context_entry_index: 3 }),
+    ],
+    run({ operations: [operation({ message_index: 4 })] }),
+  );
+
+  assert.equal(events[0].state, "used");
+  assert.equal(events[0].asset_version, 1);
+  assert.deepEqual(events[0].parent_event_ids, ["evt-v1"], "credited to the read of the revision the token came from");
+});
+
+test("a token whose revision was never delivered stays needs_review", () => {
+  const { events } = judge(
+    [fetched({ event_id: "evt-v2", asset_version: 2, context_entry_index: 1 })],
+    run({ operations: [operation({ message_index: 4 })] }),
+  );
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /what did arrive was v2/);
+});
+
+test("version-less tokens cannot be credited to any fetch", () => {
+  const { events } = judge([fetched()], run(), { "skl-wrong": ["10.244.7.19"] });
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /carry no version/);
+});
+
+test("a needs_review event borrows nothing from a fetch it was not credited with", () => {
+  const { events } = judge([fetched({ context_entry_index: 9 })], run());
+  const e = events[0];
+  assert.equal(e.asset_version, null);
+  assert.equal(e.observation, "none");
+  assert.equal(e.executed_endpoint, "");
+  assert.equal(e.upstream_status, 0);
+  assert.deepEqual(e.parent_event_ids, []);
+  assert.equal(e.proof_refs.length, 1, "only the operation, not the fetch's proof");
 });

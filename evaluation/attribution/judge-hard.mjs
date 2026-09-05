@@ -81,22 +81,56 @@ const PROOF_KIND = {
 export function isContentBearingFetch(event) {
   if (event?.state !== "fetched") return false;
   const endpoint = String(event.executed_endpoint ?? "");
-  if (!endpoint) return false;              // nothing says what was called
+  if (!endpoint) return false;                 // nothing says what was called
   if (isListingAction(endpoint)) return false; // an enumeration offers, it does not deliver
+
+  // A non-enumeration endpoint is not enough. `get` with include_content:false
+  // returns id, name and version; `update` returns a metadata summary. Both
+  // name the asset, both come from an allowed endpoint, and neither hands back
+  // a line of the body — so the response itself has to be the thing that says
+  // content arrived. Null means the response was never captured: unknown, and
+  // unknown is not a licence to promote.
+  if (event.content_delivered !== true) return false;
+
+  // And it has to be known *where* it arrived, or nothing can be shown to
+  // follow it.
+  if (event.context_entry_index == null) return false;
+
   return Array.isArray(event.proof_refs) && event.proof_refs.length > 0;
 }
 
-/** Same asset, same version. A null version matches only a null version. */
-function sameAssetVersion(a, b) {
-  return a.asset_id === b.asset_id
-    && String(a.asset_version ?? "") === String(b.asset_version ?? "");
+/**
+ * The tokens for one asset, and the revision they were taken from.
+ *
+ * Accepts the flat `[token, …]` shape as well, but marks it version-less: a
+ * token list with no revision attached cannot be matched to the fetch that
+ * delivered it, and crediting it to whichever fetch came last is how a token
+ * that only exists in v1 gets attributed to v2.
+ */
+export function tokenSet(entry) {
+  if (Array.isArray(entry)) return { version: null, tokens: entry };
+  return { version: entry?.version ?? null, tokens: entry?.tokens ?? [] };
 }
 
-/** Did `fetch` happen before `operation`? */
+/**
+ * Did the content arrive before the model wrote this operation?
+ *
+ * Judged on position in the message sequence, not on time. A model can emit
+ * several tool calls in one message: they share a timestamp, and the second was
+ * written before the first one's result existed. Comparing timestamps reads
+ * that as influence. Comparing positions — the index of the message carrying
+ * the *response* against the index of the message carrying the *call* — does
+ * not, because both calls sit at the same index and neither is after the other.
+ *
+ * A diff hunk has no position. "After everything in the run" cannot establish
+ * that the asset was read first, because a run that edited the file and then
+ * read the asset leaves exactly the same diff.
+ */
 export function precedes(fetch, operation) {
-  if (operation.ordering === "end_of_run") return Boolean(fetch.occurred_at);
-  if (!fetch.occurred_at || !operation.occurred_at) return false;
-  return fetch.occurred_at < operation.occurred_at;
+  const arrived = fetch?.context_entry_index;
+  const wrote = operation?.message_index;
+  if (arrived == null || wrote == null) return false;
+  return arrived < wrote;
 }
 
 /**
@@ -116,7 +150,8 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
   const preChange = Object.entries(artifacts?.pre_change_files ?? {});
   const fetches = events.filter(isContentBearingFetch);
 
-  for (const [assetId, tokens] of Object.entries(tokensByAsset ?? {})) {
+  for (const [assetId, entry] of Object.entries(tokensByAsset ?? {})) {
+    const { version: tokenVersion, tokens } = tokenSet(entry);
     for (const token of tokens) {
       // (a) the task description must not name it — otherwise the model was told
       if (task.includes(token)) { skipped.push({ asset_id: assetId, token, reason: "in the task description" }); continue; }
@@ -128,31 +163,43 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
         if (!String(op.text ?? "").includes(token)) continue;
 
         const searching = op.kind !== "diff_hunk" && SEARCH_COMMAND.test(String(op.text ?? ""));
-        const fetch = fetches
-          .filter((f) => f.asset_id === assetId && precedes(f, op))
-          .sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))[0];
 
-        // The version has to match the fetch that is being credited, so the
-        // event carries the version whose content actually arrived.
-        const versioned = fetch
-          ? fetches.filter((f) => sameAssetVersion(f, fetch) && precedes(f, op))[0]
-          : null;
+        // Only a fetch of the revision these tokens came from may be credited.
+        // A token that exists only in v1 must not be attributed to a later read
+        // of v2 merely because that read is the most recent one.
+        const sameRevision = (f) => tokenVersion != null
+          && String(f.asset_version ?? "") === String(tokenVersion);
 
-        const state = fetch && !searching ? "used" : "needs_review";
-        const reason = searching
+        const preceding = fetches.filter((f) => f.asset_id === assetId && precedes(f, op));
+        // The latest qualifying arrival, by position rather than by clock.
+        const fetch = preceding
+          .filter(sameRevision)
+          .sort((a, b) => b.context_entry_index - a.context_entry_index)[0];
+
+        const blocked = searching
           ? "the token appears in a search command — the model was looking for it, not using it"
-          : fetch
-            ? `content arrived at ${fetch.occurred_at}, before this operation`
-            : "no fetch of this asset precedes the operation, so the token may have come from elsewhere";
+          : op.message_index == null
+            ? "a diff has no position in the run, so it cannot show the asset was read before the change was made"
+            : !fetch && tokenVersion == null
+              ? "these tokens carry no version, so no particular fetch can be credited with delivering them"
+              : !fetch && preceding.length > 0
+                ? `content of v${tokenVersion} did not arrive before this operation; what did arrive was v${preceding.map((f) => f.asset_version ?? "?").join(", v")}`
+                : !fetch
+                  ? "no delivery of this asset's content precedes the operation, so the token may have come from elsewhere"
+                  : "";
+
+        const state = blocked ? "needs_review" : "used";
+        const reason = blocked
+          || `content of v${fetch.asset_version} entered the context at message ${fetch.context_entry_index}, before this operation at message ${op.message_index}`;
 
         const proofRefs = [{
           kind: PROOF_KIND[op.kind] ?? "tool_arg",
           ref: op.locus,
           detail: `token ${token}; ${reason}`,
         }];
-        if (fetch) proofRefs.push(...(fetch.proof_refs ?? []).slice(0, 1));
+        if (state === "used") proofRefs.push(...(fetch.proof_refs ?? []).slice(0, 1));
 
-        const base = versioned ?? fetch ?? events.find((e) => e.asset_id === assetId) ?? {};
+        const base = fetch ?? events.find((e) => e.asset_id === assetId) ?? {};
         out.push({
           schema_version: "provenance-v1",
           event_id: eventId([session, assetId, state, op.locus, token]),
@@ -166,7 +213,7 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
           asset_name: base.asset_name ?? "",
           // Only the version whose content is being credited. Absent a fetch
           // there is no version to claim, and the asset's current one is not it.
-          asset_version: fetch ? (fetch.asset_version ?? null) : null,
+          asset_version: state === "used" ? (fetch.asset_version ?? null) : null,
           asset_created_at: base.asset_created_at ?? "",
           pool_snapshot_at: base.pool_snapshot_at ?? "",
           excluded_by_snapshot: Boolean(base.excluded_by_snapshot),
@@ -175,16 +222,16 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
           actor_user_id: base.actor_user_id ?? "",
           actor_agent_id: base.actor_agent_id ?? "",
           relation: base.relation ?? "unknown",
-          observation: fetch ? (fetch.observation ?? "wire_only") : "none",
+          observation: state === "used" ? (fetch.observation ?? "wire_only") : "none",
           evidence_tier: state === "used" ? "hard" : null,
-          bridge_source: fetch?.bridge_source ?? "",
-          executed_endpoint: fetch?.executed_endpoint ?? "",
-          upstream_status: fetch?.upstream_status ?? 0,
+          bridge_source: state === "used" ? (fetch.bridge_source ?? "") : "",
+          executed_endpoint: state === "used" ? (fetch.executed_endpoint ?? "") : "",
+          upstream_status: state === "used" ? (fetch.upstream_status ?? 0) : 0,
           target_type: TARGET_TYPE[op.kind] ?? "tool_call",
           target_ref: op.locus,
           proof_refs: proofRefs,
           corrected_reason: null,
-          parent_event_ids: fetch ? [fetch.event_id] : [],
+          parent_event_ids: state === "used" ? [fetch.event_id] : [],
         });
       }
     }
@@ -258,7 +305,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const events = eventPaths.flatMap((p) => parseJsonl(readFileSync(p, "utf8")));
   const sessions = JSON.parse(readFileSync(artifactsPath, "utf8"));
-  // tokens.json is extract-tokens.mjs --json, keyed by asset id.
+  // Written by extract-tokens.mjs --out: { assetId: { version, tokens[] } }.
+  // The flat { assetId: [tokens] } shape is accepted and treated as version-less.
   const tokensByAsset = JSON.parse(readFileSync(tokensPath, "utf8"));
 
   const result = judge({ events, sessions, tokensByAsset });

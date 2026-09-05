@@ -107,16 +107,31 @@ export function splitCommandAndOutput(text) {
   return { command: s.slice(0, i), output: s.slice(nl + "Stdout:".length) };
 }
 
-/** The bridge action a command invoked, as `skill:search`, or "" if not one. */
+/**
+ * The action a command invoked, as `skill:search`, or "" if not one.
+ *
+ * The knowledge service is not shaped like the other two. It runs on its own
+ * port and takes the operation in the body (`tool_name`) rather than in the
+ * path, so a path-only pattern does not see it at all — and an unrecognised
+ * command means the response is never inspected, which shows up as "delivery
+ * unknown" for a channel where delivery is perfectly knowable.
+ */
 export function commandEndpoint(command) {
-  const m = /https?:\/\/[^\s'"]*\/(skill|memory)-bridge\/v3\/[a-z]+\/([a-z/-]+)/.exec(String(command ?? ""));
-  if (!m) return "";
-  return `${m[1]}:${m[2].replace(/\/+$/, "")}`;
+  const cmd = String(command ?? "");
+  const bridge = /https?:\/\/[^\s'"]*\/(skill|memory)-bridge\/v3\/[a-z]+\/([a-z/-]+)/.exec(cmd);
+  if (bridge) return `${bridge[1]}:${bridge[2].replace(/\/+$/, "")}`;
+
+  if (/https?:\/\/[^\s'"]*\/v3\/tools\/call/.test(cmd)) {
+    const tool = /"tool_name"\s*:\s*"([^"]+)"/.exec(cmd);
+    return `knowledge:${tool ? tool[1] : "call"}`;
+  }
+  if (/https?:\/\/[^\s'"]*\/v3\/tools\/list/.test(cmd)) return "knowledge:list";
+  return "";
 }
 
 /** Enumeration endpoints hand back a list; they never retrieve one asset. */
 export function isListingAction(action) {
-  return /^(search|list|listing)$/.test(String(action ?? "").split(":").pop() ?? "");
+  return /^(search|list|listing|list_[a-z_]+|search_[a-z_]+)$/.test(String(action ?? "").split(":").pop() ?? "");
 }
 
 /**
@@ -135,6 +150,66 @@ export function commandTargetsAsset(command, asset) {
   if (id && cmd.includes(id)) return true;
   if (name && new RegExp(`"(name|skill_name)"\\s*:\\s*"${escapeRegExp(name)}"`).test(cmd)) return true;
   return false;
+}
+
+/**
+ * What a bridge response actually handed back for this asset.
+ *
+ * A non-enumeration endpoint is not enough to say the body arrived. `get` with
+ * `include_content:false` answers with id, name and version; `update` answers
+ * with a metadata summary. Both name the asset, both come from an endpoint that
+ * is not a listing, and neither delivers a single line of the asset's content —
+ * so an endpoint allow-list would pass all of them.
+ *
+ * The version is read from the same place for the same reason: the response
+ * states which revision it returned, and that is the only source entitled to
+ * say so. The snapshot's version describes the pool now, not what came back.
+ *
+ * Returns `{ delivered, version }` where `delivered` is null when the payload
+ * could not be parsed at all — unknown, which is not false.
+ */
+export function inspectDelivery(output, assetId) {
+  const envelope = firstJsonObject(output);
+  if (!envelope) return { delivered: null, version: null };
+
+  // The asset may be the whole payload or one item inside a list.
+  const data = envelope.data ?? envelope;
+  const candidates = [data, ...(Array.isArray(data?.items) ? data.items : [])];
+  const record = candidates.find((c) => c && typeof c === "object"
+    && [c.skill_id, c.wiki_id, c.asset_id, c.id].some((v) => String(v ?? "") === assetId));
+  if (!record) return { delivered: null, version: null };
+
+  const body = [record.content, record.skill_md, record.body, record.text, record.markdown]
+    .find((v) => typeof v === "string");
+  const version = record.version ?? null;
+
+  // A field that exists but is empty is a delivery of nothing. The threshold is
+  // deliberately low — one line of real content is content — but zero is zero.
+  return { delivered: typeof body === "string" ? body.trim().length > 0 : false, version };
+}
+
+/** First balanced JSON object in a blob of text. */
+function firstJsonObject(text) {
+  const s = String(text ?? "");
+  const start = s.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i += 1) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) { try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; } }
+    }
+  }
+  return null;
 }
 
 /** Every tool result in a captured request, paired with its call id. */
@@ -178,7 +253,7 @@ export function extractAssetMentions(events, assets) {
       event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
     );
 
-    for (const { callId, text } of toolResultsOf(body)) {
+    for (const { index, callId, text } of toolResultsOf(body)) {
       const { command, output } = splitCommandAndOutput(text);
       if (!output) continue;
       for (const asset of list) {
@@ -186,13 +261,29 @@ export function extractAssetMentions(events, assets) {
         if (!mentions.has(asset.asset_id)) mentions.set(asset.asset_id, new Map());
         const bySession = mentions.get(asset.asset_id);
         if (!bySession.has(sessionKey)) {
-          bySession.set(sessionKey, { targeted: false, endpoints: new Set(), callIds: new Set() });
+          bySession.set(sessionKey, {
+            targeted: false, endpoints: new Set(), callIds: new Set(),
+            delivered: null, version: null, contextEntryIndex: null,
+          });
         }
         const seen = bySession.get(sessionKey);
         const endpoint = commandEndpoint(command);
         if (endpoint) seen.endpoints.add(endpoint);
         if (callId) seen.callIds.add(callId);
-        if (commandTargetsAsset(command, asset)) seen.targeted = true;
+        if (!commandTargetsAsset(command, asset)) continue;
+        seen.targeted = true;
+
+        // Only a targeted response can deliver the body, so delivery, version
+        // and the position it entered the context are all read from here. The
+        // index is the message carrying the *result*, not the call: a model can
+        // emit several calls in one message, and the second was written before
+        // the first one's result existed.
+        const { delivered, version } = inspectDelivery(output, asset.asset_id);
+        if (delivered && (seen.contextEntryIndex == null || index < seen.contextEntryIndex)) {
+          seen.contextEntryIndex = index;
+        }
+        if (seen.delivered !== true) seen.delivered = delivered;
+        if (version != null && seen.version == null) seen.version = version;
       }
     }
   }
@@ -337,7 +428,9 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         asset_id: assetId,
         asset_type: asset.asset_type,
         asset_name: asset.name,
-        asset_version: asset.version ?? null,
+        // From the response, never the snapshot. The snapshot says what the
+        // pool holds now; this event says which revision came back then.
+        asset_version: seen.version ?? null,
         asset_created_at: asset.asset_created_at ?? "",
         pool_snapshot_at: poolSnapshotAt,
         excluded_by_snapshot: staleAsset,
@@ -347,6 +440,8 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         actor_agent_id: actor.agent_id,
         relation: classifyRelation(producer, actor),
         observation,
+        content_delivered: seen.delivered,
+        context_entry_index: seen.contextEntryIndex,
         evidence_tier: null,
         bridge_source: success?.bridgeSource ?? "",
         executed_endpoint: success?.executedEndpoint ?? [...seen.endpoints][0] ?? "",
@@ -386,7 +481,9 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         asset_id: named?.asset_id ?? "",
         asset_type: named?.asset_type ?? "",
         asset_name: named?.name ?? "",
-        asset_version: named?.version ?? null,
+        // Only the snapshot knows a version here, and the snapshot is not
+        // entitled to say which revision a call returned.
+        asset_version: null,
         asset_created_at: named?.asset_created_at ?? "",
         pool_snapshot_at: poolSnapshotAt,
         excluded_by_snapshot: false,
@@ -396,6 +493,10 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         actor_agent_id: call.actor.agent_id,
         relation: named ? classifyRelation(producer, call.actor) : "unknown",
         observation: "bridge_only",
+        // The response was never captured. Unknown, which is not false — and
+        // not something a later stage may promote on either.
+        content_delivered: null,
+        context_entry_index: null,
         evidence_tier: null,
         bridge_source: call.bridgeSource,
         executed_endpoint: call.executedEndpoint,

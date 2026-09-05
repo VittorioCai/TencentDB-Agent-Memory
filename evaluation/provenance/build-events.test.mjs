@@ -5,7 +5,10 @@ import {
   buildEvents,
   callTargetsAsset,
   classifyRelation,
+  commandEndpoint,
   extractAssetMentions,
+  inspectDelivery,
+  isListingAction,
   normalizeSessionKey,
   parseJsonl,
   renderSummary,
@@ -124,7 +127,87 @@ test("asset identity plus a service-side success is marked bridge+wire", () => {
   assert.equal(hit.producer_user_id, "usr-alice");
   assert.equal(hit.actor_user_id, "usr-bob");
   assert.equal(hit.relation, "cross_user");
-  assert.equal(hit.asset_version, 3);
+  // The response stated no version, so the event claims none. The snapshot
+  // holds v3, and it is not entitled to say which revision came back.
+  assert.equal(hit.asset_version, null);
+});
+
+test("the version is read from the response, not from the pool", () => {
+  const events = buildEvents({
+    snapshot: SNAPSHOT, // holds v3
+    toolCallRows: [bridgeRow()],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_name":"deploy-conventions","include_content":true}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"# Deploy\\nuse 10.244.7.19"}}',
+    })],
+  });
+
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.asset_version, 2, "the response said v2; the pool holding v3 is irrelevant");
+  assert.equal(hit.content_delivered, true);
+});
+
+test("a metadata-only response is not a delivery of content", () => {
+  // `get` with include_content:false answers with id, name and version. It
+  // names the asset, it is not an enumeration endpoint, and it hands back no
+  // content at all — so an endpoint allow-list passes it.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-alice","include_content":false}' })],
+    captureEvents: [curlResult("conv-1", {
+      url: "http://127.0.0.1:8096/skill-bridge/v3/skill/get",
+      body: '{"skill_id":"skl-alice","include_content":false,"include_manifest":false}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","name":"deploy-conventions","version":3}}',
+    })],
+  });
+
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.state, "fetched", "the call did happen and is still recorded");
+  assert.equal(hit.content_delivered, false, "but nothing was delivered");
+  assert.equal(hit.context_entry_index, null, "so nothing entered the context");
+});
+
+test("an empty content field is a delivery of nothing", () => {
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow()],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_name":"deploy-conventions"}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":3,"content":"   "}}',
+    })],
+  });
+  assert.equal(events.find((e) => e.asset_id === "skl-alice").content_delivered, false);
+});
+
+test("an uncaptured response leaves delivery unknown, not false", () => {
+  // Unknown and absent are different, and a later stage may promote on neither.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ session_key: "codebuddy:conv-unseen" })],
+    captureEvents: [],
+  });
+  const only = events.find((e) => e.session_key === "conv-unseen");
+  assert.equal(only.content_delivered, null);
+  assert.equal(only.asset_version, null);
+});
+
+test("the context entry index is the message carrying the response", () => {
+  // Not the call that asked for it. That distinction is what stops a second
+  // tool call written in the same message from counting as informed by the
+  // first one's result.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow()],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_name":"deploy-conventions"}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":3,"content":"use 10.244.7.19"}}',
+    })],
+  });
+  // captureWithResult puts the assistant call at index 0 and the result at 1.
+  assert.equal(events.find((e) => e.asset_id === "skl-alice").context_entry_index, 1);
 });
 
 test("a rejected bridge call is not a success", () => {
@@ -317,4 +400,21 @@ test("a targeted call the service never logged is a fetch with the gap recorded"
   assert.equal(hit.state, "fetched");
   assert.equal(hit.observation, "wire_only");
   assert.match(hit.proof_refs[0].detail, /no service-side row recorded it/);
+});
+
+test("the knowledge service's endpoint form is recognised too", () => {
+  // It runs on its own port and takes the operation in the body rather than in
+  // the path. A path-only pattern does not see it, and an unrecognised command
+  // means the response is never inspected — which reads as "delivery unknown"
+  // for a channel where delivery is perfectly knowable.
+  assert.equal(commandEndpoint('curl http://127.0.0.1:8424/v3/tools/call -d \'{"knowledge_id":"wiki-x","tool_name":"get_info"}\''), "knowledge:get_info");
+  assert.equal(commandEndpoint("curl http://127.0.0.1:8424/v3/tools/list"), "knowledge:list");
+  assert.equal(isListingAction("knowledge:list"), true);
+  assert.equal(isListingAction("knowledge:get_info"), false);
+  // get_info answers with metadata, so it is not a listing and still delivers
+  // nothing — which only inspecting the response can tell you.
+  assert.equal(
+    inspectDelivery('{"code":0,"data":{"wiki_id":"wiki-x","name":"kb","status":"draft"}}', "wiki-x").delivered,
+    false,
+  );
 });

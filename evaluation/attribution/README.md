@@ -92,14 +92,37 @@ Every clause does work.
 **At this version.** A fetch of v2 says nothing about v3. Matching on asset id
 alone attributes a run to whichever revision happens to be current.
 
-**Content, not offer.** `<available_skills>` and a `skill/search` response carry
-names and descriptions; the body arrives only through a call that asked for it.
-So the judge does not trust the `fetched` label — it checks `executed_endpoint`
-is set and is not an enumeration. A state name is a conclusion drawn upstream;
-the endpoint is a fact about what was called.
+**Content, not offer — and delivery is a property of the response, not of the
+endpoint.** `<available_skills>` and a `skill/search` response carry names and
+descriptions; the body arrives only through a call that asked for it. But an
+endpoint allow-list is not enough either: `get` with `include_content:false`
+returns id, name and version, and `update` returns a metadata summary. Both name
+the asset, neither is an enumeration, and neither delivers a line of content.
 
-**After T, strictly.** Same session is not enough. A token appearing before the
-content arrived came from somewhere else by definition.
+So the response itself is inspected, and the event records `content_delivered`
+— true when a non-empty body came back, false when it was inspected and did
+not, **null when the response was never captured**. Null is unknown, and unknown
+promotes nothing. The version is read from the same place for the same reason:
+the response states which revision it returned, and the pool snapshot is not
+entitled to say.
+
+The judge still does not trust the `fetched` label — it re-checks the endpoint,
+the delivery flag and the entry position itself. A stage that trusts a label
+inherits every mistake made above it.
+
+**After T, strictly — and measured by position, not by clock.** A model can emit
+several tool calls in one assistant message. They share a timestamp, and the
+second was written before the first one's result existed, so comparing times
+reads *"content arrived 10:01, call stamped 10:01"* as influence when the model
+had seen nothing. Ordering compares the index of the message carrying the
+**response** against the index of the message carrying the **call**. Both calls
+sit at the same index, so neither is after the other. The recorded session has
+exactly this shape: its first two operations are both at `msg[2]`.
+
+A diff hunk has no position, so it can never promote on its own. "After
+everything in the run" does not show the asset was read first — a run that
+edited the file and then read the asset leaves exactly the same diff. The edit
+operation carries a position; that is what gets judged.
 
 **An operation the model performed.** Matching runs against what the model
 *wrote* — tool call arguments, diff hunks, test commands — and never against
@@ -109,7 +132,7 @@ result is not searched.
 
 | Outcome | When |
 |---|---|
-| `used` (`evidence_tier: hard`) | token matched, and a qualifying fetch of that version preceded it |
+| `used` (`evidence_tier: hard`) | token matched, and a delivery **of the revision the token came from** preceded it in message order |
 | `needs_review` | token matched, but nothing establishes the content arrived first |
 | *(no event)* | a fetch with no token hit stays `fetched` |
 
@@ -142,3 +165,19 @@ node evaluation/attribution/judge-hard.mjs \
   evaluation/attribution/artifacts/run-artifacts.json \
   evaluation/attribution/artifacts/tokens.json
 ```
+
+## Tokens carry their revision
+
+`--out` writes `{ assetId: { version, tokens[] } }`, and the judge will only
+credit a delivery of that same revision.
+
+Without it the judge falls back to the most recent fetch, and a run that reads
+v1, then reads v2, then uses a token that exists only in v1 gets attributed to
+v2. The flat `{ assetId: [tokens] }` shape is still accepted and treated as
+version-less — which means it can never reach `used`, because there is no
+revision to match. That is the intended outcome rather than a limitation: an
+unattributable token should stay unattributed.
+
+The chain the version travels down is: **response → `fetched` → the token set of
+that revision → the `used` event's parent.** Any break in it leaves the event at
+`needs_review` rather than guessing.

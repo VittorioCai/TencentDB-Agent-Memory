@@ -330,7 +330,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const name = /^name:\s*(.+)$/m.exec(ownMetadata(assets.find((a) => a.path === r.asset).text))?.[1]?.trim()
         ?? /^\s*name:\s*(.+)$/m.exec(read(r.asset))?.[1]?.trim();
       const match = pooled.find((a) => a.name === name);
-      if (match) byAssetId[match.asset_id] = r.tokens.filter((t) => t.discriminative).map((t) => t.token);
+      // The revision travels with the tokens. A token list with no revision
+      // attached cannot be matched to the fetch that delivered it, and the
+      // judge would fall back to crediting whichever read came last — which is
+      // how a token that only exists in v1 gets attributed to a later v2.
+      if (match) {
+        byAssetId[match.asset_id] = {
+          version: match.version ?? null,
+          tokens: r.tokens.filter((t) => t.discriminative).map((t) => t.token),
+        };
+      }
       else if (!asJson) console.log(`  [warn] ${r.asset}: name ${name ?? "?"} is not in the pool — its tokens cannot be keyed to an asset id`);
     }
   }

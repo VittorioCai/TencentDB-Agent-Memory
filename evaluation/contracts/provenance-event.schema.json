@@ -142,6 +142,20 @@
       ],
       "description": "How the event was witnessed, not how strong the claim is. bridge+wire: a service-side record and the capture both show it. bridge_only: service-side record only. wire_only: capture only. Doubtful for fetched and beyond, because the capture is reconstructed from model-produced text; not doubtful for injected, because the capture is taken upstream of the proxy, so an injected block there was written by the proxy and the model could not have produced it. none: nothing was observed (occurs only with needs_review, where a token matched but nothing was ever fetched)."
     },
+    "content_delivered": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Whether the response actually carried the asset's body. A non-enumeration endpoint is not enough: `get` with include_content:false returns id, name and version only, and `update` returns a metadata summary — both would otherwise look like retrieval. True only when the captured response was inspected and found to carry content. False when it was inspected and did not. Null when the response was never captured, which is not the same as false and must not be read as either delivery or its absence."
+    },
+    "context_entry_index": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Position in the session's message sequence at which this asset's content entered the model's context — the index of the message carrying the response, not of the call that asked for it. Ordering must be judged on this rather than on wall-clock time: a model can emit several tool calls in one message, so two calls share a timestamp while the second was written before the first one's result existed. Null when the delivering message was not observed."
+    },
     "evidence_tier": {
       "type": [
         "string",
