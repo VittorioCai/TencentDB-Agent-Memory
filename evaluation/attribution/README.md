@@ -58,3 +58,87 @@ constraint (c) is about the pool as it will be, not as it was.
 Exit status is 1 when an asset has no discriminative token, or when a
 `--contains` file carries one. Both are conditions under which the scenario
 cannot support an attribution claim, so they fail rather than warn.
+
+## Artifacts: where a token could land
+
+`collect-artifacts.mjs` turns a capture into an ordered list of **operations** —
+the places a token could appear. A token found "somewhere in the run" cannot
+support a claim; a token found in *this tool call, at this point, with this
+result* can. So every operation carries three things:
+
+| | |
+|---|---|
+| `seq` + `occurred_at` | where it sits in the run. Ordering is what separates influence from coincidence: the content has to have arrived *before* the operation, not merely in the same session. |
+| `call_id` | which result belongs to which call. The command says what was asked for, the output says what came back; they answer different questions and must stay attached. |
+| `locus` | where to look to see it again — `request(id):msg[n]:call_id:arguments`, or `diff:file:start-end`. Evidence that cannot be reopened is an assertion. |
+
+Messages accumulate across turns, so a call is recorded once, at the turn it
+first appeared. `occurred_at` is that turn's timestamp.
+
+A diff hunk is marked `ordering: "end_of_run"` with a null time. A diff is what
+a run left behind, not an event inside it, and claiming a timestamp it does not
+have would be precision the artifact cannot support.
+
+## The judgement
+
+`judge-hard.mjs` makes one narrow claim:
+
+> this asset, **at this version**, had its **content** pulled into the session at
+> time T, and a token that could only have come from it appears in an operation
+> the model performed **after** T.
+
+Every clause does work.
+
+**At this version.** A fetch of v2 says nothing about v3. Matching on asset id
+alone attributes a run to whichever revision happens to be current.
+
+**Content, not offer.** `<available_skills>` and a `skill/search` response carry
+names and descriptions; the body arrives only through a call that asked for it.
+So the judge does not trust the `fetched` label — it checks `executed_endpoint`
+is set and is not an enumeration. A state name is a conclusion drawn upstream;
+the endpoint is a fact about what was called.
+
+**After T, strictly.** Same session is not enough. A token appearing before the
+content arrived came from somewhere else by definition.
+
+**An operation the model performed.** Matching runs against what the model
+*wrote* — tool call arguments, diff hunks, test commands — and never against
+what came back. This is also what closes the command-echo false positive
+structurally rather than by pattern: the echo lives in the result, and the
+result is not searched.
+
+| Outcome | When |
+|---|---|
+| `used` (`evidence_tier: hard`) | token matched, and a qualifying fetch of that version preceded it |
+| `needs_review` | token matched, but nothing establishes the content arrived first |
+| *(no event)* | a fetch with no token hit stays `fetched` |
+
+That last row matters. An asset that was read and ignored is a real outcome —
+arguably the one a team asset system most needs to see — so it is reported in
+the summary rather than promoted or dropped.
+
+Three specific guards, one per false positive the earlier verifier fell for:
+the result is never searched (command echo); a token in returned content is not
+a token in an argument (an asset discussing the endpoints); and a token inside a
+`grep` / `rg` / `find` command is downgraded to `needs_review`, because writing
+a token into a search is looking for it, not using it.
+
+Constraints (a) and (b) are re-checked per run: the task description and the
+files as they stood are properties of the run, not of the asset, so screening
+them at extraction time is not enough.
+
+## The chain
+
+```bash
+node evaluation/attribution/extract-tokens.mjs <assets…> \
+  --pool=<snapshot.json> --capture=<capture.jsonl> \
+  --out=evaluation/attribution/artifacts/tokens.json
+
+node evaluation/attribution/collect-artifacts.mjs <capture.jsonl…> \
+  --task=<task.md> [--diff=<f>] [--pre=<path>=<file>]
+
+node evaluation/attribution/judge-hard.mjs \
+  evaluation/provenance/artifacts/provenance-events.jsonl \
+  evaluation/attribution/artifacts/run-artifacts.json \
+  evaluation/attribution/artifacts/tokens.json
+```

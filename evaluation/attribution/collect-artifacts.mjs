@@ -1,0 +1,293 @@
+/**
+ * Artifact collection — the places where a discriminative token could land.
+ *
+ * A token found "somewhere in the run" cannot support a `used` claim. What is
+ * needed is a specific operation: this tool call, at this point in the session,
+ * with this result. So everything collected here carries three things:
+ *
+ *   seq          where it sits in the run. Ordering is what lets the judge say
+ *                the content arrived *before* the operation rather than merely
+ *                in the same session — and "before" is the whole difference
+ *                between influence and coincidence.
+ *   call_id      which result belongs to which call. A command and its output
+ *                must stay attached: the command carries what was asked for and
+ *                the output carries what came back, and the two answer different
+ *                questions.
+ *   locus        where to look to see it again — request id, message index,
+ *                call id, or file and hunk. An event whose evidence cannot be
+ *                reopened is an assertion, not a record.
+ *
+ * `occurred_at` is the timestamp of the earliest captured request that carried
+ * the message. Messages accumulate across turns, so the last request holds them
+ * all; the first one to contain a message is when it happened.
+ *
+ * A diff hunk is different and is marked as such. A diff is the end state of a
+ * run, not an event within it, so it has no time of its own and gets
+ * `occurred_at: null` with `ordering: "end_of_run"`. The judge treats it as
+ * following every tool call, which is true, rather than pretending to a
+ * precision the artifact does not have.
+ *
+ * Usage:
+ *   node evaluation/attribution/collect-artifacts.mjs <capture.jsonl ...> \
+ *     [--task=<task.md>] [--diff=<file.diff>] [--pre=<path>=<file> ...] [--json]
+ */
+
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { normalizeSessionKey, parseJsonl, splitCommandAndOutput } from "../provenance/build-events.mjs";
+
+/** Commands that run a check rather than change something. */
+const TEST_COMMAND = /\b(npm|pnpm|yarn)\s+(run\s+)?test\b|\bnode\s+--test\b|\bpytest\b|\bgo\s+test\b|\bcargo\s+test\b|\bvitest\b|\bjest\b|verify[\w-]*\.sh\b/;
+
+function textOf(content) {
+  return typeof content === "string" ? content : JSON.stringify(content ?? "");
+}
+
+/**
+ * Walk one captured request's messages, emitting a record per tool call and per
+ * tool result, in message order.
+ */
+function messagesOf(body) {
+  const out = [];
+  const msgs = Array.isArray(body?.messages) ? body.messages : [];
+  msgs.forEach((message, index) => {
+    if (Array.isArray(message?.tool_calls)) {
+      for (const tc of message.tool_calls) {
+        out.push({
+          index,
+          role: "call",
+          call_id: String(tc?.id ?? ""),
+          tool_name: String(tc?.function?.name ?? tc?.name ?? ""),
+          text: String(tc?.function?.arguments ?? JSON.stringify(tc?.input ?? "")),
+        });
+      }
+    }
+    // Anthropic-shaped blocks carry tool_use / tool_result inside content.
+    const blocks = Array.isArray(message?.content) ? message.content : [];
+    for (const block of blocks) {
+      if (block?.type === "tool_use") {
+        out.push({
+          index, role: "call",
+          call_id: String(block.id ?? ""),
+          tool_name: String(block.name ?? ""),
+          text: JSON.stringify(block.input ?? ""),
+        });
+      } else if (block?.type === "tool_result") {
+        out.push({
+          index, role: "result",
+          call_id: String(block.tool_use_id ?? ""),
+          tool_name: "",
+          text: textOf(block.content),
+        });
+      }
+    }
+    if (message?.role === "tool") {
+      out.push({
+        index, role: "result",
+        call_id: String(message.tool_call_id ?? ""),
+        tool_name: "",
+        text: textOf(message.content),
+      });
+    }
+  });
+  return out;
+}
+
+/** Exit status and stderr, read out of a shell tool result envelope. */
+export function outcomeOf(resultText) {
+  const s = String(resultText ?? "");
+  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
+  const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+  return {
+    exit_code: code ? Number(code[1]) : null,
+    stderr: stderr ? stderr[1].trim().slice(0, 400) : "",
+  };
+}
+
+/**
+ * Split a unified diff into hunks, each keeping the file and line range it
+ * touches — "the token is in the diff" is not a location, "the token is in
+ * src/proxy.ts lines 40-58" is.
+ */
+export function diffHunks(diffText) {
+  const hunks = [];
+  let file = "";
+  let current = null;
+  for (const line of String(diffText ?? "").split("\n")) {
+    const plus = /^\+\+\+ [ab]\/(.+)$/.exec(line);
+    if (plus) { file = plus[1]; current = null; continue; }
+    const at = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (at) {
+      current = {
+        file,
+        start: Number(at[1]),
+        end: Number(at[1]) + (at[2] ? Number(at[2]) : 1) - 1,
+        lines: [],
+      };
+      hunks.push(current);
+      continue;
+    }
+    if (current && /^[+ -]/.test(line)) current.lines.push(line);
+  }
+  return hunks.map((h) => ({ ...h, text: h.lines.join("\n") }));
+}
+
+/**
+ * Collect every operation in a run, ordered, with calls and results paired.
+ *
+ * Messages repeat across turns as the conversation grows. A call is recorded
+ * once, at the turn it first appeared, so the sequence reflects when things
+ * happened rather than how many times they were re-sent.
+ */
+export function collectArtifacts({ captureEvents = [], taskDescription = "", preChangeFiles = {}, diff = "" }) {
+  const bySession = new Map();
+
+  const requests = captureEvents
+    .filter((e) => e?.event === "http.request" && Array.isArray(e?.body?.json?.messages))
+    .sort((a, b) => String(a.timestamp ?? "").localeCompare(String(b.timestamp ?? "")));
+
+  for (const event of requests) {
+    const sessionKey = normalizeSessionKey(
+      event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
+    );
+    if (!bySession.has(sessionKey)) bySession.set(sessionKey, { calls: new Map(), results: new Map() });
+    const store = bySession.get(sessionKey);
+    const requestId = String(event.requestId ?? "");
+    const timestamp = String(event.timestamp ?? "");
+
+    for (const m of messagesOf(event.body.json)) {
+      // Key on the call id where there is one. Without it a message can still
+      // be identified by where it sits, which is stable across turns because
+      // messages are only ever appended.
+      const key = m.call_id || `${m.role}@${m.index}`;
+      const target = m.role === "call" ? store.calls : store.results;
+      if (target.has(key)) continue; // already seen in an earlier turn
+      target.set(key, {
+        ...m,
+        first_seen_at: timestamp,
+        locus: `request(${requestId}):msg[${m.index}]${m.call_id ? `:${m.call_id}` : ""}`,
+      });
+    }
+  }
+
+  const sessions = [];
+  for (const [sessionKey, store] of bySession) {
+    const operations = [];
+    const ordered = [...store.calls.values()].sort((a, b) => a.index - b.index);
+
+    ordered.forEach((call, seq) => {
+      const result = store.results.get(call.call_id) ?? null;
+      const { command, output } = splitCommandAndOutput(result?.text ?? "");
+      operations.push({
+        seq,
+        kind: TEST_COMMAND.test(call.text) ? "test_command" : "tool_call",
+        occurred_at: call.first_seen_at || null,
+        ordering: "observed",
+        call_id: call.call_id,
+        tool_name: call.tool_name,
+        locus: `${call.locus}:arguments`,
+        // The arguments are where a token the model *acted on* appears — in the
+        // mainline scenario the bridge address is inside the curl command here,
+        // not in anything that came back.
+        text: call.text,
+        result: result
+          ? {
+              locus: result.locus,
+              // Kept apart deliberately: the echoed command says what was asked
+              // for and the output says what came back. Scanning them as one
+              // blob is how a call that timed out with empty output still
+              // matched every pattern in its own command.
+              command_echo: command,
+              output,
+              ...outcomeOf(result.text),
+            }
+          : null,
+      });
+    });
+
+    // A diff has no time of its own; it is what the run left behind.
+    diffHunks(diff).forEach((h, i) => {
+      operations.push({
+        seq: operations.length + i,
+        kind: "diff_hunk",
+        occurred_at: null,
+        ordering: "end_of_run",
+        call_id: "",
+        tool_name: "",
+        locus: `diff:${h.file}:${h.start}-${h.end}`,
+        text: h.text,
+        result: null,
+      });
+    });
+
+    sessions.push({
+      session_key: sessionKey,
+      task_description: taskDescription,
+      pre_change_files: preChangeFiles,
+      diff,
+      operations,
+      test_commands: operations.filter((o) => o.kind === "test_command").map((o) => o.locus),
+      tool_call_args: operations.filter((o) => o.kind !== "diff_hunk").map((o) => o.text),
+    });
+  }
+  return sessions;
+}
+
+export function renderArtifacts(sessions) {
+  const lines = ["# Collected artifacts", ""];
+  if (sessions.length === 0) {
+    lines.push("No session in the capture carried a tool call. Nothing to attribute against —");
+    lines.push("**not** an empty result meaning nothing was used.");
+    return lines.join("\n");
+  }
+  for (const s of sessions) {
+    lines.push(`## ${s.session_key || "(no conversation id)"}`, "");
+    lines.push(`  ${s.operations.length} operation(s), ${s.test_commands.length} of them checks`);
+    lines.push(`  task description: ${s.task_description ? `${s.task_description.length} chars` : "not supplied"}`);
+    lines.push(`  pre-change files: ${Object.keys(s.pre_change_files).length}`);
+    lines.push("");
+    for (const op of s.operations.slice(0, 25)) {
+      const when = op.occurred_at ?? op.ordering;
+      const outcome = op.result
+        ? (op.result.exit_code === null ? "" : ` exit=${op.result.exit_code}`)
+        : " (no result)";
+      lines.push(`  [${String(op.seq).padStart(2)}] ${op.kind.padEnd(12)} ${when}  ${op.tool_name || "-"}${outcome}`);
+      lines.push(`       ${op.locus}`);
+    }
+    if (s.operations.length > 25) lines.push(`  … ${s.operations.length - 25} more`);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+// ── CLI ───────────────────────────────────────────────────────────
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = process.argv.slice(2);
+  const flag = (n) => args.filter((a) => a.startsWith(`--${n}=`)).map((a) => a.slice(n.length + 3));
+  const capturePaths = args.filter((a) => !a.startsWith("--"));
+  if (capturePaths.length === 0) {
+    console.error("usage: node collect-artifacts.mjs <capture.jsonl ...> [--task=f] [--diff=f] [--pre=path=file] [--json]");
+    process.exit(2);
+  }
+
+  const preChangeFiles = {};
+  for (const spec of flag("pre")) {
+    const at = spec.indexOf("=");
+    if (at < 0) { console.error(`--pre expects <path>=<file>, got ${spec}`); process.exit(2); }
+    preChangeFiles[spec.slice(0, at)] = readFileSync(spec.slice(at + 1), "utf8");
+  }
+
+  const sessions = collectArtifacts({
+    captureEvents: capturePaths.flatMap((p) => parseJsonl(readFileSync(p, "utf8"))),
+    taskDescription: flag("task").map((p) => readFileSync(p, "utf8")).join("\n"),
+    diff: flag("diff").map((p) => readFileSync(p, "utf8")).join("\n"),
+    preChangeFiles,
+  });
+
+  const outPath = "evaluation/attribution/artifacts/run-artifacts.json";
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, JSON.stringify(sessions, null, 2), "utf8");
+
+  if (args.includes("--json")) console.log(JSON.stringify(sessions, null, 2));
+  else console.log(renderArtifacts(sessions), `\nWritten to ${outPath}`);
+}

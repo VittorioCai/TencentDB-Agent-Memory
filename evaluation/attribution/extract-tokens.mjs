@@ -31,7 +31,7 @@
  * Usage:
  *   node evaluation/attribution/extract-tokens.mjs <asset.md> [asset2.md ...] \
  *     [--pool=<snapshot.json>] [--capture=<capture.jsonl>] \
- *     [--context=<file>] [--task=<task.md>] [--json]
+ *     [--context=<file>] [--task=<task.md>] [--out=<tokens.json>] [--json]
  *
  *   # P4-1b's check: does the task description leak an answer?
  *   node evaluation/attribution/extract-tokens.mjs a.md b.md --contains=task.md
@@ -41,7 +41,7 @@
  * cannot support an attribution claim, so they fail rather than warn.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 // ── token shapes ──────────────────────────────────────────────────
 
@@ -319,7 +319,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (leaked.length > 0) failures += 1;
   }
 
-  if (asJson) console.log(JSON.stringify({ results, discriminative: all, failures }, null, 2));
+  // Keyed by asset id, so the judge can look tokens up by the id its events
+  // carry. The id comes from matching the file's frontmatter name against the
+  // frozen pool — the file path is a local fact and means nothing downstream.
+  const byAssetId = {};
+  const poolPaths = flag("pool");
+  if (poolPaths.length > 0) {
+    const pooled = poolPaths.flatMap((p) => JSON.parse(read(p)).assets ?? []);
+    for (const r of results) {
+      const name = /^name:\s*(.+)$/m.exec(ownMetadata(assets.find((a) => a.path === r.asset).text))?.[1]?.trim()
+        ?? /^\s*name:\s*(.+)$/m.exec(read(r.asset))?.[1]?.trim();
+      const match = pooled.find((a) => a.name === name);
+      if (match) byAssetId[match.asset_id] = r.tokens.filter((t) => t.discriminative).map((t) => t.token);
+      else if (!asJson) console.log(`  [warn] ${r.asset}: name ${name ?? "?"} is not in the pool — its tokens cannot be keyed to an asset id`);
+    }
+  }
+
+  for (const p of flag("out")) {
+    writeFileSync(p, JSON.stringify(byAssetId, null, 2), "utf8");
+    if (!asJson) console.log(`  tokens by asset id written to ${p}`);
+  }
+
+  if (asJson) console.log(JSON.stringify({ results, discriminative: all, by_asset_id: byAssetId, failures }, null, 2));
   else if (failures > 0) console.log(`\n${failures} problem(s): an asset with no discriminative token cannot support a "used" claim.`);
 
   process.exit(failures > 0 ? 1 : 0);
