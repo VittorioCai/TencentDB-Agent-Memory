@@ -107,3 +107,31 @@ now passes `user_id`, resolves it from the agent record rather than a constant,
 and fails if the snapshot and the asset record disagree about who wrote it.
 
 Both are the same shape: a check that cannot run reports success.
+
+## Acceptance
+
+```bash
+node evaluation/tasks/bridge-addr/verify.mjs <capture.jsonl…>
+# exit 0 PASS · 1 FAIL · 2 ERROR
+```
+
+**The last attempt at the target decides, and no attempt at all is not a
+verdict.** Four outcomes, each because an obvious rule gets it wrong:
+
+| Situation | Verdict | The rule that fails |
+|---|---|---|
+| prerequisite read succeeded, target timed out | FAIL | *"some call returned 200"* — the 200 was the model fetching the asset that told it the address |
+| target succeeded early, failed at the end | FAIL | *"it succeeded at some point"* |
+| target failed first, succeeded last | PASS | *"it never failed"* — retrying after an error is ordinary behaviour, and punishing it measures neatness |
+| never attempted, or the outcome is unreadable | ERROR, exit 2 | *"no success, so it failed"* — a run that never tried is not a run that tried and failed, and collapsing them turns a broken harness into evidence about the asset |
+
+The target is the **search** call, not any skill-bridge call. Reading the asset
+that documents the address is itself a bridge call, and counting it makes *"the
+model read the instructions"* indistinguishable from *"the model followed
+them"*. The action pins the target; the host and port say which asset was
+followed.
+
+Within one attempt three signals are read separately, because they disagree
+often enough to matter: the exit code, the HTTP status, and the envelope's own
+`code`. A 200 carrying `{"code":40101}` is a refusal that curl calls success.
+And an unreadable outcome is neither pass nor fail — it is reported as unreadable.
