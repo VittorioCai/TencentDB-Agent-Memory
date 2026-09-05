@@ -20,6 +20,8 @@
  * The LLM can discover team-wide skills via the skill_search tool (separate).
  */
 
+import { appendFileSync } from "node:fs";
+
 import type {
   AgentContext,
   AnchorTarget,
@@ -117,6 +119,59 @@ export function wrapAvailableSkillsBlock(listing: string): string {
  * `testagent1` whose description/prompt is literally "testagent1"
  * (would otherwise BM25 to zero hits and inject no skills at all).
  */
+/**
+ * Candidate-set audit trail, written only when `TDAI_CANDIDATE_LOG` names a path.
+ *
+ * The console line above prints `hits=<count>`. A count cannot be traced back
+ * to an asset, so it can support the claim "something was recalled" but never
+ * "this asset was recalled" — and an attribution record that cannot name the
+ * asset is not evidence.
+ *
+ * The rendered `listing` is written alongside the hits on purpose. Hits are the
+ * input to the narrowing step and the listing is its output; session-init
+ * `<available_skills>` caps at 20 entries (see `core-client.ts` listSkills),
+ * so the two genuinely differ once a team grows. Recording only one side makes
+ * the narrowing unobservable, and an unobservable step must not be reported as
+ * having happened.
+ *
+ * Off unless the variable is set, appended rather than rewritten, and never
+ * allowed to fail a request: this is evaluation instrumentation living in a
+ * production path.
+ */
+function writeCandidateLog(entry: {
+  session_id?: string;
+  team_id?: string;
+  agent_id?: string;
+  task_id?: string;
+  trigger: string;
+  query: string | undefined;
+  result: ListingResult;
+}): void {
+  const path = process.env.TDAI_CANDIDATE_LOG;
+  if (!path) return;
+  try {
+    const line = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      trigger: entry.trigger,
+      session_key: entry.session_id ?? "",
+      team_id: entry.team_id ?? "",
+      agent_id: entry.agent_id ?? "",
+      task_id: entry.task_id ?? "",
+      mode: entry.result.mode,
+      query: entry.query ?? null,
+      hits: (entry.result.hits ?? []).map((h) => ({
+        skill_id: h.skill_id,
+        name: h.name,
+        version: h.version,
+      })),
+      listing: entry.result.listing ?? "",
+    });
+    appendFileSync(path, `${line}\n`, "utf8");
+  } catch (err) {
+    console.warn(`${TAG} candidate log write failed: ${(err as Error).message}`);
+  }
+}
+
 function buildListingQuery(input: PrewarmInput): string | undefined {
   const parts: string[] = [];
   const ad = input.agentDetail;
@@ -189,15 +244,19 @@ export class SkillInjector implements InjectionHook {
     const caps = custom?.assetCapabilities as { skill?: boolean } | undefined;
     if (caps?.skill === false) return [];
     const session = custom?.session as {
+      session_id?: string;
       team_id?: string;
       agent_id?: string;
       space_id?: string;
+      task_id?: string;
     } | undefined;
     // No search query on the live path — core will route to mode=full.
     return this.renderListingBlocks({
+      session_id: session?.session_id,
       team_id: session?.team_id,
       agent_id: session?.agent_id,
       space_id: session?.space_id,
+      task_id: session?.task_id,
       query: undefined,
       trigger: "execute",
     });
@@ -216,9 +275,11 @@ export class SkillInjector implements InjectionHook {
     // so listing semantically matches relevant skills (FTS BM25).
     const query = buildListingQuery(input);
     return this.renderListingBlocks({
+      session_id: ids?.session_id,
       team_id: ids?.team_id,
       agent_id: ids?.agent_id,
       space_id: ids?.space_id,
+      task_id: ids?.task_id,
       query,
       trigger: "prewarm",
     });
@@ -238,13 +299,15 @@ export class SkillInjector implements InjectionHook {
    *   - Never throws.
    */
   private async renderListingBlocks(args: {
+    session_id?: string;
     team_id?: string;
     agent_id?: string;
     space_id?: string;
+    task_id?: string;
     query: string | undefined;
     trigger: "prewarm" | "execute";
   }): Promise<ContextBlock[]> {
-    const { team_id, agent_id, space_id, query, trigger } = args;
+    const { session_id, team_id, agent_id, space_id, task_id, query, trigger } = args;
     if (!team_id || !agent_id) {
       console.log(
         `${TAG} ${trigger}: missing session identity (team_id/agent_id) — skipping listing`,
@@ -275,6 +338,7 @@ export class SkillInjector implements InjectionHook {
         `${TAG} ${trigger} result mode=${result.mode}`
           + ` hits=${result.hits?.length ?? 0} listingLen=${(result.listing ?? "").length}`,
       );
+      writeCandidateLog({ session_id, team_id, agent_id, task_id, trigger, query, result });
     } catch (err) {
       console.warn(
         `${TAG} ${trigger} core listing failed, degrading to empty <available_skills>: ${(err as Error).message}`,

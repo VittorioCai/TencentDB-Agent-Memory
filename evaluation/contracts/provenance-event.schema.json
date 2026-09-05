@@ -140,7 +140,7 @@
         "wire_only",
         "none"
       ],
-      "description": "How the fetch was witnessed. bridge+wire: service-side success plus an asset id parsed from the capture. bridge_only: service-side record only. wire_only: capture only, doubtful. none: no fetch was observed at all (occurs only with needs_review, where a token matched but nothing was ever fetched)."
+      "description": "How the event was witnessed, not how strong the claim is. bridge+wire: a service-side record and the capture both show it. bridge_only: service-side record only. wire_only: capture only. Doubtful for fetched and beyond, because the capture is reconstructed from model-produced text; not doubtful for injected, because the capture is taken upstream of the proxy, so an injected block there was written by the proxy and the model could not have produced it. none: nothing was observed (occurs only with needs_review, where a token matched but nothing was ever fetched)."
     },
     "evidence_tier": {
       "type": [

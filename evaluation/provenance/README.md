@@ -89,3 +89,87 @@ answer.
 
 The snapshot instant becomes `pool_snapshot_at`, and any asset created after it
 is marked `excluded_by_snapshot`.
+
+## Early lifecycle states: recalled, selected, injected
+
+`build-events.mjs` starts at `fetched`. That leaves the three states before it
+unrecorded, and with them the distinction between **an asset that was never
+offered** and **an asset that was offered and ignored**. Those are different
+failures of a team asset system and only the second one is the asset's fault.
+
+`build-early-events.mjs` fills them in. Every state is proved from its own
+source; none is inferred from another.
+
+| State | Meaning | Proved by |
+|---|---|---|
+| `recalled` | a retrieval operation returned this asset as a candidate | `candidate_listing` (injector hits) or `bridge_response` (a `search`/`list` response in the capture) |
+| `selected` | the asset survived a narrowing step | `candidate_listing` — the hits *and* the rendered block, which are its input and output |
+| `injected` | the asset reached the model | `injected_block` (an entry in the real `<available_skills>` block) or `session_message` (a listing carried in `messages[]` of a captured request) |
+
+### Two retrieval paths, and why only reading the system prompt is wrong
+
+`<available_skills>` is owner-filtered — it lists skills belonging to the
+current agent. A consumer identity that has written nothing gets an empty block,
+and every team asset it sees arrives through `skill_search` as a **tool result**.
+Reading only the system prompt would report "nothing was recalled" for exactly
+the cross-person case this tooling exists to measure.
+
+So both paths are collected, and an asset that arrives by both is one `injected`
+event carrying two proof references, not two events.
+
+### Why `hits` is not `selected`
+
+`skill-injector.ts` logs `hits=<count>`. A count can support *"something was
+recalled"* but never *"this asset was recalled"*, and a record that cannot name
+the asset is not evidence. `candidate-log.sh` mounts a patched injector that
+appends `skill_id` + `version` per hit **and** the rendered block.
+
+Both sides are needed because they are the input and the output of the narrowing
+step: session-init `<available_skills>` caps at 20 entries, so hits genuinely
+exceed what is rendered once a team grows. With only one side the step is
+unobservable — and then `selected` is not written at all rather than copied from
+the candidates.
+
+On the bridge-search path there is **no** narrowing step: the service returns a
+list and the model's next move is a fetch. `selected` is never written there.
+
+### The rule that governs all of it
+
+A state that cannot be evidenced is not written. A missing event means *not
+observed*, never *did not happen*, and the summary prints both so the difference
+stays visible. The same rule already governs `n/a` in the capture verifier.
+
+### Running it
+
+```bash
+# once, before the session — recreates the proxy with the injector patch mounted
+bash evaluation/provenance/candidate-log.sh enable
+bash evaluation/provenance/candidate-log.sh status     # what the listing returned
+bash evaluation/provenance/candidate-log.sh disable    # back to the stock image
+
+node evaluation/provenance/build-early-events.mjs \
+  evaluation/provenance/artifacts/asset-pool-snapshot.json \
+  evaluation/gate0/artifacts/tool-call-logs.jsonl \
+  evaluation/gate0/artifacts/*-capture.jsonl \
+  --candidates=evaluation/provenance/artifacts/candidate-log.jsonl
+```
+
+The listing runs once at session init and its block is cached for the rest of
+the session, so enabling the log mid-session records nothing — start a fresh one.
+
+### Two traps this collector is built around
+
+**A prose mention of a block tag is not the block.** In a real captured system
+prompt the literal string `<available_skills>` occurs three times: twice inside
+`<skill_tools>` prose telling the model where to look, once as the actual block.
+A non-anchored `<tag>(.*?)</tag>` starts at the first mention and returns a
+paragraph of English instructions as the skill list. Injected blocks are emitted
+on their own line; prose mentions never are.
+
+**A command echo is not a response.** A tool result repeats the command before
+its output, so a `skill/search` that timed out after 75 s with empty stdout still
+contains the bridge URL and the query. The endpoint is read from the command —
+that is what the command is for — and the payload only from stdout.
+
+Both are the same shape as the three false positives the fetch judge fell for:
+the text looks related. Each has a test holding it shut.
