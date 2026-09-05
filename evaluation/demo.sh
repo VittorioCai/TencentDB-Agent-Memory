@@ -56,30 +56,46 @@ note() { echo "      ${C_DIM}$*${C_0}"; }
 have_stack() { docker ps --format '{{.Names}}' 2>/dev/null | grep -q tdai-memory-core; }
 
 # ── 1. The asset pool ────────────────────────────────────────────
+#
+# Reads the snapshot; never takes one. Freezing the pool is a deliberate act —
+# it is what `pool_snapshot_at` means and what the answer-leak guard compares
+# against — so it belongs to `enter-pool.sh`, not to a command whose job is to
+# render results. An earlier version re-froze here on every run, against the
+# default team, and silently replaced the evaluation freeze with a fresh
+# snapshot of a different pool.
 segment_pool() {
-  if have_stack && bash "$SCRIPT_DIR/provenance/snapshot-assets.sh" >/tmp/demo-snap.log 2>&1; then
+  local snap="$ARTIFACTS/asset-pool-snapshot.json"
+  if [[ -f "$snap" ]]; then
     seg_begin 1 "Asset pool" live
-    python3 - "$ARTIFACTS/asset-pool-snapshot.json" <<'PY'
-import json, sys
-snap = json.load(open(sys.argv[1]))
+    python3 - "$snap" "$SCRIPT_DIR/tasks/bridge-addr/pair.json" <<'PY'
+import json, os, sys
+snap = json.load(open(sys.argv[1], encoding="utf-8"))
 owners = {a["producer_user_id"] for a in snap["assets"] if a["producer_user_id"]}
 print(f"      frozen at {snap['pool_snapshot_at']}   team {snap['team_id']}")
 for a in snap["assets"]:
     print(f"      {a['asset_id']:<22} {a['name'][:34]:<36} author={a['producer_user_id']}")
 print(f"      {snap['asset_count']} asset(s), {len(owners)} distinct author(s)")
-if len(owners) <= 1:
-    print("      note: only one author so far; identity B has not written anything yet")
+
+# Cross-person reuse is judged on user_id, so the demo has to show that a second
+# identity exists and which role each one plays. Both come from pair.json, which
+# is written when the pool is frozen — hardcoding them here would keep printing
+# the last run's identities after the pool changed.
+pair_path = sys.argv[2]
+if os.path.exists(pair_path):
+    pair = json.load(open(pair_path, encoding="utf-8"))
+    authors = sorted({a["producer_user_id"] for a in pair["assets"] if a["producer_user_id"]})
+    print()
+    print(f"      identities:  {', '.join(authors) or '?'} authors   {pair['consumer_agent_id']} consumes")
+    if pair["pool_snapshot_at"] != snap["pool_snapshot_at"]:
+        print(f"      [warn] pair.json was written for {pair['pool_snapshot_at']}, this snapshot is"
+              f" {snap['pool_snapshot_at']} — re-run enter-pool.sh")
+else:
+    print("      identities:  pair.json not written yet (P4-1b)")
+print("      both operated by one person: the mechanism is real, ecological validity is not")
 PY
-    # Cross-person reuse is judged on user_id, so the demo must show that a
-    # second identity exists and which role each one plays.
-    local id_b
-    id_b="$(sed -n 's/^USER_ID_B=//p' "$SCRIPT_DIR/gate0/codebuddy-binding.env" 2>/dev/null | head -1)"
-    row ""
-    row "identities:  usr-n3h5ewx4ja authors   ${id_b:-<not created>} consumes"
-    note "both operated by one person: the mechanism is real, ecological validity is not"
   else
-    seg_begin 1 "Asset pool" fixture "stack unavailable"
-    row "see evaluation/provenance/README.md for the live path"
+    seg_begin 1 "Asset pool" fixture "no snapshot yet"
+    row "run evaluation/tasks/bridge-addr/enter-pool.sh to enter the pool and freeze it"
   fi
 }
 

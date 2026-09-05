@@ -26,7 +26,10 @@ ENV_DIR="$REPO_ROOT/deploy/global-images"
 CORE_URL="${CORE_URL:-http://localhost:8420}"
 KNOWLEDGE_URL="${KNOWLEDGE_URL:-http://localhost:8424}"
 SERVICE_ID="${SERVICE_ID:-default}"
-TEAM_ID="${TEAM_ID:-team-n3lgrbjx7d}"
+# The evaluation team. A bare run must not default to the old development team:
+# this script overwrites `asset-pool-snapshot.json`, and pointing it at the
+# wrong pool silently replaces the freeze the answer-leak guard compares against.
+TEAM_ID="${TEAM_ID:-team-5ezfoladb5}"
 OUT="${OUT:-$REPO_ROOT/evaluation/provenance/artifacts/asset-pool-snapshot.json}"
 
 if [[ -t 1 ]]; then C_R=$'\033[31m'; C_G=$'\033[32m'; C_B=$'\033[34m'; C_0=$'\033[0m'
