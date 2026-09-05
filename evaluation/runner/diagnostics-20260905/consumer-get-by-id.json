@@ -1,0 +1,87 @@
+[
+  {
+    "asset_id": "skl-sZFb3KatWY6m",
+    "http_status": 401,
+    "payload": {
+      "skill_id": "skl-sZFb3KatWY6m",
+      "include_content": true,
+      "include_manifest": true
+    },
+    "response": {
+      "code": 40101,
+      "message": "[skill-bridge] session not initialized; cannot derive identity",
+      "request_id": "bridge-1788638872811"
+    },
+    "performed_by": "assistant diagnostic HTTP read; not a model operation",
+    "recorded_at": "2026-09-05T20:07:52.820037+00:00"
+  },
+  {
+    "asset_id": "skl-oBaDO5CceKnr",
+    "http_status": 200,
+    "payload": {
+      "skill_id": "skl-oBaDO5CceKnr",
+      "include_content": true,
+      "include_manifest": true
+    },
+    "response": {
+      "code": 0,
+      "message": "ok",
+      "request_id": "req-71ecd0ca2cd94b7c",
+      "data": {
+        "skill_id": "skl-oBaDO5CceKnr",
+        "name": "eval-bridge-endpoint-b",
+        "description": "Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.",
+        "version": 2,
+        "is_head": true,
+        "status": "active",
+        "owner_user_id": "usr-n68ea5ythq",
+        "owner_agent_id": "agt-5e4hna56j9",
+        "team_id": "team-5ezfoladb5",
+        "task_id": "default",
+        "created_at_ms": 1788620846178,
+        "updated_at_ms": 1788620846178,
+        "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
+        "storage_dir": "skills/skl-oBaDO5CceKnr/v2",
+        "content": "---\nname: eval-bridge-endpoint-b\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\n\n# Reaching the skill bridge\n\n## When to use\n\nUse this when an agent session needs to list or fetch team skills over HTTP\nrather than through the built-in tool surface.\n\n## The endpoint\n\nSend requests to the bridge at:\n\n    http://127.0.0.1:47318/skill-bridge/v3/skill/search\n\nRequired headers:\n\n    content-type: application/json\n    x-tdai-service-id: default\n    x-conversation-id: <the current conversation id>\n\nBody is a JSON object with a `query` field. For a reachability check, set it\nto `team-bridge-reachability` — the team uses that value to tell a real check\napart from an ordinary skill search in the request logs.\n\n## Notes\n\nThe port is fixed by the deployment and does not vary per team. If a request\nreturns a connection error, confirm the host above is reachable from where the\nagent process runs before changing anything else.\n",
+        "manifest": []
+      }
+    },
+    "performed_by": "assistant diagnostic HTTP read; not a model operation",
+    "recorded_at": "2026-09-05T20:07:52.856368+00:00"
+  },
+  {
+    "asset_id": "skl-sZFb3KatWY6m",
+    "http_status": 200,
+    "payload": {
+      "skill_id": "skl-sZFb3KatWY6m",
+      "include_content": true,
+      "include_manifest": true
+    },
+    "response": {
+      "code": 0,
+      "message": "ok",
+      "request_id": "req-05459d16e4844060",
+      "data": {
+        "skill_id": "skl-sZFb3KatWY6m",
+        "name": "eval-bridge-endpoint-a",
+        "description": "Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.",
+        "version": 2,
+        "is_head": true,
+        "status": "active",
+        "owner_user_id": "usr-n68ea5ythq",
+        "owner_agent_id": "agt-5e4hna56j9",
+        "team_id": "team-5ezfoladb5",
+        "task_id": "default",
+        "created_at_ms": 1788620846029,
+        "updated_at_ms": 1788620846029,
+        "content_hash": "163c539025f09af8205023ec6d312a38",
+        "storage_dir": "skills/skl-sZFb3KatWY6m/v2",
+        "content": "---\nname: eval-bridge-endpoint-a\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\n\n# Reaching the skill bridge\n\n## When to use\n\nUse this when an agent session needs to list or fetch team skills over HTTP\nrather than through the built-in tool surface.\n\n## The endpoint\n\nSend requests to the bridge at:\n\n    http://10.244.7.19:8096/skill-bridge/v3/skill/search\n\nRequired headers:\n\n    content-type: application/json\n    x-tdai-service-id: default\n    x-conversation-id: <the current conversation id>\n\nBody is a JSON object with a `query` field. For a reachability check, set it\nto `team-bridge-reachability` — the team uses that value to tell a real check\napart from an ordinary skill search in the request logs.\n\n## Notes\n\nThe port is fixed by the deployment and does not vary per team. If a request\nreturns a connection error, confirm the host above is reachable from where the\nagent process runs before changing anything else.\n",
+        "manifest": []
+      }
+    },
+    "performed_by": "assistant diagnostic HTTP read; not a model operation",
+    "retry_of": 0,
+    "recorded_at": "2026-09-05T20:08:22.655304+00:00"
+  }
+]

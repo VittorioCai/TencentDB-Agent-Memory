@@ -48,7 +48,33 @@ ok()   { echo "${C_G}[ok]${C_0} $*"; }
 warn() { echo "${C_Y}[warn]${C_0} $*"; }
 die()  { echo "${C_R}[error]${C_0} $*" >&2; exit 1; }
 
-probe_running() { [[ -f "$PROBE_PID" ]] && kill -0 "$(cat "$PROBE_PID")" 2>/dev/null; }
+# Ask the process table, not just the pid file. A pid file can vanish or go
+# stale while the probe is still running, and then this script would start a
+# second one, fail on the port, and leave the environment looking prepared
+# without being prepared. Recovers the pid file when it finds a live probe.
+probe_running() {
+  if [[ -f "$PROBE_PID" ]] && kill -0 "$(cat "$PROBE_PID")" 2>/dev/null; then return 0; fi
+  local pid
+  pid="$(pgrep -f "proxy-observability-probe" 2>/dev/null | head -1)"
+  if [[ -n "$pid" ]]; then echo "$pid" > "$PROBE_PID"; return 0; fi
+  rm -f "$PROBE_PID"
+  return 1
+}
+
+# Every prerequisite, checked against the live environment rather than against
+# what this script did earlier. The whole point is that a wrong answer here is
+# invisible later.
+verify_ready() {
+  local want_agent="$1" bad=0
+  probe_running || { echo "  ${C_R}probe not running${C_0}"; bad=1; }
+  [[ "$(current_upstream)" == "$PROBE_UPSTREAM" ]] \
+    || { echo "  ${C_R}proxy upstream is $(current_upstream), not the probe — nothing would be captured${C_0}"; bad=1; }
+  [[ "$(current_agent)" == "$want_agent" ]] \
+    || { echo "  ${C_R}forced agent is $(current_agent), expected $want_agent${C_0}"; bad=1; }
+  [[ "$(docker inspect tdai-proxy --format '{{.State.Health.Status}}' 2>/dev/null)" == healthy ]] \
+    || { echo "  ${C_R}proxy is not healthy${C_0}"; bad=1; }
+  return "$bad"
+}
 
 set_yaml_upstream() {  # $1 = url
   python3 - "$CONFIG" "$1" <<'PY'
@@ -160,6 +186,11 @@ case "${1:---status}" in
     # The candidate log only fills at session init, so a session already open
     # writes nothing to it.
     : > "$EVAL/provenance/artifacts/candidate-log.jsonl"
+
+    # Re-read the live environment. Reporting "ready" on the strength of having
+    # issued the commands is the same mistake as a check that cannot run
+    # reporting success.
+    verify_ready "$AGENT" || die "preparation did not take — see the lines above; nothing was captured last time this state was reached"
     echo
     echo "  Ready. Start a ${C_B}fresh${C_0} CodeBuddy session — the skill listing runs once at"
     echo "  session init, so an already-open session records no candidates."
