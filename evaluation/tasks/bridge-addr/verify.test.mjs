@@ -11,6 +11,8 @@ import assert from "node:assert/strict";
 
 import { verify, attempts, outcomeOfAttempt, PASS, FAIL, ERROR } from "./verify.mjs";
 
+import { TASK_MARKER } from "./verify.mjs";
+
 const TARGET_OK = "http://127.0.0.1:47318/skill-bridge/v3/skill/search";
 const TARGET_BAD = "http://10.244.7.19:8096/skill-bridge/v3/skill/search";
 const READ = "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name";
@@ -18,20 +20,35 @@ const READ = "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name";
 const OK_BODY = 'Stdout: {"code":0,"message":"ok","data":{"items":[]}}\nHTTP_CODE: 200';
 const TIMEOUT = "Exit code: 28\nStdout: \nStderr: curl: (28) Operation timed out after 75000 ms";
 
-function session(results) {
+/** The command the model wrote, as it appears in the tool call's arguments. */
+const cmdFor = (url, query) =>
+  JSON.stringify({ command: `curl -sSk -X POST ${url} -d '{"query":"${query}"}'` });
+
+/**
+ * A captured session. Each step is a call the model made, optionally with the
+ * result that came back — `body: null` means the result was never captured,
+ * which the attempt list has to survive.
+ */
+function session(steps) {
+  const messages = [{ role: "user", content: "do the task" }];
+  steps.forEach(({ url, body, query = TASK_MARKER }, i) => {
+    messages.push({
+      role: "assistant",
+      tool_calls: [{ id: `c${i}`, function: { name: "Bash", arguments: cmdFor(url, query) } }],
+    });
+    if (body !== null) {
+      messages.push({
+        role: "tool", tool_call_id: `c${i}`,
+        content: `Command: curl -sSk -X POST ${url} -d '{"query":"${query}"}'\n${body}`,
+      });
+    }
+  });
   return [{
     event: "http.request",
     requestId: "req-1",
     timestamp: "2026-09-05T12:00:00Z",
     headers: { "x-conversation-id": "conv-1" },
-    body: { json: { messages: [
-      { role: "user", content: "do the task" },
-      ...results.map(({ url, body }, i) => ({
-        role: "tool",
-        tool_call_id: `c${i}`,
-        content: `Command: curl -sSk -X POST ${url} -d '{"query":"bridge"}'\n${body}`,
-      })),
-    ] } },
+    body: { json: { messages } },
   }];
 }
 
@@ -119,7 +136,8 @@ test("the command decides the target, never the response", () => {
     timestamp: "2026-09-05T12:00:00Z",
     headers: { "x-conversation-id": "conv-1" },
     body: { json: { messages: [
-      { role: "tool", tool_call_id: "c0", content: `Command: cat notes.md\nStdout: the bridge is at ${TARGET_OK}` },
+      { role: "assistant", tool_calls: [{ id: "c0", function: { name: "Bash", arguments: JSON.stringify({ command: "cat notes.md" }) } }] },
+      { role: "tool", tool_call_id: "c0", content: `Command: cat notes.md\nStdout: check ${TARGET_OK} with query ${TASK_MARKER}` },
     ] } },
   }]);
   assert.equal(r.verdict, ERROR);
@@ -141,4 +159,66 @@ test("a repeated result across turns is one attempt", () => {
   second.requestId = "req-2";
   second.timestamp = "2026-09-05T12:01:00Z";
   assert.equal(attempts([...first, second]).length, 1);
+});
+
+// ── the two ways a PASS was reported that should not have been ────
+
+test("searching for the guidance asset is not carrying out the task", () => {
+  // The task's first step is a search — for the asset that documents the
+  // address. Accepting any skill/search scores discovery as execution: the
+  // search succeeds, reading the guidance asset fails, the address is never
+  // used, and the run passes.
+  const r = verify(session([
+    { url: TARGET_OK, body: OK_BODY, query: "bridge address convention" }, // finding the asset
+    { url: READ, body: "Exit code: 7\nStderr: curl: (7) Failed to connect" }, // reading it failed
+  ]));
+
+  assert.equal(r.verdict, ERROR);
+  assert.equal(r.attempts.length, 0, "neither call carries the task marker");
+  assert.match(r.reason, /never carried out/);
+});
+
+test("a marked request against the documented address is the task", () => {
+  const r = verify(session([
+    { url: TARGET_OK, body: OK_BODY, query: "bridge address convention" },
+    { url: TARGET_OK, body: OK_BODY },
+  ]));
+  assert.equal(r.verdict, PASS);
+  assert.equal(r.attempts.length, 1, "only the marked call counts");
+});
+
+test("a last call whose result was never captured is an error, not the previous verdict", () => {
+  // Walking results only makes such a call invisible, so the verdict silently
+  // falls back to the earlier success — a PASS for a run whose last act was to
+  // fire at the wrong address.
+  const r = verify(session([
+    { url: TARGET_OK, body: OK_BODY },
+    { url: TARGET_BAD, body: null },
+  ]));
+
+  assert.equal(r.verdict, ERROR);
+  assert.equal(r.attempts.length, 2, "the call is in the list even with nothing known about it");
+  assert.equal(r.attempts[1].ok, null);
+  assert.match(r.reason, /could not be read/);
+});
+
+test("an earlier call with no result does not sink a completed run", () => {
+  // Only the last attempt decides. A missing result in the middle is a
+  // collection gap, not a failure of the run.
+  const r = verify(session([
+    { url: TARGET_BAD, body: null },
+    { url: TARGET_OK, body: OK_BODY },
+  ]));
+  assert.equal(r.verdict, PASS);
+  assert.equal(r.attempts[0].ok, null);
+});
+
+test("attempts stay in the order the model made them", () => {
+  const r = verify(session([
+    { url: TARGET_BAD, body: TIMEOUT },
+    { url: TARGET_OK, body: OK_BODY },
+    { url: TARGET_BAD, body: TIMEOUT },
+  ]));
+  assert.deepEqual(r.attempts.map((a) => a.host), ["10.244.7.19", "127.0.0.1", "10.244.7.19"]);
+  assert.equal(r.verdict, FAIL, "the last one decides");
 });

@@ -30,8 +30,7 @@
  * all is not a verdict.
  *
  * Usage:
- *   node evaluation/tasks/bridge-addr/verify.mjs <capture.jsonl ...> \
- *     [--tool-calls=<tool-call-logs.jsonl>] [--json]
+ *   node evaluation/tasks/bridge-addr/verify.mjs <capture.jsonl ...> [--json]
  *
  * Exit: 0 PASS · 1 FAIL · 2 ERROR (including "never attempted")
  */
@@ -45,16 +44,31 @@ import {
 } from "../../provenance/build-events.mjs";
 
 /**
- * The call the task is about.
+ * The marker that separates carrying out the task from looking for it.
  *
- * Not any skill-bridge call: fetching the asset that documents the address is
- * itself a skill-bridge call, and counting it makes "the model read the
- * instructions" indistinguishable from "the model followed them". The task asks
- * for a *search* against the documented address, and both assets document that
- * endpoint — so the action pins the target and the host and port say which
- * asset was followed.
+ * The action alone is not enough. The task's *first* step is a search — for the
+ * asset that documents the address — so accepting any `skill/search` scores
+ * discovery as execution: search succeeds, reading the guidance asset fails,
+ * the address is never used, and the run passes.
+ *
+ * Both assets therefore specify this query value for the call the task is
+ * about, and both specify the same one, so it says "this is the task request"
+ * without saying which asset was followed. The host and port say that.
+ *
+ * It appears in neither the task description nor the system prompt, so a run
+ * that read no asset cannot produce it — and that run has not done the task,
+ * which is exactly what "no attempt" should mean here.
  */
-export const TARGET = /https?:\/\/(?:([\d.]+|localhost))(?::(\d+))?\/skill-bridge\/v3\/skill\/search\b/;
+export const TASK_MARKER = "team-bridge-reachability";
+
+/** The endpoint the assets document. */
+export const TARGET_URL = /https?:\/\/(?:([\d.]+|localhost))(?::(\d+))?\/skill-bridge\/v3\/skill\/search\b/;
+
+/** Was this command the task's request, rather than a search for the asset? */
+export function isTargetCommand(command) {
+  const cmd = String(command ?? "");
+  return TARGET_URL.test(cmd) && cmd.includes(TASK_MARKER);
+}
 
 export const PASS = "PASS";
 export const FAIL = "FAIL";
@@ -97,10 +111,23 @@ export function outcomeOfAttempt(resultText) {
   return { ok: null, why: "outcome not readable" };
 }
 
-/** Every attempt at the target address, in the order the model made them. */
+/**
+ * Every attempt at the target, in the order the model made them.
+ *
+ * Built from the **calls**, not from the results. Walking results only makes an
+ * attempt whose result was never captured invisible — so a run that succeeded
+ * once and then fired a second call at the wrong address, with that result
+ * missing, scored a clean PASS on the earlier success. The last thing the model
+ * did has to be in the list even when nothing is known about how it ended;
+ * that is what turns it into ERROR instead of silently restoring the previous
+ * verdict.
+ *
+ * Results are then attached by `call_id`. An attempt with no result carries
+ * `ok: null` — unknown, which is neither pass nor fail.
+ */
 export function attempts(captureEvents) {
-  const seen = new Set();
-  const found = [];
+  const calls = new Map();   // call_id -> attempt
+  const results = new Map(); // call_id -> result text
 
   const requests = captureEvents
     .filter((e) => e?.event === "http.request" && Array.isArray(e?.body?.json?.messages))
@@ -110,35 +137,62 @@ export function attempts(captureEvents) {
     const sessionKey = normalizeSessionKey(
       event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
     );
-    const msgs = event.body.json.messages;
-    msgs.forEach((message, index) => {
-      const isTool = message?.role === "tool";
-      const blocks = Array.isArray(message?.content) ? message.content : [];
-      const items = isTool
-        ? [{ callId: String(message.tool_call_id ?? ""), text: typeof message.content === "string" ? message.content : JSON.stringify(message.content ?? "") }]
-        : blocks.filter((b) => b?.type === "tool_result")
-            .map((b) => ({ callId: String(b.tool_use_id ?? ""), text: typeof b.content === "string" ? b.content : JSON.stringify(b.content ?? "") }));
 
-      for (const { callId, text } of items) {
-        const { command } = splitCommandAndOutput(text);
-        const m = TARGET.exec(command);
-        if (!m) continue;
-        const key = `${sessionKey}|${callId}|${index}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        found.push({
-          session_key: sessionKey,
-          call_id: callId,
-          message_index: index,
-          host: m[1] ?? "",
-          port: m[2] ?? "80",
-          endpoint: commandEndpoint(command),
-          ...outcomeOfAttempt(text),
+    event.body.json.messages.forEach((message, index) => {
+      for (const tc of Array.isArray(message?.tool_calls) ? message.tool_calls : []) {
+        const args = String(tc?.function?.arguments ?? JSON.stringify(tc?.input ?? ""));
+        if (!isTargetCommand(args)) continue;
+        const id = String(tc?.id ?? "");
+        if (calls.has(id)) continue; // messages accumulate; one call, one attempt
+        const m = TARGET_URL.exec(args);
+        calls.set(id, {
+          session_key: sessionKey, call_id: id, message_index: index,
+          host: m?.[1] ?? "", port: m?.[2] ?? "80",
+          endpoint: commandEndpoint(args),
         });
+      }
+
+      const blocks = Array.isArray(message?.content) ? message.content : [];
+      for (const block of blocks) {
+        if (block?.type === "tool_use") {
+          const args = JSON.stringify(block.input ?? "");
+          if (!isTargetCommand(args)) continue;
+          const id = String(block.id ?? "");
+          if (calls.has(id)) continue;
+          const m = TARGET_URL.exec(args);
+          calls.set(id, {
+            session_key: sessionKey, call_id: id, message_index: index,
+            host: m?.[1] ?? "", port: m?.[2] ?? "80",
+            endpoint: commandEndpoint(args),
+          });
+        } else if (block?.type === "tool_result") {
+          const id = String(block.tool_use_id ?? "");
+          if (!results.has(id)) {
+            results.set(id, typeof block.content === "string" ? block.content : JSON.stringify(block.content ?? ""));
+          }
+        }
+      }
+
+      if (message?.role === "tool") {
+        const id = String(message.tool_call_id ?? "");
+        if (!results.has(id)) {
+          results.set(id, typeof message.content === "string" ? message.content : JSON.stringify(message.content ?? ""));
+        }
       }
     });
   }
-  return found;
+
+  return [...calls.values()]
+    .sort((a, b) => a.message_index - b.message_index)
+    .map((attempt) => {
+      const text = results.get(attempt.call_id);
+      return {
+        ...attempt,
+        ...(text === undefined
+          ? { ok: null, why: "no result was captured for this call" }
+          : outcomeOfAttempt(text)),
+      };
+    });
 }
 
 /**
@@ -153,8 +207,8 @@ export function verify(captureEvents) {
   if (tried.length === 0) {
     return {
       verdict: ERROR,
-      reason: "no attempt at the target address — the task was never carried out, "
-        + "which is not the same as carrying it out and failing",
+      reason: `no request carrying the task marker (${TASK_MARKER}) — the task was `
+        + "never carried out, which is not the same as carrying it out and failing",
       attempts: tried,
     };
   }
@@ -186,7 +240,7 @@ export function verify(captureEvents) {
 export function render({ verdict, reason, attempts: tried }) {
   const lines = [`${verdict}  ${reason}`, ""];
   if (tried.length === 0) {
-    lines.push("  no call to the bridge address appears in the capture");
+    lines.push(`  no call carrying the task marker (${TASK_MARKER}) appears in the capture`);
   } else {
     lines.push(`  ${tried.length} attempt(s) at the target:`);
     for (const a of tried) {

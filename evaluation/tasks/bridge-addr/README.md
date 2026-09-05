@@ -83,7 +83,7 @@ description leaks one.
 | team | `team-5ezfoladb5` — created for this, holding these two assets and nothing else |
 | author | `agt-5e4hna56j9` / `usr-n68ea5ythq` |
 | consumer | `agt-5e0y4l8a7a` / `usr-4u07qc2kuj` |
-| frozen at | `2026-09-05T10:14:40Z`, 2 assets |
+| frozen at | `2026-09-05T15:07:26Z`, 2 assets at v2 |
 | ids | `pair.json` |
 
 All four prerequisites cleared: candidate-pool isolation, the bridge gate
@@ -125,11 +125,34 @@ verdict.** Four outcomes, each because an obvious rule gets it wrong:
 | target failed first, succeeded last | PASS | *"it never failed"* — retrying after an error is ordinary behaviour, and punishing it measures neatness |
 | never attempted, or the outcome is unreadable | ERROR, exit 2 | *"no success, so it failed"* — a run that never tried is not a run that tried and failed, and collapsing them turns a broken harness into evidence about the asset |
 
-The target is the **search** call, not any skill-bridge call. Reading the asset
-that documents the address is itself a bridge call, and counting it makes *"the
-model read the instructions"* indistinguishable from *"the model followed
-them"*. The action pins the target; the host and port say which asset was
-followed.
+### What counts as the task's request
+
+The target is a search **carrying the task marker** `team-bridge-reachability`,
+not any `skill/search`. Two things forced that:
+
+Reading the asset that documents the address is itself a bridge call, so
+matching on the URL alone makes *"the model read the instructions"*
+indistinguishable from *"the model followed them"*.
+
+And the task's **first step is a search** — for the asset. Matching on the
+action alone therefore scores discovery as execution: the search succeeds,
+reading the guidance asset fails, the address is never used, and the run passes.
+
+Both assets specify the same marker, so it says *this is the task request*
+without saying which asset was followed — the host and port say that. It is in
+neither the task description nor the system prompt, so a run that read no asset
+cannot produce it, and that run has not done the task.
+
+### Attempts come from the calls, not the results
+
+An attempt whose result was never captured is invisible if you walk results. A
+run that succeeded once and then fired at the wrong address, with that last
+result missing, scored a clean PASS on the earlier success. The list is built
+from the tool calls and results are attached by `call_id`; an attempt with no
+result is `ok: null`, and if it is the last one the verdict is ERROR.
+
+A missing result **in the middle** is a collection gap, not a failure — only the
+last attempt decides.
 
 Within one attempt three signals are read separately, because they disagree
 often enough to matter: the exit code, the HTTP status, and the envelope's own

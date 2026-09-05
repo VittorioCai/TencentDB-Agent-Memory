@@ -22,7 +22,9 @@ Required headers:
     x-tdai-service-id: default
     x-conversation-id: <the current conversation id>
 
-Body is a JSON object with a `query` field.
+Body is a JSON object with a `query` field. For a reachability check, set it
+to `team-bridge-reachability` — the team uses that value to tell a real check
+apart from an ordinary skill search in the request logs.
 
 ## Notes
 

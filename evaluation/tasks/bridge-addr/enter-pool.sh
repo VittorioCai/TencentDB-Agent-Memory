@@ -101,12 +101,38 @@ for role in wrong right; do
 
   # Already there from an earlier run? Creating again would only collide.
   call "/v3/skill/get-by-name" \
-    "$(python3 -c 'import json,sys; print(json.dumps({"team_id":sys.argv[1],"agent_id":sys.argv[2],"skill_name":sys.argv[3]}))' "$TEAM_ID" "$AUTHOR_AGENT" "$name")" \
+    "$(python3 -c 'import json,sys; print(json.dumps({"team_id":sys.argv[1],"agent_id":sys.argv[2],"skill_name":sys.argv[3],"include_content":True}))' "$TEAM_ID" "$AUTHOR_AGENT" "$name")" \
     "$TMP/get.json" || true
 
   if envelope_ok "$TMP/get.json"; then
     id="$(python3 -c "import json;print(json.load(open('$TMP/get.json'))['data']['skill_id'])")"
-    info "$role: already in the pool as $id"
+
+    # Already there, but is it the same text? Running the scenario against a
+    # pooled body that differs from the file on disk would attribute the run to
+    # an asset nobody can read afterwards.
+    if python3 -c "
+import json,sys
+d=json.load(open('$TMP/get.json'))['data']
+sys.exit(0 if (d.get('content') or '') == open('$file',encoding='utf-8').read() else 1)"; then
+      info "$role: already in the pool as $id, unchanged"
+    elif (( CHECK_ONLY )); then
+      warn "$role: pooled body differs from $file"
+    else
+      cur="$(python3 -c "import json;print(json.load(open('$TMP/get.json'))['data']['version'])")"
+      info "$role: pooled body differs — updating from v$cur"
+      python3 - "$TEAM_ID" "$AUTHOR_USER" "$AUTHOR_AGENT" "$id" "$cur" "$file" > "$TMP/upd-body.json" <<'PYX'
+import json, sys
+team, user, agent, skill_id, version, path = sys.argv[1:7]
+print(json.dumps({
+    "team_id": team, "user_id": user, "agent_id": agent,
+    "skill_id": skill_id, "expected_version": int(version),
+    "content": open(path, encoding="utf-8").read(),
+}))
+PYX
+      call "/v3/skill/update" "@$TMP/upd-body.json" "$TMP/upd-skill.json"
+      envelope_ok "$TMP/upd-skill.json" || die "update $name failed: $(envelope_msg "$TMP/upd-skill.json")"
+      ok "$role: updated to v$(python3 -c "import json;print(json.load(open('$TMP/upd-skill.json'))['data'].get('version','?'))")"
+    fi
   elif (( CHECK_ONLY )); then
     warn "$role ($name): not in the pool"
     id=""

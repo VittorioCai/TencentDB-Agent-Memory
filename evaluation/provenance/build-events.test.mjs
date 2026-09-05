@@ -495,3 +495,78 @@ test("a row is paired with its own request, not by arrival order", () => {
   assert.equal(hit.observation, "bridge+wire");
   assert.match(hit.proof_refs[0].ref, /13:09:00/);
 });
+
+test("a missing service row does not let one response take another's", () => {
+  // Delete the first record and the first response used to claim the second's
+  // row: one event got evidence from a call it never made, and the other was
+  // reported as a telemetry gap. Both wrong, and the second hid the first.
+  const capture = [{
+    event: "http.request",
+    headers: { "x-conversation-id": "conv-1" },
+    timestamp: "2026-09-04T13:06:00Z",
+    body: { json: { messages: [
+      { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c1", content:
+        "Command: curl -X POST " + GET_URL2 + " -d '{\"skill_id\":\"skl-alice\",\"include_content\":false}'\n"
+        + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":1}}' },
+      { role: "assistant", tool_calls: [{ id: "c2", function: { name: "Bash", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c2", content:
+        "Command: curl -X POST " + GET_URL2 + " -d '{\"skill_id\":\"skl-alice\",\"include_content\":true}'\n"
+        + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"body"}}' },
+    ] } },
+  }];
+
+  // Only the second call's row survives.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({
+      executed_endpoint: "get",
+      request_body: '{"skill_id":"skl-alice","include_content":true}',
+      timestamp: "2026-09-04T13:05:00Z",
+    })],
+    captureEvents: capture,
+  });
+
+  const v1 = events.find((e) => e.asset_version === 1);
+  const v2 = events.find((e) => e.asset_version === 2);
+
+  assert.equal(v1.observation, "wire_only", "the response whose row is missing stays unpaired");
+  assert.deepEqual(v1.proof_refs.map((r) => r.kind), ["capture_line"]);
+  assert.equal(v2.observation, "bridge+wire", "and the surviving row stays with its own request");
+  assert.match(v2.proof_refs[0].ref, /13:05:00/);
+
+  assert.equal(events.unpairedResponses.length, 1);
+  assert.match(events.unpairedResponses[0].note, /no service row carries this request/);
+});
+
+test("identical requests with a missing row are reported as ambiguous", () => {
+  // Two indistinguishable requests and one row: which response lost it cannot
+  // be decided, so it is reported rather than resolved by position.
+  const body = '{"skill_id":"skl-alice","include_content":true}';
+  const result = (id) => ({
+    role: "tool", tool_call_id: id,
+    content: "Command: curl -X POST " + GET_URL2 + " -d '" + body + "'\n"
+      + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"body"}}',
+  });
+
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ executed_endpoint: "get", request_body: body, timestamp: "2026-09-04T13:05:00Z" })],
+    captureEvents: [{
+      event: "http.request",
+      headers: { "x-conversation-id": "conv-1" },
+      timestamp: "2026-09-04T13:06:00Z",
+      body: { json: { messages: [
+        { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
+        result("c1"),
+        { role: "assistant", tool_calls: [{ id: "c2", function: { name: "Bash", arguments: "{}" } }] },
+        result("c2"),
+      ] } },
+    }],
+  });
+
+  assert.equal(events.filter((e) => e.asset_id === "skl-alice").length, 2);
+  assert.equal(events.unpairedResponses.length, 1);
+  assert.match(events.unpairedResponses[0].note, /cannot be decided/);
+  assert.match(renderSummary(summarize(events)), /could not be paired/);
+});

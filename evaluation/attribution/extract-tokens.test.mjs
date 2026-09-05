@@ -162,9 +162,17 @@ test("the right-address asset cannot document the endpoint already in the prompt
   );
   const original = readFileSync("evaluation/tasks/bridge-addr/assets/right.md", "utf8")
     .replace("127.0.0.1:47318", "127.0.0.1:8096");
+  // The sibling belongs in the corpus: constraint (c) is about the pool these
+  // two are in. Without it the shared task marker survives screening, and a
+  // value both assets carry cannot say which one was followed.
+  const sibling = readFileSync("evaluation/tasks/bridge-addr/assets/wrong.md", "utf8");
 
   assert.deepEqual(
-    discriminativeTokens(original, { "system prompt": systemPrompt, "own name/description": ownMetadata(original) }),
+    discriminativeTokens(original, {
+      "system prompt": systemPrompt,
+      sibling,
+      "own name/description": ownMetadata(original),
+    }),
     [],
   );
 });

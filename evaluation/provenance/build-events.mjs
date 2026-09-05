@@ -380,6 +380,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
 
   const events = [];
   const offeredNotRetrieved = [];
+  const unpairedResponses = [];
 
   for (const [assetId, sessions] of mentions) {
     const asset = byId.get(assetId);
@@ -410,21 +411,50 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         continue;
       }
 
-      // Pair each response with the service row for the same request. Matching
-      // on the request payload rather than on order, because order only holds
-      // when nothing was dropped, and a dropped row is exactly the case where
-      // the pairing matters.
-      const consumed = new Set();
+      // Pair each response with the service row for the same request, matched
+      // on the request payload.
+      //
+      // There is deliberately no fallback to "any row not yet used". That
+      // fallback is worse than no pairing at all: drop the first service record
+      // and the first response takes the second's row, so one event gets
+      // evidence from a call it did not make and the other is reported as a
+      // telemetry gap. Both statements are wrong, and the second one hides the
+      // first. An unmatched response is left unmatched — a missing row is a
+      // hole in the tap, and saying so is the point.
+      const rowsByPayload = new Map();
+      for (const r of targetedRows) {
+        const key = normalizeJson(r.requestBody);
+        if (!rowsByPayload.has(key)) rowsByPayload.set(key, []);
+        rowsByPayload.get(key).push(r);
+      }
+      for (const rows of rowsByPayload.values()) {
+        rows.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+      }
+
       const rowFor = (response) => {
-        const exact = targetedRows.find((r, i) => !consumed.has(i)
-          && response.requestPayload && normalizeJson(r.requestBody) === response.requestPayload
-          && (consumed.add(i) || true));
-        if (exact) return exact;
-        const idx = targetedRows.findIndex((_, i) => !consumed.has(i));
-        if (idx < 0) return null;
-        consumed.add(idx);
-        return targetedRows[idx];
+        const rows = rowsByPayload.get(response.requestPayload);
+        return rows && rows.length > 0 ? rows.shift() : null;
       };
+
+      // Identical requests are indistinguishable, so when their counts do not
+      // match there is no way to say which response lost its row. Report the
+      // ambiguity rather than resolving it by position.
+      const responsesByPayload = new Map();
+      for (const r of bucket.responses) {
+        responsesByPayload.set(r.requestPayload, (responsesByPayload.get(r.requestPayload) ?? 0) + 1);
+      }
+      for (const [payload, count] of responsesByPayload) {
+        const rows = (targetedRows.filter((r) => normalizeJson(r.requestBody) === payload)).length;
+        if (rows !== count) {
+          unpairedResponses.push({
+            asset_id: assetId, session_key: sessionKey,
+            responses: count, service_rows: rows,
+            note: count > 1 || rows > 1
+              ? "identical requests: which response lost its row cannot be decided"
+              : "no service row carries this request",
+          });
+        }
+      }
 
       for (const response of bucket.responses) {
         const row = rowFor(response);
@@ -551,6 +581,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
   }
 
   events.offeredNotRetrieved = offeredNotRetrieved;
+  events.unpairedResponses = unpairedResponses;
   return events;
 }
 
@@ -577,6 +608,7 @@ export function summarize(events) {
     excludedBySnapshot: excluded,
     crossUserRate: attributable > 0 ? counts.cross_user / attributable : null,
     offeredNotRetrieved: events.offeredNotRetrieved ?? [],
+    unpairedResponses: events.unpairedResponses ?? [],
   };
 }
 
@@ -617,6 +649,13 @@ export function renderSummary(s) {
     lines.push("Offered, not fetched. These are **not** written as `fetched` — appearing in a");
     lines.push("listing is the retrieval system doing its job, not the model taking the content.");
     lines.push("They are recorded as `recalled` / `injected` by build-early-events.mjs.");
+  }
+  const unpaired = s.unpairedResponses ?? [];
+  if (unpaired.length > 0) {
+    lines.push("", `${unpaired.length} response(s) could not be paired with a service-side row:`);
+    for (const u of unpaired) lines.push(`  - ${u.asset_id}: ${u.responses} response(s), ${u.service_rows} row(s) — ${u.note}`);
+    lines.push("Left unpaired rather than matched by position. Borrowing another call's row");
+    lines.push("would give one event evidence it did not earn and report the other as a gap.");
   }
   if (s.excludedBySnapshot > 0) {
     lines.push("", `${s.excludedBySnapshot} event(s) excluded: asset created after the pool was frozen (answer-leak guard).`);
