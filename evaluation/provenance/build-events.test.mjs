@@ -624,3 +624,62 @@ test("identical requests with matching counts do pair, in call order", () => {
   assert.match(hits[1].proof_refs[0].ref, /13:07:00/);
   assert.deepEqual(events.unpairedResponses, []);
 });
+
+test("a row whose body the proxy augmented with identity still pairs", () => {
+  // The exact shape from the real injector-probe run: the model wrote
+  // {skill_name, include_content, include_manifest}; the service row is that
+  // plus team_id/agent_id/user_id. An exact-string compare misses it and
+  // reports a telemetry gap that is not real.
+  const modelBody = '{"skill_name":"deploy-conventions","include_content":true,"include_manifest":true}';
+  const rowBody = '{"skill_name":"deploy-conventions","include_content":true,"include_manifest":true,'
+    + '"team_id":"team-eval","agent_id":"agt-alice","user_id":"usr-alice"}';
+
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ executed_endpoint: "get-by-name", request_body: rowBody, timestamp: "2026-09-04T13:05:00Z" })],
+    captureEvents: [curlResult("conv-1", {
+      url: "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name",
+      body: modelBody,
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":3,"content":"# Deploy\\nuse 10.244.7.19"}}',
+    })],
+  });
+
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.observation, "bridge+wire", "the row pairs despite the added identity fields");
+  assert.match(hit.proof_refs[0].ref, /13:05:00/);
+  assert.deepEqual(events.unpairedResponses, []);
+});
+
+test("key order in the request body does not affect pairing", () => {
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({
+      executed_endpoint: "get",
+      request_body: '{"include_content":true,"skill_id":"skl-alice"}',  // reversed
+      timestamp: "2026-09-04T13:05:00Z",
+    })],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL2,
+      body: '{"skill_id":"skl-alice","include_content":true}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"body"}}',
+    })],
+  });
+  assert.equal(events.find((e) => e.asset_id === "skl-alice").observation, "bridge+wire");
+});
+
+test("identity augmentation does not merge two genuinely different calls", () => {
+  // Stripping identity must not make a get-by-name for A look like one for B.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [
+      bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-alice","team_id":"t","agent_id":"a"}', timestamp: "2026-09-04T13:05:00Z" }),
+      bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-late","team_id":"t","agent_id":"a"}', timestamp: "2026-09-04T13:06:00Z" }),
+    ],
+    captureEvents: [
+      curlResult("conv-1", { url: GET_URL2, body: '{"skill_id":"skl-alice"}', stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":3,"content":"a body"}}' }),
+    ],
+  });
+  const alice = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(alice.observation, "bridge+wire");
+  assert.match(alice.proof_refs[0].ref, /13:05:00/, "paired with skl-alice's row, not skl-late's");
+});

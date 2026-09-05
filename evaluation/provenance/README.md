@@ -173,3 +173,20 @@ that is what the command is for — and the payload only from stdout.
 
 Both are the same shape as the three false positives the fetch judge fell for:
 the text looks related. Each has a test holding it shut.
+
+## The proxy augments the request body
+
+A service-side `bridge_call` row records the request body **as the bridge
+forwarded it** — the model's body plus the identity the proxy injects from the
+session (`user_id` / `team_id` / `agent_id`, and routing fields). The model
+never writes those. So pairing a captured response to its service row on an
+exact string match of the body always fails, and the real injector-probe run
+showed the cost: two genuine `get-by-name` reads reported `wire_only` with "no
+service row" while their rows sat in the log.
+
+Pairing now canonicalises both sides — parse, sort keys at every depth, drop the
+proxy-injected identity keys — before comparing. The fields that tell one call
+from another (`skill_id`, `skill_name`, `include_content`) are all kept, and
+within a session identity is constant, so this cannot merge calls that were
+really distinct. It is a defined normalisation, not the positional fallback that
+was removed earlier.

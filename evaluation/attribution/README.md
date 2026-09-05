@@ -204,3 +204,31 @@ matters.
 judge` and asserts on the final verdict. The unit tests either side of it feed
 the judge events built by hand, so they check its rules but never the events it
 will actually receive — and that gap is precisely where this defect lived.
+
+## Offered is not fetched: the snippet screen
+
+A `skill_search` result carries a `snippet` — an FTS window cut from the asset's
+`content` column. So a discriminative token can reach the model **without any
+full-text fetch**, as part of a search result it was offered.
+
+The first real run proved this is not hypothetical, and proved it asymmetrically:
+across one B session, `47318` (the right asset's port) came back in **13**
+search snippets, while `10.244.7.19` (the wrong asset's address) came back in
+**none**. Nothing about the design guarantees which tokens a snippet window will
+include.
+
+So the judge screens each token against the search snippets that reached the
+model **before** the operation. If the token was in one, the use cannot be told
+apart from having read the snippet, and the event stops at `needs_review` — a
+full fetch may also have happened, but the token no longer isolates it. This is
+the same principle as screening against the system prompt, applied to content
+the run itself surfaced.
+
+`collect-artifacts.mjs` records `offered_content` (every search/list result body
+with the message index it arrived at) so the judge can screen only what
+preceded each operation.
+
+One consequence worth stating plainly: because `47318` leaks into snippets, the
+mainline right-asset `used` case is provable **only** in runs where no snippet
+carried it. Making that token snippet-safe would need another pool re-freeze and
+is left as a scenario decision rather than done silently.

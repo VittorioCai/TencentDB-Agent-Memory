@@ -40,13 +40,32 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { normalizeSessionKey, parseJsonl, splitCommandAndOutput } from "../provenance/build-events.mjs";
+import {
+  normalizeSessionKey,
+  parseJsonl,
+  splitCommandAndOutput,
+  commandEndpoint,
+  isListingAction,
+} from "../provenance/build-events.mjs";
 
 /** Commands that run a check rather than change something. */
 const TEST_COMMAND = /\b(npm|pnpm|yarn)\s+(run\s+)?test\b|\bnode\s+--test\b|\bpytest\b|\bgo\s+test\b|\bcargo\s+test\b|\bvitest\b|\bjest\b|verify[\w-]*\.sh\b/;
 
 function textOf(content) {
   return typeof content === "string" ? content : JSON.stringify(content ?? "");
+}
+
+/** Tool results in one captured request, each with the message index it sat at. */
+function toolResults(body) {
+  const out = [];
+  const msgs = Array.isArray(body?.messages) ? body.messages : [];
+  msgs.forEach((message, index) => {
+    if (message?.role === "tool") out.push({ index, text: textOf(message.content) });
+    for (const block of Array.isArray(message?.content) ? message.content : []) {
+      if (block?.type === "tool_result") out.push({ index, text: textOf(block.content) });
+    }
+  });
+  return out;
 }
 
 /**
@@ -176,6 +195,29 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
     }
   }
 
+  // What the model was *offered* without fetching: the body of every search /
+  // list result. A discriminative token that appears in one of these reached
+  // the model as a snippet, not through a full-content read — so a later use of
+  // it cannot be told apart from having read the snippet. Kept with the message
+  // index it arrived at, so the judge can screen only what preceded an
+  // operation. Confirmed necessary by the real run: `47318` came back in 13
+  // search snippets while `10.244.7.19` came back in none.
+  const offeredBySession = new Map();
+  for (const event of requests) {
+    const sessionKey = normalizeSessionKey(
+      event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
+    );
+    for (const { index, text } of toolResults(event.body.json)) {
+      const { command, output } = splitCommandAndOutput(text);
+      const endpoint = commandEndpoint(command);
+      if (!endpoint || !isListingAction(endpoint) || !output) continue;
+      if (!offeredBySession.has(sessionKey)) offeredBySession.set(sessionKey, new Map());
+      const byIndex = offeredBySession.get(sessionKey);
+      // First arrival of a given result is when it was offered.
+      if (!byIndex.has(index)) byIndex.set(index, { message_index: index, endpoint, text: output });
+    }
+  }
+
   const sessions = [];
   for (const [sessionKey, store] of bySession) {
     const operations = [];
@@ -239,6 +281,8 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
       task_description: taskDescription,
       pre_change_files: preChangeFiles,
       diff,
+      offered_content: [...(offeredBySession.get(sessionKey)?.values() ?? [])]
+        .sort((a, b) => a.message_index - b.message_index),
       operations,
       test_commands: operations.filter((o) => o.kind === "test_command").map((o) => o.locus),
       tool_call_args: operations.filter((o) => o.kind !== "diff_hunk").map((o) => o.text),

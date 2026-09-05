@@ -107,7 +107,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 158 tests across the six directories.
+Full suite: 164 tests across the six directories.
 
 Each directory has its own README with the details.
 

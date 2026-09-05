@@ -69,6 +69,7 @@ function run(over = {}) {
     session_key: "sess-1",
     task_description: "Reach the team's skill bridge and report what it returns.",
     pre_change_files: {},
+    offered_content: [],
     operations: [operation()],
     ...over,
   };
@@ -359,4 +360,48 @@ test("a needs_review event borrows nothing from a fetch it was not credited with
   assert.equal(e.upstream_status, 0);
   assert.deepEqual(e.parent_event_ids, []);
   assert.equal(e.proof_refs.length, 1, "only the operation, not the fetch's proof");
+});
+
+// ── snippet leakage: offered is not fetched ───────────────────────
+
+test("a token delivered by a search snippet before use is not hard evidence", () => {
+  // The real run's asymmetry: 47318 came back in a search snippet, 10.244.7.19
+  // did not. A used judgement on 47318 would credit a full-text fetch it cannot
+  // separate from the model having read the snippet.
+  const { events } = judge(
+    [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
+    }),
+    { "skl-right": { version: 1, tokens: ["47318"] } },
+  );
+
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /in a search snippet .* before this operation/);
+});
+
+test("a token that never appeared in a snippet still reaches used", () => {
+  // The control, and the asymmetry: 10.244.7.19 was in no snippet, so a real
+  // fetch of it before use is still hard evidence.
+  const { events } = judge(
+    [fetched({ context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6 })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-wrong","snippet":"eval-bridge-endpoint-a"}]}' }],
+    }),
+  );
+  assert.equal(events[0].state, "used");
+});
+
+test("a snippet that arrives after the operation does not block it", () => {
+  // Only exposure that preceded the use matters.
+  const { events } = judge(
+    [fetched({ context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6 })],
+      offered_content: [{ message_index: 9, endpoint: "skill:search", text: "reach it at 10.244.7.19" }],
+    }),
+  );
+  assert.equal(events[0].state, "used");
 });

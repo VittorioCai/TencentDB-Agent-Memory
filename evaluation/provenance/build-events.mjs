@@ -232,8 +232,47 @@ function toolResultsOf(body) {
 }
 
 /** Canonical form of a JSON blob, so two spellings of one body compare equal. */
-function normalizeJson(text) {
-  try { return JSON.stringify(JSON.parse(String(text ?? ""))); } catch { return String(text ?? "").trim(); }
+/**
+ * Keys the proxy adds to a request body on the way through. The model never
+ * writes these; the bridge injects identity from the session (skill-bridge.ts:
+ * user_id / team_id / agent_id, plus routing fields). So the service-side
+ * `request_body` is the model's body *plus* these, and an exact-string compare
+ * against what the model wrote never matches. That is what left A's two
+ * get-by-name calls reporting wire_only with "no service row" when the rows
+ * were right there.
+ */
+const PROXY_INJECTED_KEYS = new Set([
+  "user_id", "team_id", "agent_id", "task_id", "space_id", "service_id",
+]);
+
+/**
+ * Canonical form of a request body for matching: parsed, keys sorted at every
+ * depth, and the proxy-injected identity fields dropped from the top level.
+ *
+ * Dropping them is a defined normalisation, not a loosening — the fields that
+ * distinguish one call from another (skill_id, skill_name, include_content)
+ * are all kept, so two different requests still differ. Within one session the
+ * identity is constant, so removing it cannot merge calls that were really
+ * distinct.
+ */
+function canonicalRequest(text) {
+  let obj;
+  try { obj = JSON.parse(String(text ?? "")); } catch { return String(text ?? "").trim(); }
+  const sort = (v) => {
+    if (Array.isArray(v)) return v.map(sort);
+    if (v && typeof v === "object") {
+      const out = {};
+      for (const k of Object.keys(v).sort()) out[k] = sort(v[k]);
+      return out;
+    }
+    return v;
+  };
+  if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+    const kept = {};
+    for (const k of Object.keys(obj)) if (!PROXY_INJECTED_KEYS.has(k)) kept[k] = obj[k];
+    obj = kept;
+  }
+  return JSON.stringify(sort(obj));
 }
 
 /** The `-d '…'` payload a curl command carried, for pairing with a service row. */
@@ -241,7 +280,7 @@ export function requestPayloadOf(command) {
   const m = /-d\s+'([\s\S]*?)'(?:\s|$)/.exec(String(command ?? ""))
     ?? /-d\s+"([\s\S]*?)"(?:\s|$)/.exec(String(command ?? ""));
   if (!m) return "";
-  try { return JSON.stringify(JSON.parse(m[1])); } catch { return m[1].trim(); }
+  return canonicalRequest(m[1]);
 }
 
 /**
@@ -428,7 +467,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
       // somewhere else entirely.
       const rowsByPayload = new Map();
       for (const r of targetedRows) {
-        const key = normalizeJson(r.requestBody);
+        const key = canonicalRequest(r.requestBody);
         if (!rowsByPayload.has(key)) rowsByPayload.set(key, []);
         rowsByPayload.get(key).push(r);
       }

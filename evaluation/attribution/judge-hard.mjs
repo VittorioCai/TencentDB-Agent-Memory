@@ -149,6 +149,8 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
   const task = String(artifacts?.task_description ?? "");
   const preChange = Object.entries(artifacts?.pre_change_files ?? {});
   const fetches = events.filter(isContentBearingFetch);
+  // Content the model was offered without fetching: search / list snippets.
+  const offered = artifacts?.offered_content ?? [];
 
   for (const [assetId, entry] of Object.entries(tokensByAsset ?? {})) {
     const { version: tokenVersion, tokens } = tokenSet(entry);
@@ -164,6 +166,17 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
 
         const searching = op.kind !== "diff_hunk" && SEARCH_COMMAND.test(String(op.text ?? ""));
 
+        // Was this exact token handed to the model in a search snippet before
+        // the operation? If so, using it cannot distinguish reading the snippet
+        // from fetching the body — the snippet already carried it. A full fetch
+        // may also have happened, but the token is no longer clean evidence of
+        // it, so this stops at needs_review rather than crediting a fetch it
+        // cannot separate from an offer. The real run showed this is not
+        // hypothetical: `47318` came back in a snippet, `10.244.7.19` did not.
+        const snippetLeak = offered.find((o) =>
+          (op.message_index == null || o.message_index < op.message_index)
+          && String(o.text ?? "").includes(token));
+
         // Only a fetch of the revision these tokens came from may be credited.
         // A token that exists only in v1 must not be attributed to a later read
         // of v2 merely because that read is the most recent one.
@@ -178,6 +191,8 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
 
         const blocked = searching
           ? "the token appears in a search command — the model was looking for it, not using it"
+          : snippetLeak
+            ? `the token was in a search snippet (message ${snippetLeak.message_index}) before this operation, so its use cannot be told apart from reading that snippet`
           : op.message_index == null
             ? "a diff has no position in the run, so it cannot show the asset was read before the change was made"
             : !fetch && tokenVersion == null
