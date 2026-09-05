@@ -113,6 +113,27 @@ recreate() {
   die "container did not become healthy; see: docker logs $CONTAINER"
 }
 
+# Is the image's copy of a file the version this branch patched from?
+#
+# Compared against the newest committed version that LACKS the patch marker —
+# not against HEAD. Once the patch is committed, HEAD contains it, and a guard
+# that diffs the image against HEAD refuses precisely when it should allow.
+# That is exactly what happened on the first enable after the bridge commit.
+#   $1 in-image path   $2 repo-relative path   $3 marker string
+image_matches_prepatch() {
+  local tmp; tmp="$(mktemp)"
+  if ! docker cp "$CONTAINER:$1" "$tmp" 2>/dev/null; then rm -f "$tmp"; return 0; fi
+  if grep -q "$3" "$tmp"; then rm -f "$tmp"; return 0; fi   # already the patched file (mounted)
+  local c
+  for c in $(git -C "$REPO_ROOT" log --format=%H -- "$2"); do
+    if ! git -C "$REPO_ROOT" show "$c:$2" 2>/dev/null | grep -q "$3"; then
+      if git -C "$REPO_ROOT" show "$c:$2" | diff -q - "$tmp" >/dev/null; then rm -f "$tmp"; return 0; fi
+      break   # newest unpatched version found, and the image is not it
+    fi
+  done
+  rm -f "$tmp"; return 1
+}
+
 case "${1:-status}" in
   enable)
     [[ -f "$PATCHED_SRC" ]] || die "patched injector not found: $PATCHED_SRC"
@@ -120,33 +141,23 @@ case "${1:-status}" in
       || die "$PATCHED_SRC carries no candidate-log patch — nothing to enable"
 
     # The mount only holds if the rest of the file matches what the image ships.
-    docker cp "$CONTAINER:$IN_IMAGE_SRC" /tmp/tdai-injector-in-image.ts 2>/dev/null || true
-    if [[ -f /tmp/tdai-injector-in-image.ts ]] \
-       && ! grep -q "TDAI_CANDIDATE_LOG" /tmp/tdai-injector-in-image.ts; then
-      if ! git -C "$REPO_ROOT" show "HEAD:MemoryProxy/src/injection/injectors/skill-injector.ts" \
-           | diff -q - /tmp/tdai-injector-in-image.ts >/dev/null; then
-        echo "[warn] the image's injector differs from HEAD by more than this patch;"
-        echo "[warn] mounting one file over it could mix two versions. Inspect before proceeding:"
-        echo "       docker cp $CONTAINER:$IN_IMAGE_SRC /tmp/img.ts && diff /tmp/img.ts $PATCHED_SRC"
-        die "refusing to enable"
-      fi
-    fi
+    image_matches_prepatch "$IN_IMAGE_SRC" "MemoryProxy/src/injection/injectors/skill-injector.ts" "TDAI_CANDIDATE_LOG" || {
+      echo "[warn] the image's injector is not the version this patch was made from;"
+      echo "[warn] mounting one file over it could mix two versions. Inspect before proceeding:"
+      echo "       docker cp $CONTAINER:$IN_IMAGE_SRC /tmp/img.ts && diff /tmp/img.ts $PATCHED_SRC"
+      die "refusing to enable"
+    }
 
     # Same parity guard for the bridge: mounting one file over the image's copy
     # is only safe if the image's copy is what this branch started from.
     [[ -f "$BRIDGE_SRC" ]] || die "patched bridge not found: $BRIDGE_SRC"
     grep -q "READ_VISIBILITY_OPS" "$BRIDGE_SRC" \
       || die "$BRIDGE_SRC carries no read-visibility patch — nothing to enable"
-    docker cp "$CONTAINER:$IN_IMAGE_BRIDGE" /tmp/tdai-bridge-in-image.ts 2>/dev/null || true
-    if [[ -f /tmp/tdai-bridge-in-image.ts ]] \
-       && ! grep -q "READ_VISIBILITY_OPS" /tmp/tdai-bridge-in-image.ts; then
-      if ! git -C "$REPO_ROOT" show "HEAD:MemoryProxy/src/skill/skill-bridge.ts" \
-           | diff -q - /tmp/tdai-bridge-in-image.ts >/dev/null; then
-        echo "[warn] the image's skill-bridge.ts differs from HEAD by more than this patch;"
-        echo "       docker cp $CONTAINER:$IN_IMAGE_BRIDGE /tmp/img.ts && diff /tmp/img.ts $BRIDGE_SRC"
-        die "refusing to enable"
-      fi
-    fi
+    image_matches_prepatch "$IN_IMAGE_BRIDGE" "MemoryProxy/src/skill/skill-bridge.ts" "READ_VISIBILITY_OPS" || {
+      echo "[warn] the image's skill-bridge.ts is not the version this patch was made from;"
+      echo "       docker cp $CONTAINER:$IN_IMAGE_BRIDGE /tmp/img.ts && diff /tmp/img.ts $BRIDGE_SRC"
+      die "refusing to enable"
+    }
 
     if [[ -f "$RIGHT_ASSET" ]] && ! grep -q ":$SCENARIO_PORT" "$RIGHT_ASSET"; then
       die "right.md does not document port $SCENARIO_PORT — publishing it would make the scenario unreachable"
