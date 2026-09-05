@@ -113,24 +113,41 @@ recreate() {
   die "container did not become healthy; see: docker logs $CONTAINER"
 }
 
-# Is the image's copy of a file the version this branch patched from?
+# Is it safe to mount our patched file over the image's copy?
 #
-# Compared against the newest committed version that LACKS the patch marker —
-# not against HEAD. Once the patch is committed, HEAD contains it, and a guard
-# that diffs the image against HEAD refuses precisely when it should allow.
-# That is exactly what happened on the first enable after the bridge commit.
+# Safe means the image's copy is a version this repo's history knows — so our
+# HEAD file is a forward move, not a clobber of newer work that only exists in
+# the image. The check is therefore: does the image file match the committed
+# blob of that path at ANY commit? If yes, allow.
+#
+# This replaces an earlier rule that compared against HEAD (which refuses once
+# the patch is committed, since HEAD then contains it) and then against "the
+# newest unpatched commit" (correct in principle but order-sensitive and, in
+# practice, refused a stock image it should have allowed). "Matches any
+# historical version" is strictly simpler and cannot misfire that way.
+#
+# On refusal it prints what it compared, so a future refusal is diagnosable
+# without another round trip.
 #   $1 in-image path   $2 repo-relative path   $3 marker string
 image_matches_prepatch() {
+  local inimage="$1" path="$2" marker="$3"
   local tmp; tmp="$(mktemp)"
-  if ! docker cp "$CONTAINER:$1" "$tmp" 2>/dev/null; then rm -f "$tmp"; return 0; fi
-  if grep -q "$3" "$tmp"; then rm -f "$tmp"; return 0; fi   # already the patched file (mounted)
+  if ! docker cp "$CONTAINER:$inimage" "$tmp" 2>/dev/null; then
+    rm -f "$tmp"; return 0   # nothing in the image to clobber
+  fi
+  if grep -q "$marker" "$tmp"; then rm -f "$tmp"; return 0; fi  # already our patched file (mounted)
+
   local c
-  for c in $(git -C "$REPO_ROOT" log --format=%H -- "$2"); do
-    if ! git -C "$REPO_ROOT" show "$c:$2" 2>/dev/null | grep -q "$3"; then
-      if git -C "$REPO_ROOT" show "$c:$2" | diff -q - "$tmp" >/dev/null; then rm -f "$tmp"; return 0; fi
-      break   # newest unpatched version found, and the image is not it
+  for c in $(git -C "$REPO_ROOT" log --format=%H -- "$path"); do
+    if git -C "$REPO_ROOT" show "$c:$path" 2>/dev/null | diff -q - "$tmp" >/dev/null 2>&1; then
+      rm -f "$tmp"; return 0
     fi
   done
+
+  echo "[warn] the image's $path matches no committed version of that file."
+  echo "[warn] mounting our copy could clobber changes that live only in the image."
+  echo "[warn] image sha256: $(shasum -a 256 "$tmp" | cut -c1-16)  ($(wc -l < "$tmp" | tr -d ' ') lines)"
+  echo "[warn] inspect: docker cp $CONTAINER:$inimage /tmp/img.ts && git -C $REPO_ROOT diff --no-index /tmp/img.ts $REPO_ROOT/$path"
   rm -f "$tmp"; return 1
 }
 
