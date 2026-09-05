@@ -236,10 +236,40 @@ json.dump({
 }, open(out, "w", encoding="utf-8"), indent=2)
 PY
 
+# ── 5b. the identity the proxy actually resolved ─────────────────
+# Read from the proxy's own session-init log, never inferred from request
+# headers. The two disagree by design: in -p mode CodeBuddy forwards the
+# binding headers from codebuddy-binding.env (the old gate0 ids), and the
+# proxy's debugForceIdentity overrides them. A capture therefore shows the old
+# team in its headers while the session ran as the forced consumer — and
+# reading the headers nearly had a valid run thrown out as mis-bound. The
+# "→ initialized" line is what the session was; that is what gets recorded.
+CONV_ID="$(python3 - "$CAPTURE" <<'PY'
+import json, sys
+for line in open(sys.argv[1], encoding="utf-8"):
+    try: e = json.loads(line)
+    except ValueError: continue
+    if e.get("event") != "http.request": continue
+    h = e.get("headers") or {}
+    c = h.get("x-conversation-id") or h.get("X-Conversation-Id")
+    if c: print(c); break
+PY
+)"
+RESOLVED_LINE=""
+if [[ -n "$CONV_ID" ]]; then
+  RESOLVED_LINE="$(docker logs tdai-proxy 2>&1 | grep -F "session=codebuddy:$CONV_ID" | grep -F "→ initialized" | tail -1 || true)"
+fi
+if [[ -n "$RESOLVED_LINE" ]]; then
+  printf '%s\n' "$RESOLVED_LINE" > "$RUN_DIR/resolved-identity.txt"
+  info "identity per proxy log: $(sed -E 's/.*→ initialized //' <<<"$RESOLVED_LINE")"
+else
+  warn "could not find this session's '→ initialized' line in the proxy log; identity unverified"
+fi
+
 # ── 6. manifest ──────────────────────────────────────────────────
-python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" <<'PY'
-import json, os, sys
-run_dir, run_id, label, identity, started, verdict = sys.argv[1:7]
+python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" <<'PY'
+import json, os, re, sys
+run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line = sys.argv[1:9]
 
 def count(name):
     p = os.path.join(run_dir, name)
@@ -247,10 +277,24 @@ def count(name):
         return None
     return sum(1 for line in open(p, encoding="utf-8") if line.strip())
 
+# Parse "→ initialized agent=… task=… team=… user=…" into fields. Absent line
+# → nulls, never a guess from the request headers.
+resolved = {k: None for k in ("agent_id", "team_id", "user_id", "task_id")}
+if resolved_line:
+    for key, field in (("agent", "agent_id"), ("team", "team_id"), ("user", "user_id"), ("task", "task_id")):
+        m = re.search(rf"\b{key}=(\S+)", resolved_line)
+        if m:
+            resolved[field] = m.group(1)
+
 manifest = {
     "run_id": run_id,
     "label": label,
     "identity": identity,
+    "conversation_id": conv_id or None,
+    # What the proxy actually bound this session to. Null fields mean the log
+    # line was not found, not that identity was absent.
+    "resolved_identity": resolved,
+    "resolved_identity_source": "proxy session-init log" if resolved_line else None,
     "started_at": started,
     "verdict": verdict,
     "counts": {n: count(n) for n in

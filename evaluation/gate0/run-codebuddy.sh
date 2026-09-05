@@ -85,12 +85,24 @@ HEADERS=(
 # PROXY_FORCE_AGENT_ID / PROXY_FORCE_TASK_ID in .env and restart the proxy.
 # Without that, interactive mode stalls on the session-init form.
 #
-# The `-p` single-prompt mode works with either binding route (headers first,
-# force identity as fallback).
+# In `-p` mode the `-H` headers ARE forwarded — and debugForceIdentity still
+# wins over them. Verified from the proxy's own session-init log on a real run:
+# headers carried the old gate0 binding, the log read "DEBUG bypass — force
+# identity team=… agent=…" and initialized the forced identity. So the headers
+# below are a fallback for a proxy with no forced identity, nothing more. The
+# resolved identity is always the proxy log's `→ initialized` line, never the
+# request headers; run-once.sh records that line per run.
+#
+# `-y` (--dangerously-skip-permissions): a `-p` run has nobody to approve tool
+# calls, so without it every Bash call is denied and the model — correctly —
+# reports that it could not carry out the task. That produced a whole run
+# whose only content was permission errors. The flag is the non-interactive
+# equivalent of the approval a person gives in the TUI; this harness runs a
+# task the operator wrote, against local endpoints, so that is the intent.
 
 if (( $# > 0 )); then
-  ok "single-prompt mode"
-  exec codebuddy -p --model "$CB_MODEL" "$*" "${HEADERS[@]}"
+  ok "single-prompt mode (permissions bypassed: no one is present to approve)"
+  exec codebuddy -p -y --model "$CB_MODEL" "$*" "${HEADERS[@]}"
 fi
 
 if ! grep -q "debugForceIdentity" "$SCRIPT_DIR/../../deploy/global-images/.proxy-config/config.yaml" 2>/dev/null; then
