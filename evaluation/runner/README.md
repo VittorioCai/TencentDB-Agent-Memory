@@ -20,6 +20,36 @@ Raw inputs are kept from the **first** run, not once the pipeline looks
 finished. A run whose capture was not saved cannot be re-judged when the judge
 changes, and the judge is going to change — it has changed four times already.
 
+## Before the first run
+
+Three things must be true, and two fail silently — the run finishes, the files
+are written, and what they contain is empty or wrong:
+
+1. **The probe must be running and the proxy must route through it.** The
+   proxy's upstream points straight at the model by default, so nothing is
+   captured. Where the probe sits matters too: between client and proxy it
+   recorded a system prompt with zero asset blocks while the proxy's own log
+   showed several injected on every turn. Both readings were honest — injection
+   happens inside the proxy, so the probe goes above it.
+2. **`debugForceIdentity` overrides the request headers.** Switching the API key
+   is not enough: the injector lists skills for the *forced* agent, so an
+   injector probe run as the author while the config still forces the consumer
+   sees the consumer's empty block — and the result reads as "the injector path
+   produced nothing" when it was never asked.
+3. The candidate log and the scenario port must be on.
+
+`prepare.sh` does all three:
+
+```bash
+bash evaluation/runner/prepare.sh --identity b   # mainline, consumer
+bash evaluation/runner/prepare.sh --identity a   # injector probe, author
+bash evaluation/runner/prepare.sh --status
+bash evaluation/runner/prepare.sh --teardown     # probe off, upstream restored
+```
+
+Start a **fresh** CodeBuddy session afterwards: the skill listing runs once at
+session init, so an already-open session records no candidates.
+
 ```bash
 bash evaluation/runner/run-once.sh --label gate-off
 bash evaluation/runner/run-once.sh --label gate-on
@@ -52,3 +82,13 @@ under `artifacts/` and the run copies from there, so without clearing, a stage
 that fails leaves the previous run's file in place and it gets copied in — a
 step that could not run producing output that looks like it did, which is the
 failure this whole tree exists to prevent.
+
+## The capture is cleared per run
+
+The probe appends. Without clearing, run N's capture contains runs 1..N, and
+every count, cost figure and attribution in that run would be about a mixture of
+sessions. `run-once.sh` truncates it before the session and keeps whatever was
+there as `capture-before.jsonl` rather than deleting it.
+
+An empty capture afterwards is a hard error, not an empty result: it means the
+probe saw no traffic, which is a fact about the wiring and not about the run.

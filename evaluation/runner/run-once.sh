@@ -80,13 +80,26 @@ if [[ -n "${CAPTURE_FROM:-}" ]]; then
   cp "$CAPTURE_FROM" "$CAPTURE"
   info "capture supplied from $CAPTURE_FROM"
 else
+  PROBE_OUT="${PROBE_OUT:-$EVAL/gate0/artifacts/gate0-proxy-capture.jsonl}"
+
+  # The probe appends, so without truncating, run N's capture contains runs
+  # 1..N as well — and every count, cost figure and attribution in this run
+  # would be about a mixture of sessions.
+  BEFORE=0
+  if [[ -f "$PROBE_OUT" ]]; then
+    BEFORE="$(wc -l < "$PROBE_OUT" | tr -d ' ')"
+    cp "$PROBE_OUT" "$RUN_DIR/capture-before.jsonl"
+    : > "$PROBE_OUT"
+    info "capture cleared ($BEFORE earlier line(s) kept as capture-before.jsonl)"
+  fi
+
   bash "$EVAL/tasks/bridge-addr/use-identity.sh" "$IDENTITY" >/dev/null \
     || die "could not switch to identity $IDENTITY"
-  info "identity $IDENTITY active; run the task now, then press enter"
+  info "identity $IDENTITY active; run the task in a ${C_B}fresh${C_0} CodeBuddy session, then press enter"
   echo "       task: $EVAL/tasks/bridge-addr/task.md"
   read -r _
-  PROBE_OUT="${PROBE_OUT:-$EVAL/gate0/artifacts/gate0-proxy-capture.jsonl}"
-  [[ -f "$PROBE_OUT" ]] || die "no capture at $PROBE_OUT — was the probe running?"
+
+  [[ -s "$PROBE_OUT" ]] || die "the capture is empty — the probe saw no traffic. Check: bash evaluation/runner/prepare.sh --status"
   cp "$PROBE_OUT" "$CAPTURE"
 fi
 
