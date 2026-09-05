@@ -1,0 +1,46 @@
+{
+  "pool_snapshot_at": "2026-09-05T10:15:35Z",
+  "team_id": "team-n3lgrbjx7d",
+  "asset_count": 3,
+  "assets": [
+    {
+      "asset_id": "skl-gWTY69V4tFw7",
+      "asset_type": "skill",
+      "name": "agentmemory-knowledge-tools-bridge-routing",
+      "producer_user_id": "usr-n3h5ewx4ja",
+      "producer_agent_id": "agt-n3lgrhe73q",
+      "team_id": "team-n3lgrbjx7d",
+      "version": 1,
+      "is_head": true,
+      "status": "active",
+      "asset_created_at": "2026-08-29T21:54:13Z",
+      "asset_updated_at": "2026-08-29T21:54:13Z"
+    },
+    {
+      "asset_id": "skl-TPooFGaywqdC",
+      "asset_type": "skill",
+      "name": "agentmemory-project-deploy-db-conventions",
+      "producer_user_id": "usr-n3h5ewx4ja",
+      "producer_agent_id": "agt-n3lgrhe73q",
+      "team_id": "team-n3lgrbjx7d",
+      "version": 7,
+      "is_head": true,
+      "status": "active",
+      "asset_created_at": "2026-08-27T08:49:57Z",
+      "asset_updated_at": "2026-08-27T08:49:57Z"
+    },
+    {
+      "asset_id": "wiki-yrgnw0ho",
+      "asset_type": "knowledge",
+      "name": "topic4-gate0-probe-kb",
+      "producer_user_id": "usr-n3h5ewx4ja",
+      "producer_agent_id": "",
+      "team_id": "team-n3lgrbjx7d",
+      "version": "0",
+      "is_head": null,
+      "status": "draft",
+      "asset_created_at": "2026-09-01T05:39:07Z",
+      "asset_updated_at": "2026-09-01T05:39:07Z"
+    }
+  ]
+}

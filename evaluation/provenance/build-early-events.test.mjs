@@ -320,7 +320,13 @@ test("the summary says not observed rather than zero", () => {
 // ── against the recorded session ──────────────────────────────────
 
 test("the recorded three-channel session yields recalled and injected, and no selected", () => {
-  const snapshot = JSON.parse(readFileSync("evaluation/provenance/artifacts/asset-pool-snapshot.json", "utf8"));
+  // The snapshot is a committed fixture, not the live artifact under
+  // provenance/artifacts/. That file is rewritten every time a pool is frozen,
+  // so a test reading it asserts against whichever pool happened to be current
+  // — this test broke the moment the evaluation pool replaced the old team's.
+  // A test about a *recorded* session has to use the pool as it was for that
+  // session.
+  const snapshot = JSON.parse(readFileSync("evaluation/contracts/fixtures/pool-snapshot-gate0-session.json", "utf8"));
   const captureEvents = parseJsonl(readFileSync("evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl", "utf8"));
   const toolCallRows = parseJsonl(readFileSync("evaluation/gate0/artifacts/tool-call-logs.jsonl", "utf8"));
 

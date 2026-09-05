@@ -76,11 +76,34 @@ node evaluation/attribution/extract-tokens.mjs \
 Exit status is 1 if either asset has no discriminative token, or if the task
 description leaks one.
 
-## Status
+## Status: in the pool, frozen
 
-Offline drafts. Not in any pool. Entering the pool requires, in order:
+| | |
+|---|---|
+| team | `team-5ezfoladb5` — created for this, holding these two assets and nothing else |
+| author | `agt-5e4hna56j9` / `usr-n68ea5ythq` |
+| consumer | `agt-5e0y4l8a7a` / `usr-4u07qc2kuj` |
+| frozen at | `2026-09-05T10:14:40Z`, 2 assets |
+| ids | `pair.json` |
 
-1. candidate-pool isolation verified (identity B cannot reach the old team's assets) — **done**
-2. the bridge gate verified end to end (P3-3a) — **done**
-3. each asset carries a discriminative token (P1-3) — **done**
-4. pool entry and freeze (P4-1b)
+All four prerequisites cleared: candidate-pool isolation, the bridge gate
+(P3-3a), a discriminative token per asset (P1-3), and pool entry itself.
+
+### Two silent failures the entry script now checks for
+
+**Both assets landed `private`.** `/v3/skill/*` authenticates on the Bearer
+token and `/v3/meta/*` on `x-tdai-user-key`; sending only the first got a 401
+on the visibility call, which the first version of the script reported as a
+warning and carried on. A consumer cannot see a private asset, so the scenario
+would have produced a clean, confident, empty result. Reading the visibility
+back is now a hard failure, not a warning.
+
+**The skill row said the author was `default`.** `user_id` is optional on
+`/v3/skill/create`, and omitting it stores `default` on the skill row while the
+asset row records the real owner. Nothing in the output looks wrong — and
+`default` still compares as different from the consumer, so the run would still
+have reported `cross_user`. It would just have been about nobody. The script
+now passes `user_id`, resolves it from the agent record rather than a constant,
+and fails if the snapshot and the asset record disagree about who wrote it.
+
+Both are the same shape: a check that cannot run reports success.

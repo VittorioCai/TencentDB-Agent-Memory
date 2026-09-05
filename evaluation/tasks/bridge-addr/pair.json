@@ -1,0 +1,29 @@
+{
+  "team_id": "team-5ezfoladb5",
+  "author_agent_id": "agt-5e4hna56j9",
+  "consumer_agent_id": "agt-5e0y4l8a7a",
+  "task_id": "task-5e6xp4mrrw",
+  "pool_snapshot_at": "2026-09-05T10:14:40Z",
+  "pool_asset_count": 2,
+  "assets": [
+    {
+      "role": "wrong",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "version": 1,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9"
+    },
+    {
+      "role": "right",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "version": 1,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9"
+    }
+  ],
+  "expected_relation": "cross_user",
+  "expected_relation_holds_if": "the consumer identity resolves to a user id different from usr-n68ea5ythq; verified from the events of the run, never assumed",
+  "operated_by": "one person running both identities — the mechanism is real, ecological validity is not, and this is stated in the report"
+}
