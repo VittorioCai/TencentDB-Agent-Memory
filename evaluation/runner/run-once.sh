@@ -39,11 +39,19 @@ RUNS_DIR="${RUNS_DIR:-$EVAL/runner/runs}"
 LABEL="run"
 IDENTITY="b"
 SINCE="${SINCE:-30 MINUTE}"
+AUTO=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --label) LABEL="$2"; shift 2 ;;
     --identity) IDENTITY="$2"; shift 2 ;;
     --since) SINCE="$2"; shift 2 ;;
+    # Launch the task itself via run-codebuddy.sh -p instead of waiting for a
+    # manual session. This spawns a brand-new CodeBuddy process every time, so
+    # the session is guaranteed fresh — which the manual path could not
+    # guarantee, and a stale session against a just-recreated proxy is rejected
+    # before the probe (which sits upstream of the proxy) sees anything, giving
+    # an empty capture that looks like the model did nothing.
+    --auto) AUTO=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -95,11 +103,32 @@ else
 
   bash "$EVAL/tasks/bridge-addr/use-identity.sh" "$IDENTITY" >/dev/null \
     || die "could not switch to identity $IDENTITY"
-  info "identity $IDENTITY active; run the task in a ${C_B}fresh${C_0} CodeBuddy session, then press enter"
-  echo "       task: $EVAL/tasks/bridge-addr/task.md"
-  read -r _
 
-  [[ -s "$PROBE_OUT" ]] || die "the capture is empty — the probe saw no traffic. Check: bash evaluation/runner/prepare.sh --status"
+  TASK_FILE="$EVAL/tasks/bridge-addr/task.md"
+  if (( AUTO )); then
+    info "launching a fresh single-prompt CodeBuddy session (run-codebuddy.sh -p)"
+    # -p spawns a new process, runs one prompt to completion (the agent still
+    # loops through its own tool calls inside that turn), and exits. Its stdout
+    # is the model's transcript; keep it for the record.
+    if bash "$EVAL/gate0/run-codebuddy.sh" "$(cat "$TASK_FILE")" >"$RUN_DIR/codebuddy-stdout.txt" 2>&1; then
+      info "session finished; transcript → codebuddy-stdout.txt"
+    else
+      warn "run-codebuddy.sh exited non-zero; see $RUN_DIR/codebuddy-stdout.txt (continuing to judge whatever was captured)"
+    fi
+  else
+    info "identity $IDENTITY active; run the task in a ${C_B}fresh${C_0} CodeBuddy session, then press enter"
+    echo "       task: $TASK_FILE"
+    echo "       (or re-run with --auto to launch a fresh session for you)"
+    read -r _
+  fi
+
+  if [[ ! -s "$PROBE_OUT" ]]; then
+    die "the capture is empty — the probe saw no traffic.
+       Most often this means the CodeBuddy session was not fresh: enable/prepare
+       recreated the proxy, and a session opened before that is rejected before
+       the probe can see it. Re-run with --auto, or start a brand-new session.
+       State check: bash evaluation/runner/prepare.sh --status"
+  fi
   cp "$PROBE_OUT" "$CAPTURE"
 fi
 

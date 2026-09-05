@@ -47,8 +47,16 @@ bash evaluation/runner/prepare.sh --status
 bash evaluation/runner/prepare.sh --teardown     # probe off, upstream restored
 ```
 
-Start a **fresh** CodeBuddy session afterwards: the skill listing runs once at
-session init, so an already-open session records no candidates.
+Then run the task. Two ways:
+
+- `run-once.sh --auto` launches the task itself in a brand-new single-prompt
+  CodeBuddy process. Prefer this — the session is guaranteed fresh.
+- Without `--auto`, run-once waits for you to run the task in a CodeBuddy session
+  and press enter. That session **must be brand new**: `enable` and `prepare`
+  recreate the proxy, and a session opened before that is rejected before the
+  probe (which sits upstream of the proxy) sees anything — an empty capture that
+  looks like the model did nothing. The skill listing also runs once at session
+  init, so an already-open session records no candidates either.
 
 ```bash
 bash evaluation/runner/run-once.sh --label gate-off
