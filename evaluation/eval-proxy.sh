@@ -55,6 +55,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONTAINER="${CONTAINER:-tdai-proxy}"
 PATCHED_SRC="$REPO_ROOT/MemoryProxy/src/injection/injectors/skill-injector.ts"
 IN_IMAGE_SRC="/app/src/injection/injectors/skill-injector.ts"
+# The second patched file: the bridge, with read-op visibility (get /
+# get-by-name / files/read honour the same whitelist as search). Without it a
+# consumer can find another agent's team-shared skill through search and then
+# get 40401 reading it by name — which is what blocked the cross-user mainline.
+BRIDGE_SRC="$REPO_ROOT/MemoryProxy/src/skill/skill-bridge.ts"
+IN_IMAGE_BRIDGE="/app/src/skill/skill-bridge.ts"
 LOG_DIR="$REPO_ROOT/evaluation/provenance/artifacts"
 LOG_NAME="candidate-log.jsonl"
 # Kept in step with the address in evaluation/tasks/bridge-addr/assets/right.md;
@@ -126,6 +132,22 @@ case "${1:-status}" in
       fi
     fi
 
+    # Same parity guard for the bridge: mounting one file over the image's copy
+    # is only safe if the image's copy is what this branch started from.
+    [[ -f "$BRIDGE_SRC" ]] || die "patched bridge not found: $BRIDGE_SRC"
+    grep -q "READ_VISIBILITY_OPS" "$BRIDGE_SRC" \
+      || die "$BRIDGE_SRC carries no read-visibility patch — nothing to enable"
+    docker cp "$CONTAINER:$IN_IMAGE_BRIDGE" /tmp/tdai-bridge-in-image.ts 2>/dev/null || true
+    if [[ -f /tmp/tdai-bridge-in-image.ts ]] \
+       && ! grep -q "READ_VISIBILITY_OPS" /tmp/tdai-bridge-in-image.ts; then
+      if ! git -C "$REPO_ROOT" show "HEAD:MemoryProxy/src/skill/skill-bridge.ts" \
+           | diff -q - /tmp/tdai-bridge-in-image.ts >/dev/null; then
+        echo "[warn] the image's skill-bridge.ts differs from HEAD by more than this patch;"
+        echo "       docker cp $CONTAINER:$IN_IMAGE_BRIDGE /tmp/img.ts && diff /tmp/img.ts $BRIDGE_SRC"
+        die "refusing to enable"
+      fi
+    fi
+
     if [[ -f "$RIGHT_ASSET" ]] && ! grep -q ":$SCENARIO_PORT" "$RIGHT_ASSET"; then
       die "right.md does not document port $SCENARIO_PORT — publishing it would make the scenario unreachable"
     fi
@@ -134,9 +156,11 @@ case "${1:-status}" in
     recreate \
       -p "${SCENARIO_PORT}:8096" \
       -v "$PATCHED_SRC:$IN_IMAGE_SRC:ro" \
+      -v "$BRIDGE_SRC:$IN_IMAGE_BRIDGE:ro" \
       -v "$LOG_DIR:/data/eval" \
       -e "TDAI_CANDIDATE_LOG=/data/eval/$LOG_NAME"
     ok "candidate log on → $LOG_DIR/$LOG_NAME"
+    ok "read-visibility bridge mounted → get-by-name resolves across visible team skills"
     ok "scenario port $SCENARIO_PORT published → the right-address asset is reachable"
     echo "     Start a fresh session: the listing runs once at session init, and its"
     echo "     block is cached for the rest of the session, so an in-flight session"
@@ -170,6 +194,12 @@ PY
       fi
     else
       echo "  candidate log: OFF"
+    fi
+
+    if docker inspect "$CONTAINER" --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx "$IN_IMAGE_BRIDGE"; then
+      echo "  read-visibility bridge: MOUNTED (get-by-name resolves across visible team skills)"
+    else
+      echo "  read-visibility bridge: not mounted — a consumer reading another agent's skill by name gets 40401"
     fi
 
     if docker inspect "$CONTAINER" --format '{{range $p, $c := .NetworkSettings.Ports}}{{range $c}}{{.HostPort}}{{"\n"}}{{end}}{{end}}' \

@@ -182,6 +182,19 @@ const WRITE_SUBPATHS = new Set<string>([
  *   do NOT participate (soft-delete doesn't bump version; others are stateless).
  */
 const READ_VERSION_OPS = new Set<string>(["get", "files/read"]);
+
+/**
+ * Read ops that must honour the same visibility whitelist as `search`.
+ *
+ * Before this, the three read paths disagreed about scope: `search` was
+ * team-visible (whitelist A ∪ B), `get-by-name` was owner-only (core looks up
+ * by (team, caller agent, name)), and `get` / `files/read` were team-wide with
+ * no visibility check at all (core scopes by team only). Two consequences,
+ * both seen in a real run: a consumer could *find* another agent's team-shared
+ * skill via search and then get 40401 reading it by name; and the same
+ * consumer could read any skill in the team by id — private ones included.
+ */
+const READ_VISIBILITY_OPS = new Set<string>(["get", "get-by-name", "files/read"]);
 const WRITE_LOCK_OPS = new Set<string>([
   "update",
   "patch",
@@ -378,6 +391,115 @@ export interface SkillBridgeDeps {
    * (B) and already-injected skills (C) — see whitelist composition below.
    */
   coreClient?: CoreSkillClient;
+}
+
+/** A team skill as `listSkills` reports it, reduced to what visibility needs. */
+export interface TeamSkillRef {
+  skill_id: string;
+  name: string;
+  owner_agent_id?: string;
+}
+
+export type ReadVisibilityDecision =
+  | { kind: "forward" }
+  | { kind: "rewrite"; skillId: string }
+  | { kind: "reject"; reason: string; message: string };
+
+/**
+ * Decide how a read op proceeds, given the visibility whitelist.
+ *
+ * Pure: no I/O, no session — so it can be tested directly, which matters
+ * because this is an authorization decision and the handler around it needs a
+ * live session to exercise.
+ *
+ *   get / files/read   the id must be in the whitelist, else reject. This is
+ *                      what closes the bypass: core scopes these by team only.
+ *   get-by-name        resolve the name among *visible* team skills and rewrite
+ *                      to `get` by id — that is what lets a consumer read a
+ *                      skill it found through search. Prefer the caller's own
+ *                      skill on a name clash; with no own skill and more than
+ *                      one visible match, do not guess: forward unchanged and
+ *                      let core answer as it always has.
+ *   anything else      forward unchanged.
+ *
+ * A name that resolves to nothing visible is also forwarded unchanged rather
+ * than rejected: core's owner-scoped lookup will 40401 exactly as before, and
+ * a private skill of another agent stays invisible — its existence is not
+ * revealed by a different error code. Likewise a rejected `get` says only
+ * "not visible", whether the id is private or does not exist.
+ */
+export function decideReadVisibility(input: {
+  sub: string;
+  inboundBody: Record<string, unknown>;
+  whitelist: Set<string>;
+  teamSkills: TeamSkillRef[];
+  callerAgentId: string;
+}): ReadVisibilityDecision {
+  const { sub, inboundBody, whitelist, teamSkills, callerAgentId } = input;
+
+  if (sub === "get" || sub === "files/read") {
+    const skillId = typeof inboundBody.skill_id === "string" ? inboundBody.skill_id : "";
+    if (!skillId) return { kind: "forward" }; // schema validation upstream will reject
+    if (whitelist.has(skillId)) return { kind: "forward" };
+    return {
+      kind: "reject",
+      reason: "not_visible",
+      message: `skill ${skillId} is not visible to agent ${callerAgentId}`,
+    };
+  }
+
+  if (sub === "get-by-name") {
+    const name = typeof inboundBody.skill_name === "string" ? inboundBody.skill_name : "";
+    if (!name) return { kind: "forward" };
+    const visible = teamSkills.filter((t) => t.name === name && whitelist.has(t.skill_id));
+    if (visible.length === 0) return { kind: "forward" };
+    const own = visible.find((t) => t.owner_agent_id === callerAgentId);
+    if (own) return { kind: "rewrite", skillId: own.skill_id };
+    if (visible.length === 1) return { kind: "rewrite", skillId: visible[0].skill_id };
+    return { kind: "forward" };
+  }
+
+  return { kind: "forward" };
+}
+
+/**
+ * The visibility whitelist for read ops: A ∪ B, exactly as `search` computes it,
+ * plus the team-wide skill list so `get-by-name` can resolve names.
+ *
+ *   A = meta list-accessible(visibility='team')   team-shared, from the control plane
+ *   B = the caller's own skills, including private ones
+ *
+ * B is derived from the team-wide list by owner rather than fetched separately,
+ * so this costs two calls per read op, not three. Failure policy mirrors
+ * search: A failing is fail-closed (an empty whitelist, never an unfiltered
+ * read); the team list failing degrades B to empty and name resolution to none.
+ */
+async function computeReadWhitelist(input: {
+  ids: { user_id: string; team_id: string; agent_id: string; user_key?: string; space_id?: string };
+  resolver: VisibleSkillIdsResolver;
+  coreClient: CoreSkillClient;
+}): Promise<{ ok: true; whitelist: Set<string>; teamSkills: TeamSkillRef[] } | { ok: false; err: Error }> {
+  const { ids, resolver, coreClient } = input;
+
+  const promiseA = resolver({
+    user_id: ids.user_id, team_id: ids.team_id, user_key: ids.user_key ?? "", space_id: ids.space_id,
+  }).then((r) => ({ ok: true as const, ids: r.ids }))
+    .catch((err) => ({ ok: false as const, err: err as Error }));
+
+  const promiseTeam = coreClient.listSkills(
+    { team_id: ids.team_id, pagination: { limit: 1000 } },
+    { serviceId: ids.space_id },
+  ).then((r) => r.items.map((s) => ({ skill_id: s.skill_id, name: s.name, owner_agent_id: s.owner_agent_id })))
+    .catch((err) => {
+      console.warn(`${TAG} read whitelist team list failed, treating as empty: ${(err as Error).message}`);
+      return [] as TeamSkillRef[];
+    });
+
+  const [aResult, teamSkills] = await Promise.all([promiseA, promiseTeam]);
+  if (!aResult.ok) return { ok: false, err: aResult.err };
+
+  const own = teamSkills.filter((t) => t.owner_agent_id === ids.agent_id).map((t) => t.skill_id);
+  return { ok: true, whitelist: new Set<string>([...aResult.ids, ...own]), teamSkills };
 }
 
 /**
@@ -835,6 +957,60 @@ export function createSkillBridgeHandler(
           // is safe.
           top_k: PLUGIN_SEARCH_HARD_TOPK,
         };
+      }
+
+      // ── Read visibility: the same whitelist search uses, applied to reads ──
+      if (READ_VISIBILITY_OPS.has(sub)) {
+        if (!ids.user_key) {
+          console.error(`${TAG} read visibility: session lacks user_key — session-init should have stored it (sessionKey=${sessionKey})`);
+          return envelope(50001, `${TAG} read misconfigured: session has no user_key`, 500);
+        }
+        const wl = await computeReadWhitelist({
+          ids,
+          resolver: deps.resolveVisibleSkillIds ?? defaultVisibleSkillIdsResolver(config),
+          coreClient: deps.coreClient ?? getCoreSkillClient(config.coreSkill),
+        });
+        if (!wl.ok) {
+          // Fail-closed, as search does: an infra failure must not widen a read.
+          console.warn(`${TAG} read whitelist resolver (A) failed, fail-closed: ${wl.err.message}`);
+          emitBridgeRejectTelemetry({
+            sessionKey, bridgeSource: "skill-bridge",
+            rejectReason: "visibility_unavailable", httpStatus: 403,
+            executedEndpoint: sub,
+            spaceId: ids.space_id, userId: ids.user_id, teamId: ids.team_id,
+            agentId: ids.agent_id, agentSource: ids.agent_source,
+          });
+          return envelope(40301, `${TAG} visibility could not be resolved; read refused`, 403);
+        }
+
+        const decision = decideReadVisibility({
+          sub, inboundBody, whitelist: wl.whitelist, teamSkills: wl.teamSkills, callerAgentId: ids.agent_id,
+        });
+        if (decision.kind === "reject") {
+          emitBridgeRejectTelemetry({
+            sessionKey, bridgeSource: "skill-bridge",
+            rejectReason: decision.reason, httpStatus: 403,
+            executedEndpoint: sub,
+            spaceId: ids.space_id, userId: ids.user_id, teamId: ids.team_id,
+            agentId: ids.agent_id, agentSource: ids.agent_source,
+          });
+          return envelope(40301, `${TAG} ${decision.message}`, 403);
+        }
+        if (decision.kind === "rewrite") {
+          // A name that resolved to a visible skill — possibly another agent's —
+          // is read by id, which core scopes by team. The include_* flags the
+          // caller sent are preserved; the name itself is no longer needed.
+          upstreamSubpathOverride = "get";
+          outbound = {
+            skill_id: decision.skillId,
+            ...(inboundBody.include_content !== undefined ? { include_content: inboundBody.include_content } : {}),
+            ...(inboundBody.include_manifest !== undefined ? { include_manifest: inboundBody.include_manifest } : {}),
+            team_id: ids.team_id,
+            agent_id: ids.agent_id,
+            user_id: ids.user_id,
+          };
+          console.log(`${TAG} get-by-name resolved to ${decision.skillId} via visibility whitelist (agent=${ids.agent_id})`);
+        }
       }
 
       // ── Version pinning: inject pinned version for read/write ops ──
