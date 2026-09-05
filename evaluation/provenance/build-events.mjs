@@ -85,16 +85,89 @@ export function parseJsonl(text) {
 }
 
 /**
- * Find asset ids that appear in the capture, together with the session they
- * appeared in. Search tool *results* only, never requests: a request carries
- * intent rather than delivery, and a tool result echoes the command verbatim
- * before its output, so scanning the whole blob mistakes the request for the
- * response.
+ * Split a Bash tool result into the command that was issued and the output it
+ * produced.
+ *
+ * These must never be scanned as one blob. A tool result echoes the command
+ * before its output, so a call that timed out after 75 s with empty stdout
+ * still contains the bridge URL and the asset name — matching the whole thing
+ * reads the *request* as if it were the response. The endpoint is read from the
+ * command, which is what the command is for; the payload only from the output.
  */
-export function extractAssetMentions(events, assetIds) {
-  const mentions = new Map(); // assetId -> Set<sessionKey>
-  const ids = [...assetIds].filter(Boolean);
-  if (ids.length === 0) return mentions;
+export function splitCommandAndOutput(text) {
+  const s = String(text ?? "");
+  const i = s.search(/(^|\n)Stdout:/);
+  // No envelope — a native tool result rather than a shell call. The two halves
+  // cannot be separated, so the whole thing is treated as output and the
+  // command as absent. That keeps the id visible while making targeting
+  // undecidable, which is the honest reading: with no command to inspect,
+  // nothing here can establish that this asset was the one asked for.
+  if (i < 0) return { command: "", output: s };
+  const nl = s.indexOf("Stdout:", i);
+  return { command: s.slice(0, i), output: s.slice(nl + "Stdout:".length) };
+}
+
+/** The bridge action a command invoked, as `skill:search`, or "" if not one. */
+export function commandEndpoint(command) {
+  const m = /https?:\/\/[^\s'"]*\/(skill|memory)-bridge\/v3\/[a-z]+\/([a-z/-]+)/.exec(String(command ?? ""));
+  if (!m) return "";
+  return `${m[1]}:${m[2].replace(/\/+$/, "")}`;
+}
+
+/** Enumeration endpoints hand back a list; they never retrieve one asset. */
+export function isListingAction(action) {
+  return /^(search|list|listing)$/.test(String(action ?? "").split(":").pop() ?? "");
+}
+
+/**
+ * Did this command ask for *this* asset's content?
+ *
+ * The distinction that the whole `fetched` state rests on: appearing in a
+ * `skill/search` result means the asset was **offered**, and appearing in a
+ * `get-by-name` response means it was **retrieved**. Only the second is a fetch.
+ */
+export function commandTargetsAsset(command, asset) {
+  const cmd = String(command ?? "");
+  const endpoint = commandEndpoint(cmd);
+  if (!endpoint || isListingAction(endpoint)) return false;
+  const id = String(asset?.asset_id ?? "");
+  const name = String(asset?.name ?? "");
+  if (id && cmd.includes(id)) return true;
+  if (name && new RegExp(`"(name|skill_name)"\\s*:\\s*"${escapeRegExp(name)}"`).test(cmd)) return true;
+  return false;
+}
+
+/** Every tool result in a captured request, paired with its call id. */
+function toolResultsOf(body) {
+  const out = [];
+  const msgs = Array.isArray(body?.messages) ? body.messages : [];
+  msgs.forEach((message, index) => {
+    if (message?.role === "tool") {
+      const c = message.content;
+      out.push({ index, callId: String(message.tool_call_id ?? ""), text: typeof c === "string" ? c : JSON.stringify(c ?? "") });
+    }
+    const blocks = Array.isArray(message?.content) ? message.content : [];
+    for (const block of blocks) {
+      if (block?.type !== "tool_result") continue;
+      const c = block.content;
+      out.push({ index, callId: String(block.tool_use_id ?? ""), text: typeof c === "string" ? c : JSON.stringify(c ?? "") });
+    }
+  });
+  return out;
+}
+
+/**
+ * Where each asset was seen in the capture, and — the part that matters —
+ * whether the call that produced it had asked for that asset.
+ *
+ * Only tool *results* are searched: a request carries intent rather than
+ * delivery. Within a result, the asset id must appear in the output half and
+ * the targeting decision is made from the command half.
+ */
+export function extractAssetMentions(events, assets) {
+  const mentions = new Map(); // assetId -> Map<sessionKey, {targeted, endpoints:Set, callIds:Set}>
+  const list = [...assets].filter((a) => a?.asset_id);
+  if (list.length === 0) return mentions;
 
   for (const event of events) {
     if (event?.event !== "http.request") continue;
@@ -105,21 +178,22 @@ export function extractAssetMentions(events, assetIds) {
       event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
     );
 
-    const returned = [];
-    for (const message of body.messages) {
-      if (message?.role === "tool") returned.push(JSON.stringify(message?.content ?? ""));
-      const content = Array.isArray(message?.content) ? message.content : [];
-      for (const block of content) {
-        if (block?.type === "tool_result") returned.push(JSON.stringify(block?.content ?? ""));
+    for (const { callId, text } of toolResultsOf(body)) {
+      const { command, output } = splitCommandAndOutput(text);
+      if (!output) continue;
+      for (const asset of list) {
+        if (!output.includes(asset.asset_id)) continue;
+        if (!mentions.has(asset.asset_id)) mentions.set(asset.asset_id, new Map());
+        const bySession = mentions.get(asset.asset_id);
+        if (!bySession.has(sessionKey)) {
+          bySession.set(sessionKey, { targeted: false, endpoints: new Set(), callIds: new Set() });
+        }
+        const seen = bySession.get(sessionKey);
+        const endpoint = commandEndpoint(command);
+        if (endpoint) seen.endpoints.add(endpoint);
+        if (callId) seen.callIds.add(callId);
+        if (commandTargetsAsset(command, asset)) seen.targeted = true;
       }
-    }
-    const haystack = returned.join("\n");
-    if (!haystack) continue;
-
-    for (const id of ids) {
-      if (!haystack.includes(id)) continue;
-      if (!mentions.has(id)) mentions.set(id, new Set());
-      mentions.get(id).add(sessionKey);
     }
   }
   return mentions;
@@ -164,7 +238,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
   const poolSnapshotAt = snapshot?.pool_snapshot_at ?? "";
   const byId = new Map(assets.map((a) => [a.asset_id, a]));
 
-  const mentions = extractAssetMentions(captureEvents, byId.keys());
+  const mentions = extractAssetMentions(captureEvents, assets);
 
   // Service-side call records, grouped by normalised session key.
   const bridgeBySession = new Map();
@@ -188,6 +262,8 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
   }
 
   const events = [];
+  const offeredNotRetrieved = [];
+
   for (const [assetId, sessions] of mentions) {
     const asset = byId.get(assetId);
     if (!asset) continue;
@@ -197,30 +273,58 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
       poolSnapshotAt && asset.asset_created_at && asset.asset_created_at > poolSnapshotAt,
     );
 
-    for (const sessionKey of sessions) {
+    for (const [sessionKey, seen] of sessions) {
       const calls = bridgeBySession.get(sessionKey) ?? [];
       const producer = { user_id: asset.producer_user_id, agent_id: asset.producer_agent_id };
 
       // A successful call somewhere in the session is not evidence that *this*
-      // asset was retrieved. A search that merely returned it in a result list
-      // is not retrieval either. The call must name this asset.
+      // asset was retrieved. The call must name this asset.
       const targeted = calls.filter((c) => c.ok && callTargetsAsset(c, asset));
       const success = targeted[0];
-      const actor = success?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
 
+      // Nor is appearing in the capture. An asset id in a `skill/search`
+      // response was **offered**; only a response to a command that asked for
+      // this asset was **retrieved**. Without either, there is no fetch here —
+      // and writing one anyway is how a listing hit becomes a `used` claim two
+      // stages later. The asset did reach the model's context, and that is
+      // recorded as `recalled` / `injected` by build-early-events.mjs, which is
+      // a different statement about a different thing.
+      if (!success && !seen.targeted) {
+        offeredNotRetrieved.push({
+          asset_id: assetId,
+          session_key: sessionKey,
+          endpoints: [...seen.endpoints],
+        });
+        continue;
+      }
+
+      const actor = success?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
       const occurredAt = success?.timestamp ?? "";
+      // `observation` says which sources witnessed the event, not how strong the
+      // claim is — those are deliberately separate fields. Inside this loop the
+      // capture always saw the asset id, so a service-side row makes it both.
+      // Whether it counts as a *fetch* was decided above, by targeting.
       const observation = success ? "bridge+wire" : "wire_only";
-      const proofRefs = success
-        ? [{
-            kind: "bridge_row",
-            ref: `tool_call_logs:${occurredAt}:${success.bridgeSource}:${success.executedEndpoint}`,
-            detail: `request names ${asset.asset_id}`,
-          }]
-        : [{
-            kind: "capture_line",
-            ref: `${sessionKey}:tool_result`,
-            detail: "asset id appears in a captured result, but no service-side call targets it",
-          }];
+
+      const proofRefs = [];
+      if (success) {
+        proofRefs.push({
+          kind: "bridge_row",
+          ref: `tool_call_logs:${occurredAt}:${success.bridgeSource}:${success.executedEndpoint}`,
+          detail: `request names ${asset.asset_id}`,
+        });
+      }
+      if (seen.targeted) {
+        proofRefs.push({
+          kind: "capture_line",
+          ref: `${sessionKey}:${[...seen.callIds][0] || "tool_result"}`,
+          detail: success
+            ? `returned by ${[...seen.endpoints].join(", ") || "a targeted call"}`
+            // A wire-level fetch the service never logged is a hole in the tap,
+            // not a stronger result. It is recorded so the gap is visible.
+            : `returned by ${[...seen.endpoints].join(", ") || "a targeted call"}, but no service-side row recorded it — telemetry gap`,
+        });
+      }
 
       events.push({
         schema_version: "provenance-v1",
@@ -245,7 +349,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         observation,
         evidence_tier: null,
         bridge_source: success?.bridgeSource ?? "",
-        executed_endpoint: success?.executedEndpoint ?? "",
+        executed_endpoint: success?.executedEndpoint ?? [...seen.endpoints][0] ?? "",
         upstream_status: success?.status ?? 0,
         target_type: null,
         target_ref: null,
@@ -259,30 +363,38 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
   // Channels with a service-side success the capture never saw get their own
   // record. Dropping them would suggest the call never happened — a gap in
   // collection and an absence of activity are not the same thing.
-  const seenSessions = new Set(events.map((e) => e.session_key));
+  const seenPairs = new Set(events.map((e) => `${e.session_key}|${e.asset_id}`));
   for (const [sessionKey, calls] of bridgeBySession) {
-    if (seenSessions.has(sessionKey)) continue;
     for (const call of calls.filter((c) => c.ok)) {
+      // A row that names an asset is attributed to it, even with no capture.
+      const named = assets.find((a) => callTargetsAsset(call, a));
+      if (named && seenPairs.has(`${sessionKey}|${named.asset_id}`)) continue;
+      if (!named && [...seenPairs].some((k) => k.startsWith(`${sessionKey}|`))) continue;
+
+      const producer = named
+        ? { user_id: named.producer_user_id, agent_id: named.producer_agent_id }
+        : { user_id: "", agent_id: "" };
+
       events.push({
         schema_version: "provenance-v1",
-        event_id: eventId([sessionKey, "", "fetched", call.timestamp, "bridge_only", call.bridgeSource, call.executedEndpoint]),
+        event_id: eventId([sessionKey, named?.asset_id ?? "", "fetched", call.timestamp, "bridge_only", call.bridgeSource, call.executedEndpoint]),
         state: "fetched",
         session_key: sessionKey,
         run_id: null,
         task_id: null,
         occurred_at: call.timestamp || null,
-        asset_id: "",
-        asset_type: "",
-        asset_name: "",
-        asset_version: null,
-        asset_created_at: "",
+        asset_id: named?.asset_id ?? "",
+        asset_type: named?.asset_type ?? "",
+        asset_name: named?.name ?? "",
+        asset_version: named?.version ?? null,
+        asset_created_at: named?.asset_created_at ?? "",
         pool_snapshot_at: poolSnapshotAt,
         excluded_by_snapshot: false,
-        producer_user_id: "",
-        producer_agent_id: "",
+        producer_user_id: producer.user_id,
+        producer_agent_id: producer.agent_id,
         actor_user_id: call.actor.user_id,
         actor_agent_id: call.actor.agent_id,
-        relation: "unknown",
+        relation: named ? classifyRelation(producer, call.actor) : "unknown",
         observation: "bridge_only",
         evidence_tier: null,
         bridge_source: call.bridgeSource,
@@ -290,13 +402,19 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         upstream_status: call.status,
         target_type: null,
         target_ref: null,
-        proof_refs: [{ kind: "bridge_row", ref: `tool_call_logs:${call.timestamp}:${call.bridgeSource}:${call.executedEndpoint}` }],
+        proof_refs: [{
+          kind: "bridge_row",
+          ref: `tool_call_logs:${call.timestamp}:${call.bridgeSource}:${call.executedEndpoint}`,
+          detail: named ? `request names ${named.asset_id}; the capture never saw the response` : "the capture never saw this call",
+        }],
         corrected_reason: null,
         parent_event_ids: [],
       });
+      if (named) seenPairs.add(`${sessionKey}|${named.asset_id}`);
     }
   }
 
+  events.offeredNotRetrieved = offeredNotRetrieved;
   return events;
 }
 
@@ -322,6 +440,7 @@ export function summarize(events) {
     distinctAssets: assets.size,
     excludedBySnapshot: excluded,
     crossUserRate: attributable > 0 ? counts.cross_user / attributable : null,
+    offeredNotRetrieved: events.offeredNotRetrieved ?? [],
   };
 }
 
@@ -354,6 +473,14 @@ export function renderSummary(s) {
       lines.push("a single cross-person reuse record**. It logs who created an asset but never");
       lines.push("logs whose asset someone else successfully used.");
     }
+  }
+  const offered = s.offeredNotRetrieved ?? [];
+  if (offered.length > 0) {
+    lines.push("", `${offered.length} asset/session pair(s) appeared in the capture but were never retrieved:`);
+    for (const o of offered) lines.push(`  - ${o.asset_id} via ${o.endpoints.join(", ") || "no bridge command"}`);
+    lines.push("Offered, not fetched. These are **not** written as `fetched` — appearing in a");
+    lines.push("listing is the retrieval system doing its job, not the model taking the content.");
+    lines.push("They are recorded as `recalled` / `injected` by build-early-events.mjs.");
   }
   if (s.excludedBySnapshot > 0) {
     lines.push("", `${s.excludedBySnapshot} event(s) excluded: asset created after the pool was frozen (answer-leak guard).`);

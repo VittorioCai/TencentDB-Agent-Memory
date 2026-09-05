@@ -288,8 +288,18 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
   const ownerMismatches = [];
   const miss = (kind, key) => unresolved.set(`${kind}:${key}`, (unresolved.get(`${kind}:${key}`) ?? 0) + 1);
 
+  // The version is part of an event's identity, not a decoration on it.
+  //
+  // Two things follow. The merge key carries it, so two versions of one asset
+  // seen in one session stay two events rather than collapsing into whichever
+  // was noticed first. And it is never taken from the snapshot: the snapshot
+  // says what the pool holds *now*, and an event says what the model saw
+  // *then*. Copying one into the other produced chains reading recalled v2 →
+  // selected v2 → injected v3, where the last step was the snapshot leaking in
+  // through a path that stated no version at all.
+  const versionKey = (v) => (v == null ? "?" : String(v));
   const note = ({ state, asset, sessionKey, occurredAt, observation, proofRef, version = null }) => {
-    const key = `${sessionKey}|${asset.asset_id}|${state}`;
+    const key = `${sessionKey}|${asset.asset_id}|${state}|${versionKey(version)}`;
     let rec = records.get(key);
     if (!rec) {
       rec = {
@@ -298,12 +308,12 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
         observations: new Set(),
         refs: new Map(), // ref -> {kind, ref, detail, turns}
         version,
+        versionStated: version != null,
       };
       records.set(key, rec);
     }
     rec.observations.add(observation);
     if (occurredAt && (!rec.occurredAt || occurredAt < rec.occurredAt)) rec.occurredAt = occurredAt;
-    if (version != null && rec.version == null) rec.version = version;
 
     const existing = rec.refs.get(proofRef.ref);
     if (existing) existing.turns += 1;
@@ -398,6 +408,62 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
     }
   }
 
+  // ── resolve versions no source stated ────────────────────────────
+  //
+  // `<available_skills>` lists names only — no ids and no versions — so the
+  // injected-block path genuinely cannot know which revision it rendered. When
+  // some other source saw exactly one version of that asset in that session,
+  // adopting it is sound and the event says it was inferred. When two versions
+  // were in play, there is no honest answer: the version stays null and the
+  // ambiguity is reported, because guessing here is precisely how a run gets
+  // attributed to a revision the model never saw.
+  const versionsSeen = new Map(); // "session|asset" -> Set<version>
+  for (const rec of records.values()) {
+    if (rec.version == null) continue;
+    const k = `${rec.sessionKey}|${rec.asset.asset_id}`;
+    if (!versionsSeen.has(k)) versionsSeen.set(k, new Set());
+    versionsSeen.get(k).add(rec.version);
+  }
+
+  const ambiguousVersions = [];
+  for (const rec of [...records.values()]) {
+    if (rec.version != null) continue;
+    const k = `${rec.sessionKey}|${rec.asset.asset_id}`;
+    const seen = [...(versionsSeen.get(k) ?? [])];
+    if (seen.length !== 1) {
+      if (seen.length > 1) {
+        ambiguousVersions.push({ session_key: rec.sessionKey, asset_id: rec.asset.asset_id, state: rec.state, versions: seen });
+      }
+      continue;
+    }
+    rec.version = seen[0];
+    for (const ref of rec.refs.values()) {
+      ref.detail = `${ref.detail}; version not stated by this source, taken from the only version of this asset seen in the session (v${seen[0]})`;
+    }
+    // Re-key, and fold into the versioned record for the same state if one exists.
+    records.delete(rec.key);
+    const merged = `${rec.sessionKey}|${rec.asset.asset_id}|${rec.state}|${versionKey(rec.version)}`;
+    const target = records.get(merged);
+    if (!target) { rec.key = merged; records.set(merged, rec); continue; }
+    for (const [refKey, ref] of rec.refs) if (!target.refs.has(refKey)) target.refs.set(refKey, ref);
+    for (const o of rec.observations) target.observations.add(o);
+    if (rec.occurredAt && (!target.occurredAt || rec.occurredAt < target.occurredAt)) target.occurredAt = rec.occurredAt;
+  }
+
+  // The pool rolling forward is worth saying out loud: an event about v2 sitting
+  // next to a snapshot holding v3 is normal, and silently showing v3 is not.
+  // One entry per (asset, version) pair rather than per event: three events
+  // about the same revision are one fact about the pool, not three.
+  const driftSeen = new Map();
+  for (const rec of records.values()) {
+    const pooled = rec.asset.version;
+    if (rec.version == null || pooled == null || String(rec.version) === String(pooled)) continue;
+    driftSeen.set(`${rec.asset.asset_id}|${rec.version}`, {
+      asset_id: rec.asset.asset_id, observed: rec.version, in_snapshot: pooled,
+    });
+  }
+  const versionDrift = [...driftSeen.values()];
+
   // ── materialise, then link injected/selected back to recalled ───
   const NO_ACTOR_LOCAL = NO_ACTOR;
   const ordered = [...records.values()].sort((a, b) =>
@@ -414,7 +480,7 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
       kind, ref,
       detail: turns > 1 ? `${detail}; present in ${turns} captured turn(s)` : detail,
     }));
-    const id = eventId([rec.sessionKey, rec.asset.asset_id, rec.state, rec.occurredAt, obs]);
+    const id = eventId([rec.sessionKey, rec.asset.asset_id, rec.state, versionKey(rec.version), rec.occurredAt, obs]);
     idByKey.set(rec.key, id);
     return {
       schema_version: "provenance-v1",
@@ -427,7 +493,9 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
       asset_id: rec.asset.asset_id,
       asset_type: rec.asset.asset_type,
       asset_name: rec.asset.name,
-      asset_version: rec.version ?? rec.asset.version ?? null,
+      // Null when no source stated it and none could be inferred. The snapshot's
+      // version is deliberately not used as a fallback.
+      asset_version: rec.version ?? null,
       asset_created_at: rec.asset.asset_created_at ?? "",
       pool_snapshot_at: poolSnapshotAt,
       excluded_by_snapshot: Boolean(
@@ -454,22 +522,33 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
   // A later state points at the earlier one for the same asset and session, but
   // only when that earlier state was actually observed. A dangling parent would
   // assert a stage that was never proved.
+  //
+  // The link is version-matched. Pointing an injected v3 event at a recalled v2
+  // event would assert that this revision was the one recalled, which is the
+  // same error as writing the wrong version on the event itself — just spread
+  // across two records where it is harder to see.
   const PARENT_OF = { selected: "recalled", injected: "selected" };
   for (const e of events) {
     let want = PARENT_OF[e.state];
     while (want) {
-      const parent = idByKey.get(`${e.session_key}|${e.asset_id}|${want}`);
+      const parent = idByKey.get(`${e.session_key}|${e.asset_id}|${want}|${versionKey(e.asset_version)}`);
       if (parent) { e.parent_event_ids = [parent]; break; }
       want = PARENT_OF[want]; // selected unobserved → fall through to recalled
     }
   }
 
-  return { events, unresolved: Object.fromEntries(unresolved), ownerMismatches };
+  return {
+    events,
+    unresolved: Object.fromEntries(unresolved),
+    ownerMismatches,
+    ambiguousVersions,
+    versionDrift,
+  };
 }
 
 // ── reporting ─────────────────────────────────────────────────────
 
-export function summarizeEarly({ events, unresolved, ownerMismatches }) {
+export function summarizeEarly({ events, unresolved, ownerMismatches, ambiguousVersions, versionDrift }) {
   const byState = {};
   const byStateAssets = {};
   for (const e of events) {
@@ -482,6 +561,9 @@ export function summarizeEarly({ events, unresolved, ownerMismatches }) {
     distinctByState: Object.fromEntries(Object.entries(byStateAssets).map(([k, v]) => [k, v.size])),
     unresolved,
     ownerMismatches,
+    ambiguousVersions: ambiguousVersions ?? [],
+    versionDrift: versionDrift ?? [],
+    versionless: events.filter((e) => e.asset_version == null).length,
   };
 }
 
@@ -514,6 +596,18 @@ export function renderEarlySummary(s) {
     for (const [k, v] of Object.entries(s.unresolved).sort()) lines.push(`  - ${k} ×${v}`);
     lines.push("These are reported rather than dropped — an asset the snapshot does not know");
     lines.push("is either created after the freeze or of a type the snapshot does not cover.");
+  }
+  if ((s.versionless ?? 0) > 0) {
+    lines.push("", `${s.versionless} event(s) carry no \`asset_version\`: no source stated one and none`);
+    lines.push("could be inferred. The snapshot's version is **not** used as a fallback — it says");
+    lines.push("what the pool holds now, not what the model saw then.");
+  }
+  for (const a of s.ambiguousVersions ?? []) {
+    lines.push("", `**Ambiguous version** ${a.asset_id} (${a.state}) in ${a.session_key}: versions ${a.versions.join(", ")} were both seen; left unset.`);
+  }
+  if ((s.versionDrift ?? []).length > 0) {
+    lines.push("", "Pool moved on since these events (normal; recorded so the difference is visible):");
+    for (const d of s.versionDrift) lines.push(`  - ${d.asset_id}: event v${d.observed}, snapshot v${d.in_snapshot}`);
   }
   if (s.ownerMismatches.length > 0) {
     lines.push("", "**Owner disagreement between the live response and the frozen snapshot:**");

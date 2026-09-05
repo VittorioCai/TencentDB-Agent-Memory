@@ -342,3 +342,94 @@ test("the recorded three-channel session yields recalled and injected, and no se
   // skill and knowledge. They are reported as unresolved rather than dropped.
   assert.ok(Object.keys(unresolved).some((k) => k.startsWith("listing:m_")));
 });
+
+// ── version is identity, not decoration ───────────────────────────
+
+test("a chain never mixes versions: the snapshot's is not a fallback", () => {
+  // The reported defect, reproduced. The candidate log states v2; the snapshot
+  // holds v3; the injected block states nothing. The chain came out
+  // recalled v2 → selected v2 → injected v3, and that last v3 was the snapshot
+  // leaking in through the one path that had no version to state.
+  const snapshot = {
+    pool_snapshot_at: "2026-09-01T00:00:00Z",
+    assets: [{
+      asset_id: "skl-AAA", asset_type: "skill", name: "bridge-addr-right",
+      producer_user_id: "usr-author", producer_agent_id: "agt-author",
+      version: 3, asset_created_at: "2026-08-20T00:00:00Z",
+    }],
+  };
+
+  const { events, versionDrift } = buildEarlyEvents({
+    snapshot,
+    toolCallRows: CONSUMER_ROWS,
+    candidateLog: [{
+      session_key: "sess-1", timestamp: "2026-09-02T09:00:00Z", mode: "full",
+      hits: [{ skill_id: "skl-AAA", name: "bridge-addr-right", version: 2 }],
+      listing: "<available_skills>\n- bridge-addr-right: the working address\n</available_skills>",
+    }],
+    captureEvents: [capturedRequest({
+      system: "<available_skills>\n- bridge-addr-right: the working address\n</available_skills>",
+    })],
+  });
+
+  assert.deepEqual([...new Set(events.map((e) => e.asset_version))], [2]);
+  assert.deepEqual(events.map((e) => e.state).sort(), ["injected", "recalled", "selected"]);
+  assert.deepEqual(versionDrift, [{ asset_id: "skl-AAA", observed: 2, in_snapshot: 3 }]);
+});
+
+test("two versions in one session stay two chains", () => {
+  // Collapsing them would report one lifecycle for two different revisions, and
+  // whichever was noticed first would silently own the other's evidence.
+  const { events } = buildEarlyEvents({
+    snapshot: SNAPSHOT, toolCallRows: CONSUMER_ROWS,
+    captureEvents: [
+      capturedRequest({ requestId: "r1", ts: "2026-09-02T10:00:00Z", toolResults: [searchResult([{ ...REAL_ITEMS[0], version: 2 }])] }),
+      capturedRequest({ requestId: "r2", ts: "2026-09-02T10:05:00Z", toolResults: [searchResult([{ ...REAL_ITEMS[0], version: 3 }])] }),
+    ],
+  });
+
+  const recalled = events.filter((e) => e.state === "recalled");
+  assert.deepEqual(recalled.map((e) => e.asset_version).sort(), [2, 3]);
+
+  // And each injected event points at the recalled event of its own version.
+  for (const inj of events.filter((e) => e.state === "injected")) {
+    const parent = recalled.find((r) => r.event_id === inj.parent_event_ids[0]);
+    assert.equal(parent.asset_version, inj.asset_version);
+  }
+});
+
+test("an unstatable version stays null when two versions were in play", () => {
+  // With one version seen, the block's version can be inferred. With two, there
+  // is no honest answer, so it is left unset and reported.
+  const { events, ambiguousVersions } = buildEarlyEvents({
+    snapshot: SNAPSHOT, toolCallRows: CONSUMER_ROWS,
+    captureEvents: [
+      capturedRequest({ requestId: "r1", ts: "2026-09-02T10:00:00Z", toolResults: [searchResult([{ ...REAL_ITEMS[0], version: 2 }])] }),
+      capturedRequest({
+        requestId: "r2", ts: "2026-09-02T10:05:00Z",
+        system: "<available_skills>\n- bridge-addr-right: the working address\n</available_skills>",
+        toolResults: [searchResult([{ ...REAL_ITEMS[0], version: 3 }])],
+      }),
+    ],
+  });
+
+  const fromBlock = events.find((e) => e.proof_refs.some((r) => r.kind === "injected_block") && e.asset_version == null);
+  assert.ok(fromBlock, "the block-only event keeps a null version");
+  assert.equal(ambiguousVersions.length, 1);
+  assert.deepEqual(ambiguousVersions[0].versions.sort(), [2, 3]);
+});
+
+test("an inferred version says so in its evidence", () => {
+  const { events } = buildEarlyEvents({
+    snapshot: SNAPSHOT, toolCallRows: CONSUMER_ROWS,
+    captureEvents: [capturedRequest({
+      system: "<available_skills>\n- bridge-addr-right: the working address\n</available_skills>",
+      toolResults: [searchResult([{ ...REAL_ITEMS[0], version: 2 }])],
+    })],
+  });
+
+  const injected = events.find((e) => e.state === "injected");
+  assert.equal(injected.asset_version, 2);
+  const fromBlock = injected.proof_refs.find((r) => r.kind === "injected_block");
+  assert.match(fromBlock.detail, /version not stated by this source/);
+});

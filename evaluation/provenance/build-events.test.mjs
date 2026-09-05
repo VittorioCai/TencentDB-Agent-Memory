@@ -44,6 +44,22 @@ function captureWithResult(conversationId, resultText) {
   };
 }
 
+/**
+ * A tool result shaped the way a real Bash curl call comes back: the command
+ * echoed first, then the output. The two halves have to be separable, because
+ * whether the call *asked for* this asset is decided by the command and whether
+ * it *came back* is decided by the output.
+ */
+function curlResult(conversationId, { url, body = "{}", stdout }) {
+  return captureWithResult(
+    conversationId,
+    `Command: curl -sSk -X POST ${url} -d '${body}'\nStdout: ${stdout}`,
+  );
+}
+
+const SEARCH_URL = "http://127.0.0.1:8096/skill-bridge/v3/skill/search";
+const GET_URL = "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name";
+
 function bridgeRow(overrides = {}) {
   return {
     kind: "bridge_call",
@@ -90,10 +106,10 @@ test("asset ids are matched in tool results only, never in requests", () => {
       { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: '{"command":"curl ... skl-alice"}' } }] },
     ] } },
   };
-  assert.equal(extractAssetMentions([inRequest], ["skl-alice"]).size, 0);
+  assert.equal(extractAssetMentions([inRequest], SNAPSHOT.assets).size, 0);
 
   const inResult = captureWithResult("conv-1", '{"data":{"items":[{"skill_id":"skl-alice"}]}}');
-  assert.deepEqual([...extractAssetMentions([inResult], ["skl-alice"]).keys()], ["skl-alice"]);
+  assert.deepEqual([...extractAssetMentions([inResult], SNAPSHOT.assets).keys()], ["skl-alice"]);
 });
 
 test("asset identity plus a service-side success is marked bridge+wire", () => {
@@ -111,19 +127,42 @@ test("asset identity plus a service-side success is marked bridge+wire", () => {
   assert.equal(hit.asset_version, 3);
 });
 
-test("a rejected bridge call is not a success and degrades to wire_only", () => {
+test("a rejected bridge call is not a success", () => {
+  // The command asked for this asset and the output carried it, so the wire
+  // shows a retrieval. The service says the call was refused. That is a real
+  // disagreement between the two tiers and it is recorded as such rather than
+  // resolved in either direction.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({ upstream_status: 401, reject_reason: "session_not_initialized" })],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_name":"deploy-conventions"}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice"}}',
+    })],
+  });
+
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.observation, "wire_only");
+  assert.match(hit.proof_refs[0].detail, /telemetry gap/);
+});
+
+test("a refused call and a bare mention together are still not a fetch", () => {
   const events = buildEvents({
     snapshot: SNAPSHOT,
     toolCallRows: [bridgeRow({ upstream_status: 401, reject_reason: "session_not_initialized" })],
     captureEvents: [captureWithResult("conv-1", '{"skill_id":"skl-alice"}')],
   });
 
-  assert.equal(events.find((e) => e.asset_id === "skl-alice").observation, "wire_only");
+  assert.equal(events.find((e) => e.asset_id === "skl-alice"), undefined);
+  assert.equal(events.offeredNotRetrieved.length, 1);
 });
 
-test("a service-side record the capture missed is kept as bridge_only", () => {
+test("a service-side record the capture missed is kept, and named when the row names it", () => {
   // A gap in collection and an absence of activity are different things;
-  // dropping it would suggest the call never happened.
+  // dropping it would suggest the call never happened. And when the row itself
+  // names the asset, the event can say which one — the capture is only needed
+  // to see the response, not to identify the request.
   const events = buildEvents({
     snapshot: SNAPSHOT,
     toolCallRows: [bridgeRow({ session_key: "codebuddy:conv-unseen" })],
@@ -132,6 +171,24 @@ test("a service-side record the capture missed is kept as bridge_only", () => {
 
   const only = events.find((e) => e.session_key === "conv-unseen");
   assert.equal(only.observation, "bridge_only");
+  assert.equal(only.asset_id, "skl-alice");
+  assert.equal(only.relation, "cross_user");
+});
+
+test("a listing call the capture missed names no asset", () => {
+  // skill/search does not identify an asset in its request, so the row alone
+  // cannot say which asset — reporting one would be a guess.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [bridgeRow({
+      session_key: "codebuddy:conv-unseen",
+      executed_endpoint: "search",
+      request_body: '{"query":"deploy"}',
+    })],
+    captureEvents: [],
+  });
+
+  const only = events.find((e) => e.session_key === "conv-unseen");
   assert.equal(only.asset_id, "");
   assert.equal(only.relation, "unknown");
 });
@@ -142,8 +199,12 @@ test("assets created after the pool freeze are flagged as answer leaks", () => {
   // to match the task, that is an answer leak.
   const events = buildEvents({
     snapshot: SNAPSHOT,
-    toolCallRows: [bridgeRow()],
-    captureEvents: [captureWithResult("conv-1", '{"skill_id":"skl-late"}')],
+    toolCallRows: [bridgeRow({ request_body: '{"skill_id":"skl-late"}', executed_endpoint: "get" })],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_id":"skl-late"}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-late"}}',
+    })],
   });
 
   assert.equal(events.find((e) => e.asset_id === "skl-late").excluded_by_snapshot, true);
@@ -211,7 +272,49 @@ test("an unrelated success in the same session does not mark an asset fetched", 
     captureEvents: [captureWithResult("conv-1", '{"skill_id":"skl-alice"}')],
   });
 
+  assert.equal(events.find((e) => e.asset_id === "skl-alice"), undefined);
+});
+
+test("appearing in a search response is never written as fetched", () => {
+  // The second half of the same defect. The earlier fix stopped an unrelated
+  // bridge row from standing in as evidence, but the event was still written —
+  // as `fetched` with observation wire_only, on nothing but the asset id being
+  // present. A later stage that keys off the state name would read that as a
+  // retrieval and promote it.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [],
+    captureEvents: [curlResult("conv-1", {
+      url: SEARCH_URL,
+      body: '{"query":"deploy"}',
+      stdout: '{"code":0,"data":{"items":[{"skill_id":"skl-alice"},{"skill_id":"skl-late"}]}}',
+    })],
+  });
+
+  assert.deepEqual(events.filter((e) => e.state === "fetched"), []);
+  assert.deepEqual(
+    events.offeredNotRetrieved.map((o) => o.asset_id).sort(),
+    ["skl-alice", "skl-late"],
+  );
+  assert.match(renderSummary(summarize(events)), /Offered, not fetched/);
+});
+
+test("a targeted call the service never logged is a fetch with the gap recorded", () => {
+  // The wire shows the model asked for this asset by name and got it back. No
+  // bridge row exists. That is a hole in the tap, not a stronger result, and
+  // the event says so rather than presenting itself as ordinary evidence.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL,
+      body: '{"skill_name":"deploy-conventions"}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":3}}',
+    })],
+  });
+
   const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.state, "fetched");
   assert.equal(hit.observation, "wire_only");
-  assert.match(hit.proof_refs[0].detail, /no service-side call targets it/);
+  assert.match(hit.proof_refs[0].detail, /no service-side row recorded it/);
 });
