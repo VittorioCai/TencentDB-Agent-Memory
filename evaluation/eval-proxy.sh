@@ -225,7 +225,23 @@ PY
     fi
 
     if docker inspect "$CONTAINER" --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx "$IN_IMAGE_BRIDGE"; then
-      echo "  read-visibility bridge: MOUNTED (get-by-name resolves across visible team skills)"
+      # A single-file bind mount follows the inode. Editing the file on the
+      # host replaces the inode, and the container keeps the old bytes — a
+      # restart does not help, only a recreate re-binds the path. Found the
+      # hard way: the name-resolution fix sat on disk while the container ran
+      # the previous whitelist logic. Compare bytes, not just the mount table.
+      in_c="$(docker exec "$CONTAINER" sha256sum "$IN_IMAGE_BRIDGE" 2>/dev/null | cut -c1-16)"
+      on_d="$(shasum -a 256 "$BRIDGE_SRC" 2>/dev/null | cut -c1-16)"
+      if [[ -n "$in_c" && "$in_c" == "$on_d" ]]; then
+        echo "  read-visibility bridge: MOUNTED and current ($in_c)"
+      else
+        echo "  read-visibility bridge: MOUNTED but STALE — container has $in_c, disk has $on_d."
+        echo "                          The file was replaced after mounting; run 'enable' to re-bind (restart is not enough)."
+      fi
+      in_i="$(docker exec "$CONTAINER" sha256sum "$IN_IMAGE_SRC" 2>/dev/null | cut -c1-16)"
+      on_i="$(shasum -a 256 "$PATCHED_SRC" 2>/dev/null | cut -c1-16)"
+      [[ -n "$in_i" && "$in_i" == "$on_i" ]] \
+        || echo "  candidate-log injector:  MOUNTED but STALE ($in_i vs $on_i) — run 'enable' to re-bind"
     else
       echo "  read-visibility bridge: not mounted — a consumer reading another agent's skill by name gets 40401"
     fi

@@ -232,3 +232,23 @@ One consequence worth stating plainly: because `47318` leaks into snippets, the
 mainline right-asset `used` case is provable **only** in runs where no snippet
 carried it. Making that token snippet-safe would need another pool re-freeze and
 is left as a scenario decision rather than done silently.
+
+## The earliest delivery decides
+
+The snippet screen above was the first form of a more general rule, and the
+second real run showed why the general form is needed. The consumer read its
+**own auto-extracted skill** at message 4 — the system had distilled one from a
+previous session and left it in the evaluation pool — and only then read the
+credited assets at messages 20 and 21. That skill happened not to carry the
+discriminative tokens. Nothing guarantees the next one will not.
+
+So `collect-artifacts.mjs` now records `delivered_content`: **every** tool
+result's output with the message index it arrived at and the command that
+produced it. The judge finds the earliest delivery of the token before the
+operation and credits the fetch only if that fetch *is* the earliest delivery.
+Anything earlier — a search snippet, another asset's body, a file read, the
+model's own skill — stops the event at `needs_review` and names the source.
+
+Equal is not earlier: the credited fetch's own response is in
+`delivered_content` at its `context_entry_index`, and that is the case that
+passes.

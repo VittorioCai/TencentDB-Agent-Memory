@@ -190,3 +190,19 @@ from another (`skill_id`, `skill_name`, `include_content`) are all kept, and
 within a session identity is constant, so this cannot merge calls that were
 really distinct. It is a defined normalisation, not the positional fallback that
 was removed earlier.
+
+## Assets the frozen snapshot does not hold
+
+`build-events.mjs` used to iterate the snapshot's assets, which made an asset
+that appeared *after* the freeze invisible — not excluded, not flagged, simply
+absent from every event. That is the worst outcome for exactly the case the
+freeze exists to catch: the system auto-extracts skills from finished sessions,
+and the first real consumer run left a consumer-owned skill in the evaluation
+pool one minute after it ended. The next run read that skill before any
+credited asset, and no event recorded it.
+
+Targeted responses naming a skill id the snapshot lacks are now collected as
+`unknownAssets` and printed in the summary with their first message index.
+Nothing attributes to them; the judge's earliest-delivery rule is what screens
+against them. `run-once.sh` additionally reads the live pool every run and
+writes `pool-drift.json`, warning loudly when the pool has moved.

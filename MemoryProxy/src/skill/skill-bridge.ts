@@ -373,7 +373,15 @@ export type VisibleSkillIdsResolver = (input: {
   team_id: string;
   user_key: string;
   space_id?: string;
-}) => Promise<{ ids: string[] }>;
+}) => Promise<{
+  ids: string[];
+  /**
+   * The same assets with their names, when the resolver has them. Optional so
+   * a resolver that returns ids alone (older callers, tests) keeps working;
+   * without it get-by-name can resolve only the caller's own skills.
+   */
+  assets?: Array<{ asset_id: string; name?: string; owner_user_id?: string }>;
+}>;
 
 export interface SkillBridgeDeps {
   /** Override fetcher (tests). */
@@ -464,42 +472,61 @@ export function decideReadVisibility(input: {
 
 /**
  * The visibility whitelist for read ops: A ∪ B, exactly as `search` computes it,
- * plus the team-wide skill list so `get-by-name` can resolve names.
+ * with names attached so `get-by-name` can resolve across it.
  *
- *   A = meta list-accessible(visibility='team')   team-shared, from the control plane
- *   B = the caller's own skills, including private ones
+ *   A = meta list-accessible(visibility='team')   team-shared, from the control
+ *       plane — and it carries each asset's name, which is where names for
+ *       other agents' skills come from
+ *   B = coreClient.listSkills(team, caller agent)   the caller's own skills,
+ *       including private ones — the very call search makes, proven to work
  *
- * B is derived from the team-wide list by owner rather than fetched separately,
- * so this costs two calls per read op, not three. Failure policy mirrors
- * search: A failing is fail-closed (an empty whitelist, never an unfiltered
- * read); the team list failing degrades B to empty and name resolution to none.
+ * There is deliberately no team-wide `listSkills` here. An earlier version
+ * called it with team_id alone, and CoreSkillClient.normalizeTeamAgent fills
+ * an empty agent_id with "default" — so the call listed the skills owned by an
+ * agent named "default": none, and no error. Name resolution then found
+ * nothing, get-by-name was forwarded unchanged, and the consumer got 40401
+ * exactly as before the fix, with the fix silently doing nothing.
+ *
+ * Failure policy mirrors search: A failing is fail-closed (an empty whitelist,
+ * never an unfiltered read); B failing degrades to A only.
  */
-async function computeReadWhitelist(input: {
+export async function computeReadWhitelist(input: {
   ids: { user_id: string; team_id: string; agent_id: string; user_key?: string; space_id?: string };
   resolver: VisibleSkillIdsResolver;
-  coreClient: CoreSkillClient;
-}): Promise<{ ok: true; whitelist: Set<string>; teamSkills: TeamSkillRef[] } | { ok: false; err: Error }> {
+  coreClient: Pick<CoreSkillClient, "listSkills">;
+}): Promise<{ ok: true; whitelist: Set<string>; teamSkills: TeamSkillRef[]; namesFromA: boolean } | { ok: false; err: Error }> {
   const { ids, resolver, coreClient } = input;
 
   const promiseA = resolver({
     user_id: ids.user_id, team_id: ids.team_id, user_key: ids.user_key ?? "", space_id: ids.space_id,
-  }).then((r) => ({ ok: true as const, ids: r.ids }))
+  }).then((r) => ({ ok: true as const, ids: r.ids, assets: r.assets ?? [] }))
     .catch((err) => ({ ok: false as const, err: err as Error }));
 
-  const promiseTeam = coreClient.listSkills(
-    { team_id: ids.team_id, pagination: { limit: 1000 } },
+  const promiseB = coreClient.listSkills(
+    { team_id: ids.team_id, agent_id: ids.agent_id, pagination: { limit: 1000 } },
     { serviceId: ids.space_id },
-  ).then((r) => r.items.map((s) => ({ skill_id: s.skill_id, name: s.name, owner_agent_id: s.owner_agent_id })))
+  ).then((r) => r.items.map((s) => ({ skill_id: s.skill_id, name: s.name, owner_agent_id: s.owner_agent_id ?? ids.agent_id })))
     .catch((err) => {
-      console.warn(`${TAG} read whitelist team list failed, treating as empty: ${(err as Error).message}`);
+      console.warn(`${TAG} read whitelist own-skills list (B) failed, treating as empty: ${(err as Error).message}`);
       return [] as TeamSkillRef[];
     });
 
-  const [aResult, teamSkills] = await Promise.all([promiseA, promiseTeam]);
+  const [aResult, own] = await Promise.all([promiseA, promiseB]);
   if (!aResult.ok) return { ok: false, err: aResult.err };
 
-  const own = teamSkills.filter((t) => t.owner_agent_id === ids.agent_id).map((t) => t.skill_id);
-  return { ok: true, whitelist: new Set<string>([...aResult.ids, ...own]), teamSkills };
+  const ownIds = new Set(own.map((s) => s.skill_id));
+  // A's entries that are not the caller's own carry no agent id from meta, so
+  // they are recorded as "someone else's" — which is all the clash rule needs.
+  const fromA: TeamSkillRef[] = aResult.assets
+    .filter((a) => a.name && !ownIds.has(a.asset_id))
+    .map((a) => ({ skill_id: a.asset_id, name: a.name as string, owner_agent_id: undefined }));
+
+  return {
+    ok: true,
+    whitelist: new Set<string>([...aResult.ids, ...ownIds]),
+    teamSkills: [...own, ...fromA],
+    namesFromA: aResult.assets.length > 0,
+  };
 }
 
 /**
@@ -554,7 +581,10 @@ function defaultVisibleSkillIdsResolver(
       visibility: "team",
     });
     // For skill assets, asset_id === skill_id by kernel convention.
-    return { ids: assets.map((a) => a.asset_id) };
+    return {
+      ids: assets.map((a) => a.asset_id),
+      assets: assets.map((a) => ({ asset_id: a.asset_id, name: a.name, owner_user_id: a.owner_user_id })),
+    };
   };
 }
 

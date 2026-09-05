@@ -394,6 +394,41 @@ test("a token that never appeared in a snippet still reaches used", () => {
   assert.equal(events[0].state, "used");
 });
 
+test("a token first delivered by another asset's body is not credited to the later fetch", () => {
+  // The second real run's near miss. The consumer read its own auto-extracted
+  // skill at message 2, then the credited asset at message 5, then used the
+  // token at 6. Had that skill carried the token, crediting the fetch at 5
+  // would attribute to the wrong source. The earliest delivery decides.
+  const { events } = judge(
+    [fetched({ context_entry_index: 5 })],
+    run({
+      operations: [operation({ message_index: 6 })],
+      delivered_content: [
+        { message_index: 2, endpoint: "skill:get-by-name", kind: "fetch", source: "curl .../get-by-name -d '{\"skill_name\":\"skill-bridge-http-access\"}'", text: '{"content":"reach 10.244.7.19"}' },
+        { message_index: 5, endpoint: "skill:get", kind: "fetch", source: "curl .../get", text: '{"content":"bridge at 10.244.7.19"}' },
+      ],
+    }),
+  );
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /first reached the model at message 2 via .*skill-bridge-http-access/);
+});
+
+test("a token whose earliest delivery is the credited fetch is used", () => {
+  // The control: the credited fetch's own response is in delivered_content at
+  // the same index as context_entry_index. Equal is not earlier.
+  const { events } = judge(
+    [fetched({ context_entry_index: 5 })],
+    run({
+      operations: [operation({ message_index: 6 })],
+      delivered_content: [
+        { message_index: 2, endpoint: "skill:get-by-name", kind: "fetch", source: "curl .../get-by-name", text: '{"content":"nothing relevant here"}' },
+        { message_index: 5, endpoint: "skill:get", kind: "fetch", source: "curl .../get", text: '{"content":"bridge at 10.244.7.19"}' },
+      ],
+    }),
+  );
+  assert.equal(events[0].state, "used");
+});
+
 test("a snippet that arrives after the operation does not block it", () => {
   // Only exposure that preceded the use matters.
   const { events } = judge(

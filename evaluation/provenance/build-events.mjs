@@ -307,6 +307,14 @@ export function extractAssetMentions(events, assets) {
   const mentions = new Map(); // assetId -> Map<sessionKey, {targeted, endpoints:Set, callIds:Set}>
   const list = [...assets].filter((a) => a?.asset_id);
   if (list.length === 0) return mentions;
+  const known = new Set(list.map((a) => a.asset_id));
+  // Targeted responses for assets the frozen snapshot does not hold. Iterating
+  // the snapshot's assets makes these invisible, and invisible is the worst
+  // outcome for exactly this case: an asset that appeared after the freeze —
+  // the system auto-extracts skills from finished sessions — is the answer
+  // leak the freeze exists to catch. The first real consumer run read such a
+  // skill before any credited asset and no event recorded it.
+  const unknown = new Map(); // asset_id -> {asset_id, name, version, sessions:Set, first_index}
 
   for (const event of events) {
     if (event?.event !== "http.request") continue;
@@ -320,6 +328,23 @@ export function extractAssetMentions(events, assets) {
     for (const { index, callId, text } of toolResultsOf(body)) {
       const { command, output } = splitCommandAndOutput(text);
       if (!output) continue;
+
+      // A non-listing response naming a skill id the snapshot lacks.
+      const ep = commandEndpoint(command);
+      if (ep && !isListingAction(ep)) {
+        const env = firstJsonObject(output);
+        const rec = env?.data && typeof env.data === "object" ? env.data : null;
+        const rid = rec ? String(rec.skill_id ?? rec.wiki_id ?? rec.asset_id ?? "") : "";
+        if (rid && !known.has(rid)) {
+          if (!unknown.has(rid)) {
+            unknown.set(rid, { asset_id: rid, name: String(rec.name ?? ""), version: rec.version ?? null, sessions: new Set(), first_index: index });
+          }
+          const u = unknown.get(rid);
+          u.sessions.add(sessionKey);
+          if (index < u.first_index) u.first_index = index;
+        }
+      }
+
       for (const asset of list) {
         if (!output.includes(asset.asset_id)) continue;
         if (!mentions.has(asset.asset_id)) mentions.set(asset.asset_id, new Map());
@@ -352,6 +377,7 @@ export function extractAssetMentions(events, assets) {
       }
     }
   }
+  mentions.unknownAssets = [...unknown.values()].map((u) => ({ ...u, sessions: [...u.sessions] }));
   return mentions;
 }
 
@@ -633,6 +659,7 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
 
   events.offeredNotRetrieved = offeredNotRetrieved;
   events.unpairedResponses = unpairedResponses;
+  events.unknownAssets = mentions.unknownAssets ?? [];
   return events;
 }
 
@@ -660,6 +687,7 @@ export function summarize(events) {
     crossUserRate: attributable > 0 ? counts.cross_user / attributable : null,
     offeredNotRetrieved: events.offeredNotRetrieved ?? [],
     unpairedResponses: events.unpairedResponses ?? [],
+    unknownAssets: events.unknownAssets ?? [],
   };
 }
 
@@ -700,6 +728,18 @@ export function renderSummary(s) {
     lines.push("Offered, not fetched. These are **not** written as `fetched` — appearing in a");
     lines.push("listing is the retrieval system doing its job, not the model taking the content.");
     lines.push("They are recorded as `recalled` / `injected` by build-early-events.mjs.");
+  }
+  const unknownAssets = s.unknownAssets ?? [];
+  if (unknownAssets.length > 0) {
+    lines.push("", `**${unknownAssets.length} asset(s) were retrieved that the frozen snapshot does not hold:**`);
+    for (const u of unknownAssets) {
+      lines.push(`  - ${u.asset_id} ${u.name ? `(${u.name}) ` : ""}v${u.version ?? "?"}, first at message ${u.first_index}`);
+    }
+    lines.push("The pool moved after it was frozen — most likely the system auto-extracted a skill");
+    lines.push("from a finished session. Nothing above attributes to these assets, and nothing");
+    lines.push("above *screens* against them either; the judge's earliest-delivery rule does. If");
+    lines.push("one of them carried a token before a credited fetch, that token's use is not");
+    lines.push("evidence for the credited asset.");
   }
   const unpaired = s.unpairedResponses ?? [];
   if (unpaired.length > 0) {

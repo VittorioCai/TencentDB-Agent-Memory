@@ -100,3 +100,27 @@ there as `capture-before.jsonl` rather than deleting it.
 
 An empty capture afterwards is a hard error, not an empty result: it means the
 probe saw no traffic, which is a fact about the wiring and not about the run.
+
+## Pool drift is checked every run
+
+The system extracts skills from finished sessions on its own. `run-once.sh`
+reads the live pool after the session and writes `pool-drift.json` (added /
+removed / version-changed against the frozen snapshot), warning when anything
+moved. Attribution in the run is still against the **frozen** pool; the drift
+file says what that pool no longer describes.
+
+## Three harness traps, each of which produced a wrong-looking run
+
+- **`-p` needs `-y`.** Non-interactive CodeBuddy has nobody to approve tool
+  calls; without the flag every Bash call is denied and the model correctly
+  reports it could not do the task. A whole run of permission errors, scored
+  ERROR — right verdict, wrong cause.
+- **Headers are not identity.** In `-p` mode the binding headers from
+  `codebuddy-binding.env` are forwarded, and `debugForceIdentity` overrides
+  them. The capture shows the old team in its headers while the session ran as
+  the forced consumer. `run.json` now records the proxy's own `→ initialized`
+  line as `resolved_identity`; the headers are never used for that.
+- **A single-file bind mount follows the inode.** Editing a mounted source
+  file on the host replaces its inode; the container keeps the old bytes, and
+  `docker restart` does not help. Only `eval-proxy.sh enable` (a recreate)
+  re-binds. `eval-proxy.sh status` now compares bytes and says STALE.

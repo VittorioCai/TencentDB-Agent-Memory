@@ -171,6 +171,43 @@ done
 SNAPSHOT="$EVAL/provenance/artifacts/asset-pool-snapshot.json"
 cp "$SNAPSHOT" "$RUN_DIR/asset-pool-snapshot.json" 2>/dev/null || warn "no pool snapshot to copy"
 
+# ── 3b. has the pool moved since it was frozen? ──────────────────
+# The system extracts skills from finished sessions on its own. The first real
+# consumer run left a consumer-owned skill in the evaluation pool one minute
+# after it ended, and the next run read that skill before any credited asset.
+# It happened not to carry the discriminative tokens; nothing guarantees the
+# next one will not. The frozen snapshot cannot flag an asset it never held, so
+# the live pool is read here and the difference recorded — loudly, because a
+# drifted pool changes what every later number in this run means.
+TEAM_ID_FOR_POOL="$(python3 -c "import json;print(json.load(open('$SNAPSHOT')).get('team_id',''))" 2>/dev/null || true)"
+if [[ -n "$TEAM_ID_FOR_POOL" ]] \
+   && TEAM_ID="$TEAM_ID_FOR_POOL" OUT="$RUN_DIR/asset-pool-live.json" \
+      bash "$EVAL/provenance/snapshot-assets.sh" >"$RUN_DIR/pool-live.log" 2>&1; then
+  python3 - "$RUN_DIR/asset-pool-snapshot.json" "$RUN_DIR/asset-pool-live.json" "$RUN_DIR/pool-drift.json" <<'PY'
+import json, sys
+frozen = {a["asset_id"]: a for a in json.load(open(sys.argv[1], encoding="utf-8"))["assets"]}
+live = {a["asset_id"]: a for a in json.load(open(sys.argv[2], encoding="utf-8"))["assets"]}
+added = [live[k] for k in live if k not in frozen]
+removed = [frozen[k] for k in frozen if k not in live]
+changed = [{"asset_id": k, "frozen_version": frozen[k].get("version"), "live_version": live[k].get("version")}
+           for k in live if k in frozen and str(live[k].get("version")) != str(frozen[k].get("version"))]
+drift = {"added": added, "removed": removed, "version_changed": changed,
+         "drifted": bool(added or removed or changed)}
+json.dump(drift, open(sys.argv[3], "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+if drift["drifted"]:
+    print(f"POOL DRIFT: +{len(added)} added, -{len(removed)} removed, {len(changed)} version change(s)")
+    for a in added:
+        print(f"  + {a['asset_id']} {a.get('name','')} owner={a.get('producer_agent_id','')} created={a.get('asset_created_at','')}")
+PY
+  if python3 -c "import json,sys;sys.exit(0 if json.load(open('$RUN_DIR/pool-drift.json'))['drifted'] else 1)"; then
+    warn "the live pool differs from the frozen snapshot — see pool-drift.json; attribution below is against the FROZEN pool"
+  else
+    info "pool unchanged since freeze"
+  fi
+else
+  warn "could not read the live pool; drift unknown (not the same as none)"
+fi
+
 info "provenance …"
 (cd "$REPO_ROOT" && node "$EVAL/provenance/build-events.mjs" "$SNAPSHOT" "$TOOL_CALLS" "$CAPTURE" \
   > "$RUN_DIR/provenance.md" 2>&1) || warn "build-events failed; see $RUN_DIR/provenance.md"

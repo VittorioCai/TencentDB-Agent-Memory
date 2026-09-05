@@ -202,20 +202,44 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
   // index it arrived at, so the judge can screen only what preceded an
   // operation. Confirmed necessary by the real run: `47318` came back in 13
   // search snippets while `10.244.7.19` came back in none.
-  const offeredBySession = new Map();
+  // Every tool result's output, not only search results. The first real run
+  // showed why the narrower version is not enough: the consumer's own
+  // auto-extracted skill was read at message 4, before any of the credited
+  // assets. It happened not to carry the discriminative tokens that time —
+  // but a token delivered by *any* earlier result (another asset's body, a
+  // file read, a search snippet) means its later use cannot be credited to
+  // the fetch the judge is looking at. So the judge is given everything that
+  // arrived, with where it came from, and decides by earliest delivery.
+  const deliveredBySession = new Map();
   for (const event of requests) {
     const sessionKey = normalizeSessionKey(
       event?.headers?.["x-conversation-id"] ?? event?.headers?.["X-Conversation-Id"] ?? "",
     );
     for (const { index, text } of toolResults(event.body.json)) {
       const { command, output } = splitCommandAndOutput(text);
+      if (!output) continue;
       const endpoint = commandEndpoint(command);
-      if (!endpoint || !isListingAction(endpoint) || !output) continue;
-      if (!offeredBySession.has(sessionKey)) offeredBySession.set(sessionKey, new Map());
-      const byIndex = offeredBySession.get(sessionKey);
-      // First arrival of a given result is when it was offered.
-      if (!byIndex.has(index)) byIndex.set(index, { message_index: index, endpoint, text: output });
+      if (!deliveredBySession.has(sessionKey)) deliveredBySession.set(sessionKey, new Map());
+      const byIndex = deliveredBySession.get(sessionKey);
+      // First arrival of a given result is when it was delivered.
+      if (!byIndex.has(index)) {
+        byIndex.set(index, {
+          message_index: index,
+          endpoint: endpoint || null,
+          kind: endpoint ? (isListingAction(endpoint) ? "listing" : "fetch") : "other",
+          // Enough of the command to name the source in a judgement; not the
+          // full text, which can be long and carries nothing the locus lacks.
+          source: String(command ?? "").trim().split("\n")[0].slice(0, 160),
+          text: output,
+        });
+      }
     }
+  }
+  const offeredBySession = new Map();
+  for (const [sessionKey, byIndex] of deliveredBySession) {
+    const listings = new Map();
+    for (const [i, d] of byIndex) if (d.kind === "listing") listings.set(i, d);
+    offeredBySession.set(sessionKey, listings);
   }
 
   const sessions = [];
@@ -282,6 +306,12 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
       pre_change_files: preChangeFiles,
       diff,
       offered_content: [...(offeredBySession.get(sessionKey)?.values() ?? [])]
+        .sort((a, b) => a.message_index - b.message_index),
+      // Everything that came back from any tool, in arrival order. The judge
+      // credits a token to a fetch only when that fetch is the token's
+      // earliest delivery; anything earlier — another asset's body, a file
+      // read, a snippet — means the credit cannot be given.
+      delivered_content: [...(deliveredBySession.get(sessionKey)?.values() ?? [])]
         .sort((a, b) => a.message_index - b.message_index),
       operations,
       test_commands: operations.filter((o) => o.kind === "test_command").map((o) => o.locus),

@@ -149,8 +149,10 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
   const task = String(artifacts?.task_description ?? "");
   const preChange = Object.entries(artifacts?.pre_change_files ?? {});
   const fetches = events.filter(isContentBearingFetch);
-  // Content the model was offered without fetching: search / list snippets.
-  const offered = artifacts?.offered_content ?? [];
+  // Everything that reached the model through a tool result, in arrival
+  // order — bodies of fetched assets, file reads, search snippets. Falls back
+  // to the listing-only view for artifacts collected before it existed.
+  const delivered = artifacts?.delivered_content ?? artifacts?.offered_content ?? [];
 
   for (const [assetId, entry] of Object.entries(tokensByAsset ?? {})) {
     const { version: tokenVersion, tokens } = tokenSet(entry);
@@ -166,16 +168,21 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
 
         const searching = op.kind !== "diff_hunk" && SEARCH_COMMAND.test(String(op.text ?? ""));
 
-        // Was this exact token handed to the model in a search snippet before
-        // the operation? If so, using it cannot distinguish reading the snippet
-        // from fetching the body — the snippet already carried it. A full fetch
-        // may also have happened, but the token is no longer clean evidence of
-        // it, so this stops at needs_review rather than crediting a fetch it
-        // cannot separate from an offer. The real run showed this is not
-        // hypothetical: `47318` came back in a snippet, `10.244.7.19` did not.
-        const snippetLeak = offered.find((o) =>
-          (op.message_index == null || o.message_index < op.message_index)
-          && String(o.text ?? "").includes(token));
+        // Where did this token FIRST reach the model, before the operation?
+        //
+        // The credit can only go to the fetch that delivered the token first.
+        // If anything earlier carried it — a search snippet, another asset's
+        // body, a file read, the model's own auto-extracted skill — then the
+        // later use cannot be told apart from having read that earlier thing,
+        // and the credited fetch is at best a second source. The real runs
+        // supplied both shapes: `47318` came back in a search snippet in one
+        // session; in the next, the consumer read its own auto-extracted skill
+        // at message 4, well before any credited asset. That skill happened
+        // not to carry the tokens. Nothing guarantees the next one will not.
+        const earliest = delivered
+          .filter((d) => (op.message_index == null || d.message_index < op.message_index)
+            && String(d.text ?? "").includes(token))
+          .sort((a, b) => a.message_index - b.message_index)[0] ?? null;
 
         // Only a fetch of the revision these tokens came from may be credited.
         // A token that exists only in v1 must not be attributed to a later read
@@ -189,10 +196,18 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
           .filter(sameRevision)
           .sort((a, b) => b.context_entry_index - a.context_entry_index)[0];
 
+        // The credited fetch must BE the earliest delivery. Equal index means
+        // the same tool result; anything earlier is a different source.
+        const earlierSource = earliest && (!fetch || earliest.message_index < fetch.context_entry_index)
+          ? earliest
+          : null;
+
         const blocked = searching
           ? "the token appears in a search command — the model was looking for it, not using it"
-          : snippetLeak
-            ? `the token was in a search snippet (message ${snippetLeak.message_index}) before this operation, so its use cannot be told apart from reading that snippet`
+          : earlierSource
+            ? ((earlierSource.kind === "listing" || (earlierSource.endpoint && isListingAction(earlierSource.endpoint)))
+                ? `the token was in a search snippet (message ${earlierSource.message_index}) before this operation, so its use cannot be told apart from reading that snippet`
+                : `the token first reached the model at message ${earlierSource.message_index} via ${earlierSource.source || earlierSource.endpoint || "another tool result"}, before the credited fetch — its use cannot be attributed to that fetch`)
           : op.message_index == null
             ? "a diff has no position in the run, so it cannot show the asset was read before the change was made"
             : !fetch && tokenVersion == null
