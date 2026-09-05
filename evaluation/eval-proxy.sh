@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
-# Turn the injector's candidate-set audit trail on or off.
+# Put the proxy into evaluation mode, or take it back out.
+#
+# Evaluation mode changes exactly two things, and both are off by default:
+#
+#   1. The injector's candidate-set audit trail (TDAI_CANDIDATE_LOG).
+#   2. A second published port for the mainline scenario (SCENARIO_PORT).
+#
+# They live in one script because each is applied by recreating the container.
+# Two scripts doing that independently would silently undo each other: the
+# second would rebuild the run arguments from a container the first had already
+# changed, and whichever ran last would win.
 #
 # Why this exists: `skill-injector.ts` logs `hits=<count>`. A count can support
 # "something was recalled" but never "this asset was recalled", and an
@@ -17,10 +27,22 @@
 # code path, so it is gated on an environment variable, appends rather than
 # rewrites, and never fails a request when the write fails.
 #
+## The scenario port
+#
+# The mainline pair distinguishes two assets by the address they document. The
+# "right" one cannot document `127.0.0.1:8096`: that exact URL is already in the
+# injected `<skill_tools>` block of every session, so a model would write it
+# having read nothing. It documents an arbitrary port instead, and that port has
+# to actually reach the bridge for the acceptance check to be able to pass.
+#
+# Verified before choosing it: the proxy does not route on the Host header — a
+# request carrying `Host: 127.0.0.1:47318` gets the same response as the default
+# — so publishing a second port needs no application change.
+#
 # Usage:
-#   bash evaluation/provenance/candidate-log.sh enable
-#   bash evaluation/provenance/candidate-log.sh status
-#   bash evaluation/provenance/candidate-log.sh disable   # back to the stock image
+#   bash evaluation/eval-proxy.sh enable
+#   bash evaluation/eval-proxy.sh status
+#   bash evaluation/eval-proxy.sh disable   # back to the stock configuration
 #
 # `enable` and `disable` both recreate the container (an env var cannot be
 # added to a running one). The proxy holds no state that matters here: its
@@ -29,12 +51,16 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONTAINER="${CONTAINER:-tdai-proxy}"
 PATCHED_SRC="$REPO_ROOT/MemoryProxy/src/injection/injectors/skill-injector.ts"
 IN_IMAGE_SRC="/app/src/injection/injectors/skill-injector.ts"
 LOG_DIR="$REPO_ROOT/evaluation/provenance/artifacts"
 LOG_NAME="candidate-log.jsonl"
+# Kept in step with the address in evaluation/tasks/bridge-addr/assets/right.md;
+# `status` checks the two still agree.
+SCENARIO_PORT="${SCENARIO_PORT:-47318}"
+RIGHT_ASSET="$REPO_ROOT/evaluation/tasks/bridge-addr/assets/right.md"
 
 die() { echo "[error] $*" >&2; exit 1; }
 ok()  { echo "[ok] $*"; }
@@ -100,12 +126,18 @@ case "${1:-status}" in
       fi
     fi
 
+    if [[ -f "$RIGHT_ASSET" ]] && ! grep -q ":$SCENARIO_PORT" "$RIGHT_ASSET"; then
+      die "right.md does not document port $SCENARIO_PORT — publishing it would make the scenario unreachable"
+    fi
+
     mkdir -p "$LOG_DIR"
     recreate \
+      -p "${SCENARIO_PORT}:8096" \
       -v "$PATCHED_SRC:$IN_IMAGE_SRC:ro" \
       -v "$LOG_DIR:/data/eval" \
       -e "TDAI_CANDIDATE_LOG=/data/eval/$LOG_NAME"
     ok "candidate log on → $LOG_DIR/$LOG_NAME"
+    ok "scenario port $SCENARIO_PORT published → the right-address asset is reachable"
     echo "     Start a fresh session: the listing runs once at session init, and its"
     echo "     block is cached for the rest of the session, so an in-flight session"
     echo "     writes nothing."
@@ -113,7 +145,7 @@ case "${1:-status}" in
 
   disable)
     recreate
-    ok "candidate log off; proxy back to the stock image"
+    ok "evaluation mode off: no candidate log, no scenario port, stock image source"
     ;;
 
   status)
@@ -138,6 +170,20 @@ PY
       fi
     else
       echo "  candidate log: OFF"
+    fi
+
+    if docker inspect "$CONTAINER" --format '{{range $p, $c := .NetworkSettings.Ports}}{{range $c}}{{.HostPort}}{{"\n"}}{{end}}{{end}}' \
+         | awk 'NF' | grep -qx "$SCENARIO_PORT"; then
+      code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SCENARIO_PORT}/" --max-time 5 || echo "unreachable")"
+      echo "  scenario port $SCENARIO_PORT: PUBLISHED (responds $code)"
+    else
+      echo "  scenario port $SCENARIO_PORT: not published — the right-address asset would fail"
+    fi
+
+    if [[ -f "$RIGHT_ASSET" ]]; then
+      grep -q ":$SCENARIO_PORT" "$RIGHT_ASSET" \
+        && echo "  right.md documents :$SCENARIO_PORT — script and asset agree" \
+        || echo "  [warn] right.md does not document :$SCENARIO_PORT — they have drifted apart"
     fi
     ;;
 

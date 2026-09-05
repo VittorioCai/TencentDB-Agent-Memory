@@ -143,9 +143,9 @@ stays visible. The same rule already governs `n/a` in the capture verifier.
 
 ```bash
 # once, before the session — recreates the proxy with the injector patch mounted
-bash evaluation/provenance/candidate-log.sh enable
-bash evaluation/provenance/candidate-log.sh status     # what the listing returned
-bash evaluation/provenance/candidate-log.sh disable    # back to the stock image
+bash evaluation/eval-proxy.sh enable
+bash evaluation/eval-proxy.sh status     # what the listing returned
+bash evaluation/eval-proxy.sh disable    # back to the stock image
 
 node evaluation/provenance/build-early-events.mjs \
   evaluation/provenance/artifacts/asset-pool-snapshot.json \

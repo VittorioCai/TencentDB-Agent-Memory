@@ -14,7 +14,7 @@ rather than through the built-in tool surface.
 
 Send requests to the bridge at:
 
-    http://127.0.0.1:8096/skill-bridge/v3/skill/search
+    http://127.0.0.1:47318/skill-bridge/v3/skill/search
 
 Required headers:
 
