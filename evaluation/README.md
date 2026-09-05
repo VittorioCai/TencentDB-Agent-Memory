@@ -46,7 +46,9 @@ structure, not a stricter pattern.
 | `contracts/` | Three frozen JSON Schemas plus a zero-dependency validator. Everything downstream is written against them. |
 | `gate0/` | Observability probe and the two-tier capture verifier that decides whether an asset fetch can be seen at all. |
 | `provenance/` | Asset pool snapshot, the join that puts producer and consumer on the same event, and the early lifecycle states. |
-| `attribution/` | Discriminative token extraction — the strings whose appearance in the work has no explanation other than the asset. |
+| `attribution/` | Discriminative token extraction, artifact collection, and the hard-evidence judge. |
+| `tasks/` | The mainline scenario: two assets differing only in the bridge address, and its acceptance check. |
+| `runner/` | One command per run, leaving a directory that can be reopened; and the aggregate, where ERROR stays in the denominator. |
 
 Nothing under `evaluation/` pulls npm packages; everything runs on Node's standard
 library and shell.
@@ -105,7 +107,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 152 tests across the five directories.
+Full suite: 158 tests across the six directories.
 
 Each directory has its own README with the details.
 

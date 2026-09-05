@@ -412,15 +412,20 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
       }
 
       // Pair each response with the service row for the same request, matched
-      // on the request payload.
+      // on the request payload — and only when the pairing is forced.
       //
-      // There is deliberately no fallback to "any row not yet used". That
-      // fallback is worse than no pairing at all: drop the first service record
-      // and the first response takes the second's row, so one event gets
-      // evidence from a call it did not make and the other is reported as a
-      // telemetry gap. Both statements are wrong, and the second one hides the
-      // first. An unmatched response is left unmatched — a missing row is a
-      // hole in the tap, and saying so is the point.
+      // Two identical requests with one surviving row have no answer: nothing
+      // distinguishes the requests, so nothing says which response lost its
+      // record. Taking them in order picks one arbitrarily, and the cost of
+      // being wrong is not symmetric — one event gets evidence from a call it
+      // never made, and the other is reported as a telemetry gap. Both
+      // statements are false and the second one hides the first.
+      //
+      // So a group pairs only when the counts match. Otherwise every response
+      // in it stays wire_only, the rows stay unattached, and the ambiguity is
+      // reported. Warning while still binding would be the worst of both: the
+      // wrong link is made and the note explaining why it might be wrong sits
+      // somewhere else entirely.
       const rowsByPayload = new Map();
       for (const r of targetedRows) {
         const key = normalizeJson(r.requestBody);
@@ -431,30 +436,37 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
         rows.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
       }
 
-      const rowFor = (response) => {
-        const rows = rowsByPayload.get(response.requestPayload);
-        return rows && rows.length > 0 ? rows.shift() : null;
-      };
-
-      // Identical requests are indistinguishable, so when their counts do not
-      // match there is no way to say which response lost its row. Report the
-      // ambiguity rather than resolving it by position.
       const responsesByPayload = new Map();
       for (const r of bucket.responses) {
-        responsesByPayload.set(r.requestPayload, (responsesByPayload.get(r.requestPayload) ?? 0) + 1);
+        if (!responsesByPayload.has(r.requestPayload)) responsesByPayload.set(r.requestPayload, []);
+        responsesByPayload.get(r.requestPayload).push(r);
       }
-      for (const [payload, count] of responsesByPayload) {
-        const rows = (targetedRows.filter((r) => normalizeJson(r.requestBody) === payload)).length;
-        if (rows !== count) {
-          unpairedResponses.push({
-            asset_id: assetId, session_key: sessionKey,
-            responses: count, service_rows: rows,
-            note: count > 1 || rows > 1
-              ? "identical requests: which response lost its row cannot be decided"
-              : "no service row carries this request",
-          });
+
+      // Only groups whose counts match may pair. Within such a group both
+      // sides are in the order the calls were made, so position is sound.
+      const pairable = new Map();
+      for (const [payload, responses] of responsesByPayload) {
+        const rows = rowsByPayload.get(payload) ?? [];
+        if (rows.length === responses.length && rows.length > 0) {
+          pairable.set(payload, [...rows]);
+          continue;
         }
+        unpairedResponses.push({
+          asset_id: assetId,
+          session_key: sessionKey,
+          responses: responses.length,
+          service_rows: rows.length,
+          note: rows.length === 0
+            ? "no service row carries this request"
+            : "identical requests, unequal counts: which response lost its row cannot be decided, "
+              + "so none of them is paired and the row is left unattached",
+        });
       }
+
+      const rowFor = (response) => {
+        const rows = pairable.get(response.requestPayload);
+        return rows && rows.length > 0 ? rows.shift() : null;
+      };
 
       for (const response of bucket.responses) {
         const row = rowFor(response);

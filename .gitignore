@@ -144,3 +144,4 @@ submission/
 
 # provenance 产出物：含真实会话与资产内容，不入库
 evaluation/provenance/artifacts/
+evaluation/runner/runs/

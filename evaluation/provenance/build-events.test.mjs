@@ -565,8 +565,62 @@ test("identical requests with a missing row are reported as ambiguous", () => {
     }],
   });
 
-  assert.equal(events.filter((e) => e.asset_id === "skl-alice").length, 2);
+  const hits = events.filter((e) => e.asset_id === "skl-alice");
+  assert.equal(hits.length, 2);
+
+  // The point is not that a warning appeared. It is that no response was bound.
+  // Reporting the ambiguity while still pairing is the worst outcome: the wrong
+  // link gets made and the note explaining why it might be wrong sits elsewhere.
+  for (const e of hits) {
+    assert.equal(e.observation, "wire_only", "no response may claim the surviving row");
+    assert.deepEqual(e.proof_refs.map((r) => r.kind), ["capture_line"]);
+    assert.equal(e.bridge_source, "");
+    assert.equal(e.upstream_status, 0);
+    assert.equal(e.occurred_at, null, "no timestamp borrowed from a row it was not paired with");
+  }
+
   assert.equal(events.unpairedResponses.length, 1);
-  assert.match(events.unpairedResponses[0].note, /cannot be decided/);
+  assert.equal(events.unpairedResponses[0].responses, 2);
+  assert.equal(events.unpairedResponses[0].service_rows, 1);
+  assert.match(events.unpairedResponses[0].note, /none of them is paired/);
   assert.match(renderSummary(summarize(events)), /could not be paired/);
+});
+
+test("identical requests with matching counts do pair, in call order", () => {
+  // The control. Without it the rule above is indistinguishable from "never
+  // pair identical requests", and a check that can only withhold proves
+  // nothing. Counts match and nothing was dropped, so position is sound.
+  const body = '{"skill_id":"skl-alice","include_content":true}';
+  const result = (id) => ({
+    role: "tool", tool_call_id: id,
+    content: "Command: curl -X POST " + GET_URL2 + " -d '" + body + "'\n"
+      + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"body"}}',
+  });
+
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [
+      bridgeRow({ executed_endpoint: "get", request_body: body, timestamp: "2026-09-04T13:05:00Z" }),
+      bridgeRow({ executed_endpoint: "get", request_body: body, timestamp: "2026-09-04T13:07:00Z" }),
+    ],
+    captureEvents: [{
+      event: "http.request",
+      headers: { "x-conversation-id": "conv-1" },
+      timestamp: "2026-09-04T13:08:00Z",
+      body: { json: { messages: [
+        { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
+        result("c1"),
+        { role: "assistant", tool_calls: [{ id: "c2", function: { name: "Bash", arguments: "{}" } }] },
+        result("c2"),
+      ] } },
+    }],
+  });
+
+  const hits = events.filter((e) => e.asset_id === "skl-alice")
+    .sort((a, b) => String(a.occurred_at).localeCompare(String(b.occurred_at)));
+  assert.equal(hits.length, 2);
+  assert.deepEqual(hits.map((e) => e.observation), ["bridge+wire", "bridge+wire"]);
+  assert.match(hits[0].proof_refs[0].ref, /13:05:00/);
+  assert.match(hits[1].proof_refs[0].ref, /13:07:00/);
+  assert.deepEqual(events.unpairedResponses, []);
 });
