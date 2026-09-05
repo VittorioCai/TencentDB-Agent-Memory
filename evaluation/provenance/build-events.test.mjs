@@ -62,6 +62,7 @@ function curlResult(conversationId, { url, body = "{}", stdout }) {
 
 const SEARCH_URL = "http://127.0.0.1:8096/skill-bridge/v3/skill/search";
 const GET_URL = "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name";
+const GET_URL2 = "http://127.0.0.1:8096/skill-bridge/v3/skill/get";
 
 function bridgeRow(overrides = {}) {
   return {
@@ -115,7 +116,14 @@ test("asset ids are matched in tool results only, never in requests", () => {
   assert.deepEqual([...extractAssetMentions([inResult], SNAPSHOT.assets).keys()], ["skl-alice"]);
 });
 
-test("asset identity plus a service-side success is marked bridge+wire", () => {
+test("producer and consumer are joined onto one event", () => {
+  // The edge the existing telemetry never had: tool_call_logs records only the
+  // consumer, the owner lives in the asset record, and nothing joined them.
+  //
+  // The result here carries no command envelope, so nothing shows this response
+  // answered a call for this asset — it could as easily be a search listing. So
+  // the wire half witnesses no retrieval and the observation is bridge_only,
+  // even though the asset id is in the capture.
   const events = buildEvents({
     snapshot: SNAPSHOT,
     toolCallRows: [bridgeRow()],
@@ -123,7 +131,8 @@ test("asset identity plus a service-side success is marked bridge+wire", () => {
   });
 
   const hit = events.find((e) => e.asset_id === "skl-alice");
-  assert.equal(hit.observation, "bridge+wire");
+  assert.equal(hit.observation, "bridge_only");
+  assert.equal(hit.content_delivered, null, "an uninspectable result establishes nothing");
   assert.equal(hit.producer_user_id, "usr-alice");
   assert.equal(hit.actor_user_id, "usr-bob");
   assert.equal(hit.relation, "cross_user");
@@ -417,4 +426,72 @@ test("the knowledge service's endpoint form is recognised too", () => {
     inspectDelivery('{"code":0,"data":{"wiki_id":"wiki-x","name":"kb","status":"draft"}}', "wiki-x").delivered,
     false,
   );
+});
+
+// ── one response, one event ───────────────────────────────────────
+
+test("two reads of one asset produce two events, each self-consistent", () => {
+  // The reported defect. Aggregating per asset per session took the first
+  // version it saw, any delivery, the earliest delivered position and the first
+  // call id — from different responses. A metadata-only read of v1 followed by
+  // a content read of v2 produced a single record saying "v1, content
+  // delivered, at the second response's position, evidenced by the first
+  // call" — a retrieval that never happened, and one the contract accepts,
+  // because a contract constrains fields and not their provenance.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [
+      bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-alice","include_content":false}', timestamp: "2026-09-04T13:00:00Z" }),
+      bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-alice","include_content":true}', timestamp: "2026-09-04T13:05:00Z" }),
+    ],
+    captureEvents: [{
+      event: "http.request",
+      headers: { "x-conversation-id": "conv-1" },
+      timestamp: "2026-09-04T13:06:00Z",
+      body: { json: { messages: [
+        { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
+        { role: "tool", tool_call_id: "c1", content:
+          "Command: curl -X POST " + GET_URL2 + " -d '{\"skill_id\":\"skl-alice\",\"include_content\":false}'\n"
+          + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":1,"name":"deploy-conventions"}}' },
+        { role: "assistant", tool_calls: [{ id: "c2", function: { name: "Bash", arguments: "{}" } }] },
+        { role: "tool", tool_call_id: "c2", content:
+          "Command: curl -X POST " + GET_URL2 + " -d '{\"skill_id\":\"skl-alice\",\"include_content\":true}'\n"
+          + 'Stdout: {"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"# Deploy\\nuse 10.244.7.19"}}' },
+      ] } },
+    }],
+  });
+
+  const fetched = events.filter((e) => e.asset_id === "skl-alice");
+  assert.equal(fetched.length, 2, "two reads, two events");
+
+  const v1 = fetched.find((e) => e.asset_version === 1);
+  assert.equal(v1.content_delivered, false, "v1 was metadata only");
+  assert.equal(v1.context_entry_index, null, "so v1 never entered the context");
+
+  const v2 = fetched.find((e) => e.asset_version === 2);
+  assert.equal(v2.content_delivered, true);
+  assert.equal(v2.context_entry_index, 3);
+
+  // Each event's service row is the one for its own request.
+  assert.match(v1.proof_refs[0].ref, /13:00:00/);
+  assert.match(v2.proof_refs[0].ref, /13:05:00/);
+});
+
+test("a row is paired with its own request, not by arrival order", () => {
+  // Order only holds when nothing was dropped, and a dropped row is exactly the
+  // case where the pairing matters.
+  const events = buildEvents({
+    snapshot: SNAPSHOT,
+    toolCallRows: [
+      bridgeRow({ executed_endpoint: "get", request_body: '{"skill_id":"skl-alice","include_content":true}', timestamp: "2026-09-04T13:09:00Z" }),
+    ],
+    captureEvents: [curlResult("conv-1", {
+      url: GET_URL2,
+      body: '{"skill_id":"skl-alice","include_content":true}',
+      stdout: '{"code":0,"data":{"skill_id":"skl-alice","version":2,"content":"body"}}',
+    })],
+  });
+  const hit = events.find((e) => e.asset_id === "skl-alice");
+  assert.equal(hit.observation, "bridge+wire");
+  assert.match(hit.proof_refs[0].ref, /13:09:00/);
 });

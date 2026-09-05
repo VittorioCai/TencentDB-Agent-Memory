@@ -181,3 +181,26 @@ unattributable token should stay unattributed.
 The chain the version travels down is: **response → `fetched` → the token set of
 that revision → the `used` event's parent.** Any break in it leaves the event at
 `needs_review` rather than guessing.
+
+## One response, one event
+
+Provenance events are emitted per **response**, not summarised per asset per
+session. Version, delivery, entry position and the evidence reference all come
+from the same response, and an asset read twice produces two events.
+
+Summarising was how a record got assembled from three different calls: a first
+`get` with `include_content:false` supplying the version, a second `get` of a
+different revision supplying the delivery flag and the entry position, and the
+first call id supplying the reference. Each field passed its own check. The
+record as a whole described a retrieval nobody had made, and it validated
+against the contract — **a schema constrains fields, not their provenance**.
+
+Each response is paired with the service-side row for its own request, matched
+on the request payload rather than on arrival order. Order only holds when
+nothing was dropped, and a dropped row is exactly the case where the pairing
+matters.
+
+`chain.test.mjs` runs captured bytes through `buildEvents → collectArtifacts →
+judge` and asserts on the final verdict. The unit tests either side of it feed
+the judge events built by hand, so they check its rules but never the events it
+will actually receive — and that gap is precisely where this defect lived.

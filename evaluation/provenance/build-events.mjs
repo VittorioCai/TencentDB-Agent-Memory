@@ -231,9 +231,34 @@ function toolResultsOf(body) {
   return out;
 }
 
+/** Canonical form of a JSON blob, so two spellings of one body compare equal. */
+function normalizeJson(text) {
+  try { return JSON.stringify(JSON.parse(String(text ?? ""))); } catch { return String(text ?? "").trim(); }
+}
+
+/** The `-d '…'` payload a curl command carried, for pairing with a service row. */
+export function requestPayloadOf(command) {
+  const m = /-d\s+'([\s\S]*?)'(?:\s|$)/.exec(String(command ?? ""))
+    ?? /-d\s+"([\s\S]*?)"(?:\s|$)/.exec(String(command ?? ""));
+  if (!m) return "";
+  try { return JSON.stringify(JSON.parse(m[1])); } catch { return m[1].trim(); }
+}
+
 /**
  * Where each asset was seen in the capture, and — the part that matters —
  * whether the call that produced it had asked for that asset.
+ *
+ * Every targeted response is kept **separately**. Summarising them per asset
+ * per session is what produced events assembled from different calls: a first
+ * `get` with include_content:false supplying the version, a second `get` of a
+ * different revision supplying the delivery flag and the entry position, and
+ * the first call id supplying the evidence reference. Every field passed its
+ * own check and the record as a whole described a retrieval that never
+ * happened — and it validated against the contract, because the contract
+ * constrains fields, not their provenance.
+ *
+ * So version, delivery, position and reference all come from one response, and
+ * an asset read twice produces two events.
  *
  * Only tool *results* are searched: a request carries intent rather than
  * delivery. Within a result, the asset id must appear in the output half and
@@ -262,28 +287,29 @@ export function extractAssetMentions(events, assets) {
         const bySession = mentions.get(asset.asset_id);
         if (!bySession.has(sessionKey)) {
           bySession.set(sessionKey, {
-            targeted: false, endpoints: new Set(), callIds: new Set(),
-            delivered: null, version: null, contextEntryIndex: null,
+            endpoints: new Set(), offered: false, responses: [], seen: new Set(),
           });
         }
-        const seen = bySession.get(sessionKey);
+        const bucket = bySession.get(sessionKey);
         const endpoint = commandEndpoint(command);
-        if (endpoint) seen.endpoints.add(endpoint);
-        if (callId) seen.callIds.add(callId);
-        if (!commandTargetsAsset(command, asset)) continue;
-        seen.targeted = true;
+        if (endpoint) bucket.endpoints.add(endpoint);
 
-        // Only a targeted response can deliver the body, so delivery, version
-        // and the position it entered the context are all read from here. The
-        // index is the message carrying the *result*, not the call: a model can
-        // emit several calls in one message, and the second was written before
-        // the first one's result existed.
+        if (!commandTargetsAsset(command, asset)) { bucket.offered = true; continue; }
+
+        // Results repeat as the conversation grows; record each response once.
+        const key = `${callId}|${index}`;
+        if (bucket.seen.has(key)) continue;
+        bucket.seen.add(key);
+
+        // One response, one record. The index is the message carrying the
+        // *result*, not the call: a model can emit several calls in one
+        // message, and the second was written before the first one's result
+        // existed.
         const { delivered, version } = inspectDelivery(output, asset.asset_id);
-        if (delivered && (seen.contextEntryIndex == null || index < seen.contextEntryIndex)) {
-          seen.contextEntryIndex = index;
-        }
-        if (seen.delivered !== true) seen.delivered = delivered;
-        if (version != null && seen.version == null) seen.version = version;
+        bucket.responses.push({
+          callId, endpoint, messageIndex: index, delivered, version,
+          requestPayload: requestPayloadOf(command),
+        });
       }
     }
   }
@@ -363,95 +389,104 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
     const staleAsset = Boolean(
       poolSnapshotAt && asset.asset_created_at && asset.asset_created_at > poolSnapshotAt,
     );
+    const producer = { user_id: asset.producer_user_id, agent_id: asset.producer_agent_id };
 
-    for (const [sessionKey, seen] of sessions) {
+    for (const [sessionKey, bucket] of sessions) {
       const calls = bridgeBySession.get(sessionKey) ?? [];
-      const producer = { user_id: asset.producer_user_id, agent_id: asset.producer_agent_id };
+      const targetedRows = calls.filter((c) => c.ok && callTargetsAsset(c, asset));
 
-      // A successful call somewhere in the session is not evidence that *this*
-      // asset was retrieved. The call must name this asset.
-      const targeted = calls.filter((c) => c.ok && callTargetsAsset(c, asset));
-      const success = targeted[0];
-
-      // Nor is appearing in the capture. An asset id in a `skill/search`
-      // response was **offered**; only a response to a command that asked for
-      // this asset was **retrieved**. Without either, there is no fetch here —
-      // and writing one anyway is how a listing hit becomes a `used` claim two
-      // stages later. The asset did reach the model's context, and that is
-      // recorded as `recalled` / `injected` by build-early-events.mjs, which is
-      // a different statement about a different thing.
-      if (!success && !seen.targeted) {
-        offeredNotRetrieved.push({
-          asset_id: assetId,
-          session_key: sessionKey,
-          endpoints: [...seen.endpoints],
-        });
+      // Appearing in the capture is not retrieval. An id in a `skill/search`
+      // response was offered; only a response to a command that asked for this
+      // asset was retrieved. With no targeted response and no targeted row,
+      // there is no fetch here — the asset did reach the model's context, and
+      // that is `recalled` / `injected`, a different statement about a
+      // different thing.
+      if (bucket.responses.length === 0) {
+        if (targetedRows.length === 0) {
+          offeredNotRetrieved.push({
+            asset_id: assetId, session_key: sessionKey, endpoints: [...bucket.endpoints],
+          });
+        }
         continue;
       }
 
-      const actor = success?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
-      const occurredAt = success?.timestamp ?? "";
-      // `observation` says which sources witnessed the event, not how strong the
-      // claim is — those are deliberately separate fields. Inside this loop the
-      // capture always saw the asset id, so a service-side row makes it both.
-      // Whether it counts as a *fetch* was decided above, by targeting.
-      const observation = success ? "bridge+wire" : "wire_only";
+      // Pair each response with the service row for the same request. Matching
+      // on the request payload rather than on order, because order only holds
+      // when nothing was dropped, and a dropped row is exactly the case where
+      // the pairing matters.
+      const consumed = new Set();
+      const rowFor = (response) => {
+        const exact = targetedRows.find((r, i) => !consumed.has(i)
+          && response.requestPayload && normalizeJson(r.requestBody) === response.requestPayload
+          && (consumed.add(i) || true));
+        if (exact) return exact;
+        const idx = targetedRows.findIndex((_, i) => !consumed.has(i));
+        if (idx < 0) return null;
+        consumed.add(idx);
+        return targetedRows[idx];
+      };
 
-      const proofRefs = [];
-      if (success) {
-        proofRefs.push({
-          kind: "bridge_row",
-          ref: `tool_call_logs:${occurredAt}:${success.bridgeSource}:${success.executedEndpoint}`,
-          detail: `request names ${asset.asset_id}`,
-        });
-      }
-      if (seen.targeted) {
+      for (const response of bucket.responses) {
+        const row = rowFor(response);
+        const actor = row?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
+        const observation = row ? "bridge+wire" : "wire_only";
+
+        const proofRefs = [];
+        if (row) {
+          proofRefs.push({
+            kind: "bridge_row",
+            ref: `tool_call_logs:${row.timestamp}:${row.bridgeSource}:${row.executedEndpoint}`,
+            detail: `request names ${assetId}`,
+          });
+        }
         proofRefs.push({
           kind: "capture_line",
-          ref: `${sessionKey}:${[...seen.callIds][0] || "tool_result"}`,
-          detail: success
-            ? `returned by ${[...seen.endpoints].join(", ") || "a targeted call"}`
-            // A wire-level fetch the service never logged is a hole in the tap,
-            // not a stronger result. It is recorded so the gap is visible.
-            : `returned by ${[...seen.endpoints].join(", ") || "a targeted call"}, but no service-side row recorded it — telemetry gap`,
+          ref: `${sessionKey}:${response.callId || `msg[${response.messageIndex}]`}`,
+          detail: [
+            `${response.endpoint || "a targeted call"} answered at message ${response.messageIndex}`,
+            response.delivered === true ? "carrying content" : response.delivered === false ? "carrying no content" : "content undetermined",
+            response.version == null ? "version not stated" : `version ${response.version}`,
+            row ? "" : "no service-side row recorded it — telemetry gap",
+          ].filter(Boolean).join("; "),
+        });
+
+        events.push({
+          schema_version: "provenance-v1",
+          event_id: eventId([sessionKey, assetId, "fetched", response.callId, String(response.messageIndex), observation]),
+          state: "fetched",
+          session_key: sessionKey,
+          run_id: null,
+          task_id: null,
+          occurred_at: row?.timestamp ?? null,
+          asset_id: assetId,
+          asset_type: asset.asset_type,
+          asset_name: asset.name,
+          // Every one of the next three comes from this same response. Taking
+          // them from whichever response happened to have each one is how a
+          // record gets assembled that describes a retrieval nobody made.
+          asset_version: response.version ?? null,
+          asset_created_at: asset.asset_created_at ?? "",
+          pool_snapshot_at: poolSnapshotAt,
+          excluded_by_snapshot: staleAsset,
+          producer_user_id: producer.user_id,
+          producer_agent_id: producer.agent_id,
+          actor_user_id: actor.user_id,
+          actor_agent_id: actor.agent_id,
+          relation: classifyRelation(producer, actor),
+          observation,
+          content_delivered: response.delivered,
+          context_entry_index: response.delivered === true ? response.messageIndex : null,
+          evidence_tier: null,
+          bridge_source: row?.bridgeSource ?? "",
+          executed_endpoint: row?.executedEndpoint ?? response.endpoint ?? "",
+          upstream_status: row?.status ?? 0,
+          target_type: null,
+          target_ref: null,
+          proof_refs: proofRefs,
+          corrected_reason: null,
+          parent_event_ids: [],
         });
       }
-
-      events.push({
-        schema_version: "provenance-v1",
-        event_id: eventId([sessionKey, assetId, "fetched", occurredAt, observation]),
-        state: "fetched",
-        session_key: sessionKey,
-        run_id: null,
-        task_id: null,
-        occurred_at: occurredAt || null,
-        asset_id: assetId,
-        asset_type: asset.asset_type,
-        asset_name: asset.name,
-        // From the response, never the snapshot. The snapshot says what the
-        // pool holds now; this event says which revision came back then.
-        asset_version: seen.version ?? null,
-        asset_created_at: asset.asset_created_at ?? "",
-        pool_snapshot_at: poolSnapshotAt,
-        excluded_by_snapshot: staleAsset,
-        producer_user_id: producer.user_id,
-        producer_agent_id: producer.agent_id,
-        actor_user_id: actor.user_id,
-        actor_agent_id: actor.agent_id,
-        relation: classifyRelation(producer, actor),
-        observation,
-        content_delivered: seen.delivered,
-        context_entry_index: seen.contextEntryIndex,
-        evidence_tier: null,
-        bridge_source: success?.bridgeSource ?? "",
-        executed_endpoint: success?.executedEndpoint ?? [...seen.endpoints][0] ?? "",
-        upstream_status: success?.status ?? 0,
-        target_type: null,
-        target_ref: null,
-        proof_refs: proofRefs,
-        corrected_reason: null,
-        parent_event_ids: [],
-      });
     }
   }
 
