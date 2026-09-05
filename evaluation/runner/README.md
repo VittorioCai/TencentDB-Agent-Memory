@@ -124,3 +124,13 @@ file says what that pool no longer describes.
   file on the host replaces its inode; the container keeps the old bytes, and
   `docker restart` does not help. Only `eval-proxy.sh enable` (a recreate)
   re-binds. `eval-proxy.sh status` now compares bytes and says STALE.
+
+## When the model does not exercise a path, prove it directly
+
+Run 4 never called `get-by-name` for the author's assets: the consumer's own
+auto-extracted skill already told it to use `get` by id. A path the model
+happens not to take is not thereby proven. The bridge's name resolution was
+demonstrated instead by initialising a throwaway session (one one-word model
+call, too small to trigger extraction) and calling the bridge directly — the
+same read-only diagnostic pattern used for the visibility negative. Record such
+probes as diagnostics, never as runs.
