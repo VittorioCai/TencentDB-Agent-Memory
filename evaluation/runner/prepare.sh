@@ -136,6 +136,21 @@ case "${1:---status}" in
       "$AUTHOR_AGENT")   echo "  forced identity:  $ag  (author — injector probe)" ;;
       *)                 echo "  forced identity:  $ag  ${C_Y}(neither evaluation agent)${C_0}" ;;
     esac
+    # The product's auto-extraction switch, read from the core config the
+    # container mounts. Off during the on/off comparison by decision.
+    core_cfg="$REPO_ROOT/deploy/global-images/.memory-core-config/tdai-gateway.yaml"
+    ext="$(python3 - "$core_cfg" <<'PY' 2>/dev/null || echo unknown
+import re, sys
+s = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"^skill:\n(?:(?:  .*|)\n)*?  extraction:\n(?:(?:    .*|)\n)*?    enabled:\s*(true|false)", s, re.M)
+print(m.group(1) if m else "unknown")
+PY
+)"
+    case "$ext" in
+      false) echo "  core auto-extraction: OFF  (pool frozen for the comparison)" ;;
+      true)  echo "  core auto-extraction: ON   ${C_Y}— the pool can change between runs${C_0}" ;;
+      *)     echo "  core auto-extraction: ${C_Y}unknown (could not read $core_cfg)${C_0}" ;;
+    esac
     bash "$EVAL/eval-proxy.sh" status
     ;;
 

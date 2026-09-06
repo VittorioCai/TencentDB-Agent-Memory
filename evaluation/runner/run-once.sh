@@ -303,10 +303,26 @@ else
   warn "could not find this session's '→ initialized' line in the proxy log; identity unverified"
 fi
 
+# ── 5c. is the product's auto-extraction on or off for this run? ─────
+# Decided for the on/off comparison: extraction is switched off so both arms
+# see the same frozen pool and no run can teach the next one. That is a change
+# to the product under test, so every run records the switch's state — read
+# from the core config the container actually mounts, not from memory of
+# having flipped it.
+CORE_CFG="$REPO_ROOT/deploy/global-images/.memory-core-config/tdai-gateway.yaml"
+EXTRACTION_ENABLED="$(python3 - "$CORE_CFG" <<'PY' 2>/dev/null || echo unknown
+import re, sys
+s = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"^skill:\n(?:(?:  .*|)\n)*?  extraction:\n(?:(?:    .*|)\n)*?    enabled:\s*(true|false)", s, re.M)
+print(m.group(1) if m else "unknown")
+PY
+)"
+info "core auto-extraction: $EXTRACTION_ENABLED"
+
 # ── 6. manifest ──────────────────────────────────────────────────
-python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" <<'PY'
+python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" <<'PY'
 import json, os, re, sys
-run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line = sys.argv[1:9]
+run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction = sys.argv[1:10]
 
 def count(name):
     p = os.path.join(run_dir, name)
@@ -332,6 +348,11 @@ manifest = {
     # line was not found, not that identity was absent.
     "resolved_identity": resolved,
     "resolved_identity_source": "proxy session-init log" if resolved_line else None,
+    # The product's skill auto-extraction during this run: "true" / "false" as
+    # read from the mounted core config, or "unknown" if it could not be read.
+    # Off for the on/off comparison — a disclosed design choice, not a default.
+    "auto_extraction_enabled": {"true": True, "false": False}.get(extraction, None),
+    "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
     "verdict": verdict,
     "counts": {n: count(n) for n in
