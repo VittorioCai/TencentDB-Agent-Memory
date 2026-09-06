@@ -1,0 +1,102 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "7e576bd6-d232-4503-88d1-6cd716427f12",
+  "run_id": "20260906T092114Z-gate-off",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-06T12:06:30Z",
+  "summary": {
+    "applied_count": 2,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 1,
+      "provided": 0,
+      "corrected": 1
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "status": "corrected",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "7e576bd6-d232-4503-88d1-6cd716427f12:verify.mjs:call=call_00_jQAsNzB0fmeqxhF9pbnS9470:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_00_jQAsNzB0fmeqxhF9pbnS9470:arguments",
+          "detail": "token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 8"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "7e576bd6-d232-4503-88d1-6cd716427f12:call_00_3eplhQP1ahdTXDW2iQ9s1654",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 10.244.7.19:8096 (call_00_jQAsNzB0fmeqxhF9pbnS9470)",
+          "passed": false
+        }
+      ],
+      "risks": [
+        {
+          "kind": "gate_rejected",
+          "detail": "rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)"
+        }
+      ],
+      "gate_decision": "reject",
+      "author_confidence": 0.5
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8), but the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_01_2VnyERt2SFuKjZiNaRtS2494:arguments",
+          "detail": "token 47318; the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "7e576bd6-d232-4503-88d1-6cd716427f12:call_01_eFIEHEkVHnZgjEUkaKGe7591",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "needs_review",
+          "detail": "token 47318; the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet"
+        }
+      ],
+      "gate_decision": "admit",
+      "author_confidence": 0.5
+    }
+  ]
+}

@@ -464,6 +464,21 @@ manifest = {
 json.dump(manifest, open(os.path.join(run_dir, "run.json"), "w", encoding="utf-8"), indent=2)
 PY
 
+# ── 7. the receipt ───────────────────────────────────────────────
+# After the manifest, because it reads run_id, the resolved task id and the
+# conversation id from it. What this run used, from whom, in what state, with
+# what evidence and what risk. The gate decision shown is the one the run
+# actually faced — the frozen baseline when a gate mode was set — not what
+# this run's own evidence would decide; that stays in gate-decisions.json.
+RECEIPT_DECISIONS="$RUN_DIR/gate-decisions.json"
+[[ -n "$GATE" && -f "$RUN_DIR/gate_baseline.json" ]] && RECEIPT_DECISIONS="$RUN_DIR/gate_baseline.json"
+info "receipt …"
+(cd "$REPO_ROOT" && node "$EVAL/receipt/build-receipt.mjs" \
+  --events="$RUN_DIR/events.jsonl,$RUN_DIR/early-events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \
+  --snapshot="$RUN_DIR/asset-pool-snapshot.json" --decisions="$RECEIPT_DECISIONS" --run="$RUN_DIR/run.json" \
+  --out="$RUN_DIR/receipt.json" > "$RUN_DIR/receipt.txt" 2>&1) \
+  || warn "build-receipt failed; see $RUN_DIR/receipt.txt"
+
 case "$VERDICT" in
   PASS)  echo "${C_G}PASS${C_0}  $RUN_ID" ;;
   FAIL)  echo "${C_R}FAIL${C_0}  $RUN_ID" ;;

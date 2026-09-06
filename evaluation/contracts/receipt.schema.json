@@ -28,7 +28,8 @@
             "validated": { "type": "integer", "minimum": 0, "description": "validated" },
             "used":      { "type": "integer", "minimum": 0, "description": "used (behavioural evidence)" },
             "fetched":   { "type": "integer", "minimum": 0, "description": "fetched" },
-            "provided":  { "type": "integer", "minimum": 0, "description": "provided only (injected but never fetched)" }
+            "provided":  { "type": "integer", "minimum": 0, "description": "provided only (injected but never fetched)" },
+            "corrected": { "type": "integer", "minimum": 0, "description": "used, and the call it fed failed for a reason the content explains. Counted apart from used and validated." }
           }
         },
         "soft_only_count": { "type": "integer", "minimum": 0, "description": "Count of soft-evidence-only records. Reported separately; never folded into used." }
@@ -50,8 +51,8 @@
 
           "status": {
             "type": "string",
-            "enum": ["validated", "used", "used_soft", "fetched", "provided"],
-            "description": "Maps to the four status marks. used_soft stands alone and must not be rendered as a plain check mark."
+            "enum": ["validated", "used", "used_soft", "fetched", "provided", "corrected"],
+            "description": "Maps to the status marks. used_soft stands alone and must not be rendered as a plain check mark. corrected: the asset was used and the call it fed failed for a reason its content explains; rendered as a cross, never folded into used."
           },
 
           "source": {
@@ -107,11 +108,11 @@
               "additionalProperties": false,
               "required": ["kind", "detail"],
               "properties": {
-                "kind":   { "type": "string", "enum": ["stale", "low_confidence", "conflict", "not_head", "gate_pending", "gate_rejected"] },
+                "kind":   { "type": "string", "enum": ["stale", "low_confidence", "conflict", "not_head", "gate_pending", "gate_rejected", "needs_review"] },
                 "detail": { "type": "string" }
               }
             },
-            "description": "Conflict, staleness, low confidence, or not admitted by the gate."
+            "description": "Conflict, staleness, low confidence, not admitted by the gate, or a use that could not be tied to this asset's own content (needs_review)."
           },
 
           "gate_decision": {

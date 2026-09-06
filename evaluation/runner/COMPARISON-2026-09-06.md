@@ -131,3 +131,11 @@ against the captures, not assumed.
 What remains is what the design set out to show: the product's whitelist
 removed the rejected asset from the consumer's search results, and the run's
 behaviour followed from what was left.
+
+## Receipts
+
+Each of the six runs now carries `receipt.json` (contract-valid) and
+`receipt.txt`. Gate off: every receipt shows `✗ eval-bridge-endpoint-a`
+(corrected, gate reject) beside `✓` or `○ eval-bridge-endpoint-b`. Gate on:
+only `eval-bridge-endpoint-b` appears at all. The receipts are the task-four
+deliverable for these runs; the comparison above is what they add up to.

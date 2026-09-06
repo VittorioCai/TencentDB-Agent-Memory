@@ -1,0 +1,61 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "1a008cd0-b707-4dcd-9378-a3a1fca89526",
+  "run_id": "20260906T113049Z-gate-on",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-06T12:06:30Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 47318 was used in tool call call_00_dNEKoZMpsNAr0hsjsUjV7754 (message 6); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "1a008cd0-b707-4dcd-9378-a3a1fca89526:verify.mjs:call=call_00_dNEKoZMpsNAr0hsjsUjV7754:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(81c44656-21e3-416b-929e-9fc17802f3f8):msg[6]:call_00_dNEKoZMpsNAr0hsjsUjV7754:arguments",
+          "detail": "token 47318; content of v2 entered the context at message 5, before this operation at message 6"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "1a008cd0-b707-4dcd-9378-a3a1fca89526:call_00_bpXBDl9aX6EFPr8yeCiJ2192",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_00_dNEKoZMpsNAr0hsjsUjV7754)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": 0.5
+    }
+  ]
+}

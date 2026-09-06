@@ -50,6 +50,7 @@ structure, not a stricter pattern.
 | `tasks/` | The mainline scenario: two assets differing only in the bridge address, and its acceptance check. |
 | `runner/` | One command per run, leaving a directory that can be reopened; and the aggregate, where ERROR stays in the denominator. |
 | `gate/` | The admission gate: outcomes tied to calls, the three rules, the author prior, and the write into the product's `visibility` field with read-back. |
+| `receipt/` | The receipt task four asks for: what a run used, from whom, in what state, with what evidence and what risk; JSON plus terminal rendering. |
 
 Nothing under `evaluation/` pulls npm packages; everything runs on Node's standard
 library and shell.

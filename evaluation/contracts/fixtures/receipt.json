@@ -5,8 +5,14 @@
   "task_id": "pair-01-B",
   "generated_at": "2026-09-08T09:05:30Z",
   "summary": {
-    "applied_count": 3,
-    "by_status": { "validated": 1, "used": 0, "fetched": 1, "provided": 1 },
+    "applied_count": 4,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 1,
+      "provided": 1,
+      "corrected": 1
+    },
     "soft_only_count": 1
   },
   "items": [
@@ -17,14 +23,30 @@
       "version": 3,
       "updated_at": "2026-09-05T10:00:00Z",
       "status": "validated",
-      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "source": {
+        "producer_user_id": "usr-alice",
+        "producer_agent_id": "agt-alice",
+        "relation": "cross_user"
+      },
       "impact": "changed PROXY_UPSTREAM_URL from the container-internal IP to 127.0.0.1:8096",
       "target_type": "code_change",
       "evidence": [
-        { "kind": "diff_hunk", "ref": "run-0001:deploy/global-images/.env:@@ -16,1 +16,1 @@", "detail": "discriminative token 8096 matched" },
-        { "kind": "verify_result", "ref": "run-0001:verify.sh:exit=0" }
+        {
+          "kind": "diff_hunk",
+          "ref": "run-0001:deploy/global-images/.env:@@ -16,1 +16,1 @@",
+          "detail": "discriminative token 8096 matched"
+        },
+        {
+          "kind": "verify_result",
+          "ref": "run-0001:verify.sh:exit=0"
+        }
       ],
-      "related_tests": [ { "command": "bash evaluation/tasks/pair-01/verify.sh", "passed": true } ],
+      "related_tests": [
+        {
+          "command": "bash evaluation/tasks/pair-01/verify.sh",
+          "passed": true
+        }
+      ],
       "risks": [],
       "gate_decision": "admit",
       "author_confidence": 0.62
@@ -36,16 +58,30 @@
       "version": 1,
       "updated_at": "2026-09-06T14:00:00Z",
       "status": "used_soft",
-      "source": { "producer_user_id": "usr-bob", "producer_agent_id": "agt-bob", "relation": "cross_user" },
+      "source": {
+        "producer_user_id": "usr-bob",
+        "producer_agent_id": "agt-bob",
+        "relation": "cross_user"
+      },
       "impact": "claim #2 (bridge routing uses port 8424) relates to the change; soft evidence",
       "target_type": "decision",
       "evidence": [
-        { "kind": "session_message", "ref": "run-0002:msg-17", "detail": "cheap model judgement, confidence 0.71" }
+        {
+          "kind": "session_message",
+          "ref": "run-0002:msg-17",
+          "detail": "cheap model judgement, confidence 0.71"
+        }
       ],
       "related_tests": [],
       "risks": [
-        { "kind": "low_confidence", "detail": "soft evidence only; author has no cross-person validation yet" },
-        { "kind": "gate_pending", "detail": "gate decision pending; handed to a human" }
+        {
+          "kind": "low_confidence",
+          "detail": "soft evidence only; author has no cross-person validation yet"
+        },
+        {
+          "kind": "gate_pending",
+          "detail": "gate decision pending; handed to a human"
+        }
       ],
       "gate_decision": "pending",
       "author_confidence": null
@@ -57,11 +93,18 @@
       "version": null,
       "updated_at": "2026-08-29T13:53:28Z",
       "status": "fetched",
-      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "source": {
+        "producer_user_id": "usr-alice",
+        "producer_agent_id": "agt-alice",
+        "relation": "cross_user"
+      },
       "impact": null,
       "target_type": null,
       "evidence": [
-        { "kind": "bridge_row", "ref": "tool_call_logs:2026-09-08T09:00:12Z:memory-bridge:atomic/search" }
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-08T09:00:12Z:memory-bridge:atomic/search"
+        }
       ],
       "related_tests": [],
       "risks": [],
@@ -75,15 +118,63 @@
       "version": 5,
       "updated_at": "2026-03-02T00:00:00Z",
       "status": "provided",
-      "source": { "producer_user_id": "usr-alice", "producer_agent_id": "agt-alice", "relation": "cross_user" },
+      "source": {
+        "producer_user_id": "usr-alice",
+        "producer_agent_id": "agt-alice",
+        "relation": "cross_user"
+      },
       "impact": null,
       "target_type": null,
       "evidence": [],
       "related_tests": [],
       "risks": [
-        { "kind": "stale", "detail": "190 days since last update; review recommended" }
+        {
+          "kind": "stale",
+          "detail": "190 days since last update; review recommended"
+        }
       ],
       "gate_decision": null,
+      "author_confidence": 0.62
+    },
+    {
+      "asset_id": "skl-decoy-badport",
+      "name": "decoy-deploy-wrong-port",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T17:00:00Z",
+      "status": "corrected",
+      "source": {
+        "producer_user_id": "usr-alice",
+        "producer_agent_id": "agt-alice",
+        "relation": "cross_user"
+      },
+      "impact": "its value 9999 was dialled in tool call call_07 (message 12) and the call timed out",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "run-0003:verify.mjs:call=call_07:ok=false",
+          "detail": "the call it fed dialled 10.0.0.9:9999 — the asset's own value (9999) — and timed out"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "run-0003:msg[12]:call_07:arguments",
+          "detail": "token 9999"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 10.0.0.9:9999 (call_07)",
+          "passed": false
+        }
+      ],
+      "risks": [
+        {
+          "kind": "gate_rejected",
+          "detail": "rule reject: a corrected record exists (reason=wrong)"
+        }
+      ],
+      "gate_decision": "reject",
       "author_confidence": 0.62
     }
   ]
