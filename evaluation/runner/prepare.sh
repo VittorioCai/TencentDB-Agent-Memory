@@ -73,6 +73,9 @@ verify_ready() {
     || { echo "  ${C_R}forced agent is $(current_agent), expected $want_agent${C_0}"; bad=1; }
   [[ "$(docker inspect tdai-proxy --format '{{.State.Health.Status}}' 2>/dev/null)" == healthy ]] \
     || { echo "  ${C_R}proxy is not healthy${C_0}"; bad=1; }
+  # "Ready" must imply the pool cannot move during the run.
+  [[ "$(core_extraction_state)" == false ]] \
+    || { echo "  ${C_R}core auto-extraction is $(core_extraction_state), not off — the pool could change mid-run${C_0}"; bad=1; }
   return "$bad"
 }
 
@@ -114,6 +117,47 @@ import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
 m=re.search(r'debugForceIdentity:\n(?:[ \t]+\w+:.*\n)*?[ \t]+agent_id:[ \t]*\"([^\"]*)\"',t,re.M)
 print(m.group(1) if m else '?')"; }
+
+# ── the product's skill auto-extraction switch ───────────────────
+# Off for the on/off comparison, by decision (see the run report). It has to be
+# enforced here rather than remembered: the core config file is gitignored and
+# start-memory-core.sh regenerates it on every start with `enabled: true`, so
+# one redeploy would switch extraction back on and every later run would be
+# against a moving pool. The state is read from the file the container mounts;
+# writes are in place, because that mount is a single read-only file and a
+# replaced inode leaves the container reading the old bytes.
+CORE_CFG="$REPO_ROOT/deploy/global-images/.memory-core-config/tdai-gateway.yaml"
+
+core_extraction_state() {  # prints true | false | unknown
+  python3 - "$CORE_CFG" <<'PY' 2>/dev/null || echo unknown
+import re, sys
+s = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"^skill:\n(?:(?:  .*|)\n)*?  extraction:\n(?:(?:    .*|)\n)*?    enabled:\s*(true|false)", s, re.M)
+print(m.group(1) if m else "unknown")
+PY
+}
+
+set_core_extraction_off() {  # in-place, inode-preserving; then restart core and verify
+  local before; before="$(stat -f %i "$CORE_CFG")"
+  python3 - "$CORE_CFG" <<'PY' || return 1
+import re, sys
+p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+pat = re.compile(r"(^skill:\n(?:(?:  .*|)\n)*?  extraction:\n(?:(?:    .*|)\n)*?    enabled:\s*)true", re.M)
+new, n = pat.subn(r"\1false", s, count=1)
+if n != 1:
+    sys.exit("skill.extraction.enabled: true not found exactly once")
+fh = open(p, "r+", encoding="utf-8"); fh.write(new); fh.truncate(); fh.close()
+PY
+  [[ "$(stat -f %i "$CORE_CFG")" == "$before" ]] || { echo "  ${C_R}inode changed while writing $CORE_CFG — the container would keep the old bytes${C_0}"; return 1; }
+  docker restart tdai-memory-core >/dev/null || return 1
+  local _ st
+  for _ in $(seq 1 45); do
+    st="$(docker inspect tdai-memory-core --format '{{.State.Health.Status}}' 2>/dev/null)"
+    [[ "$st" == healthy ]] && break; sleep 2
+  done
+  [[ "$st" == healthy ]] || { echo "  ${C_R}tdai-memory-core did not come back healthy${C_0}"; return 1; }
+  docker exec tdai-memory-core sh -c 'grep -A1 "^  extraction:" /data/config/tdai-gateway.yaml | tail -1' | grep -q false
+}
 
 restart_proxy() {
   docker restart tdai-proxy >/dev/null || die "could not restart tdai-proxy"
@@ -194,6 +238,17 @@ PY
     info "restarting proxy: upstream=$PROBE_UPSTREAM  agent=$AGENT"
     restart_proxy
     ok "proxy healthy, forced identity $AGENT — $WHO"
+
+    # 2b. the pool must not move during the run
+    case "$(core_extraction_state)" in
+      false) ok "core auto-extraction already off" ;;
+      true)
+        info "core auto-extraction is ON (a redeploy regenerates the config with it on) — switching it off in place and restarting core"
+        set_core_extraction_off && ok "core auto-extraction off; tdai-memory-core healthy and reads enabled: false" \
+          || die "could not switch core auto-extraction off — refusing to prepare a run against a pool that can move"
+        ;;
+      *) die "cannot read $CORE_CFG — refusing to prepare without knowing whether the pool can move" ;;
+    esac
 
     # 3. the api key CodeBuddy sends
     bash "$EVAL/tasks/bridge-addr/use-identity.sh" "$2" >/dev/null && ok "CodeBuddy key switched to identity $2"
