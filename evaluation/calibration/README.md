@@ -33,25 +33,41 @@ used (needs_review or nothing) but acted and needed. Precision and recall are
 always printed with n. An asset with no hidden run is **undetermined**, never
 100%.
 
-## Current state (2026-09-06, after the hidden runs)
+## Current state (2026-09-06)
+
+Before the rule revision (kept as `loo-2026-09-06-before-rule-revision.md`):
 
 | asset | present | acted | judged used | withheld | hidden | acted while hidden | truth | precision | recall |
 |---|---|---|---|---|---|---|---|---|---|
 | eval-bridge-endpoint-a (wrong) | 7 | 7 | 7 | 0 | 3 | 0 | needed | 100% (n=7) | 100% (n=7) |
-| eval-bridge-endpoint-b (right) | 6 | 6 | 4 | 2 | 4 | 0 | needed | 100% (n=4) | 67% (n=6) |
+| eval-bridge-endpoint-b (right) | 6 | 6 | 4 | 2 | 4 | 0 | needed | 100% (n=4) | **67% (n=6)** |
 
-Overall: precision 100% (n=11), recall 85% (n=13). Rendered table: `loo-2026-09-06.md`.
+The two misses were a systematic class, not noise: in both runs the token
+had first reached the model inside the right asset's **own** search entry
+(its snippet), before the fetch, and the earliest-delivery rule treated that
+entry as "another source". It is the same asset at the same version through a
+second channel; the content came from the asset either way, which is the claim
+`used` makes. The rule was revised with the user's approval (judge-hard,
+`listingEntriesCarrying`): an earlier listing whose only entry carrying the
+token is this asset's own entry no longer blocks. A listing where another
+asset's entry also carries the token still blocks; a listing that cannot be
+parsed into entries still blocks.
 
-The four runs with the right asset hidden all **failed**: the model dialled
-10.244.7.19:8096, timed out, and never reached 47318. With the asset visible,
-6/6 passed. Nothing else in the pool, the system prompt or the model's own
-knowledge supplied the port — which is what makes the token discriminative and
-the `used` claims on it supportable.
+After the revision (`loo-2026-09-06.md`):
 
-The two recall misses are the two `needs_review` runs: the token had appeared
-in a search snippet before the fetch, and the earliest-delivery rule withheld
-`used`. The rule is conservative by design; this is its measured cost, 2 of 6,
-and it is reported as a miss rather than argued away.
+| asset | present | acted | judged used | withheld | hidden | acted while hidden | truth | precision | recall |
+|---|---|---|---|---|---|---|---|---|---|
+| eval-bridge-endpoint-a (wrong) | 7 | 7 | 7 | 0 | 3 | 0 | needed | 100% (n=7) | 100% (n=7) |
+| eval-bridge-endpoint-b (right) | 6 | 6 | 6 | 0 | 4 | 0 | needed | 100% (n=6) | 100% (n=6) |
+
+Overall: precision 100% (n=13), recall 100% (n=13). The hidden runs are the
+check that the revision did not loosen anything: with the right asset hidden
+the model still never produced 47318 (4/4 failed), so every `used` on it rests
+on content that came from the asset. A rule change that had let a leaked
+token through would show up here as `acted while hidden > 0`.
+
+Both tables stay in the report. The first shows the calibration finding a
+real miss class; the second shows the fix measured by the same instrument.
 
 ## Limits
 

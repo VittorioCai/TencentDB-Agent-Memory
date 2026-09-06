@@ -11,6 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { judgeSession, isContentBearingFetch, precedes, tokenSet } from "./judge-hard.mjs";
+import { listingEntriesCarrying } from "./judge-hard.mjs";
 
 const T = {
   fetchA: "2026-09-05T10:00:00Z",
@@ -364,21 +365,59 @@ test("a needs_review event borrows nothing from a fetch it was not credited with
 
 // ── snippet leakage: offered is not fetched ───────────────────────
 
-test("a token delivered by a search snippet before use is not hard evidence", () => {
-  // The real run's asymmetry: 47318 came back in a search snippet, 10.244.7.19
-  // did not. A used judgement on 47318 would credit a full-text fetch it cannot
-  // separate from the model having read the snippet.
+test("rule revised 2026-09-06: a snippet inside THIS asset's own listing entry is the same asset by another channel — still used", () => {
+  // Calibration found a systematic miss class: 47318 came back inside
+  // eval-bridge-endpoint-b's own search entry before the fetch, and the old
+  // rule treated that entry as "another source". It is the same asset at the
+  // same version through a second channel; the content came from the asset
+  // either way, which is the claim `used` makes. Approved by the user before
+  // the change; the before/after numbers stay in the calibration report.
   const { events } = judge(
     [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", context_entry_index: 3 })],
     run({
       operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
-      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-other","snippet":"nothing here"},{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
     }),
     { "skl-right": { version: 1, tokens: ["47318"] } },
   );
 
+  assert.equal(events[0].state, "used");
+  assert.match(events[0].proof_refs[0].detail, /this asset's own search entry \(rank 2\).*credited either way/);
+});
+
+test("a snippet carrying the token inside ANOTHER asset's listing entry still blocks", () => {
+  // The guard the revision keeps: when a second entry in the same listing also
+  // carries the token, the use cannot be attributed to this asset.
+  const { events } = judge(
+    [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"},{"skill_id":"skl-copycat","name":"copycat","snippet":"also 47318"}]}' }],
+    }),
+    { "skl-right": { version: 1, tokens: ["47318"] } },
+  );
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /inside another asset's entry as well \(copycat\)/);
+});
+
+test("a listing that cannot be parsed into entries stays an unknown source and still blocks", () => {
+  const { events } = judge(
+    [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: "plain text listing mentioning 47318 with no JSON" }],
+    }),
+    { "skl-right": { version: 1, tokens: ["47318"] } },
+  );
   assert.equal(events[0].state, "needs_review");
   assert.match(events[0].proof_refs[0].detail, /in a search snippet .* before this operation/);
+});
+
+test("listingEntriesCarrying parses Stdout-prefixed envelopes and reports ranks", () => {
+  const text = 'Command: curl …\nStdout: {"code":0,"data":{"items":[{"skill_id":"a","name":"A","snippet":"x"},{"skill_id":"b","name":"B","snippet":"port 47318"}]}}';
+  assert.deepEqual(listingEntriesCarrying(text, "47318"), [{ asset_id: "b", name: "B", rank: 2 }]);
+  assert.equal(listingEntriesCarrying("no json", "47318"), null);
+  assert.deepEqual(listingEntriesCarrying('{"data":{"items":[]}}', "47318"), []);
 });
 
 test("a token that never appeared in a snippet still reaches used", () => {

@@ -24,14 +24,14 @@ model recovered every time instead. Reported as observed.
 
 | arm | wrong asset seen at any stage | first dial failed | failed attempts | corrected events | validated events | mean wall s |
 |---|---|---|---|---|---|---|
-| gate-off | **3/3** | **3/3** | 3 | 3 | 2 | 50 |
-| gate-on | **0/3** | **0/3** | 0 | 0 | 2 | 33 |
+| gate-off | **3/3** | **3/3** | 3 | 3 | 3 | 50 |
+| gate-on | **0/3** | **0/3** | 0 | 0 | 3 | 33 |
 
 Per run, gate-off:
 
 | run | first dial | wrong asset | right asset |
 |---|---|---|---|
-| 09:21Z | 10.244.7.19:8096, timed out | recalled → injected → fetched → used → **corrected** | fetched → needs_review |
+| 09:21Z | 10.244.7.19:8096, timed out | recalled → injected → fetched → used → **corrected** | fetched → used → validated (needs_review before the rule revision) |
 | 09:31Z | 10.244.7.19:8096, timed out | recalled → injected → fetched → used → **corrected** | fetched → used → validated |
 | 11:16Z | 10.244.7.19:8096, timed out | recalled → injected → fetched → used → **corrected** | fetched → used → validated |
 
@@ -40,7 +40,7 @@ Per run, gate-on (wrong asset `visibility=private` before the session, read back
 | run | first dial | wrong asset | right asset |
 |---|---|---|---|
 | 11:29Z | 127.0.0.1:47318, code 0 | **absent from every stage** | fetched → used → validated |
-| 11:29Z | 127.0.0.1:47318, code 0 | **absent from every stage** | fetched → needs_review |
+| 11:29Z | 127.0.0.1:47318, code 0 | **absent from every stage** | fetched → used → validated (needs_review before the rule revision) |
 | 11:30Z | 127.0.0.1:47318, code 0 | **absent from every stage** | fetched → used → validated |
 
 "Absent from every stage" is the strongest form of the claim this design can
@@ -63,14 +63,18 @@ there cannot have been produced by the model.
   rejecting the asset was gathered in the evidence-base runs, and the
   comparison shows what happens once it has been acted on.
 
-## The two `needs_review` outcomes
+## The two `needs_review` outcomes, and the rule revision
 
-One run in each arm ends with the right asset at `needs_review` rather than
-`validated`. Same reason both times: the token `47318` appeared in a search
-snippet at message 3, before the fetch, and the hard judge cannot tell use of
-the fetched body apart from use of the snippet. That is the earliest-delivery
-rule working as specified, and it costs one validated event per arm equally.
-It is not counted against either arm.
+At first judgement one run in each arm ended with the right asset at
+`needs_review` rather than `validated`: the token `47318` had appeared in a
+search snippet at message 3, before the fetch. Leave-one-out calibration
+(`evaluation/calibration/`) showed this was a systematic miss class: the
+snippet sat inside the right asset's **own** listing entry, and the
+earliest-delivery rule was treating the same asset's second channel as
+another source. With the user's approval the rule was revised (same-asset
+listing entry no longer blocks; another asset's entry, or an unparseable
+listing, still does) and the runs re-judged. Both arms now read 3 validated;
+the pre-revision table is kept beside the new one in the calibration README.
 
 ## What this does and does not establish
 

@@ -1,12 +1,12 @@
-# 资产使用回执 — 运行 20260906T092114Z-gate-off · 会话 7e576bd6 · 任务 task-5e6xp4mrrw · 2026-09-06T12:56:15Z
+# 资产使用回执 — 运行 20260906T092114Z-gate-off · 会话 7e576bd6 · 任务 task-5e6xp4mrrw · 2026-09-06T14:04:12Z
 
 本次应用 2 项团队资产
 - Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
-- Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8), but the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet
+- Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8); the call succeeded and the run's acceptance passed
 
 效果状态
+- 1 项已通过相关测试验证
 - 1 项被证明错误——已采用，且它引出的调用因其内容而失败
-- 1 项仅作为背景参考（取回或提供），效果待验证
 
 ✗ eval-bridge-endpoint-a  v2  skill
     来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
@@ -23,17 +23,18 @@
     闸门 拒绝 · 作者置信度 0.5
     风险         闸门拒绝: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
 
-○ eval-bridge-endpoint-b  v2  skill
+✓ eval-bridge-endpoint-b  v2  skill
     来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
     类型         Skill
-    状态         已取回——正文已读取，采用未成立
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
     为何提供       offered at rank 3 of 3 (score 5.91e-6) for the query "skill bridge http 访问 约定"
-    影响         its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8), but the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet
+    影响         its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8); the call succeeded and the run's acceptance passed
     作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_01_2VnyERt2SFuKjZiNaRtS2494) 通过
     证据
-      tool_arg        request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_01_2VnyERt2SFuKjZiNaRtS2494:arguments  — token 47318; the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet
+      verify_result   7e576bd6-d232-4503-88d1-6cd716427f12:verify.mjs:call=call_01_2VnyERt2SFuKjZiNaRtS2494:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_01_2VnyERt2SFuKjZiNaRtS2494:arguments  — token 47318; content of v2 entered the context at message 6, before this operation at message 8; the token had first reached the model at message 3 through this asset's own search entry (rank 3) — the same asset by another channel, credited either way
       capture_line    7e576bd6-d232-4503-88d1-6cd716427f12:call_01_eFIEHEkVHnZgjEUkaKGe7591  — skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap
     闸门 准入 · 作者置信度 0.5
-    风险         待复核: token 47318; the token was in a search snippet (message 3) before this operation, so its use cannot be told apart from reading that snippet
 
 标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

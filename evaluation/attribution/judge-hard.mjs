@@ -142,6 +142,35 @@ export function precedes(fetch, operation) {
  * description and pre-change files, because those are properties of the run
  * rather than of the asset.
  */
+/**
+ * Which assets' entries in a listing (search / list response) carry the token.
+ *
+ * A listing is one tool result holding several assets' entries — name,
+ * description, snippet. A token found in the listing text may sit in this
+ * asset's own entry or in another asset's. The difference decides whether the
+ * listing is "the same asset through another channel" or "another source".
+ *
+ * Returns the asset ids whose entry carries the token, with the entry's rank;
+ * null when the listing cannot be parsed into entries, in which case the
+ * caller must treat it as an unknown source.
+ */
+export function listingEntriesCarrying(text, token) {
+  const s = String(text ?? "");
+  const start = s.indexOf("Stdout:") >= 0 ? s.indexOf("{", s.indexOf("Stdout:")) : s.indexOf("{");
+  if (start < 0) return null;
+  let doc;
+  try { doc = JSON.parse(s.slice(start, s.lastIndexOf("}") + 1)); } catch { return null; }
+  const items = doc?.data?.items ?? doc?.data?.hits ?? doc?.items;
+  if (!Array.isArray(items)) return null;
+  const carriers = [];
+  items.forEach((it, i) => {
+    if (JSON.stringify(it).includes(token)) {
+      carriers.push({ asset_id: String(it?.skill_id ?? it?.wiki_id ?? it?.id ?? ""), name: String(it?.name ?? ""), rank: i + 1 });
+    }
+  });
+  return carriers;
+}
+
 export function judgeSession({ events, artifacts, tokensByAsset }) {
   const out = [];
   const skipped = [];
@@ -197,16 +226,40 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
           .sort((a, b) => b.context_entry_index - a.context_entry_index)[0];
 
         // The credited fetch must BE the earliest delivery. Equal index means
-        // the same tool result; anything earlier is a different source.
-        const earlierSource = earliest && (!fetch || earliest.message_index < fetch.context_entry_index)
+        // the same tool result; anything earlier is a different source —
+        // with one exception, decided below.
+        let earlierSource = earliest && (!fetch || earliest.message_index < fetch.context_entry_index)
           ? earliest
           : null;
+
+        // The exception (rule revised 2026-09-06, after calibration showed a
+        // systematic miss class): an earlier listing whose only entry carrying
+        // the token is THIS asset's own entry is the same asset through another
+        // channel, not another source. Whether the model used the snippet or
+        // the fetched body, the content came from this asset at this version,
+        // and that is the claim `used` makes. A listing where another asset's
+        // entry also carries the token stays ambiguous; one that cannot be
+        // parsed into entries stays an unknown source. Both remain blocked.
+        let viaListing = null;
+        let listingOther = null;
+        if (fetch && earlierSource
+            && (earlierSource.kind === "listing" || (earlierSource.endpoint && isListingAction(earlierSource.endpoint)))) {
+          const carriers = listingEntriesCarrying(earlierSource.text, token);
+          if (carriers && carriers.length === 1 && carriers[0].asset_id === assetId) {
+            viaListing = { message_index: earlierSource.message_index, rank: carriers[0].rank };
+            earlierSource = null;
+          } else if (carriers && carriers.some((c) => c.asset_id !== assetId)) {
+            listingOther = carriers.filter((c) => c.asset_id !== assetId).map((c) => c.name || c.asset_id).join(", ");
+          }
+        }
 
         const blocked = searching
           ? "the token appears in a search command — the model was looking for it, not using it"
           : earlierSource
             ? ((earlierSource.kind === "listing" || (earlierSource.endpoint && isListingAction(earlierSource.endpoint)))
-                ? `the token was in a search snippet (message ${earlierSource.message_index}) before this operation, so its use cannot be told apart from reading that snippet`
+                ? (listingOther
+                    ? `the token was in a search listing (message ${earlierSource.message_index}) before this operation, inside another asset's entry as well (${listingOther}), so its use cannot be attributed to this asset`
+                    : `the token was in a search snippet (message ${earlierSource.message_index}) before this operation, so its use cannot be told apart from reading that snippet`)
                 : `the token first reached the model at message ${earlierSource.message_index} via ${earlierSource.source || earlierSource.endpoint || "another tool result"}, before the credited fetch — its use cannot be attributed to that fetch`)
           : op.message_index == null
             ? "a diff has no position in the run, so it cannot show the asset was read before the change was made"
@@ -220,7 +273,10 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
 
         const state = blocked ? "needs_review" : "used";
         const reason = blocked
-          || `content of v${fetch.asset_version} entered the context at message ${fetch.context_entry_index}, before this operation at message ${op.message_index}`;
+          || `content of v${fetch.asset_version} entered the context at message ${fetch.context_entry_index}, before this operation at message ${op.message_index}`
+            + (viaListing
+              ? `; the token had first reached the model at message ${viaListing.message_index} through this asset's own search entry (rank ${viaListing.rank}) — the same asset by another channel, credited either way`
+              : "");
 
         const proofRefs = [{
           kind: PROOF_KIND[op.kind] ?? "tool_arg",
