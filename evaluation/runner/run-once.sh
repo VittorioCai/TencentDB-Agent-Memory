@@ -226,6 +226,16 @@ else
   cp "$RUN_DIR/tool-call-logs-all.jsonl" "$TOOL_CALLS"
 fi
 
+# The task id the proxy resolved this session to, from its own "→ initialized"
+# line. Stamped onto the events below so the gate can count distinct tasks;
+# empty when the line is not found, and then the events keep task_id null —
+# a missing signal, never a guessed one.
+TASK_ID=""
+if [[ -n "$RUN_CONV" ]]; then
+  TASK_ID="$(docker logs tdai-proxy 2>&1 | grep -F "session=codebuddy:$RUN_CONV" | grep -F "→ initialized" | tail -1 | sed -nE 's/.*\btask=([^[:space:]]+).*/\1/p' || true)"
+fi
+[[ -n "$TASK_ID" ]] && info "task id per proxy log: $TASK_ID" || warn "task id not found in the proxy log; events will carry task_id null"
+
 CANDIDATES="$EVAL/provenance/artifacts/candidate-log.jsonl"
 [[ -f "$CANDIDATES" ]] && cp "$CANDIDATES" "$RUN_DIR/candidate-log.jsonl"
 
@@ -302,10 +312,14 @@ cp "$EVAL/provenance/artifacts/provenance-events.jsonl" "$RUN_DIR/events.jsonl" 
 (cd "$REPO_ROOT" && node "$EVAL/provenance/build-early-events.mjs" "$SNAPSHOT" "$TOOL_CALLS" "$CAPTURE" \
   ${CANDIDATES:+--candidates="$CANDIDATES"} > "$RUN_DIR/early.md" 2>&1) || warn "build-early-events failed"
 cp "$EVAL/provenance/artifacts/early-events.jsonl" "$RUN_DIR/early-events.jsonl" 2>/dev/null || : > "$RUN_DIR/early-events.jsonl"
+# The builders know the session, not the run or the task; stamp both now so
+# every later stage (judge, gate, receipt) inherits them.
+(cd "$REPO_ROOT" && node "$EVAL/provenance/stamp-events.mjs" "$RUN_DIR/events.jsonl" "$RUN_DIR/early-events.jsonl" \
+  --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null) || warn "could not stamp run/task ids on the events"
 
 info "judgement …"
 (cd "$REPO_ROOT" && node "$EVAL/attribution/collect-artifacts.mjs" "$CAPTURE" \
-  --task="$EVAL/tasks/bridge-addr/task.md" >/dev/null 2>&1) || warn "collect-artifacts failed"
+  --task="$EVAL/tasks/bridge-addr/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null 2>&1) || warn "collect-artifacts failed"
 cp "$EVAL/attribution/artifacts/run-artifacts.json" "$RUN_DIR/run-artifacts.json" 2>/dev/null \
   || { warn "no artifacts collected"; echo "[]" > "$RUN_DIR/run-artifacts.json"; }
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-hard.mjs" \

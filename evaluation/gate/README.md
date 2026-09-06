@@ -142,9 +142,9 @@ node --test evaluation/gate/*.test.mjs evaluation/attribution/judge-outcome.test
 
 ## Limits, stated
 
-- `task_id` is not stamped on events by the runner yet, so `distinct_tasks`
-  reads 0 everywhere and the reasons say generalisation is not measurable. It
-  is a reporting gap, not a zero.
+- One task so far, so `distinct_tasks` reads 1 everywhere (the runner stamps
+  the task id the proxy resolved onto every event; until 2026-09-06 it did not,
+  and the signal read 0). Generalisation needs a second task pair (P4-7).
 - One author, one consumer. The author prior is at its neutral fallback and
   says so; the team dimension is real in mechanism and thin in data.
 - `visibility` is proven to govern the bridge's search result set (P3-3a) and

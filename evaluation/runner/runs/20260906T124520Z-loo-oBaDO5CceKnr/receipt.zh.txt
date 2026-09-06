@@ -1,4 +1,4 @@
-# 资产使用回执 — 运行 20260906T124520Z-loo-oBaDO5CceKnr · 会话 34d9f251 · 任务 task-5e6xp4mrrw · 2026-09-06T14:04:13Z
+# 资产使用回执 — 运行 20260906T124520Z-loo-oBaDO5CceKnr · 会话 34d9f251 · 任务 task-5e6xp4mrrw · 2026-09-06T18:37:25Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)

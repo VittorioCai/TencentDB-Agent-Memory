@@ -164,7 +164,7 @@ export function diffHunks(diffText) {
  * once, at the turn it first appeared, so the sequence reflects when things
  * happened rather than how many times they were re-sent.
  */
-export function collectArtifacts({ captureEvents = [], taskDescription = "", preChangeFiles = {}, diff = "" }) {
+export function collectArtifacts({ captureEvents = [], taskDescription = "", preChangeFiles = {}, diff = "", runId = null, taskId = null }) {
   const bySession = new Map();
 
   const requests = captureEvents
@@ -302,6 +302,11 @@ export function collectArtifacts({ captureEvents = [], taskDescription = "", pre
 
     sessions.push({
       session_key: sessionKey,
+      // Stamped by the runner so the judge's events carry them; null when the
+      // artifacts were collected outside a run. Generalisation is counted as
+      // distinct task ids, so a missing task id is a missing signal, not zero.
+      run_id: runId,
+      task_id: taskId,
       task_description: taskDescription,
       pre_change_files: preChangeFiles,
       diff,
@@ -370,6 +375,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     taskDescription: flag("task").map((p) => readFileSync(p, "utf8")).join("\n"),
     diff: flag("diff").map((p) => readFileSync(p, "utf8")).join("\n"),
     preChangeFiles,
+    runId: flag("run-id")[0] || null,
+    taskId: flag("task-id")[0] || null,
   });
 
   const outPath = "evaluation/attribution/artifacts/run-artifacts.json";

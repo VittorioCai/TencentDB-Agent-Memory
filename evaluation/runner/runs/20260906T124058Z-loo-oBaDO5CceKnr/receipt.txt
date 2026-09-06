@@ -1,4 +1,4 @@
-# Receipt — run 20260906T124058Z-loo-oBaDO5CceKnr · session 27990aa8 · task task-5e6xp4mrrw · 2026-09-06T14:04:13Z
+# Receipt — run 20260906T124058Z-loo-oBaDO5CceKnr · session 27990aa8 · task task-5e6xp4mrrw · 2026-09-06T18:37:25Z
 
 applied 1 team asset(s)
 - skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_pB0U647pM5lABOMqZ0Bd5979 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)

@@ -2,9 +2,9 @@
 
 ADMIT    eval-bridge-endpoint-b (skl-oBaDO5CceKnr)
     - rule admit: cross_user validated >= 1 (1 record(s)) and no corrected
-    - reported signals: task ids not recorded on the events, so generalisation is not measurable here, 1 distinct consumer(s); neither is a threshold at this stage
+    - reported signals: 1 distinct task(s), 1 distinct consumer(s); neither is a threshold at this stage
     - author confidence 0.583 (1 validated, 0 corrected, prior 0.5: neutral 0.5: no other author has cross-person outcomes)
-    signals: fetched 1, used 1 (+0 soft), validated 1 (cross_user 1), corrected 0; 1 consumer(s), 0 task(s)
+    signals: fetched 1, used 1 (+0 soft), validated 1 (cross_user 1), corrected 0; 1 consumer(s), 1 task(s)
     author:  usr-n68ea5ythq / agt-5e4hna56j9 → confidence 0.583
     evidence:
       validated  cross_user  evt-ef176416627d
