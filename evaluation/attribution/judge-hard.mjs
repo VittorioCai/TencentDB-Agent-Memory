@@ -165,7 +165,15 @@ export function listingEntriesCarrying(text, token) {
   const carriers = [];
   items.forEach((it, i) => {
     if (JSON.stringify(it).includes(token)) {
-      carriers.push({ asset_id: String(it?.skill_id ?? it?.wiki_id ?? it?.id ?? ""), name: String(it?.name ?? ""), rank: i + 1 });
+      carriers.push({
+        asset_id: String(it?.skill_id ?? it?.wiki_id ?? it?.id ?? ""),
+        name: String(it?.name ?? ""),
+        rank: i + 1,
+        // The entry's own version. The same-asset exception below is same
+        // asset AND same version; an entry that states no version cannot
+        // qualify, because "same asset" alone was the gap a review found.
+        version: it?.version ?? null,
+      });
     }
   });
   return carriers;
@@ -242,12 +250,24 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
         // parsed into entries stays an unknown source. Both remain blocked.
         let viaListing = null;
         let listingOther = null;
+        let listingVersionNote = null;
         if (fetch && earlierSource
             && (earlierSource.kind === "listing" || (earlierSource.endpoint && isListingAction(earlierSource.endpoint)))) {
           const carriers = listingEntriesCarrying(earlierSource.text, token);
           if (carriers && carriers.length === 1 && carriers[0].asset_id === assetId) {
-            viaListing = { message_index: earlierSource.message_index, rank: carriers[0].rank };
-            earlierSource = null;
+            const entryVersion = carriers[0].version;
+            // Same asset AND same version — the condition the revision was
+            // approved on. An entry of another revision, or one stating no
+            // version, is not "this asset at this version by another channel":
+            // it may carry a value the credited revision no longer has.
+            if (entryVersion != null && String(entryVersion) === String(fetch.asset_version)) {
+              viaListing = { message_index: earlierSource.message_index, rank: carriers[0].rank, version: entryVersion };
+              earlierSource = null;
+            } else {
+              listingVersionNote = entryVersion == null
+                ? "this asset's own listing entry, but the entry states no version"
+                : `this asset's own listing entry, but at v${entryVersion} while the credited fetch is v${fetch.asset_version}`;
+            }
           } else if (carriers && carriers.some((c) => c.asset_id !== assetId)) {
             listingOther = carriers.filter((c) => c.asset_id !== assetId).map((c) => c.name || c.asset_id).join(", ");
           }
@@ -259,7 +279,9 @@ export function judgeSession({ events, artifacts, tokensByAsset }) {
             ? ((earlierSource.kind === "listing" || (earlierSource.endpoint && isListingAction(earlierSource.endpoint)))
                 ? (listingOther
                     ? `the token was in a search listing (message ${earlierSource.message_index}) before this operation, inside another asset's entry as well (${listingOther}), so its use cannot be attributed to this asset`
-                    : `the token was in a search snippet (message ${earlierSource.message_index}) before this operation, so its use cannot be told apart from reading that snippet`)
+                    : listingVersionNote
+                      ? `the token was in a search listing (message ${earlierSource.message_index}) before this operation — ${listingVersionNote}; its use cannot be attributed to the credited revision`
+                      : `the token was in a search snippet (message ${earlierSource.message_index}) before this operation, so its use cannot be told apart from reading that snippet`)
                 : `the token first reached the model at message ${earlierSource.message_index} via ${earlierSource.source || earlierSource.endpoint || "another tool result"}, before the credited fetch — its use cannot be attributed to that fetch`)
           : op.message_index == null
             ? "a diff has no position in the run, so it cannot show the asset was read before the change was made"

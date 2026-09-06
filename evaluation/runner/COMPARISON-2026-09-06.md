@@ -174,3 +174,27 @@ calibrates the judge: the token 47318 never appears when the asset is hidden,
 so every `used` issued on it rests on content that came from the asset.
 Calibration table: `evaluation/calibration/loo-2026-09-06.md` — precision
 100% (n=11), recall 85% (n=13); the misses are the two needs_review runs.
+
+## Supplementary metric: the first batch (added after the results were read)
+
+The primary verdict stays "last attempt decides". As a supplementary view,
+`summarize-runs` now reports the **first batch** — every target call issued in
+the earliest message that carried one:
+
+| arm | first batch all ok | first batch had a failure | failed attempts |
+|---|---|---|---|
+| gate-off | 0/3 | 3/3 | 3 |
+| gate-on | 3/3 | 0/3 | 0 |
+
+One fact must travel with this table: in every gate-off run the wrong-address
+call and the right-address call were issued **in the same model message**.
+There was no feedback between them, so "the first call failed" is true in
+submission order but cannot be told as "the model saw the failure and
+corrected itself". What the batch shows is that the model dialled the wrong
+address at all; the gate-on arm never did. This metric was added after the
+first comparison was read, and is labelled as such.
+
+The outcome judge was also tightened after review: `corrected(wrong)` now
+requires the harness's own reachability probe to reproduce the failure
+(`reachability.json` per run). The three off-arm corrected events stand under
+that rule; the probe reaches 127.0.0.1:47318 and times out on 10.244.7.19:8096.

@@ -1,4 +1,4 @@
-# 资产使用回执 — 运行 20260906T113049Z-gate-on · 会话 1a008cd0 · 任务 task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# 资产使用回执 — 运行 20260906T113049Z-gate-on · 会话 1a008cd0 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:05Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_dNEKoZMpsNAr0hsjsUjV7754 (message 6); the call succeeded and the run's acceptance passed
@@ -15,7 +15,7 @@
     作用点        tool_call
     相关测试 verify.mjs: dial 127.0.0.1:47318 (call_00_dNEKoZMpsNAr0hsjsUjV7754) 通过
     证据
-      verify_result   1a008cd0-b707-4dcd-9378-a3a1fca89526:verify.mjs:call=call_00_dNEKoZMpsNAr0hsjsUjV7754:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      verify_result   20260906T113049Z-gate-on:verify.mjs:call=call_00_dNEKoZMpsNAr0hsjsUjV7754:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(81c44656-21e3-416b-929e-9fc17802f3f8):msg[6]:call_00_dNEKoZMpsNAr0hsjsUjV7754:arguments  — token 47318; content of v2 entered the context at message 5, before this operation at message 6
       capture_line    1a008cd0-b707-4dcd-9378-a3a1fca89526:call_00_bpXBDl9aX6EFPr8yeCiJ2192  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
     闸门 准入 · 作者置信度 0.5

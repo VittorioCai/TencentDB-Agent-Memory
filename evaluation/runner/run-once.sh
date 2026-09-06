@@ -248,6 +248,17 @@ node "$EVAL/tasks/bridge-addr/verify.mjs" "$CAPTURE" --json > "$RUN_DIR/verdict.
 VERDICT_CODE=$?
 VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json'))['verdict'])" 2>/dev/null || echo ERROR)"
 
+# ── 3a. independent reachability probe ───────────────────────────
+# A model call timing out at an address proves the model followed the asset
+# that gave it the address; it does not prove the address is wrong. The
+# harness opens its own TCP connection to every host:port the run attempted,
+# right now, and records the result. The outcome judge calls an asset wrong
+# only when this probe also fails to reach the address it gave.
+(cd "$REPO_ROOT" && node "$EVAL/tasks/bridge-addr/probe-reachability.mjs" --verdict="$RUN_DIR/verdict.json" \
+  --out="$RUN_DIR/reachability.json" --source="harness probe at run time" --timeout-ms=5000 > "$RUN_DIR/reachability.log" 2>&1) \
+  || warn "reachability probe failed; see $RUN_DIR/reachability.log (outcomes will be unconfirmed)"
+[[ -f "$RUN_DIR/reachability.json" ]] && info "reachability: $(tr '\n' ';' < "$RUN_DIR/reachability.log")"
+
 # ── 4. attribution ───────────────────────────────────────────────
 #
 # The stages write to fixed paths under artifacts/, and this run copies from
@@ -338,8 +349,11 @@ cp "$EVAL/attribution/artifacts/tokens.json" "$RUN_DIR/tokens.json" 2>/dev/null 
 # alone would say; they are informational and never applied — the gate the
 # next run faces is the frozen baseline, not an accumulation.
 info "outcomes …"
+REACH_ARG=""
+[[ -f "$RUN_DIR/reachability.json" ]] && REACH_ARG="--reachability=$RUN_DIR/reachability.json"
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-outcome.mjs" \
   "$RUN_DIR/used-events.jsonl" "$RUN_DIR/verdict.json" "$RUN_DIR/tokens.json" \
+  ${REACH_ARG:+"$REACH_ARG"} \
   --out="$RUN_DIR/outcome-events.jsonl" > "$RUN_DIR/outcome.md" 2>&1) \
   || { warn "judge-outcome failed; see $RUN_DIR/outcome.md"; : > "$RUN_DIR/outcome-events.jsonl"; }
 (cd "$REPO_ROOT" && node "$EVAL/gate/decide.mjs" \

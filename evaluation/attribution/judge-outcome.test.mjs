@@ -45,6 +45,11 @@ function used(assetId, name, callId, token, extra = {}) {
 const WRONG = "skl-sZFb3KatWY6m";
 const RIGHT = "skl-oBaDO5CceKnr";
 const TOKENS = { [WRONG]: { version: 2, tokens: ["10.244.7.19"] }, [RIGHT]: { version: 2, tokens: ["47318"] } };
+// The independent probe the judge needs before it may call an asset wrong.
+const REACH = { targets: {
+  "10.244.7.19:8096": { ok: false, why: "timed out", source: "harness probe at run time", checked_at: "2026-09-06T11:16:40Z" },
+  "127.0.0.1:47318": { ok: true, why: "tcp connect ok", source: "harness probe at run time", checked_at: "2026-09-06T11:16:40Z" },
+} };
 
 function attempt(callId, host, port, ok, why) {
   return { session_key: SESSION, call_id: callId, message_index: 22, host, port, endpoint: "skill:search", ok, why };
@@ -59,6 +64,7 @@ const mainline = () => judgeOutcome({
   usedEvents: [used(WRONG, "eval-bridge-endpoint-a", WRONG_CALL, "10.244.7.19"), used(RIGHT, "eval-bridge-endpoint-b", RIGHT_CALL, "47318")],
   verdictDoc: VERDICT_PASS,
   tokensByAsset: TOKENS,
+  reachability: REACH,
 });
 
 test("mainline: wrong → corrected(wrong), right → validated, from the same passing run", () => {
@@ -90,7 +96,7 @@ test("reachability failure at an address that is not the asset's value is needs_
   const { events } = judgeOutcome({
     usedEvents: [used(WRONG, "a", WRONG_CALL, "10.244.7.19")],
     verdictDoc: { verdict: "FAIL", attempts: [attempt(WRONG_CALL, "192.168.9.9", "8096", false, "timed out")] },
-    tokensByAsset: TOKENS,
+    tokensByAsset: TOKENS, reachability: REACH,
   });
   assert.equal(events[0].state, "needs_review");
   assert.match(events[0].proof_refs[0].detail, /not the asset's value/);
@@ -139,7 +145,7 @@ test("tokens for another version cannot tie a failure to this version", () => {
   const { events } = judgeOutcome({
     usedEvents: [used(WRONG, "a", WRONG_CALL, "10.244.7.19")],
     verdictDoc: VERDICT_PASS,
-    tokensByAsset: { [WRONG]: { version: 3, tokens: ["10.244.7.19"] } },
+    tokensByAsset: { [WRONG]: { version: 3, tokens: ["10.244.7.19"] } }, reachability: REACH,
   });
   assert.equal(events[0].state, "needs_review");
   assert.match(events[0].proof_refs[0].detail, /v3.*v2/);
@@ -187,9 +193,46 @@ test("real run 3 data: wrong corrected, right validated", () => {
   } catch {
     return; // run directory not present in this checkout
   }
-  const { events } = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset: TOKENS });
+  const { events } = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset: TOKENS, reachability: REACH });
   const states = Object.fromEntries(events.map((e) => [e.asset_id, e.state]));
   assert.equal(states[WRONG], "corrected");
   assert.equal(states[RIGHT], "validated");
   assert.match(renderOutcome({ events, skipped: [] }), /corrected\(wrong\)/);
+});
+
+// ── following an asset is not proof the asset is wrong ────────────
+test("the right address timing out once is needs_review, not corrected: the probe reaches it", () => {
+  const { events } = judgeOutcome({
+    usedEvents: [used(RIGHT, "b", RIGHT_CALL, "47318")],
+    verdictDoc: { verdict: "FAIL", attempts: [attempt(RIGHT_CALL, "127.0.0.1", "47318", false, "timed out")] },
+    tokensByAsset: TOKENS, reachability: REACH,
+  });
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /an independent probe reached 127\.0\.0\.1:47318/);
+});
+
+test("a failure at an address that succeeded elsewhere in the same run is transient, not the content", () => {
+  const { events } = judgeOutcome({
+    usedEvents: [used(RIGHT, "b", "call_01_first", "47318")],
+    verdictDoc: { verdict: "PASS", attempts: [attempt("call_01_first", "127.0.0.1", "47318", false, "timed out"), { ...attempt("call_02_retry", "127.0.0.1", "47318", true, "code 0"), message_index: 24 }] },
+    tokensByAsset: TOKENS, reachability: { targets: { "127.0.0.1:47318": { ok: false, why: "timed out" } } },
+  });
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /succeeded at message 24 in this run; the failure was transient/);
+});
+
+test("with no independent probe on record the failure is unconfirmed — never corrected on one call alone", () => {
+  const { events } = judgeOutcome({
+    usedEvents: [used(WRONG, "a", WRONG_CALL, "10.244.7.19")],
+    verdictDoc: VERDICT_PASS, tokensByAsset: TOKENS,
+  });
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /no independent reachability check .* on record/);
+});
+
+test("corrected cites the probe that reproduced the failure", () => {
+  const { events } = mainline();
+  const wrong = events.find((e) => e.asset_id === WRONG);
+  assert.equal(wrong.state, "corrected");
+  assert.match(wrong.proof_refs[0].detail, /an independent probe also failed to reach it \(timed out, harness probe at run time/);
 });

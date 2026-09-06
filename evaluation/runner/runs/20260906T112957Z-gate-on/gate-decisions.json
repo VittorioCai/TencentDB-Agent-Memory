@@ -4,7 +4,7 @@
     "asset_id": "skl-oBaDO5CceKnr",
     "asset_type": "skill",
     "asset_name": "eval-bridge-endpoint-b",
-    "decided_at": "2026-09-06T18:37:25Z",
+    "decided_at": "2026-09-06T19:21:05Z",
     "decision": "admit",
     "reasons": [
       "rule admit: cross_user validated >= 1 (1 record(s)) and no corrected",
@@ -55,7 +55,7 @@
     "asset_id": "skl-sZFb3KatWY6m",
     "asset_type": "skill",
     "asset_name": "eval-bridge-endpoint-a",
-    "decided_at": "2026-09-06T18:37:25Z",
+    "decided_at": "2026-09-06T19:21:05Z",
     "decision": "pending",
     "reasons": [
       "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",

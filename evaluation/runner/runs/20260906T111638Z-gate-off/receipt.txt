@@ -1,7 +1,7 @@
-# Receipt — run 20260906T111638Z-gate-off · session 89e6c3c5 · task task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# Receipt — run 20260906T111638Z-gate-off · session 89e6c3c5 · task task-5e6xp4mrrw · 2026-09-06T19:21:04Z
 
 applied 2 team asset(s)
-- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
 - skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_KQXi3EL66rVhNNmLsTjz7617 (message 9); the call succeeded and the run's acceptance passed
 
 effect status
@@ -13,11 +13,11 @@ effect status
     type       skill
     status     corrected — used, and the call it fed failed for a reason its content explains
     why offered offered at rank 2 of 3 (score 7.57e-6) for the query "skill-bridge convention 接口地址 reach bridge http"
-    impact     its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    impact     its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
     target     tool_call
     related test verify.mjs: dial 10.244.7.19:8096 (call_00_vipdZ1y28EAQmn94imgg7830) failed
     evidence
-      verify_result   89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:verify.mjs:call=call_00_vipdZ1y28EAQmn94imgg7830:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      verify_result   20260906T111638Z-gate-off:verify.mjs:call=call_00_vipdZ1y28EAQmn94imgg7830:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
       tool_arg        request(1ee8e549-2b3a-491c-a3f4-06841c47de3b):msg[9]:call_00_vipdZ1y28EAQmn94imgg7830:arguments  — token 10.244.7.19; content of v2 entered the context at message 7, before this operation at message 9
       bridge_row      tool_call_logs:2026-09-06 19:17:01.452:skill-bridge:get  — request names skl-sZFb3KatWY6m
       capture_line    89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:call_00_7o7kKXoXOnTsaYGZZTt82387  — skill:get answered at message 7; carrying content; version 2
@@ -33,7 +33,7 @@ effect status
     target     tool_call
     related test verify.mjs: dial 127.0.0.1:47318 (call_01_KQXi3EL66rVhNNmLsTjz7617) passed
     evidence
-      verify_result   89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:verify.mjs:call=call_01_KQXi3EL66rVhNNmLsTjz7617:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      verify_result   20260906T111638Z-gate-off:verify.mjs:call=call_01_KQXi3EL66rVhNNmLsTjz7617:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(1ee8e549-2b3a-491c-a3f4-06841c47de3b):msg[9]:call_01_KQXi3EL66rVhNNmLsTjz7617:arguments  — token 47318; content of v2 entered the context at message 8, before this operation at message 9
       bridge_row      tool_call_logs:2026-09-06 19:17:01.447:skill-bridge:get  — request names skl-oBaDO5CceKnr
       capture_line    89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:call_01_86v88eKRZ7joUtropzcQ8928  — skill:get answered at message 8; carrying content; version 2

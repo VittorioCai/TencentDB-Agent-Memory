@@ -1,4 +1,4 @@
-# Receipt — run 20260906T112924Z-gate-on · session 1e32353b · task task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# Receipt — run 20260906T112924Z-gate-on · session 1e32353b · task task-5e6xp4mrrw · 2026-09-06T19:21:05Z
 
 applied 1 team asset(s)
 - skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_2wyJ0OMOdGymnJqWWnxg8206 (message 7); the call succeeded and the run's acceptance passed
@@ -15,7 +15,7 @@ effect status
     target     tool_call
     related test verify.mjs: dial 127.0.0.1:47318 (call_00_2wyJ0OMOdGymnJqWWnxg8206) passed
     evidence
-      verify_result   1e32353b-808c-45e0-ba0a-24e478c5ad28:verify.mjs:call=call_00_2wyJ0OMOdGymnJqWWnxg8206:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      verify_result   20260906T112924Z-gate-on:verify.mjs:call=call_00_2wyJ0OMOdGymnJqWWnxg8206:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(df10ec7f-dd57-45ed-85ad-f3d1e88b4a98):msg[7]:call_00_2wyJ0OMOdGymnJqWWnxg8206:arguments  — token 47318; content of v2 entered the context at message 6, before this operation at message 7
       bridge_row      tool_call_logs:2026-09-06 19:29:34.878:skill-bridge:get  — request names skl-oBaDO5CceKnr
       capture_line    1e32353b-808c-45e0-ba0a-24e478c5ad28:call_00_d77GoJwjnuhexRvnF1TX6548  — skill:get answered at message 6; carrying content; version 2

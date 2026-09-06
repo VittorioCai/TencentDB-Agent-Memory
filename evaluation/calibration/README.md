@@ -77,3 +77,35 @@ real miss class; the second shows the fix measured by the same instrument.
 - The behavioural signal is token presence in calls. An asset that changes
   behaviour without its token appearing (a decision not to do something) is
   not captured; `avoided_option` is in the contract and not measured here.
+
+## Two corrections after review (2026-09-06, evening)
+
+A review of the revised rule and of the outcome judge found two real
+misjudgements. Both are fixed, with regression tests, and every run was
+re-judged; the states did not change, but the rules under which they hold are
+now the stricter ones.
+
+1. **The listing exception checked the asset, not the version.** The approval
+   was for "same asset, same version"; the implementation accepted a v1 listing
+   entry as cover for a v2 fetch, and an entry stating no version at all.
+   `listingEntriesCarrying` now returns each entry's version, and the exception
+   applies only when the entry's version equals the credited fetch's. A v1
+   entry against a v2 fetch, or an entry with no version, blocks with a reason
+   that says so.
+2. **A failed call at the asset's own address was called `corrected(wrong)` on
+   that call alone.** Dialling the address proves the model followed the asset;
+   it does not prove the content is wrong — the right address can time out
+   once. `corrected` now needs the failure to reproduce: the harness probes
+   every attempted host:port itself (`probe-reachability.mjs`, TCP connect,
+   recorded with time and source) and the judge calls the asset wrong only when
+   that probe also failed to reach the address, and no other attempt at the
+   same address in the run succeeded. Otherwise `needs_review`, with the
+   contradiction named. Runs before this change carry a probe taken afterwards,
+   labelled "harness probe after the run (backfill 2026-09-06)"; from now on the
+   probe is taken at run time.
+
+**On the 100% above.** The rule was revised and the same runs re-scored; that
+is a development-set recomputation, not an independent validation. Both tables
+stay. The rules are now frozen for the extension scenarios: their runs will be
+judged under the rules as committed before those runs start, and any further
+rule change will be reported as a change, with before and after.

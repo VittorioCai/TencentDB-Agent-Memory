@@ -105,7 +105,8 @@ test("mainline acceptance: wrong → reject and right → admit from one run's r
     return; // run directory absent
   }
   const tokens = { [WRONG]: { version: 2, tokens: ["10.244.7.19"] }, [RIGHT]: { version: 2, tokens: ["47318"] } };
-  const outcome = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset: tokens }).events;
+  const reachability = { targets: { "10.244.7.19:8096": { ok: false, why: "timed out", source: "test" }, "127.0.0.1:47318": { ok: true, why: "tcp connect ok", source: "test" } } };
+  const outcome = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset: tokens, reachability }).events;
   const decisions = decide({ events: [...fetched, ...usedEvents, ...outcome], snapshot: SNAPSHOT, now: NOW, tokensByAsset: tokens });
   const by = Object.fromEntries(decisions.map((d) => [d.asset_id, d]));
   assert.equal(by[WRONG].decision, "reject");

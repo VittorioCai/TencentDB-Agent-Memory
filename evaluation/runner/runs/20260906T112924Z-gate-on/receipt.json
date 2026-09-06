@@ -3,7 +3,7 @@
   "session_key": "1e32353b-808c-45e0-ba0a-24e478c5ad28",
   "run_id": "20260906T112924Z-gate-on",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T18:37:25Z",
+  "generated_at": "2026-09-06T19:21:05Z",
   "summary": {
     "applied_count": 1,
     "by_status": {
@@ -35,7 +35,7 @@
       "evidence": [
         {
           "kind": "verify_result",
-          "ref": "1e32353b-808c-45e0-ba0a-24e478c5ad28:verify.mjs:call=call_00_2wyJ0OMOdGymnJqWWnxg8206:ok=true",
+          "ref": "20260906T112924Z-gate-on:verify.mjs:call=call_00_2wyJ0OMOdGymnJqWWnxg8206:ok=true",
           "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
         },
         {

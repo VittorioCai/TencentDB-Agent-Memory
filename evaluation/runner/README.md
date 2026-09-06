@@ -174,3 +174,12 @@ usage chunk was found"; zero would read as "measured, and it was free".
 `cached_tokens` and `reasoning_tokens` are kept because most of each prompt
 is cache hits, and a saving in turns looks different from a saving in prompt
 size.
+
+## The harness probes every address the run dialled
+
+Stage 3a opens a TCP connection from the harness to each host:port the run
+attempted and writes `reachability.json` (ok / why / time / source). The
+outcome judge calls an asset wrong only when this independent probe also
+fails to reach the address the asset gave; a model call that timed out at an
+address the probe reaches is `needs_review`, not `corrected`. Following an
+asset is not proof the asset is wrong.

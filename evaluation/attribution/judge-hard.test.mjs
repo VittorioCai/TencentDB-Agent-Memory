@@ -376,7 +376,7 @@ test("rule revised 2026-09-06: a snippet inside THIS asset's own listing entry i
     [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", context_entry_index: 3 })],
     run({
       operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
-      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-other","snippet":"nothing here"},{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-other","snippet":"nothing here"},{"skill_id":"skl-right","version":1,"snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
     }),
     { "skl-right": { version: 1, tokens: ["47318"] } },
   );
@@ -415,7 +415,7 @@ test("a listing that cannot be parsed into entries stays an unknown source and s
 
 test("listingEntriesCarrying parses Stdout-prefixed envelopes and reports ranks", () => {
   const text = 'Command: curl …\nStdout: {"code":0,"data":{"items":[{"skill_id":"a","name":"A","snippet":"x"},{"skill_id":"b","name":"B","snippet":"port 47318"}]}}';
-  assert.deepEqual(listingEntriesCarrying(text, "47318"), [{ asset_id: "b", name: "B", rank: 2 }]);
+  assert.deepEqual(listingEntriesCarrying(text, "47318"), [{ asset_id: "b", name: "B", rank: 2, version: null }]);
   assert.equal(listingEntriesCarrying("no json", "47318"), null);
   assert.deepEqual(listingEntriesCarrying('{"data":{"items":[]}}', "47318"), []);
 });
@@ -478,4 +478,30 @@ test("a snippet that arrives after the operation does not block it", () => {
     }),
   );
   assert.equal(events[0].state, "used");
+});
+
+test("the same-asset exception is same asset AND same version: a v1 entry cannot cover a v2 fetch", () => {
+  const { events } = judge(
+    [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", asset_version: 2, context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-right","version":1,"snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
+    }),
+    { "skl-right": { version: 2, tokens: ["47318"] } },
+  );
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /at v1 while the credited fetch is v2/);
+});
+
+test("a listing entry that states no version does not qualify for the exception", () => {
+  const { events } = judge(
+    [fetched({ asset_id: "skl-right", asset_name: "eval-bridge-endpoint-b", asset_version: 2, context_entry_index: 3 })],
+    run({
+      operations: [operation({ message_index: 6, text: '{"command":"curl http://127.0.0.1:47318/skill-bridge/v3/skill/search -d ..."}' })],
+      offered_content: [{ message_index: 2, endpoint: "skill:search", text: '{"items":[{"skill_id":"skl-right","snippet":"reach the bridge at 127.0.0.1:47318"}]}' }],
+    }),
+    { "skl-right": { version: 2, tokens: ["47318"] } },
+  );
+  assert.equal(events[0].state, "needs_review");
+  assert.match(events[0].proof_refs[0].detail, /the entry states no version/);
 });

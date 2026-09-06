@@ -1,7 +1,7 @@
-# Receipt — run 20260906T124152Z-loo-oBaDO5CceKnr · session 988c4f67 · task task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# Receipt — run 20260906T124152Z-loo-oBaDO5CceKnr · session 988c4f67 · task task-5e6xp4mrrw · 2026-09-06T19:21:06Z
 
 applied 1 team asset(s)
-- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
 
 effect status
 - 1 corrected — used, and the call it fed failed for a reason its content explains
@@ -11,11 +11,11 @@ effect status
     type       skill
     status     corrected — used, and the call it fed failed for a reason its content explains
     why offered offered at rank 2 of 2 (score 7.57e-6)
-    impact     its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    impact     its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
     target     tool_call
     related test verify.mjs: dial 10.244.7.19:8096 (call_00_VKrYU7RKSiEFfW1JwcW20877) failed
     evidence
-      verify_result   988c4f67-4e0b-418b-8405-775cbd658d8e:verify.mjs:call=call_00_VKrYU7RKSiEFfW1JwcW20877:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      verify_result   20260906T124152Z-loo-oBaDO5CceKnr:verify.mjs:call=call_00_VKrYU7RKSiEFfW1JwcW20877:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
       tool_arg        request(e8348427-b34d-494a-a810-d984725daeae):msg[6]:call_00_VKrYU7RKSiEFfW1JwcW20877:arguments  — token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 6
       capture_line    988c4f67-4e0b-418b-8405-775cbd658d8e:call_00_JyCbvmYh2GZmIX0U78Lv0860  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
     gate reject · author confidence 0.5

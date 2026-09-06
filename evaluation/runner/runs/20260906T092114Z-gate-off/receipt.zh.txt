@@ -1,7 +1,7 @@
-# 资产使用回执 — 运行 20260906T092114Z-gate-off · 会话 7e576bd6 · 任务 task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# 资产使用回执 — 运行 20260906T092114Z-gate-off · 会话 7e576bd6 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:04Z
 
 本次应用 2 项团队资产
-- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_2VnyERt2SFuKjZiNaRtS2494 (message 8); the call succeeded and the run's acceptance passed
 
 效果状态
@@ -13,11 +13,11 @@
     类型         Skill
     状态         已纠错——已采用，且它引出的调用因其内容而失败
     为何提供       offered at rank 2 of 3 (score 5.91e-6) for the query "skill bridge http 访问 约定"
-    影响         its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    影响         its value 10.244.7.19 was used in tool call call_00_jQAsNzB0fmeqxhF9pbnS9470 (message 8) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
     作用点        tool_call
     相关测试 verify.mjs: dial 10.244.7.19:8096 (call_00_jQAsNzB0fmeqxhF9pbnS9470) 失败
     证据
-      verify_result   7e576bd6-d232-4503-88d1-6cd716427f12:verify.mjs:call=call_00_jQAsNzB0fmeqxhF9pbnS9470:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      verify_result   20260906T092114Z-gate-off:verify.mjs:call=call_00_jQAsNzB0fmeqxhF9pbnS9470:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
       tool_arg        request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_00_jQAsNzB0fmeqxhF9pbnS9470:arguments  — token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 8
       capture_line    7e576bd6-d232-4503-88d1-6cd716427f12:call_00_3eplhQP1ahdTXDW2iQ9s1654  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
     闸门 拒绝 · 作者置信度 0.5
@@ -32,7 +32,7 @@
     作用点        tool_call
     相关测试 verify.mjs: dial 127.0.0.1:47318 (call_01_2VnyERt2SFuKjZiNaRtS2494) 通过
     证据
-      verify_result   7e576bd6-d232-4503-88d1-6cd716427f12:verify.mjs:call=call_01_2VnyERt2SFuKjZiNaRtS2494:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      verify_result   20260906T092114Z-gate-off:verify.mjs:call=call_01_2VnyERt2SFuKjZiNaRtS2494:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(0e7506de-53a4-41fc-8d57-9ac56f6cd31a):msg[8]:call_01_2VnyERt2SFuKjZiNaRtS2494:arguments  — token 47318; content of v2 entered the context at message 6, before this operation at message 8; the token had first reached the model at message 3 through this asset's own search entry (rank 3) — the same asset by another channel, credited either way
       capture_line    7e576bd6-d232-4503-88d1-6cd716427f12:call_01_eFIEHEkVHnZgjEUkaKGe7591  — skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap
     闸门 准入 · 作者置信度 0.5

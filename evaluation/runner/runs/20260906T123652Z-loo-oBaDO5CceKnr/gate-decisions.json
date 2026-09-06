@@ -4,7 +4,7 @@
     "asset_id": "skl-oBaDO5CceKnr",
     "asset_type": "skill",
     "asset_name": "eval-bridge-endpoint-b",
-    "decided_at": "2026-09-06T18:37:25Z",
+    "decided_at": "2026-09-06T19:21:05Z",
     "decision": "pending",
     "reasons": [
       "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
@@ -44,10 +44,10 @@
     "asset_id": "skl-sZFb3KatWY6m",
     "asset_type": "skill",
     "asset_name": "eval-bridge-endpoint-a",
-    "decided_at": "2026-09-06T18:37:25Z",
+    "decided_at": "2026-09-06T19:21:05Z",
     "decision": "reject",
     "reasons": [
-      "rule reject: a corrected record exists (reason=wrong, 1 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)",
+      "rule reject: a corrected record exists (reason=wrong, 1 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)",
       "reported signals: task ids not recorded on the events, so generalisation is not measurable here, 1 distinct consumer(s); neither is a threshold at this stage",
       "author confidence 0.417 (0 validated, 1 corrected, prior 0.5: neutral 0.5: no other author has cross-person outcomes)"
     ],

@@ -3,7 +3,7 @@
   "session_key": "34d9f251-fb5e-4b99-9d4a-515b4a7b1838",
   "run_id": "20260906T124520Z-loo-oBaDO5CceKnr",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T18:37:25Z",
+  "generated_at": "2026-09-06T19:21:06Z",
   "summary": {
     "applied_count": 1,
     "by_status": {
@@ -30,13 +30,13 @@
         "producer_agent_id": "agt-5e4hna56j9",
         "relation": "cross_user"
       },
-      "impact": "its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)",
+      "impact": "its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)",
       "target_type": "tool_call",
       "evidence": [
         {
           "kind": "verify_result",
-          "ref": "34d9f251-fb5e-4b99-9d4a-515b4a7b1838:verify.mjs:call=call_00_cjQnPkupd1nC1ho6WxqK1596:ok=false",
-          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)"
+          "ref": "20260906T124520Z-loo-oBaDO5CceKnr:verify.mjs:call=call_00_cjQnPkupd1nC1ho6WxqK1596:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)"
         },
         {
           "kind": "tool_arg",
@@ -55,7 +55,7 @@
         },
         {
           "kind": "verify_result",
-          "ref": "34d9f251-fb5e-4b99-9d4a-515b4a7b1838:verify.mjs:call=call_00_1AbgvllrU65zpUKM82mR3338:ok=n/a",
+          "ref": "20260906T124520Z-loo-oBaDO5CceKnr:verify.mjs:call=call_00_1AbgvllrU65zpUKM82mR3338:ok=n/a",
           "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
         },
         {

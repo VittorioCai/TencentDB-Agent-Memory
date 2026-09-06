@@ -36,8 +36,20 @@ export function runFacts(run, { rejected = new Set() } = {}) {
   const attempts = run.verdict_doc?.attempts ?? null;
   const events = run.events ?? null;
   const first = attempts?.[0] ?? null;
+  // The first BATCH: every attempt issued in the earliest message that
+  // carried one. In the off arm the two target calls came from the same
+  // model message, issued together — so "the first call failed" is true in
+  // submission order but must not be read as "the model corrected itself
+  // after seeing a failure"; there was no feedback between them. Added after
+  // the first comparison was read, as a supplementary metric; the final
+  // verdict (last attempt decides) stays the primary one.
+  const firstIndex = attempts && attempts.length ? Math.min(...attempts.map((a) => a.message_index ?? Infinity)) : null;
+  const firstBatch = firstIndex === null || firstIndex === Infinity ? (attempts ?? []) : attempts.filter((a) => (a.message_index ?? Infinity) === firstIndex);
   return {
     first_dial_failed: first ? (first.ok === false && REACHABILITY.has(first.why)) : null,
+    first_batch_size: attempts ? firstBatch.length : null,
+    first_batch_all_ok: attempts && firstBatch.length ? firstBatch.every((a) => a.ok === true) : null,
+    first_batch_any_failed: attempts && firstBatch.length ? firstBatch.some((a) => a.ok === false) : null,
     failed_attempts: attempts ? attempts.filter((a) => a.ok === false).length : null,
     attempts: attempts ? attempts.length : null,
     rejected_seen: events ? events.some((e) => rejected.has(e.asset_id)) : null,
@@ -98,6 +110,8 @@ export function summarizeRuns(runs, { baseline = null } = {}) {
       pass_rate: started > 0 ? g.pass / started : null,
       pass_rate_of_judged: judged > 0 ? g.pass / judged : null,
       first_dial_failed: countTrue(g.facts.map((f) => f.first_dial_failed)),
+      first_batch_all_ok: countTrue(g.facts.map((f) => f.first_batch_all_ok)),
+      first_batch_any_failed: countTrue(g.facts.map((f) => f.first_batch_any_failed)),
       rejected_seen: countTrue(g.facts.map((f) => f.rejected_seen)),
       failed_attempts: g.facts.some((f) => f.failed_attempts != null) ? g.facts.reduce((a, f) => a + (f.failed_attempts ?? 0), 0) : null,
       corrected: g.facts.some((f) => f.corrected != null) ? g.facts.reduce((a, f) => a + (f.corrected ?? 0), 0) : null,
@@ -149,13 +163,14 @@ export function renderRuns({ groups, total, rejected_assets = [], baseline_froze
     lines.push("address, times out, and then dials the right one still passes. The gate's");
     lines.push("effect is in the columns below, not in the pass rate.", "");
     const rej = rejected_assets.length ? ` (${rejected_assets.join(", ")})` : "";
-    lines.push(`| label | rejected asset seen${rej} | first dial failed | failed attempts | corrected | validated | mean wall s | mean prompt tok | mean total tok |`);
-    lines.push("|---|---|---|---|---|---|---|---|---|");
+    lines.push(`| label | rejected asset seen${rej} | first batch all ok | first batch had a failure | failed attempts | corrected | validated | mean wall s | mean prompt tok | mean total tok |`);
+    lines.push("|---|---|---|---|---|---|---|---|---|---|");
     const k = (x) => (x === null ? "—" : `${(x / 1000).toFixed(1)}k`);
     for (const g of withFacts) {
-      lines.push(`| ${g.label} | ${frac(g.rejected_seen)} | ${frac(g.first_dial_failed)} | ${num(g.failed_attempts)} | ${num(g.corrected)} | ${num(g.validated)} | ${g.wall_seconds_mean === null ? "—" : g.wall_seconds_mean.toFixed(0)} | ${k(g.prompt_tokens_mean)} | ${k(g.total_tokens_mean)} |`);
+      lines.push(`| ${g.label} | ${frac(g.rejected_seen)} | ${frac(g.first_batch_all_ok)} | ${frac(g.first_batch_any_failed)} | ${num(g.failed_attempts)} | ${num(g.corrected)} | ${num(g.validated)} | ${g.wall_seconds_mean === null ? "—" : g.wall_seconds_mean.toFixed(0)} | ${k(g.prompt_tokens_mean)} | ${k(g.total_tokens_mean)} |`);
     }
-    lines.push("", "Tokens are the sum over a run's streamed responses of the usage the upstream reported (prompt includes cached tokens); \"—\" means no usage chunk was captured for any run in the group.");
+    lines.push("", "\"First batch\" is every target call issued in the earliest message that carried one. Supplementary metric, added after the first comparison was read; the primary verdict stays \"last attempt decides\". In the off arm the wrong and right calls were issued in the same model message, so a failure in the first batch means the model dialled the wrong address, not that it corrected itself after seeing a failure.");
+    lines.push("Tokens are the sum over a run's streamed responses of the usage the upstream reported (prompt includes cached tokens); \"—\" means no usage chunk was captured for any run in the group.");
     lines.push("", "\"seen\" means the asset appears at any lifecycle stage of the run — recalled,");
     lines.push("injected or fetched. A rejected asset that is never seen was hidden by the gate");
     lines.push("before the model could reach it; that is the product filtering, not this report.");

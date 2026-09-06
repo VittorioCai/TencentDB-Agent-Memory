@@ -1,4 +1,4 @@
-# 资产使用回执 — 运行 20260906T112957Z-gate-on · 会话 61da9c39 · 任务 task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# 资产使用回执 — 运行 20260906T112957Z-gate-on · 会话 61da9c39 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:05Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_I7J1P10rHqQl7ffaC9Yq7297 (message 7); the call succeeded and the run's acceptance passed
@@ -15,7 +15,7 @@
     作用点        tool_call
     相关测试 verify.mjs: dial 127.0.0.1:47318 (call_00_I7J1P10rHqQl7ffaC9Yq7297) 通过
     证据
-      verify_result   61da9c39-9ab3-498f-8abe-55a7c2eabd17:verify.mjs:call=call_00_I7J1P10rHqQl7ffaC9Yq7297:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      verify_result   20260906T112957Z-gate-on:verify.mjs:call=call_00_I7J1P10rHqQl7ffaC9Yq7297:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(26df8aef-41e9-4c86-90c9-29f3bccf6da8):msg[7]:call_00_I7J1P10rHqQl7ffaC9Yq7297:arguments  — token 47318; content of v2 entered the context at message 5, before this operation at message 7; the token had first reached the model at message 3 through this asset's own search entry (rank 2) — the same asset by another channel, credited either way
       capture_line    61da9c39-9ab3-498f-8abe-55a7c2eabd17:call_00_jouMbF1pKIjpxcKdjnAb9656  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
     闸门 准入 · 作者置信度 0.5

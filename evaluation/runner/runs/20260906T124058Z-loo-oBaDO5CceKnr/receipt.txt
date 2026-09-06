@@ -1,7 +1,7 @@
-# Receipt — run 20260906T124058Z-loo-oBaDO5CceKnr · session 27990aa8 · task task-5e6xp4mrrw · 2026-09-06T18:37:25Z
+# Receipt — run 20260906T124058Z-loo-oBaDO5CceKnr · session 27990aa8 · task task-5e6xp4mrrw · 2026-09-06T19:21:06Z
 
 applied 1 team asset(s)
-- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_pB0U647pM5lABOMqZ0Bd5979 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_pB0U647pM5lABOMqZ0Bd5979 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
 
 effect status
 - 1 corrected — used, and the call it fed failed for a reason its content explains
@@ -11,11 +11,11 @@ effect status
     type       skill
     status     corrected — used, and the call it fed failed for a reason its content explains
     why offered offered at rank 2 of 2 (score 7.57e-6) for the query "skill bridge http 地址 convention 技能搜索"
-    impact     its value 10.244.7.19 was used in tool call call_00_pB0U647pM5lABOMqZ0Bd5979 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    impact     its value 10.244.7.19 was used in tool call call_00_pB0U647pM5lABOMqZ0Bd5979 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
     target     tool_call
     related test verify.mjs: dial 10.244.7.19:8096 (call_00_pB0U647pM5lABOMqZ0Bd5979) failed
     evidence
-      verify_result   27990aa8-183a-4535-886b-3598245ff170:verify.mjs:call=call_00_pB0U647pM5lABOMqZ0Bd5979:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      verify_result   20260906T124058Z-loo-oBaDO5CceKnr:verify.mjs:call=call_00_pB0U647pM5lABOMqZ0Bd5979:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
       tool_arg        request(93203b64-086e-481d-9c8f-ca1a6995fe29):msg[7]:call_00_pB0U647pM5lABOMqZ0Bd5979:arguments  — token 10.244.7.19; content of v2 entered the context at message 6, before this operation at message 7
       bridge_row      tool_call_logs:2026-09-06 20:41:09.986:skill-bridge:get  — request names skl-sZFb3KatWY6m
       capture_line    27990aa8-183a-4535-886b-3598245ff170:call_00_uGRyiuUg6tEOW43h3b9l7388  — skill:get answered at message 6; carrying content; version 2

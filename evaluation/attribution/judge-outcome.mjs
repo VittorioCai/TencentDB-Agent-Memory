@@ -64,8 +64,31 @@ export function dialledToken(attempt, tokens) {
   return tokens.find((t) => dialled.some((d) => d === t || d.includes(t))) ?? null;
 }
 
+/**
+ * Is a failed attempt at this address contradicted by other evidence?
+ *
+ * A reachability failure at the asset's own address proves the model followed
+ * the asset; it does not prove the asset's content is wrong — the right
+ * address can time out once. So `corrected` needs the failure to be
+ * reproducible, and two things can contradict it:
+ *   - another attempt at the same host:port in the same run succeeded
+ *   - an independent probe from the harness reached the address
+ * With no independent probe on record, the failure is unconfirmed and the
+ * asset is not judged wrong on it.
+ */
+export function contradiction({ attempt, attempts = [], reachability = null }) {
+  const key = `${attempt.host}:${attempt.port}`;
+  const later = attempts.find((a) => a !== attempt && `${a.host}:${a.port}` === key && a.ok === true);
+  if (later) return { kind: "same_address_succeeded", detail: `the same address ${key} succeeded at message ${later.message_index} in this run; the failure was transient, not the content` };
+  const probe = reachability?.[key] ?? null;
+  if (!probe) return { kind: "unconfirmed", detail: `no independent reachability check of ${key} on record; a single failed call does not establish that the content is wrong` };
+  if (probe.ok === true) return { kind: "probe_reached", detail: `an independent probe reached ${key} (${probe.source ?? "harness probe"}, ${probe.checked_at ?? "time unknown"}); the model's failure was environmental, not the content` };
+  return null; // the probe also failed: the failure reproduces
+}
+
 /** Decide the outcome state for one used event against its own call. */
-export function outcomeOf({ used, attempt, tokens, verdict }) {
+export function outcomeOf({ used, attempt, tokens, verdict, attempts = [], reachabilityRecord = {} }) {
+  reachabilityRecord = reachabilityRecord ?? {};
   if (!attempt) {
     return {
       state: "needs_review",
@@ -85,10 +108,20 @@ export function outcomeOf({ used, attempt, tokens, verdict }) {
     const reachability = REACHABILITY.has(attempt.why);
     const token = dialledToken(attempt, tokens);
     if (reachability && token) {
+      // Following the asset is established; that the asset is wrong is not,
+      // until the failure is shown to reproduce independently of this call.
+      const contra = contradiction({ attempt, attempts, reachability: reachabilityRecord });
+      if (contra) {
+        return {
+          state: "needs_review",
+          why: `the call it fed dialled ${attempt.host}:${attempt.port} — the asset's own value (${token}) — and ${attempt.why}, but ${contra.detail}`,
+        };
+      }
+      const probe = reachabilityRecord[`${attempt.host}:${attempt.port}`];
       return {
         state: "corrected",
         corrected_reason: "wrong",
-        why: `the call it fed dialled ${attempt.host}:${attempt.port} — the asset's own value (${token}) — and ${attempt.why}; the content explains the failure`,
+        why: `the call it fed dialled ${attempt.host}:${attempt.port} — the asset's own value (${token}) — and ${attempt.why}; an independent probe also failed to reach it (${probe.why}, ${probe.source ?? "harness probe"}, ${probe.checked_at ?? "time unknown"}), so the content explains the failure`,
       };
     }
     if (!reachability) {
@@ -109,9 +142,11 @@ export function outcomeOf({ used, attempt, tokens, verdict }) {
  * Judge every `used` event. `verdictDoc` is verify.mjs --json output;
  * `tokensByAsset` is extract-tokens --out (asset → {version, tokens}).
  */
-export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset }) {
-  const attempts = new Map((verdictDoc?.attempts ?? []).map((a) => [a.call_id, a]));
+export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset, reachability = null }) {
+  const allAttempts = verdictDoc?.attempts ?? [];
+  const attempts = new Map(allAttempts.map((a) => [a.call_id, a]));
   const verdict = verdictDoc?.verdict ?? "ERROR";
+  const reachabilityRecord = reachability?.targets ?? reachability ?? {};
   const out = [];
   const skipped = [];
 
@@ -133,7 +168,7 @@ export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset }) {
       versionNote = `tokens on file are for v${entry.version}, the event credits v${used.asset_version}`;
     }
 
-    let decision = outcomeOf({ used, attempt, tokens, verdict });
+    let decision = outcomeOf({ used, attempt, tokens, verdict, attempts: allAttempts, reachabilityRecord });
     // A failed call can only be blamed on content we can check; with the wrong
     // version's tokens on file there is nothing to check it against.
     if (versionNote && attempt && attempt.ok === false) {
@@ -191,7 +226,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const usedEvents = parseJsonl(readFileSync(usedPath, "utf8"));
   const verdictDoc = JSON.parse(readFileSync(verdictPath, "utf8"));
   const tokensByAsset = JSON.parse(readFileSync(tokensPath, "utf8"));
-  const result = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset });
+  const reachArg = args.find((a) => a.startsWith("--reachability="));
+  const reachability = reachArg ? JSON.parse(readFileSync(reachArg.slice("--reachability=".length), "utf8")) : null;
+  const result = judgeOutcome({ usedEvents, verdictDoc, tokensByAsset, reachability });
   const out = outArg ? outArg.slice("--out=".length) : DEFAULT_OUT;
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, result.events.map((e) => JSON.stringify(e)).join("\n") + (result.events.length ? "\n" : ""));
