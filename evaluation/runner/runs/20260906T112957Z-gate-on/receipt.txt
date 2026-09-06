@@ -1,15 +1,15 @@
-# Receipt — run 20260906T112957Z-gate-on · session 61da9c39 · task task-5e6xp4mrrw · 2026-09-06T19:21:05Z
+# Receipt — run 20260906T112957Z-gate-on · session 61da9c39 · task task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 applied 1 team asset(s)
 - skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_I7J1P10rHqQl7ffaC9Yq7297 (message 7); the call succeeded and the run's acceptance passed
 
 effect status
-- 1 validated by a related test
+- 1 validated, with a contrast batch showing positive gain for this version
 
-✓ eval-bridge-endpoint-b  v2  skill
+◆ eval-bridge-endpoint-b  v2  skill
     from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
     type       skill
-    status     validated — used, and the call it fed succeeded in a run that passed
+    status     contributed — validated, and a named contrast batch shows positive gain for this version
     why offered offered at rank 2 of 2 (score 5.91e-6) for the query "skill bridge 技能桥 HTTP 访问 约定 地址"
     impact     its value 47318 was used in tool call call_00_I7J1P10rHqQl7ffaC9Yq7297 (message 7); the call succeeded and the run's acceptance passed
     target     tool_call
@@ -18,8 +18,9 @@ effect status
       verify_result   20260906T112957Z-gate-on:verify.mjs:call=call_00_I7J1P10rHqQl7ffaC9Yq7297:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(26df8aef-41e9-4c86-90c9-29f3bccf6da8):msg[7]:call_00_I7J1P10rHqQl7ffaC9Yq7297:arguments  — token 47318; content of v2 entered the context at message 5, before this operation at message 7; the token had first reached the model at message 3 through this asset's own search entry (rank 2) — the same asset by another channel, credited either way
       capture_line    61da9c39-9ab3-498f-8abe-55a7c2eabd17:call_00_jouMbF1pKIjpxcKdjnAb9656  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-06  — present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197
     gate admit · author confidence 0.5
 
-marks: ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
 
 → evaluation/runner/runs/20260906T112957Z-gate-on/receipt.json

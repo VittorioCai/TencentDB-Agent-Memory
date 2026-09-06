@@ -3,15 +3,16 @@
   "session_key": "89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac",
   "run_id": "20260906T111638Z-gate-off",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T19:21:04Z",
+  "generated_at": "2026-09-06T21:14:21Z",
   "summary": {
     "applied_count": 2,
     "by_status": {
-      "validated": 1,
+      "validated": 0,
       "used": 0,
       "fetched": 0,
       "provided": 0,
-      "corrected": 1
+      "corrected": 1,
+      "contributed": 1
     },
     "soft_only_count": 0
   },
@@ -64,6 +65,10 @@
         {
           "kind": "gate_rejected",
           "detail": "rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)"
+        },
+        {
+          "kind": "conflict",
+          "detail": "supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run"
         }
       ],
       "gate_decision": "reject",
@@ -77,7 +82,7 @@
       "updated_at": "2026-09-05T15:07:26Z",
       "category": "skill",
       "why_applicable": "offered at rank 3 of 3 (score 7.57e-6) for the query \"skill-bridge convention 接口地址 reach bridge http\"",
-      "status": "validated",
+      "status": "contributed",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",
         "producer_agent_id": "agt-5e4hna56j9",
@@ -105,6 +110,11 @@
           "kind": "capture_line",
           "ref": "89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:call_01_86v88eKRZ7joUtropzcQ8928",
           "detail": "skill:get answered at message 8; carrying content; version 2"
+        },
+        {
+          "kind": "contrast_batch",
+          "ref": "loo-skl-oBaDO5CceKnr-2026-09-06",
+          "detail": "present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197"
         }
       ],
       "related_tests": [
@@ -113,7 +123,12 @@
           "passed": true
         }
       ],
-      "risks": [],
+      "risks": [
+        {
+          "kind": "conflict",
+          "detail": "supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run"
+        }
+      ],
       "gate_decision": "admit",
       "author_confidence": 0.5
     }

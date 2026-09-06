@@ -109,3 +109,20 @@ is a development-set recomputation, not an independent validation. Both tables
 stay. The rules are now frozen for the extension scenarios: their runs will be
 judged under the rules as committed before those runs start, and any further
 rule change will be reported as a change, with before and after.
+
+## contributed (the overview chain's last link)
+
+`contributed.mjs` emits one `contributed` event per (asset, version, contrast
+batch) when all three hold: a `validated` event for that version in the
+batch's present runs; a present-vs-absent contrast of the asset itself
+(leave-one-out — the gate on/off comparison does not qualify, it contrasts
+the wrong asset's presence); and at least one gain metric non-zero and
+consistent in direction. Raw values on both sides, run ids on both sides and
+the rules commit ride on the event so a reader can recompute it.
+
+Current (`contributed-events.jsonl`, rules commit 44c3ca2):
+
+| asset | present | absent | pass rate | failed attempts | wall s | prompt tokens | contributed |
+|---|---|---|---|---|---|---|---|
+| eval-bridge-endpoint-b v2 | 6 | 4 | 1.0 vs 0.0 | 0.5 vs 1.0 | 41.8 vs 50 | 130.2k vs 145.2k | **yes** |
+| eval-bridge-endpoint-a v2 | 7 | 3 | — | — | — | — | no: no validated event |

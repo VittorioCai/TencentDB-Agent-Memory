@@ -43,9 +43,10 @@
         "used_soft",
         "needs_review",
         "validated",
-        "corrected"
+        "corrected",
+        "contributed"
       ],
-      "description": "recalled: the asset entered the candidate set for this turn. selected: it survived selection and was chosen for the context. injected: its content or a callable reference to it appears in the request the model received. fetched: the model actively retrieved this specific asset's content, evidenced by a call that names it and returns it. used: hard evidence matched and a fetch of that same asset preceded it. used_soft: only soft evidence (a model judgement) matched, which is not enough to promote to used. needs_review: a token matched but no fetch of that asset preceded it, so the model may have known it from elsewhere. validated: used, and the acceptance check tied to that asset's own call passed. corrected: counter-evidence tied to that asset's own call."
+      "description": "recalled: the asset entered the candidate set for this turn. selected: it survived selection and was chosen for the context. injected: its content or a callable reference to it appears in the request the model received. fetched: the model actively retrieved this specific asset's content, evidenced by a call that names it and returns it. used: hard evidence matched and a fetch of that same asset preceded it. used_soft: only soft evidence (a model judgement) matched, which is not enough to promote to used. needs_review: a token matched but no fetch of that asset preceded it, so the model may have known it from elsewhere. validated: used, and the acceptance check tied to that asset's own call passed. corrected: counter-evidence tied to that asset's own call. contributed: this asset version, in a named contrast batch, has traceable evidence of positive gain — a validated record in the batch, a present-vs-absent contrast of the asset itself, and at least one gain metric consistent in direction and non-zero across the two sides; the batch id, run ids on both sides, raw values and the rules commit are carried in metadata, so a reader can recompute it."
     },
     "session_key": {
       "type": "string",
@@ -230,7 +231,8 @@
       }
     },
     "metadata": {
-      "type": "object"
+      "type": "object",
+      "description": "Free-form, but for state=contributed it must carry contrast_batch {id, frozen_at, rules_commit}, present_runs[], absent_runs[] and gains{metric:{present, absent}} with raw values on both sides."
     }
   },
   "definitions": {
@@ -249,6 +251,7 @@
             "bridge_row",
             "candidate_listing",
             "capture_line",
+            "contrast_batch",
             "diff_hunk",
             "injected_block",
             "session_message",

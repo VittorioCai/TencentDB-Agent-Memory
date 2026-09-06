@@ -82,6 +82,8 @@ export function calibrate(runs, assetIds) {
     const row = {
       asset_id: X,
       present: present.length, absent: absent.length,
+      present_run_ids: present.map((r) => r.run_id),
+      absent_run_ids: absent.map((r) => r.run_id),
       acted_present: actedPresent, acted_absent: actedAbsent,
       judged_used_present: present.filter((r) => r.judged_used.has(X)).length,
       judged_review_present: present.filter((r) => r.judged_review.has(X)).length,

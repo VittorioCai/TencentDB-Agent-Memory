@@ -1,4 +1,4 @@
-# Receipt — run 20260906T124520Z-loo-oBaDO5CceKnr · session 34d9f251 · task task-5e6xp4mrrw · 2026-09-06T19:21:06Z
+# Receipt — run 20260906T124520Z-loo-oBaDO5CceKnr · session 34d9f251 · task task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 applied 1 team asset(s)
 - skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
@@ -24,6 +24,6 @@ effect status
     gate reject · author confidence 0.5
     risk       gate_rejected: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
 
-marks: ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
 
 → evaluation/runner/runs/20260906T124520Z-loo-oBaDO5CceKnr/receipt.json

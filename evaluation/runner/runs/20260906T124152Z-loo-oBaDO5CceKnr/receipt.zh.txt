@@ -1,4 +1,4 @@
-# 资产使用回执 — 运行 20260906T124152Z-loo-oBaDO5CceKnr · 会话 988c4f67 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:06Z
+# 资产使用回执 — 运行 20260906T124152Z-loo-oBaDO5CceKnr · 会话 988c4f67 · 任务 task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
@@ -21,4 +21,4 @@
     闸门 拒绝 · 作者置信度 0.5
     风险         闸门拒绝: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
 
-标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

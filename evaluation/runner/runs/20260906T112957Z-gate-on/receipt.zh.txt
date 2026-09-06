@@ -1,15 +1,15 @@
-# 资产使用回执 — 运行 20260906T112957Z-gate-on · 会话 61da9c39 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:05Z
+# 资产使用回执 — 运行 20260906T112957Z-gate-on · 会话 61da9c39 · 任务 task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_I7J1P10rHqQl7ffaC9Yq7297 (message 7); the call succeeded and the run's acceptance passed
 
 效果状态
-- 1 项已通过相关测试验证
+- 1 项已验证，且有对照批次证明该版本带来正向增益
 
-✓ eval-bridge-endpoint-b  v2  skill
+◆ eval-bridge-endpoint-b  v2  skill
     来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
     类型         Skill
-    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    状态         已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益
     为何提供       offered at rank 2 of 2 (score 5.91e-6) for the query "skill bridge 技能桥 HTTP 访问 约定 地址"
     影响         its value 47318 was used in tool call call_00_I7J1P10rHqQl7ffaC9Yq7297 (message 7); the call succeeded and the run's acceptance passed
     作用点        tool_call
@@ -18,6 +18,7 @@
       verify_result   20260906T112957Z-gate-on:verify.mjs:call=call_00_I7J1P10rHqQl7ffaC9Yq7297:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
       tool_arg        request(26df8aef-41e9-4c86-90c9-29f3bccf6da8):msg[7]:call_00_I7J1P10rHqQl7ffaC9Yq7297:arguments  — token 47318; content of v2 entered the context at message 5, before this operation at message 7; the token had first reached the model at message 3 through this asset's own search entry (rank 2) — the same asset by another channel, credited either way
       capture_line    61da9c39-9ab3-498f-8abe-55a7c2eabd17:call_00_jouMbF1pKIjpxcKdjnAb9656  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-06  — present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197
     闸门 准入 · 作者置信度 0.5
 
-标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

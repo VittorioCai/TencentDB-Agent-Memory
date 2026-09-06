@@ -21,7 +21,7 @@
 
 import { readFileSync } from "node:fs";
 
-export const MARK = { validated: "✓", corrected: "✗", used: "●", used_soft: "◐", fetched: "○", provided: "·" };
+export const MARK = { contributed: "◆", validated: "✓", corrected: "✗", used: "●", used_soft: "◐", fetched: "○", provided: "·" };
 
 const T = {
   en: {
@@ -29,6 +29,7 @@ const T = {
     applied: (n) => `applied ${n} team asset(s)`,
     none: "no team assets appeared in this run",
     effect: "effect status",
+    contributed: (n) => `${n} validated, with a contrast batch showing positive gain for this version`,
     validated: (n) => `${n} validated by a related test`,
     used: (n) => `${n} used, outcome not tied to a call`,
     corrected: (n) => `${n} corrected — used, and the call it fed failed for a reason its content explains`,
@@ -40,6 +41,7 @@ const T = {
     confidence: (c) => (c == null ? "no cross-person validation yet" : `author confidence ${c}`),
     risk: "risk",
     statusWord: {
+      contributed: "contributed — validated, and a named contrast batch shows positive gain for this version",
       validated: "validated — used, and the call it fed succeeded in a run that passed",
       corrected: "corrected — used, and the call it fed failed for a reason its content explains",
       used: "used — hard evidence, outcome not tied to a call",
@@ -51,13 +53,14 @@ const T = {
       project_convention: "project convention", historical_solution: "historical solution", failure_experience: "failure experience",
       skill: "skill", code_knowledge: "code knowledge", product_knowledge: "product knowledge", not_declared: "not declared by the asset",
     },
-    marks: (M) => `marks: ${M.validated} validated  ${M.corrected} corrected  ${M.used} used  ${M.used_soft} soft only  ${M.fetched} fetched  ${M.provided} provided`,
+    marks: (M) => `marks: ${M.contributed} contributed  ${M.validated} validated  ${M.corrected} corrected  ${M.used} used  ${M.used_soft} soft only  ${M.fetched} fetched  ${M.provided} provided`,
   },
   zh: {
     title: (r) => `# 资产使用回执 — 运行 ${r.run_id ?? "?"} · 会话 ${String(r.session_key).slice(0, 8)} · 任务 ${r.task_id ?? "?"} · ${r.generated_at}`,
     applied: (n) => `本次应用 ${n} 项团队资产`,
     none: "本次运行未出现任何团队资产",
     effect: "效果状态",
+    contributed: (n) => `${n} 项已验证，且有对照批次证明该版本带来正向增益`,
     validated: (n) => `${n} 项已通过相关测试验证`,
     used: (n) => `${n} 项已采用，结果未关联到具体调用`,
     corrected: (n) => `${n} 项被证明错误——已采用，且它引出的调用因其内容而失败`,
@@ -69,6 +72,7 @@ const T = {
     confidence: (c) => (c == null ? "作者尚无跨人验证" : `作者置信度 ${c}`),
     risk: "风险",
     statusWord: {
+      contributed: "已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益",
       validated: "已验证——已采用，且它引出的调用成功、本次运行验收通过",
       corrected: "已纠错——已采用，且它引出的调用因其内容而失败",
       used: "已采用——硬证据，结果未关联到具体调用",
@@ -80,7 +84,7 @@ const T = {
       project_convention: "项目约定", historical_solution: "历史方案", failure_experience: "失败经验",
       skill: "Skill", code_knowledge: "代码知识", product_knowledge: "产品知识", not_declared: "资产未声明",
     },
-    marks: (M) => `标记：${M.validated} 已验证  ${M.corrected} 已纠错  ${M.used} 已采用  ${M.used_soft} 仅软证据  ${M.fetched} 已取回  ${M.provided} 已提供`,
+    marks: (M) => `标记：${M.contributed} 已产生贡献  ${M.validated} 已验证  ${M.corrected} 已纠错  ${M.used} 已采用  ${M.used_soft} 仅软证据  ${M.fetched} 已取回  ${M.provided} 已提供`,
   },
 };
 
@@ -122,6 +126,7 @@ export function renderReceipt(r, lang = "en") {
   lines.push("", t.effect);
   const bg = (s.by_status.fetched ?? 0) + (s.by_status.provided ?? 0);
   const parts = [];
+  if (s.by_status.contributed) parts.push(t.contributed(s.by_status.contributed));
   if (s.by_status.validated) parts.push(t.validated(s.by_status.validated));
   if (s.by_status.used) parts.push(t.used(s.by_status.used));
   if (s.by_status.corrected) parts.push(t.corrected(s.by_status.corrected));

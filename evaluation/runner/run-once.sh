@@ -487,9 +487,14 @@ PY
 RECEIPT_DECISIONS="$RUN_DIR/gate-decisions.json"
 [[ ( -n "$GATE" || -n "$ABLATE" ) && -f "$RUN_DIR/gate_baseline.json" ]] && RECEIPT_DECISIONS="$RUN_DIR/gate_baseline.json"
 info "receipt …"
+# contributed is a cross-run claim (a contrast batch); the receipt looks it up
+# from the calibration output, never derives it from this run. The verdict
+# supplies the call slots for conflict detection.
+CONTRIB="$EVAL/calibration/contributed-events.jsonl"
 (cd "$REPO_ROOT" && node "$EVAL/receipt/build-receipt.mjs" \
   --events="$RUN_DIR/events.jsonl,$RUN_DIR/early-events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \
   --snapshot="$RUN_DIR/asset-pool-snapshot.json" --decisions="$RECEIPT_DECISIONS" --run="$RUN_DIR/run.json" \
+  --verdict="$RUN_DIR/verdict.json" ${CONTRIB:+--contributed="$CONTRIB"} \
   --out="$RUN_DIR/receipt.json" > "$RUN_DIR/receipt.txt" 2>&1) \
   || warn "build-receipt failed; see $RUN_DIR/receipt.txt"
 # The same receipt in Chinese, in the shape of the topic's own sample.

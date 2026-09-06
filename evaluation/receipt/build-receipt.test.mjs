@@ -63,7 +63,7 @@ test("mainline receipt: right validated, wrong corrected, both from the author, 
   const r = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, decisions: DECISIONS, runId: "run-x", taskId: "task-t", generatedAt: "2026-09-06T12:00:00Z" });
   assert.deepEqual(validate(SCHEMA, r), []);
   assert.equal(r.summary.applied_count, 2);
-  assert.deepEqual(r.summary.by_status, { validated: 1, used: 0, fetched: 0, provided: 0, corrected: 1 });
+  assert.deepEqual(r.summary.by_status, { validated: 1, used: 0, fetched: 0, provided: 0, corrected: 1, contributed: 0 });
   const by = Object.fromEntries(r.items.map((i) => [i.asset_id, i]));
   assert.equal(by[RIGHT].status, "validated");
   assert.equal(by[WRONG].status, "corrected");
@@ -225,4 +225,77 @@ test("background-only assets are counted as 'effect unverified', never as used",
   assert.match(zh, /本次应用 1 项团队资产/);
   assert.match(zh, /1 项仅作为背景参考（取回或提供），效果待验证/);
   assert.equal(r.summary.by_status.used, 0);
+});
+
+// ── contributed / conflict / stale, under the approved definitions ──
+import { conflictsOf, STALE_DAYS_DEFAULT } from "./build-receipt.mjs";
+
+const CONTRIB = [{
+  event_id: "evt-contrib-b", state: "contributed", asset_id: RIGHT, asset_version: 2, asset_type: "skill", asset_name: "eval-bridge-endpoint-b",
+  producer_user_id: AUTHOR, producer_agent_id: "agt-a", actor_user_id: CONSUMER, actor_agent_id: "agt-b", relation: "cross_user", observation: "bridge+wire",
+  proof_refs: [{ kind: "contrast_batch", ref: "loo-skl-oBaDO5CceKnr-2026-09-06", detail: "present 6 run(s) vs absent 4: pass_rate 1 vs 0" }],
+  metadata: { contrast_batch: { id: "loo-skl-oBaDO5CceKnr-2026-09-06", rules_commit: "44c3ca2" } },
+}];
+
+test("contributed upgrades a validated item of the same version, carries the contrast evidence, and never touches corrected", () => {
+  const r = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, decisions: DECISIONS, contributed: CONTRIB, generatedAt: "2026-09-06T20:00:00Z" });
+  assert.deepEqual(validate(SCHEMA, r), []);
+  const by = Object.fromEntries(r.items.map((i) => [i.asset_id, i]));
+  assert.equal(by[RIGHT].status, "contributed");
+  assert.ok(by[RIGHT].evidence.some((e) => e.kind === "contrast_batch" && /loo-skl-oBaDO5CceKnr/.test(e.ref)));
+  assert.equal(by[WRONG].status, "corrected");
+  assert.equal(r.summary.by_status.contributed, 1);
+  assert.equal(r.summary.by_status.validated, 0);
+  const zh = renderReceipt(r, "zh");
+  assert.match(zh, /1 项已验证，且有对照批次证明该版本带来正向增益/);
+  assert.match(zh, /◆ eval-bridge-endpoint-b/);
+  // a different version is not upgraded
+  const other = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, contributed: [{ ...CONTRIB[0], asset_version: 3 }], generatedAt: "t" });
+  assert.equal(other.items.find((i) => i.asset_id === RIGHT).status, "validated");
+});
+
+test("conflict: two assets fed different values to the same call slot in this run — behavioural evidence only", () => {
+  const verdict = { verdict: "PASS", attempts: [
+    { call_id: "call_00", endpoint: "skill:search", host: "10.244.7.19", port: "8096", ok: false, why: "timed out" },
+    { call_id: "call_01", endpoint: "skill:search", host: "127.0.0.1", port: "47318", ok: true, why: "code 0" },
+  ] };
+  const r = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, decisions: DECISIONS, verdict, generatedAt: "t" });
+  const by = Object.fromEntries(r.items.map((i) => [i.asset_id, i]));
+  const cw = by[WRONG].risks.find((x) => x.kind === "conflict"), cr = by[RIGHT].risks.find((x) => x.kind === "conflict");
+  assert.ok(cw && cr);
+  assert.match(cw.detail, /supplied 10\.244\.7\.19:8096 to skill:search while eval-bridge-endpoint-b .* supplied 127\.0\.0\.1:47318 to the same slot/);
+  assert.match(cr.detail, /supplied 127\.0\.0\.1:47318 to skill:search while eval-bridge-endpoint-a/);
+  assert.deepEqual(validate(SCHEMA, r), []);
+  // same slot, same value → no conflict; different slots → no conflict
+  const sameValue = { verdict: "PASS", attempts: [
+    { call_id: "call_00", endpoint: "skill:search", host: "127.0.0.1", port: "47318", ok: true, why: "code 0" },
+    { call_id: "call_01", endpoint: "skill:search", host: "127.0.0.1", port: "47318", ok: true, why: "code 0" },
+  ] };
+  const r2 = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, verdict: sameValue, generatedAt: "t" });
+  assert.ok(r2.items.every((i) => !i.risks.some((x) => x.kind === "conflict")));
+  const otherSlot = { verdict: "PASS", attempts: [
+    { call_id: "call_00", endpoint: "skill:search", host: "10.244.7.19", port: "8096", ok: false, why: "timed out" },
+    { call_id: "call_01", endpoint: "skill:get", host: "127.0.0.1", port: "47318", ok: true, why: "code 0" },
+  ] };
+  const r3 = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, verdict: otherSlot, generatedAt: "t" });
+  assert.ok(r3.items.every((i) => !i.risks.some((x) => x.kind === "conflict")));
+  // description similarity alone never creates a conflict (no verdict → no slots)
+  const r4 = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, generatedAt: "t" });
+  assert.ok(r4.items.every((i) => !i.risks.some((x) => x.kind === "conflict")));
+});
+
+test("stale: age past the threshold is a review prompt, never a judgement, and the threshold is named as a parameter", () => {
+  assert.equal(STALE_DAYS_DEFAULT, 90);
+  const old = { assets: [{ ...SNAPSHOT.assets[0], asset_updated_at: "2026-01-01T00:00:00Z" }] };
+  const r = buildReceipt({ events: [ev("fetched", RIGHT)], snapshot: old, generatedAt: "2026-09-06T00:00:00Z" });
+  const s = r.items[0].risks.find((x) => x.kind === "stale");
+  assert.ok(s);
+  assert.match(s.detail, /last updated 248 days ago \(threshold 90 days, a parameter of this evaluation\); review suggested, not judged expired/);
+  assert.equal(r.items[0].gate_decision, null);
+  // within the threshold → nothing; a custom threshold is honoured
+  const fresh = buildReceipt({ events: [ev("fetched", RIGHT)], snapshot: SNAPSHOT, generatedAt: "2026-09-06T00:00:00Z" });
+  assert.ok(!fresh.items[0].risks.some((x) => x.kind === "stale"));
+  const tight = buildReceipt({ events: [ev("fetched", RIGHT)], snapshot: SNAPSHOT, generatedAt: "2026-09-10T00:00:00Z", staleDays: 2 });
+  assert.ok(tight.items[0].risks.some((x) => x.kind === "stale"));
+  assert.deepEqual(validate(SCHEMA, r), []);
 });

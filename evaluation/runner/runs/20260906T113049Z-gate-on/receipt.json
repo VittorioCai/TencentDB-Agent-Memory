@@ -3,15 +3,16 @@
   "session_key": "1a008cd0-b707-4dcd-9378-a3a1fca89526",
   "run_id": "20260906T113049Z-gate-on",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T19:21:05Z",
+  "generated_at": "2026-09-06T21:14:21Z",
   "summary": {
     "applied_count": 1,
     "by_status": {
-      "validated": 1,
+      "validated": 0,
       "used": 0,
       "fetched": 0,
       "provided": 0,
-      "corrected": 0
+      "corrected": 0,
+      "contributed": 1
     },
     "soft_only_count": 0
   },
@@ -24,7 +25,7 @@
       "updated_at": "2026-09-05T15:07:26Z",
       "category": "skill",
       "why_applicable": "offered at rank 2 of 2 (score 7.57e-6) for the query \"skill bridge HTTP address convention\"",
-      "status": "validated",
+      "status": "contributed",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",
         "producer_agent_id": "agt-5e4hna56j9",
@@ -47,6 +48,11 @@
           "kind": "capture_line",
           "ref": "1a008cd0-b707-4dcd-9378-a3a1fca89526:call_00_bpXBDl9aX6EFPr8yeCiJ2192",
           "detail": "skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        },
+        {
+          "kind": "contrast_batch",
+          "ref": "loo-skl-oBaDO5CceKnr-2026-09-06",
+          "detail": "present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197"
         }
       ],
       "related_tests": [

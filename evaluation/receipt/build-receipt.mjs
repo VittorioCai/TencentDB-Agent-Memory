@@ -33,12 +33,14 @@ import { parseJsonl } from "../provenance/build-events.mjs";
 // needs_review ranks above fetched so it wins the tie and its risk is carried,
 // even though it renders as fetched: a fetch with a disputed use is more
 // worth a reader's attention than a plain fetch.
-export const STATUS_RANK = { provided: 0, fetched: 1, needs_review: 2, used_soft: 3, used: 4, validated: 5, corrected: 6 };
-const RECEIPT_STATUS = { provided: "provided", fetched: "fetched", needs_review: "fetched", used_soft: "used_soft", used: "used", validated: "validated", corrected: "corrected" };
+export const STATUS_RANK = { provided: 0, fetched: 1, needs_review: 2, used_soft: 3, used: 4, validated: 5, contributed: 6, corrected: 7 };
+const RECEIPT_STATUS = { provided: "provided", fetched: "fetched", needs_review: "fetched", used_soft: "used_soft", used: "used", validated: "validated", contributed: "contributed", corrected: "corrected" };
+export const STALE_DAYS_DEFAULT = 90;
 const EARLY = new Set(["recalled", "selected", "injected"]);
 const EVIDENCE_KIND = {
   tool_call_id: "tool_call_id", session_message: "session_message", diff_hunk: "diff_hunk", tool_arg: "tool_arg",
   test_command: "test_command", bridge_row: "bridge_row", capture_line: "capture_line", verify_result: "verify_result",
+  contrast_batch: "contrast_batch",
   // provenance-only kinds mapped onto the receipt's vocabulary
   candidate_listing: "capture_line", injected_block: "session_message", bridge_response: "bridge_row",
 };
@@ -139,15 +141,32 @@ export function relatedTestsOf(events) {
   return out;
 }
 
-export function buildItem({ assetId, events, snapshot, decision }) {
+export function buildItem({ assetId, events, snapshot, decision, contributed = [], now = null, staleDays = STALE_DAYS_DEFAULT }) {
   const byRank = [...events].sort((a, b) => (STATUS_RANK[stateOf(b)] ?? -1) - (STATUS_RANK[stateOf(a)] ?? -1));
   const top = byRank[0];
   const topState = stateOf(top);
-  const status = RECEIPT_STATUS[topState];
+  let status = RECEIPT_STATUS[topState];
   const snap = snapshot?.assets?.find((a) => a.asset_id === assetId) ?? {};
   const version = top.asset_version ?? byRank.find((e) => e.asset_version != null)?.asset_version ?? snap.version ?? null;
 
+  // contributed is a cross-run claim about this VERSION (a contrast batch),
+  // so it is looked up, never derived from this run alone. It only upgrades a
+  // validated item: an asset that failed here stays corrected whatever a
+  // batch says about it elsewhere.
+  const contrib = contributed.find((e) => e.asset_id === assetId && String(e.asset_version) === String(version)) ?? null;
+  if (status === "validated" && contrib) status = "contributed";
+
   const risks = [];
+  // Age is a prompt to review, never a judgement of expiry: the threshold is
+  // a parameter of this evaluation with no empirical basis, and the risk is
+  // worded so, and it never reaches the gate.
+  const updatedAt = snap.asset_updated_at ?? null;
+  if (updatedAt && now) {
+    const ageDays = Math.floor((new Date(now).getTime() - new Date(updatedAt).getTime()) / 86_400_000);
+    if (Number.isFinite(ageDays) && ageDays > staleDays) {
+      risks.push({ kind: "stale", detail: `last updated ${ageDays} days ago (threshold ${staleDays} days, a parameter of this evaluation); review suggested, not judged expired` });
+    }
+  }
   if (topState === "needs_review") {
     risks.push({ kind: "needs_review", detail: top.proof_refs?.[0]?.detail ?? "a token matched but no fetch of this asset could be tied to it" });
   }
@@ -180,7 +199,10 @@ export function buildItem({ assetId, events, snapshot, decision }) {
     },
     impact: impactOf(top, topState),
     target_type: topState === "provided" || topState === "fetched" ? null : (top.target_type ?? null),
-    evidence: evidenceOf(topState === "provided" ? byRank : byRank.filter((e) => stateOf(e) !== "provided")),
+    evidence: [
+      ...evidenceOf(topState === "provided" ? byRank : byRank.filter((e) => stateOf(e) !== "provided")),
+      ...(status === "contributed" ? evidenceOf([contrib]).filter((e) => e.kind === "contrast_batch") : []),
+    ],
     related_tests: relatedTestsOf(events.filter((e) => e.state === "validated" || e.state === "corrected")),
     risks,
     gate_decision: decision?.decision ?? null,
@@ -188,7 +210,57 @@ export function buildItem({ assetId, events, snapshot, decision }) {
   };
 }
 
-export function buildReceipt({ events, snapshot = null, decisions = null, runId = null, taskId = null, sessionKey = null, generatedAt = null }) {
+/**
+ * Conflict: two assets supplied different values to the same call slot in
+ * this run. Behavioural evidence only — the calls themselves — never
+ * description similarity and never the model's own remark that they disagree.
+ *
+ * A slot is the acceptance endpoint the call went to (from the verdict's
+ * attempts, keyed by call id); the value is the host:port dialled. Each
+ * asset's used events name the calls they fed. Two assets that fed the same
+ * slot with different values conflict, and each is flagged naming the other.
+ */
+export function conflictsOf(items, eventsByAsset, verdict) {
+  const attempts = new Map((verdict?.attempts ?? []).map((a) => [a.call_id, a]));
+  const slots = new Map(); // asset_id -> Map(endpoint -> Set(host:port))
+  for (const [assetId, evs] of eventsByAsset) {
+    for (const e of evs) {
+      if (!["used", "validated", "corrected"].includes(e.state)) continue;
+      const call = callFromRef(e.target_ref);
+      const a = call ? attempts.get(call) : null;
+      if (!a?.endpoint || !a.host || !a.port) continue;
+      if (!slots.has(assetId)) slots.set(assetId, new Map());
+      const m = slots.get(assetId);
+      if (!m.has(a.endpoint)) m.set(a.endpoint, new Set());
+      m.get(a.endpoint).add(`${a.host}:${a.port}`);
+    }
+  }
+  const out = new Map(); // asset_id -> [{other, endpoint, mine, theirs}]
+  const ids = [...slots.keys()];
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      for (const [endpoint, mine] of slots.get(ids[i])) {
+        const theirs = slots.get(ids[j]).get(endpoint);
+        if (!theirs) continue;
+        const differ = [...mine].some((v) => !theirs.has(v)) || [...theirs].some((v) => !mine.has(v));
+        if (!differ) continue;
+        if (!out.has(ids[i])) out.set(ids[i], []);
+        if (!out.has(ids[j])) out.set(ids[j], []);
+        out.get(ids[i]).push({ other: ids[j], endpoint, mine: [...mine], theirs: [...theirs] });
+        out.get(ids[j]).push({ other: ids[i], endpoint, mine: [...theirs], theirs: [...mine] });
+      }
+    }
+  }
+  for (const item of items) {
+    for (const c of out.get(item.asset_id) ?? []) {
+      const otherName = items.find((x) => x.asset_id === c.other)?.name ?? c.other;
+      item.risks.push({ kind: "conflict", detail: `supplied ${c.mine.join("/")} to ${c.endpoint} while ${otherName} (${c.other}) supplied ${c.theirs.join("/")} to the same slot in this run` });
+    }
+  }
+  return items;
+}
+
+export function buildReceipt({ events, snapshot = null, decisions = null, runId = null, taskId = null, sessionKey = null, generatedAt = null, contributed = [], verdict = null, staleDays = STALE_DAYS_DEFAULT }) {
   const dmap = decisions instanceof Map ? decisions : decisionsMap(decisions);
   const counted = events.filter((e) => !e.excluded_by_snapshot);
   const byAsset = new Map();
@@ -196,9 +268,11 @@ export function buildReceipt({ events, snapshot = null, decisions = null, runId 
     if (!byAsset.has(e.asset_id)) byAsset.set(e.asset_id, []);
     byAsset.get(e.asset_id).push(e);
   }
+  const now = generatedAt ?? new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const items = [...byAsset.entries()]
-    .map(([assetId, evs]) => buildItem({ assetId, events: evs, snapshot, decision: dmap.get(assetId) ?? null }))
+    .map(([assetId, evs]) => buildItem({ assetId, events: evs, snapshot, decision: dmap.get(assetId) ?? null, contributed, now, staleDays }))
     .sort((a, b) => (STATUS_RANK[b.status] ?? 0) - (STATUS_RANK[a.status] ?? 0) || a.asset_id.localeCompare(b.asset_id));
+  conflictsOf(items, byAsset, verdict);
 
   const count = (s) => items.filter((i) => i.status === s).length;
   const session = sessionKey ?? counted[0]?.session_key ?? "unknown";
@@ -207,7 +281,7 @@ export function buildReceipt({ events, snapshot = null, decisions = null, runId 
     session_key: session,
     run_id: runId ?? counted.find((e) => e.run_id)?.run_id ?? null,
     task_id: taskId ?? counted.find((e) => e.task_id)?.task_id ?? null,
-    generated_at: generatedAt ?? new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    generated_at: now,
     summary: {
       applied_count: items.filter((i) => i.status !== "provided").length,
       by_status: {
@@ -216,6 +290,7 @@ export function buildReceipt({ events, snapshot = null, decisions = null, runId 
         fetched: count("fetched"),
         provided: count("provided"),
         corrected: count("corrected"),
+        contributed: count("contributed"),
       },
       soft_only_count: count("used_soft"),
     },
@@ -234,6 +309,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const read = (p) => JSON.parse(readFileSync(p, "utf8"));
   const events = eventsArg.split(",").filter((f) => f && existsSync(f)).flatMap((f) => parseJsonl(readFileSync(f, "utf8")));
   const run = arg("run") ? read(arg("run")) : null;
+  const contributed = arg("contributed") && existsSync(arg("contributed")) ? parseJsonl(readFileSync(arg("contributed"), "utf8")) : [];
   const receipt = buildReceipt({
     events,
     snapshot: arg("snapshot") ? read(arg("snapshot")) : null,
@@ -241,6 +317,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     runId: run?.run_id ?? null,
     taskId: run?.resolved_identity?.task_id ?? null,
     sessionKey: run?.conversation_id ?? null,
+    contributed,
+    verdict: arg("verdict") && existsSync(arg("verdict")) ? read(arg("verdict")) : null,
+    staleDays: arg("stale-days") ? Number(arg("stale-days")) : STALE_DAYS_DEFAULT,
   });
   const out = arg("out");
   if (out) {

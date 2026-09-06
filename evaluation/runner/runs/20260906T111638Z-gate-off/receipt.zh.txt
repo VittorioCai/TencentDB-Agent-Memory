@@ -1,11 +1,11 @@
-# 资产使用回执 — 运行 20260906T111638Z-gate-off · 会话 89e6c3c5 · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:04Z
+# 资产使用回执 — 运行 20260906T111638Z-gate-off · 会话 89e6c3c5 · 任务 task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 本次应用 2 项团队资产
 - Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe after the run (backfill 2026-09-06), 2026-09-06T19:19:13Z), so the content explains the failure (timed out)
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_KQXi3EL66rVhNNmLsTjz7617 (message 9); the call succeeded and the run's acceptance passed
 
 效果状态
-- 1 项已通过相关测试验证
+- 1 项已验证，且有对照批次证明该版本带来正向增益
 - 1 项被证明错误——已采用，且它引出的调用因其内容而失败
 
 ✗ eval-bridge-endpoint-a  v2  skill
@@ -23,11 +23,12 @@
       capture_line    89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:call_00_7o7kKXoXOnTsaYGZZTt82387  — skill:get answered at message 7; carrying content; version 2
     闸门 拒绝 · 作者置信度 0.5
     风险         闸门拒绝: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    风险         冲突: supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run
 
-✓ eval-bridge-endpoint-b  v2  skill
+◆ eval-bridge-endpoint-b  v2  skill
     来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
     类型         Skill
-    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    状态         已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益
     为何提供       offered at rank 3 of 3 (score 7.57e-6) for the query "skill-bridge convention 接口地址 reach bridge http"
     影响         its value 47318 was used in tool call call_01_KQXi3EL66rVhNNmLsTjz7617 (message 9); the call succeeded and the run's acceptance passed
     作用点        tool_call
@@ -37,6 +38,8 @@
       tool_arg        request(1ee8e549-2b3a-491c-a3f4-06841c47de3b):msg[9]:call_01_KQXi3EL66rVhNNmLsTjz7617:arguments  — token 47318; content of v2 entered the context at message 8, before this operation at message 9
       bridge_row      tool_call_logs:2026-09-06 19:17:01.447:skill-bridge:get  — request names skl-oBaDO5CceKnr
       capture_line    89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac:call_01_86v88eKRZ7joUtropzcQ8928  — skill:get answered at message 8; carrying content; version 2
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-06  — present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197
     闸门 准入 · 作者置信度 0.5
+    风险         冲突: supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run
 
-标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

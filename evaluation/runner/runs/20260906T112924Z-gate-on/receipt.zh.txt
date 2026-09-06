@@ -1,15 +1,15 @@
-# 资产使用回执 — 运行 20260906T112924Z-gate-on · 会话 1e32353b · 任务 task-5e6xp4mrrw · 2026-09-06T19:21:05Z
+# 资产使用回执 — 运行 20260906T112924Z-gate-on · 会话 1e32353b · 任务 task-5e6xp4mrrw · 2026-09-06T21:14:21Z
 
 本次应用 1 项团队资产
 - Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_2wyJ0OMOdGymnJqWWnxg8206 (message 7); the call succeeded and the run's acceptance passed
 
 效果状态
-- 1 项已通过相关测试验证
+- 1 项已验证，且有对照批次证明该版本带来正向增益
 
-✓ eval-bridge-endpoint-b  v2  skill
+◆ eval-bridge-endpoint-b  v2  skill
     来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
     类型         Skill
-    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    状态         已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益
     为何提供       offered at rank 2 of 2 (score 7.57e-6) for the query "skill bridge http 访问 地址 convention 约定"
     影响         its value 47318 was used in tool call call_00_2wyJ0OMOdGymnJqWWnxg8206 (message 7); the call succeeded and the run's acceptance passed
     作用点        tool_call
@@ -19,6 +19,7 @@
       tool_arg        request(df10ec7f-dd57-45ed-85ad-f3d1e88b4a98):msg[7]:call_00_2wyJ0OMOdGymnJqWWnxg8206:arguments  — token 47318; content of v2 entered the context at message 6, before this operation at message 7
       bridge_row      tool_call_logs:2026-09-06 19:29:34.878:skill-bridge:get  — request names skl-oBaDO5CceKnr
       capture_line    1e32353b-808c-45e0-ba0a-24e478c5ad28:call_00_d77GoJwjnuhexRvnF1TX6548  — skill:get answered at message 6; carrying content; version 2
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-06  — present 6 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 41.833 vs 50; prompt_tokens_mean 130161.5 vs 145197
     闸门 准入 · 作者置信度 0.5
 
-标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

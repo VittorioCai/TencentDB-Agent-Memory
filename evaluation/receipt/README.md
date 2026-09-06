@@ -110,3 +110,23 @@ node evaluation/receipt/build-receipt.mjs \
 node evaluation/receipt/render-cli.mjs $R/receipt.json
 node --test evaluation/receipt/*.test.mjs
 ```
+
+## contributed, conflict, stale — the approved definitions (2026-09-06)
+
+- **contributed** (◆) — a cross-run claim about a *version*, looked up from
+  `evaluation/calibration/contributed-events.jsonl`, never derived from one
+  run. It upgrades a `validated` item only; a `corrected` item stays corrected
+  whatever a batch says elsewhere. The event carries the contrast batch id,
+  the run ids on both sides, raw values of every gain metric on both sides,
+  and the commit the judging rules were frozen at. See
+  `evaluation/calibration/contributed.mjs` for the three conditions.
+- **conflict** — behavioural evidence only: two assets fed *different values*
+  to the *same call slot* (the acceptance endpoint, from the verdict's
+  attempts) in this run. Each is flagged naming the other. Description
+  similarity and the model's own remark that "the two disagree" are never
+  used. In the gate-off runs both mainline assets are flagged: they supplied
+  10.244.7.19:8096 and 127.0.0.1:47318 to the same `skill:search` slot.
+- **stale** — `updated_at` older than a threshold (default 90 days,
+  `--stale-days`) produces a review prompt worded "review suggested, not
+  judged expired". The threshold is a parameter of this evaluation with no
+  empirical basis, and the wording says so. It never reaches the gate.

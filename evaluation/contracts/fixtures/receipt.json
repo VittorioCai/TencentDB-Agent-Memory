@@ -7,11 +7,12 @@
   "summary": {
     "applied_count": 4,
     "by_status": {
-      "validated": 1,
+      "validated": 0,
       "used": 0,
       "fetched": 1,
       "provided": 1,
-      "corrected": 1
+      "corrected": 1,
+      "contributed": 1
     },
     "soft_only_count": 1
   },
@@ -22,7 +23,7 @@
       "asset_type": "skill",
       "version": 3,
       "updated_at": "2026-09-05T10:00:00Z",
-      "status": "validated",
+      "status": "contributed",
       "source": {
         "producer_user_id": "usr-alice",
         "producer_agent_id": "agt-alice",
@@ -39,6 +40,11 @@
         {
           "kind": "verify_result",
           "ref": "run-0001:verify.sh:exit=0"
+        },
+        {
+          "kind": "contrast_batch",
+          "ref": "loo-skl-alice-deploy-2026-09-09",
+          "detail": "present 3/3 passed, absent 0/3 passed; failed attempts 0 vs 3"
         }
       ],
       "related_tests": [
