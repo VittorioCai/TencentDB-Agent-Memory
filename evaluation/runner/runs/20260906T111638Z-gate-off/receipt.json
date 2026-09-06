@@ -3,7 +3,7 @@
   "session_key": "89e6c3c5-a10b-403a-8bc1-69abc9d0e7ac",
   "run_id": "20260906T111638Z-gate-off",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T12:06:30Z",
+  "generated_at": "2026-09-06T12:56:15Z",
   "summary": {
     "applied_count": 2,
     "by_status": {
@@ -22,6 +22,8 @@
       "asset_type": "skill",
       "version": 2,
       "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 7.57e-6) for the query \"skill-bridge convention 接口地址 reach bridge http\"",
       "status": "corrected",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",
@@ -73,6 +75,8 @@
       "asset_type": "skill",
       "version": 2,
       "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 7.57e-6) for the query \"skill-bridge convention 接口地址 reach bridge http\"",
       "status": "validated",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",

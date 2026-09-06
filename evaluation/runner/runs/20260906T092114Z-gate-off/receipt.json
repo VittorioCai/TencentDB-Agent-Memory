@@ -3,7 +3,7 @@
   "session_key": "7e576bd6-d232-4503-88d1-6cd716427f12",
   "run_id": "20260906T092114Z-gate-off",
   "task_id": "task-5e6xp4mrrw",
-  "generated_at": "2026-09-06T12:06:30Z",
+  "generated_at": "2026-09-06T12:56:15Z",
   "summary": {
     "applied_count": 2,
     "by_status": {
@@ -22,6 +22,8 @@
       "asset_type": "skill",
       "version": 2,
       "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 5.91e-6) for the query \"skill bridge http 访问 约定\"",
       "status": "corrected",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",
@@ -68,6 +70,8 @@
       "asset_type": "skill",
       "version": 2,
       "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 5.91e-6) for the query \"skill bridge http 访问 约定\"",
       "status": "fetched",
       "source": {
         "producer_user_id": "usr-n68ea5ythq",

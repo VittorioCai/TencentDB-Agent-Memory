@@ -57,7 +57,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
-import { eventId, classifyRelation, normalizeSessionKey, parseJsonl } from "./build-events.mjs";
+import { eventId, classifyRelation, normalizeSessionKey, parseJsonl, requestPayloadOf } from "./build-events.mjs";
 
 // ── block extraction ──────────────────────────────────────────────
 
@@ -195,18 +195,30 @@ export function extractBridgeListings(captureEvents) {
       const envelope = firstJsonObject(output);
       const items = envelope?.data?.items;
       if (!Array.isArray(items)) continue;
+      // The query the model sent, and each item's rank and score in the reply:
+      // the retrieval system's own relevance judgement, kept so a receipt can
+      // say why an asset was offered without inventing a reason.
+      let query = null;
+      try {
+        const payload = JSON.parse(requestPayloadOf(command) || "{}");
+        if (typeof payload?.query === "string") query = payload.query;
+      } catch { /* not JSON; no query to record */ }
       found.push({
         sessionKey,
         endpoint,
+        query,
         requestId: String(event.requestId ?? ""),
         timestamp: String(event.timestamp ?? ""),
         messageIndex: index,
-        items: items.map((it) => ({
+        items: items.map((it, i) => ({
           asset_id: String(it?.skill_id ?? it?.wiki_id ?? it?.id ?? ""),
           name: String(it?.name ?? ""),
           version: it?.version ?? null,
           owner_user_id: String(it?.owner_user_id ?? it?.user_id ?? ""),
           owner_agent_id: String(it?.owner_agent_id ?? it?.agent_id ?? ""),
+          rank: i + 1,
+          score: typeof it?.score === "number" ? it.score : (it?.score != null && !Number.isNaN(Number(it.score)) ? Number(it.score) : null),
+          description: typeof it?.description === "string" ? it.description : null,
         })).filter((it) => it.asset_id),
       });
     }
@@ -298,7 +310,7 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
   // selected v2 → injected v3, where the last step was the snapshot leaking in
   // through a path that stated no version at all.
   const versionKey = (v) => (v == null ? "?" : String(v));
-  const note = ({ state, asset, sessionKey, occurredAt, observation, proofRef, version = null }) => {
+  const note = ({ state, asset, sessionKey, occurredAt, observation, proofRef, version = null, metadata = null }) => {
     const key = `${sessionKey}|${asset.asset_id}|${state}|${versionKey(version)}`;
     let rec = records.get(key);
     if (!rec) {
@@ -309,9 +321,13 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
         refs: new Map(), // ref -> {kind, ref, detail, turns}
         version,
         versionStated: version != null,
+        metadata: null,
       };
       records.set(key, rec);
     }
+    // First source to state it wins: the earliest listing is the one that
+    // offered the asset; a later turn re-listing it is the same recall.
+    if (metadata && !rec.metadata) rec.metadata = metadata;
     rec.observations.add(observation);
     if (occurredAt && (!rec.occurredAt || occurredAt < rec.occurredAt)) rec.occurredAt = occurredAt;
 
@@ -375,7 +391,16 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
         occurredAt: listing.timestamp, observation: "wire_only", version: item.version,
         proofRef: {
           kind: "bridge_response", ref,
-          detail: `${listing.endpoint} returned ${listing.items.length} candidate(s), this one among them`,
+          detail: `${listing.endpoint} returned ${listing.items.length} candidate(s), this one at rank ${item.rank}`,
+        },
+        // The retrieval system's own relevance judgement, as returned: what the
+        // model asked for, where this asset ranked, and its score. A receipt
+        // can say "why offered" from this without inventing a reason.
+        metadata: {
+          relevance: {
+            query: listing.query, rank: item.rank, total: listing.items.length,
+            score: item.score, description: item.description,
+          },
         },
       });
       // The listing sits in messages[] of a request that went to the model, so
@@ -516,6 +541,7 @@ export function buildEarlyEvents({ snapshot, toolCallRows = [], captureEvents = 
       proof_refs: proofRefs,
       corrected_reason: null,
       parent_event_ids: [],
+      ...(rec.metadata ? { metadata: rec.metadata } : {}),
     };
   });
 

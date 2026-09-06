@@ -49,6 +49,16 @@
           "version":    { "type": ["integer", "string", "null"] },
           "updated_at": { "type": ["string", "null"] },
 
+          "category": {
+            "type": "string",
+            "enum": ["project_convention", "historical_solution", "failure_experience", "skill", "code_knowledge", "product_knowledge", "not_declared"],
+            "description": "The topic's asset taxonomy (project convention / historical solution / failure experience / skill / code knowledge / product knowledge). Taken from what the asset itself declares (frontmatter `category`) or, for a skill record, the taxonomy entry 'skill'. Never inferred from wording: an undeclared knowledge or memory record is not_declared."
+          },
+          "why_applicable": {
+            "type": ["string", "null"],
+            "description": "Why the asset was offered for this task, stated from the retrieval system's own record (the model's query, the asset's rank and score in the reply), never from a reason written after the fact. Null when no retrieval call in this run offered the asset."
+          },
+
           "status": {
             "type": "string",
             "enum": ["validated", "used", "used_soft", "fetched", "provided", "corrected"],

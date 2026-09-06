@@ -499,6 +499,8 @@ info "receipt …"
   --snapshot="$RUN_DIR/asset-pool-snapshot.json" --decisions="$RECEIPT_DECISIONS" --run="$RUN_DIR/run.json" \
   --out="$RUN_DIR/receipt.json" > "$RUN_DIR/receipt.txt" 2>&1) \
   || warn "build-receipt failed; see $RUN_DIR/receipt.txt"
+# The same receipt in Chinese, in the shape of the topic's own sample.
+[[ -f "$RUN_DIR/receipt.json" ]] && (cd "$REPO_ROOT" && node "$EVAL/receipt/render-cli.mjs" "$RUN_DIR/receipt.json" --lang=zh > "$RUN_DIR/receipt.zh.txt" 2>&1) || :
 
 case "$VERDICT" in
   PASS)  echo "${C_G}PASS${C_0}  $RUN_ID" ;;

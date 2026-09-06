@@ -143,7 +143,8 @@ test("wording: related test … passed/failed, never 'verified'", () => {
   assert.ok(!/verified/i.test(text));
   assert.match(text, /✗ eval-bridge-endpoint-a/);
   assert.match(text, /✓ eval-bridge-endpoint-b/);
-  assert.match(text, /applied 2 asset\(s\): validated 1 · used 0 · corrected 1/);
+  assert.match(text, /applied 2 team asset\(s\)\n- skill：eval-bridge-endpoint-a/);
+  assert.match(text, /effect status\n- 1 validated by a related test\n- 1 corrected/);
 });
 
 test("helpers: decisionsMap accepts an array or a baseline; evidenceOf dedupes; impactOf null for fetched", () => {
@@ -171,4 +172,57 @@ test("real run: gate-off receipt shows wrong corrected and right validated with 
   assert.equal(by[WRONG].gate_decision, "reject");
   assert.equal(r.task_id, "task-5e6xp4mrrw");
   assert.equal(by[RIGHT].source.relation, "cross_user");
+});
+
+// ── task-four alignment: category, why offered, sample wording, Chinese ──
+import { categoryOf, whyApplicableOf } from "./build-receipt.mjs";
+
+const recalled = (asset, rank, total, score, query) => ev("recalled", asset, {
+  observation: "wire_only", proof_refs: [{ kind: "bridge_response", ref: `capture:skill:search:${asset}`, detail: `skill:search returned ${total} candidate(s), this one at rank ${rank}` }],
+  metadata: { relevance: { query, rank, total, score, description: "Team convention …" } },
+});
+
+test("category comes only from what is declared: skill → skill, undeclared knowledge → not_declared, declared category honoured", () => {
+  assert.equal(categoryOf({ snapshotRow: { asset_type: "skill" } }), "skill");
+  assert.equal(categoryOf({ snapshotRow: { asset_type: "knowledge", description: "Team convention for deploys" } }), "not_declared");
+  assert.equal(categoryOf({ snapshotRow: { asset_type: "memory", category: "failure_experience" } }), "failure_experience");
+  assert.equal(categoryOf({ snapshotRow: { asset_type: "memory", category: "made-up" } }), "not_declared");
+  assert.equal(categoryOf({ events: [{ asset_type: "knowledge", metadata: { category: "code_knowledge" } }] }), "code_knowledge");
+});
+
+test("why_applicable is the retrieval system's own record, null when the asset was never offered", () => {
+  const q = "skill-bridge convention 接口地址";
+  assert.equal(whyApplicableOf([recalled(RIGHT, 3, 3, 7.57e-6, q)]), `offered at rank 3 of 3 (score 7.57e-6) for the query "${q}"`);
+  assert.equal(whyApplicableOf([recalled(RIGHT, 1, 2, 4.2, q)]), `offered at rank 1 of 2 (score 4.20) for the query "${q}"`);
+  assert.equal(whyApplicableOf([ev("fetched", RIGHT)]), null);
+});
+
+test("the receipt carries category and why_applicable, validates, and renders the topic's sample shape in both languages", () => {
+  const q = "reach bridge http";
+  const events = [recalled(WRONG, 2, 3, 0.5, q), recalled(RIGHT, 3, 3, 0.5, q), ...mainlineEvents()];
+  const r = buildReceipt({ events, snapshot: SNAPSHOT, decisions: DECISIONS, generatedAt: "t" });
+  assert.deepEqual(validate(SCHEMA, r), []);
+  const by = Object.fromEntries(r.items.map((i) => [i.asset_id, i]));
+  assert.equal(by[RIGHT].category, "skill");
+  assert.match(by[RIGHT].why_applicable, /offered at rank 3 of 3 .* for the query "reach bridge http"/);
+  const en = renderReceipt(r, "en");
+  assert.match(en, /applied 2 team asset\(s\)/);
+  assert.match(en, /- skill：eval-bridge-endpoint-b — its value 47318/);
+  assert.match(en, /effect status\n- 1 validated by a related test\n- 1 corrected/);
+  assert.match(en, /why offered\s+offered at rank 3 of 3/);
+  const zh = renderReceipt(r, "zh");
+  assert.match(zh, /本次应用 2 项团队资产/);
+  assert.match(zh, /- Skill：eval-bridge-endpoint-b/);
+  assert.match(zh, /效果状态\n- 1 项已通过相关测试验证\n- 1 项被证明错误/);
+  assert.match(zh, /相关测试 verify\.mjs: dial 127\.0\.0\.1:47318 \(call_01\) 通过/);
+  assert.match(zh, /闸门 拒绝/);
+  assert.ok(!/verified/i.test(en));
+});
+
+test("background-only assets are counted as 'effect unverified', never as used", () => {
+  const r = buildReceipt({ events: [recalled(RIGHT, 1, 1, 1, "q"), ev("fetched", RIGHT)], snapshot: SNAPSHOT, generatedAt: "t" });
+  const zh = renderReceipt(r, "zh");
+  assert.match(zh, /本次应用 1 项团队资产/);
+  assert.match(zh, /1 项仅作为背景参考（取回或提供），效果待验证/);
+  assert.equal(r.summary.by_status.used, 0);
 });

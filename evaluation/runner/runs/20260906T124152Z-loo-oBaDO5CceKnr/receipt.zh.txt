@@ -1,0 +1,24 @@
+# 资产使用回执 — 运行 20260906T124152Z-loo-oBaDO5CceKnr · 会话 988c4f67 · 任务 task-5e6xp4mrrw · 2026-09-06T12:56:16Z
+
+本次应用 1 项团队资产
+- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+
+效果状态
+- 1 项被证明错误——已采用，且它引出的调用因其内容而失败
+
+✗ eval-bridge-endpoint-a  v2  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已纠错——已采用，且它引出的调用因其内容而失败
+    为何提供       offered at rank 2 of 2 (score 7.57e-6)
+    影响         its value 10.244.7.19 was used in tool call call_00_VKrYU7RKSiEFfW1JwcW20877 (message 6) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    作用点        tool_call
+    相关测试 verify.mjs: dial 10.244.7.19:8096 (call_00_VKrYU7RKSiEFfW1JwcW20877) 失败
+    证据
+      verify_result   988c4f67-4e0b-418b-8405-775cbd658d8e:verify.mjs:call=call_00_VKrYU7RKSiEFfW1JwcW20877:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      tool_arg        request(e8348427-b34d-494a-a810-d984725daeae):msg[6]:call_00_VKrYU7RKSiEFfW1JwcW20877:arguments  — token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 6
+      capture_line    988c4f67-4e0b-418b-8405-775cbd658d8e:call_00_JyCbvmYh2GZmIX0U78Lv0860  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
+    闸门 拒绝 · 作者置信度 0.5
+    风险         闸门拒绝: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+
+标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

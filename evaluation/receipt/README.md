@@ -40,6 +40,38 @@ as `receipt.json` and `receipt.txt`.
 is where a risk has to surface, and one failed call is a risk regardless of a
 later success.
 
+## The topic's own sample shape, in both languages
+
+`render-cli.mjs --lang=zh` renders the frame the topic's sample uses:
+
+```
+本次应用 2 项团队资产
+- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call … and the call failed …
+- Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call …; the call succeeded …
+
+效果状态
+- 1 项已通过相关测试验证
+- 1 项被证明错误——已采用，且它引出的调用因其内容而失败
+```
+
+The frame, labels, status words and risk names are Chinese; the evidence
+strings (impact, proof details) are the recorded English text of the events,
+left as recorded rather than paraphrased. The runner writes `receipt.txt`
+(English) and `receipt.zh.txt` beside `receipt.json`.
+
+Two fields exist for the sample's two questions:
+
+- **`category`** — the topic's taxonomy (项目约定 / 历史方案 / 失败经验 /
+  Skill / 代码知识 / 产品知识). Only what is declared: a skill record is
+  `skill` by the taxonomy's own entry; a knowledge or memory record must carry
+  a `category` on its pool row or it is `not_declared`. Reading "convention"
+  in a description and filing it as a project convention would be the receipt
+  inventing a fact.
+- **`why_applicable`** — why the asset was offered, from the retrieval
+  system's own record on the `recalled` event: the model's query, the asset's
+  rank and score in the reply. Never a reason written after the fact; null
+  when no retrieval call in the run offered it.
+
 ## The fields task four asks for
 
 - **Source** is the asset record's owner (`producer_user_id`, `producer_agent_id`)

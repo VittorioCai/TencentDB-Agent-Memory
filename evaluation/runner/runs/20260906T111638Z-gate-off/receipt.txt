@@ -1,9 +1,18 @@
-# Receipt — run 20260906T111638Z-gate-off · session 89e6c3c5 · task task-5e6xp4mrrw · 2026-09-06T12:06:30Z
-applied 2 asset(s): validated 1 · used 0 · corrected 1 · fetched 0 · provided 0
+# Receipt — run 20260906T111638Z-gate-off · session 89e6c3c5 · task task-5e6xp4mrrw · 2026-09-06T12:56:15Z
+
+applied 2 team asset(s)
+- skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+- skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_KQXi3EL66rVhNNmLsTjz7617 (message 9); the call succeeded and the run's acceptance passed
+
+effect status
+- 1 validated by a related test
+- 1 corrected — used, and the call it fed failed for a reason its content explains
 
 ✗ eval-bridge-endpoint-a  v2  skill
     from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
     status     corrected — used, and the call it fed failed for a reason its content explains
+    why offered offered at rank 2 of 3 (score 7.57e-6) for the query "skill-bridge convention 接口地址 reach bridge http"
     impact     its value 10.244.7.19 was used in tool call call_00_vipdZ1y28EAQmn94imgg7830 (message 9) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
     target     tool_call
     related test verify.mjs: dial 10.244.7.19:8096 (call_00_vipdZ1y28EAQmn94imgg7830) failed
@@ -17,7 +26,9 @@ applied 2 asset(s): validated 1 · used 0 · corrected 1 · fetched 0 · provide
 
 ✓ eval-bridge-endpoint-b  v2  skill
     from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
     status     validated — used, and the call it fed succeeded in a run that passed
+    why offered offered at rank 3 of 3 (score 7.57e-6) for the query "skill-bridge convention 接口地址 reach bridge http"
     impact     its value 47318 was used in tool call call_01_KQXi3EL66rVhNNmLsTjz7617 (message 9); the call succeeded and the run's acceptance passed
     target     tool_call
     related test verify.mjs: dial 127.0.0.1:47318 (call_01_KQXi3EL66rVhNNmLsTjz7617) passed

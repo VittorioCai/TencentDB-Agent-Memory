@@ -103,6 +103,31 @@ export function evidenceOf(events) {
   return out;
 }
 
+/**
+ * The topic's asset taxonomy. Only what is declared: a skill record is a
+ * "skill" by the taxonomy's own entry; anything else must carry a `category`
+ * on its pool record (frontmatter or metadata) or it is not_declared. Reading
+ * "convention" in a description and filing it as project_convention would be
+ * this receipt inventing a fact about the asset.
+ */
+export const CATEGORIES = new Set(["project_convention", "historical_solution", "failure_experience", "skill", "code_knowledge", "product_knowledge"]);
+export function categoryOf({ snapshotRow = {}, events = [] }) {
+  const declared = snapshotRow.category ?? events.map((e) => e.metadata?.category).find(Boolean) ?? null;
+  if (declared && CATEGORIES.has(declared)) return declared;
+  const type = snapshotRow.asset_type ?? events[0]?.asset_type ?? "";
+  return type === "skill" ? "skill" : "not_declared";
+}
+
+/** Why the asset was offered, from the retrieval system's own record on the recalled event. */
+export function whyApplicableOf(events) {
+  const rel = events.filter((e) => e.state === "recalled").map((e) => e.metadata?.relevance).find(Boolean);
+  if (!rel) return null;
+  const score = typeof rel.score === "number" ? ` (score ${rel.score >= 0.01 || rel.score === 0 ? rel.score.toFixed(2) : rel.score.toExponential(2)})` : "";
+  const query = rel.query ? ` for the query "${rel.query}"` : "";
+  const rank = rel.rank != null ? `at rank ${rel.rank}${rel.total != null ? ` of ${rel.total}` : ""}` : "in the reply";
+  return `offered ${rank}${score}${query}`;
+}
+
 /** Related tests: the acceptance calls this asset fed, from outcome events. */
 export function relatedTestsOf(events) {
   const out = [];
@@ -145,6 +170,8 @@ export function buildItem({ assetId, events, snapshot, decision }) {
     asset_type: top.asset_type || snap.asset_type || "skill",
     version,
     updated_at: snap.asset_updated_at ?? null,
+    category: categoryOf({ snapshotRow: snap, events }),
+    why_applicable: whyApplicableOf(events),
     status,
     source: {
       producer_user_id: author,

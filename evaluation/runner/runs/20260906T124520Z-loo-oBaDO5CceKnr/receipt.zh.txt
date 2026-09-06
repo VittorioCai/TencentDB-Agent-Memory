@@ -1,0 +1,27 @@
+# 资产使用回执 — 运行 20260906T124520Z-loo-oBaDO5CceKnr · 会话 34d9f251 · 任务 task-5e6xp4mrrw · 2026-09-06T12:56:16Z
+
+本次应用 1 项团队资产
+- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+
+效果状态
+- 1 项被证明错误——已采用，且它引出的调用因其内容而失败
+
+✗ eval-bridge-endpoint-a  v2  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已纠错——已采用，且它引出的调用因其内容而失败
+    为何提供       offered at rank 2 of 2 (score 5.91e-6) for the query "skill bridge http reach address"
+    影响         its value 10.244.7.19 was used in tool call call_00_cjQnPkupd1nC1ho6WxqK1596 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+    作用点        tool_call
+    相关测试 verify.mjs: dial 10.244.7.19:8096 (call_00_cjQnPkupd1nC1ho6WxqK1596) 失败
+    证据
+      verify_result   34d9f251-fb5e-4b99-9d4a-515b4a7b1838:verify.mjs:call=call_00_cjQnPkupd1nC1ho6WxqK1596:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+      tool_arg        request(4457eadd-1ee7-41c6-8677-90a894f9e7ea):msg[7]:call_00_cjQnPkupd1nC1ho6WxqK1596:arguments  — token 10.244.7.19; content of v2 entered the context at message 6, before this operation at message 7
+      bridge_row      tool_call_logs:2026-09-06 20:45:36.085:skill-bridge:get  — request names skl-sZFb3KatWY6m
+      tool_arg        request(0492f22d-843c-433a-a90a-3f7b38aea52e):msg[9]:call_00_1AbgvllrU65zpUKM82mR3338:arguments  — token 10.244.7.19; content of v2 entered the context at message 6, before this operation at message 9
+      verify_result   34d9f251-fb5e-4b99-9d4a-515b4a7b1838:verify.mjs:call=call_00_1AbgvllrU65zpUKM82mR3338:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+      capture_line    34d9f251-fb5e-4b99-9d4a-515b4a7b1838:call_00_PXge2p7y0pphgQ4EiWE54288  — skill:get answered at message 6; carrying content; version 2
+    闸门 拒绝 · 作者置信度 0.5
+    风险         闸门拒绝: rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; the content explains the failure (timed out)
+
+标记：✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供
