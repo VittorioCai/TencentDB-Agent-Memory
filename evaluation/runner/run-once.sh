@@ -163,11 +163,48 @@ fi
 
 # ── 2. the service's own records ─────────────────────────────────
 TOOL_CALLS="$RUN_DIR/tool-call-logs.jsonl"
-if SINCE="$SINCE" OUT="$TOOL_CALLS" bash "$EVAL/gate0/export-tool-call-logs.sh" >"$RUN_DIR/export.log" 2>&1; then
-  info "$(wc -l < "$TOOL_CALLS" | tr -d ' ') service-side row(s)"
+if SINCE="$SINCE" OUT="$RUN_DIR/tool-call-logs-all.jsonl" bash "$EVAL/gate0/export-tool-call-logs.sh" >"$RUN_DIR/export.log" 2>&1; then
+  info "$(wc -l < "$RUN_DIR/tool-call-logs-all.jsonl" | tr -d ' ') service-side row(s) in the export window"
 else
   warn "could not export tool_call_logs; see $RUN_DIR/export.log"
-  : > "$TOOL_CALLS"
+  : > "$RUN_DIR/tool-call-logs-all.jsonl"
+fi
+
+# The export is a time window, and two runs ten minutes apart share it. Rows
+# from the previous run then arrive here, have no capture to pair with, and
+# become bridge_only fetched events under the other session's key — inside
+# this run's directory. Seen on 2026-09-06: run 2 carried four of run 1's
+# fetches. So the rows are cut to this run's own conversation, taken from the
+# capture; the full window is kept beside it for the record.
+RUN_CONV="$(python3 - "$CAPTURE" <<'PY'
+import json, sys
+for line in open(sys.argv[1], encoding="utf-8"):
+    try: e = json.loads(line)
+    except ValueError: continue
+    if e.get("event") != "http.request": continue
+    h = e.get("headers") or {}
+    c = h.get("x-conversation-id") or h.get("X-Conversation-Id")
+    if c: print(c); break
+PY
+)"
+if [[ -n "$RUN_CONV" ]]; then
+  python3 - "$RUN_DIR/tool-call-logs-all.jsonl" "$TOOL_CALLS" "codebuddy:$RUN_CONV" <<'PY'
+import json, sys
+src, dst, key = sys.argv[1:4]
+kept = dropped = 0
+with open(dst, "w", encoding="utf-8") as out:
+    for line in open(src, encoding="utf-8"):
+        if not line.strip(): continue
+        row = json.loads(line)
+        if row.get("session_key") == key:
+            out.write(line if line.endswith("\n") else line + "\n"); kept += 1
+        else:
+            dropped += 1
+print(f"{kept} row(s) belong to this session; {dropped} from other session(s) in the window set aside")
+PY
+else
+  warn "no conversation id in the capture; service rows NOT cut to this session"
+  cp "$RUN_DIR/tool-call-logs-all.jsonl" "$TOOL_CALLS"
 fi
 
 CANDIDATES="$EVAL/provenance/artifacts/candidate-log.jsonl"
