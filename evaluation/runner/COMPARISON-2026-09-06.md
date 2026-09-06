@@ -111,3 +111,23 @@ Not established:
   window (30 minutes) pulled the previous run's rows into run 2's directory.
   Rows are now cut to the run's own conversation; run 2 was rebuilt from its
   own rows and its `run.json` says so. The gate-on arm ran after the fix.
+
+## Alternative explanations, checked
+
+Asked after the runs: could an open CodeBuddy session, or anything other than
+the gate, have produced the on-arm result? Each of the following was checked
+against the captures, not assumed.
+
+| candidate cause | check | result |
+|---|---|---|
+| A second session leaking into the capture (the desktop app or an interactive CLI was open during some runs) | `x-conversation-id` on every captured request | exactly one id per run, six distinct ids, no truncated bodies |
+| The previous run's service rows in this run's directory | export window overlap | found in run 2 of the off arm, fixed, run 2 rebuilt; the on arm ran after the fix |
+| Order effect through injected memory or skills (on ran after off) | sha1 of the system prompt, off vs on, full diff | byte-identical except the conversation id (three occurrences); same 27,051 characters in all six runs |
+| The consumer's own auto-extracted skill (`skill-bridge-http-access`, in the pool since 2026-09-05) leaking the answer | its injected block and fetched body scanned for both tokens | neither `47318` nor `10.244.7.19` appears in the system prompt of any run; it names neither asset |
+| The model simply not searching in the on arm | search tool results, names parsed | on arm: the search ran every time and returned `eval-bridge-endpoint-b` + the consumer's own skill; off arm: the same search returned `-a` as well |
+| The wrong asset hidden by something other than the visibility write | `gate-apply.json` write + read-back, `run.json.gate` | `private` written and read back before each on run; `team` read back before each off run |
+| The model knowing the hidden asset anyway | every message of the on-arm captures | the name `eval-bridge-endpoint-a` occurs once, in one run's `reasoning_content`: "there could also be an eval-bridge-endpoint-a" — a guess from the `-b` suffix, never acted on, never fetched, never dialled |
+
+What remains is what the design set out to show: the product's whitelist
+removed the rejected asset from the consumer's search results, and the run's
+behaviour followed from what was left.
