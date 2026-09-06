@@ -41,3 +41,68 @@ test("labels are grouped so gate-on and gate-off stay comparable", () => {
   ]);
   assert.deepEqual(s.groups.map((g) => [g.label, g.pass, g.fail]), [["gate-off", 0, 2], ["gate-on", 1, 0]]);
 });
+
+// ── where the gate shows ────────────────────────────────────────
+import { runFacts, loadRun } from "./summarize-runs.mjs";
+
+const WRONG = "skl-wrong";
+const attempt = (host, ok, why) => ({ host, port: "1", ok, why });
+const richRun = (label, run_id, { first, seen, corrected, wall, started_at }) => ({
+  label, run_id, verdict: "PASS", started_at,
+  verdict_doc: { verdict: "PASS", attempts: first === "wrong" ? [attempt("10.0.0.1", false, "timed out"), attempt("127.0.0.1", true, "code 0")] : [attempt("127.0.0.1", true, "code 0")] },
+  events: [
+    ...(seen ? [{ asset_id: WRONG, state: "recalled" }, { asset_id: WRONG, state: "fetched" }] : []),
+    { asset_id: "skl-right", state: "fetched" },
+    ...(corrected ? [{ asset_id: WRONG, state: "corrected" }] : []),
+    { asset_id: "skl-right", state: "validated" },
+  ],
+  cost: { wall_seconds: wall },
+});
+const BASELINE = { frozen_at: "2026-09-06T08:47:33Z", source_runs: [{ run_id: "prep-1" }], decisions: [{ asset_id: WRONG, decision: "reject" }] };
+
+test("runFacts: null for every field when the run has no extras", () => {
+  const f = runFacts(run("x", "PASS", "r"));
+  assert.deepEqual(f, { first_dial_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null });
+});
+
+test("the gate shows in seen / first-dial / corrected, while the pass rate is identical", () => {
+  const runs = [
+    richRun("gate-off", "o1", { first: "wrong", seen: true, corrected: true, wall: 50, started_at: "2026-09-06T09:00:00Z" }),
+    richRun("gate-off", "o2", { first: "wrong", seen: true, corrected: true, wall: 48, started_at: "2026-09-06T09:10:00Z" }),
+    richRun("gate-on", "n1", { first: "right", seen: false, corrected: false, wall: 24, started_at: "2026-09-06T11:00:00Z" }),
+    richRun("gate-on", "n2", { first: "right", seen: false, corrected: false, wall: 28, started_at: "2026-09-06T11:10:00Z" }),
+  ];
+  const s = summarizeRuns(runs, { baseline: BASELINE });
+  const off = s.groups.find((g) => g.label === "gate-off"), on = s.groups.find((g) => g.label === "gate-on");
+  assert.equal(off.pass_rate, 1); assert.equal(on.pass_rate, 1);
+  assert.deepEqual(off.rejected_seen, { n: 2, of: 2 }); assert.deepEqual(on.rejected_seen, { n: 0, of: 2 });
+  assert.deepEqual(off.first_dial_failed, { n: 2, of: 2 }); assert.deepEqual(on.first_dial_failed, { n: 0, of: 2 });
+  assert.equal(off.corrected, 2); assert.equal(on.corrected, 0);
+  assert.equal(off.failed_attempts, 2); assert.equal(on.failed_attempts, 0);
+  assert.equal(off.wall_seconds_mean, 49); assert.equal(on.wall_seconds_mean, 26);
+  const text = renderRuns(s);
+  assert.match(text, /Where the gate shows/);
+  assert.match(text, /\| gate-off \| 2\/2 \| 2\/2 \| 2 \| 2 \| 2 \| 49 \|/);
+  assert.match(text, /\| gate-on \| 0\/2 \| 0\/2 \| 0 \| 0 \| 2 \| 26 \|/);
+});
+
+test("evidence-base and pre-baseline runs are grouped apart from the comparison", () => {
+  const runs = [
+    { label: "gate-off", run_id: "prep-1", verdict: "PASS", started_at: "2026-09-05T22:00:00Z" },
+    { label: "gate-off", run_id: "old-error", verdict: "ERROR", started_at: "2026-09-05T15:35:00Z" },
+    richRun("gate-off", "o1", { first: "wrong", seen: true, corrected: true, wall: 50, started_at: "2026-09-06T09:00:00Z" }),
+  ];
+  const s = summarizeRuns(runs, { baseline: BASELINE });
+  assert.deepEqual(s.groups.map((g) => [g.label, g.started]).sort(), [["gate-off", 1], ["gate-off (evidence base)", 1], ["gate-off (pre-baseline)", 1]].sort());
+  assert.match(renderRuns(s), /Neither is part of the comparison/);
+});
+
+test("without a baseline nothing is regrouped and the old table is unchanged", () => {
+  const s = summarizeRuns([run("gate-off", "PASS", "a"), run("gate-on", "PASS", "b")]);
+  assert.deepEqual(s.groups.map((g) => g.label), ["gate-off", "gate-on"]);
+  assert.ok(!/Where the gate shows/.test(renderRuns(s)));
+});
+
+test("loadRun returns null for a directory without run.json", () => {
+  assert.equal(loadRun("/nonexistent/dir"), null);
+});
