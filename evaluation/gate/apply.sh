@@ -43,16 +43,20 @@ OUT=""
 MODE=""
 DRY_RUN=0
 
+HIDE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --status|--reset|--apply) MODE="${1#--}"; shift ;;
+    # --hide a,b: leave-one-out. Baseline for everything, private for the
+    # named assets, decisions ignored. Same write path and read-back as apply.
+    --hide) MODE="hide"; HIDE="$2"; shift 2 ;;
     --baseline) BASELINE="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-[[ -n "$MODE" ]] || { echo "usage: apply.sh --status|--reset|--apply [--baseline F] [--out F] [--dry-run]" >&2; exit 2; }
+[[ -n "$MODE" ]] || { echo "usage: apply.sh --status|--reset|--apply|--hide a,b [--baseline F] [--out F] [--dry-run]" >&2; exit 2; }
 
 if [[ -t 1 ]]; then C_R=$'\033[31m'; C_G=$'\033[32m'; C_B=$'\033[34m'; C_Y=$'\033[33m'; C_0=$'\033[0m'
 else C_R=""; C_G=""; C_B=""; C_Y=""; C_0=""; fi
@@ -132,11 +136,13 @@ fi
 
 # ── plan ─────────────────────────────────────────────────────────
 PLAN_MODE="$MODE"
-if ! node "$SCRIPT_DIR/plan-visibility.mjs" --mode="$PLAN_MODE" --baseline="$BASELINE" --current="$TMP/before.json" --json > "$TMP/plan.json"; then
-  node "$SCRIPT_DIR/plan-visibility.mjs" --mode="$PLAN_MODE" --baseline="$BASELINE" --current="$TMP/before.json" || true
-  die "plan refused: an asset's visibility could not be read, so its gate state would be unknown"
+PLAN_ARGS=(--mode="$PLAN_MODE" --baseline="$BASELINE" --current="$TMP/before.json")
+[[ -n "$HIDE" ]] && PLAN_ARGS+=(--hide="$HIDE")
+if ! node "$SCRIPT_DIR/plan-visibility.mjs" "${PLAN_ARGS[@]}" --json > "$TMP/plan.json"; then
+  node "$SCRIPT_DIR/plan-visibility.mjs" "${PLAN_ARGS[@]}" || true
+  die "plan refused: an asset's visibility could not be read (or a hidden id is not in the baseline), so the gate state would be unknown"
 fi
-node "$SCRIPT_DIR/plan-visibility.mjs" --mode="$PLAN_MODE" --baseline="$BASELINE" --current="$TMP/before.json"
+node "$SCRIPT_DIR/plan-visibility.mjs" "${PLAN_ARGS[@]}"
 
 N_CHANGES="$(python3 -c "import json;print(len(json.load(open('$TMP/plan.json'))['changes']))")"
 

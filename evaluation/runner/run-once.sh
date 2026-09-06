@@ -49,6 +49,10 @@ while [[ $# -gt 0 ]]; do
     # baseline's decisions reject (on). Both arms start from the same pool;
     # the label defaults to gate-on / gate-off so the aggregate groups them.
     --gate) GATE="$2"; shift 2 ;;
+    # --ablate <asset_id>[,<asset_id>]: leave-one-out. Reset to the baseline,
+    # then hide the named asset(s) for this session only. The truth this
+    # produces is behavioural: did the run change without the asset?
+    --ablate) ABLATE="$2"; shift 2 ;;
     --identity) IDENTITY="$2"; shift 2 ;;
     --since) SINCE="$2"; shift 2 ;;
     # Launch the task itself via run-codebuddy.sh -p instead of waiting for a
@@ -65,7 +69,12 @@ case "$GATE" in
   ""|on|off) ;;
   *) echo "--gate must be on or off, got: $GATE" >&2; exit 2 ;;
 esac
+ABLATE="${ABLATE:-}"
+if [[ -n "$ABLATE" && -n "$GATE" ]]; then
+  echo "--ablate and --gate are different experiments; pick one" >&2; exit 2
+fi
 [[ -n "$LABEL" ]] || LABEL="${GATE:+gate-$GATE}"
+[[ -n "$LABEL" ]] || LABEL="${ABLATE:+loo-${ABLATE##*-}}"
 [[ -n "$LABEL" ]] || LABEL="run"
 
 if [[ -t 1 ]]; then C_R=$'\033[31m'; C_G=$'\033[32m'; C_Y=$'\033[33m'; C_B=$'\033[34m'; C_0=$'\033[0m'
@@ -98,12 +107,22 @@ info "run $RUN_ID → $RUN_DIR"
 # run whose gate state is unknown is not comparable with anything, so a
 # failure here ends the run before a capture exists that could be misread.
 GATE_BASELINE="$EVAL/gate/artifacts/gate_baseline.json"
-if [[ -n "$GATE" && -z "${CAPTURE_FROM:-}" ]]; then
-  [[ -f "$GATE_BASELINE" ]] || die "gate $GATE requested but no baseline at $GATE_BASELINE (build it: node evaluation/gate/build-baseline.mjs …)"
-  GATE_MODE="reset"; [[ "$GATE" == "on" ]] && GATE_MODE="apply"
-  info "gate $GATE: $GATE_MODE visibility from the baseline frozen $(python3 -c "import json;print(json.load(open('$GATE_BASELINE'))['frozen_at'])")"
-  bash "$EVAL/gate/apply.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
-    || die "gate $GATE could not be applied and read back; the run is not started"
+if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
+  [[ -f "$GATE_BASELINE" ]] || die "gate/ablation requested but no baseline at $GATE_BASELINE (build it: node evaluation/gate/build-baseline.mjs …)"
+  FROZEN="$(python3 -c "import json;print(json.load(open('$GATE_BASELINE'))['frozen_at'])")"
+  if [[ -n "$ABLATE" ]]; then
+    # Leave-one-out: baseline for everything, private for the named asset(s).
+    # The gate's decisions are not applied; the question is what the model
+    # does without this asset, not what the gate would do about it.
+    info "ablation: hiding $ABLATE, everything else at the baseline frozen $FROZEN"
+    bash "$EVAL/gate/apply.sh" --hide "$ABLATE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
+      || die "ablation could not be applied and read back; the run is not started"
+  else
+    GATE_MODE="reset"; [[ "$GATE" == "on" ]] && GATE_MODE="apply"
+    info "gate $GATE: $GATE_MODE visibility from the baseline frozen $FROZEN"
+    bash "$EVAL/gate/apply.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
+      || die "gate $GATE could not be applied and read back; the run is not started"
+  fi
   cp "$GATE_BASELINE" "$RUN_DIR/gate_baseline.json"
 fi
 
@@ -407,15 +426,17 @@ PY
 info "core auto-extraction: $EXTRACTION_ENABLED"
 
 # ── 6. manifest ──────────────────────────────────────────────────
-python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" <<'PY'
+python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
 import json, os, re, sys
-run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction, gate = sys.argv[1:11]
+run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction, gate, ablate = sys.argv[1:12]
 
 # The gate state this run actually started under, as read back from the
-# product after apply.sh wrote it — not the mode that was requested.
-gate_block = {"mode": gate or None, "baseline_frozen_at": None, "visibility_at_start": None, "all_verified": None}
+# product after apply.sh wrote it — not the mode that was requested. An
+# ablation run records the same block with mode "ablate" and the hidden ids.
+mode = gate or ("ablate" if ablate else None)
+gate_block = {"mode": mode, "hidden": ablate.split(",") if ablate else [], "baseline_frozen_at": None, "visibility_at_start": None, "all_verified": None}
 apply_p = os.path.join(run_dir, "gate-apply.json")
-if gate and os.path.exists(apply_p):
+if mode and os.path.exists(apply_p):
     rec = json.load(open(apply_p, encoding="utf-8"))
     gate_block["visibility_at_start"] = rec.get("visibility_after")
     gate_block["all_verified"] = rec.get("all_verified")
@@ -471,7 +492,7 @@ PY
 # actually faced — the frozen baseline when a gate mode was set — not what
 # this run's own evidence would decide; that stays in gate-decisions.json.
 RECEIPT_DECISIONS="$RUN_DIR/gate-decisions.json"
-[[ -n "$GATE" && -f "$RUN_DIR/gate_baseline.json" ]] && RECEIPT_DECISIONS="$RUN_DIR/gate_baseline.json"
+[[ ( -n "$GATE" || -n "$ABLATE" ) && -f "$RUN_DIR/gate_baseline.json" ]] && RECEIPT_DECISIONS="$RUN_DIR/gate_baseline.json"
 info "receipt …"
 (cd "$REPO_ROOT" && node "$EVAL/receipt/build-receipt.mjs" \
   --events="$RUN_DIR/events.jsonl,$RUN_DIR/early-events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \

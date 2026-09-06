@@ -153,3 +153,13 @@ After judgement, stage 4b writes `outcome-events.jsonl` (validated / corrected
 / needs_review, each tied to the specific call the asset fed) and
 `gate-decisions.json` (what this run's evidence alone would decide). The
 decisions are informational; they are not applied.
+
+## `--ablate <asset_id>`: leave-one-out
+
+Resets the pool to the frozen baseline, then sets the named asset `private`
+for this session only — the gate's own write path, with the same read-back.
+The gate's decisions are not applied; the question is what the model does
+without the asset, not what the gate would do about it. `run.json.gate`
+records `mode: "ablate"`, the hidden ids and the read-back visibility, and
+`evaluation/calibration/loo.mjs` scores the judge's `used` against those runs.
+`--ablate` and `--gate` are different experiments and cannot be combined.

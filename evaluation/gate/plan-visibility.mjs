@@ -34,8 +34,15 @@ export const HIDDEN = "private";
  * @param baseline  { assets: { [asset_id]: { baseline_visibility } }, decisions: [...] }
  * @param current   { [asset_id]: visibility | null }   null = could not be read
  */
-export function planVisibility({ mode, baseline, current }) {
-  if (mode !== "apply" && mode !== "reset") throw new Error(`mode must be apply or reset, got ${mode}`);
+export function planVisibility({ mode, baseline, current, hide = [] }) {
+  if (mode !== "apply" && mode !== "reset" && mode !== "hide") throw new Error(`mode must be apply, reset or hide, got ${mode}`);
+  // "hide" is leave-one-out's tool: baseline for everything, private for the
+  // named assets, decisions ignored. Same write path, same read-back.
+  const hidden = new Set(hide);
+  if (mode === "hide" && hidden.size === 0) throw new Error("hide mode needs at least one asset id");
+  for (const id of hidden) {
+    if (!(baseline.assets ?? {})[id]) throw new Error(`cannot hide ${id}: not in the baseline`);
+  }
   const decisions = new Map((baseline.decisions ?? []).map((d) => [d.asset_id, d]));
   const changes = [];
   const unchanged = [];
@@ -51,7 +58,10 @@ export function planVisibility({ mode, baseline, current }) {
     }
     let target = base;
     let because = `reset to baseline (${base})`;
-    if (mode === "apply") {
+    if (mode === "hide") {
+      if (hidden.has(assetId)) { target = HIDDEN; because = `leave-one-out: hidden for this run (${HIDDEN})`; }
+      else because = `leave-one-out: kept at baseline (${base})`;
+    } else if (mode === "apply") {
       const d = decisions.get(assetId);
       if (!d) {
         undecided.push(assetId);
@@ -91,6 +101,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     mode,
     baseline: JSON.parse(readFileSync(baselinePath, "utf8")),
     current: JSON.parse(readFileSync(currentPath, "utf8")),
+    hide: (arg("hide") ?? "").split(",").filter(Boolean),
   });
   console.log(process.argv.includes("--json") ? JSON.stringify(plan, null, 2) : renderPlan(plan));
   // An unreadable asset is a failed plan: a run whose gate state is unknown is

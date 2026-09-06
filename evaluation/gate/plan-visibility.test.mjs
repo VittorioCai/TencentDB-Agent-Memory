@@ -60,3 +60,16 @@ test("render lists changes and unchanged, or says nothing to change", () => {
   const plan = planVisibility({ mode: "reset", baseline, current: { [WRONG]: "team", [RIGHT]: "team", [PEND]: "team" } });
   assert.match(renderPlan(plan), /nothing to change/);
 });
+
+test("hide mode: named assets private, everything else at baseline, decisions ignored", () => {
+  const plan = planVisibility({ mode: "hide", baseline, current: { [WRONG]: "team", [RIGHT]: "team", [PEND]: "team" }, hide: [RIGHT] });
+  assert.deepEqual(plan.changes.map((c) => [c.asset_id, c.from, c.to]), [[RIGHT, "team", HIDDEN]]);
+  assert.match(plan.changes[0].because, /leave-one-out: hidden/);
+  // the rejected asset is NOT hidden in hide mode — decisions are not applied
+  assert.ok(plan.unchanged.find((u) => u.asset_id === WRONG));
+});
+
+test("hide mode refuses an empty list or an id outside the baseline", () => {
+  assert.throws(() => planVisibility({ mode: "hide", baseline, current: {}, hide: [] }), /at least one/);
+  assert.throws(() => planVisibility({ mode: "hide", baseline, current: {}, hide: ["skl-nope"] }), /not in the baseline/);
+});
