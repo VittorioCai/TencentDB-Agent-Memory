@@ -163,3 +163,14 @@ without the asset, not what the gate would do about it. `run.json.gate`
 records `mode: "ablate"`, the hidden ids and the read-back visibility, and
 `evaluation/calibration/loo.mjs` scores the judge's `used` against those runs.
 `--ablate` and `--gate` are different experiments and cannot be combined.
+
+## Cost is read from the response stream
+
+`cost.mjs` sums the `usage` block the upstream sends in the final chunk of
+each streamed response (`stream_options.include_usage`). The first collector
+looked in request JSON and reported null for every run — honest about what
+it had examined, wrong about what the capture held. Null still means "no
+usage chunk was found"; zero would read as "measured, and it was free".
+`cached_tokens` and `reasoning_tokens` are kept because most of each prompt
+is cache hits, and a saving in turns looks different from a saving in prompt
+size.

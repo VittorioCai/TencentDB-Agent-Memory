@@ -1,0 +1,86 @@
+{
+  "turns": 9,
+  "responses_with_usage": 9,
+  "wall_seconds": 73,
+  "system_prompt_chars": 26965,
+  "prompt_tokens": 312073,
+  "completion_tokens": 8731,
+  "total_tokens": 320804,
+  "cached_tokens": 280320,
+  "reasoning_tokens": 4315,
+  "token_source": "final usage chunk of each streamed response in the capture",
+  "per_turn": [
+    {
+      "request_id": "39b7f6f4-1b82-41c0-b471-b4acc7da5a53",
+      "prompt_tokens": 27573,
+      "completion_tokens": 894,
+      "total_tokens": 28467,
+      "cached_tokens": 2944,
+      "reasoning_tokens": 537
+    },
+    {
+      "request_id": "b4c88a96-37f6-41bb-9767-ae0612ac2026",
+      "prompt_tokens": 30346,
+      "completion_tokens": 759,
+      "total_tokens": 31105,
+      "cached_tokens": 28416,
+      "reasoning_tokens": 361
+    },
+    {
+      "request_id": "6b9eaa89-09a1-4739-b4a9-52157d48c9c0",
+      "prompt_tokens": 31508,
+      "completion_tokens": 1123,
+      "total_tokens": 32631,
+      "cached_tokens": 31104,
+      "reasoning_tokens": 693
+    },
+    {
+      "request_id": "9bcfa324-ff16-4a37-b20b-c6688f4dd3aa",
+      "prompt_tokens": 33014,
+      "completion_tokens": 922,
+      "total_tokens": 33936,
+      "cached_tokens": 32512,
+      "reasoning_tokens": 509
+    },
+    {
+      "request_id": "91f747f4-8ed7-48f2-9a95-092b6124cb29",
+      "prompt_tokens": 34356,
+      "completion_tokens": 1497,
+      "total_tokens": 35853,
+      "cached_tokens": 33920,
+      "reasoning_tokens": 1010
+    },
+    {
+      "request_id": "44fb8135-a907-4a94-aeef-7feaec9bd69d",
+      "prompt_tokens": 36540,
+      "completion_tokens": 672,
+      "total_tokens": 37212,
+      "cached_tokens": 35840,
+      "reasoning_tokens": 402
+    },
+    {
+      "request_id": "29c84874-64bf-4a7a-9b7f-df3852eef9b6",
+      "prompt_tokens": 37776,
+      "completion_tokens": 425,
+      "total_tokens": 38201,
+      "cached_tokens": 37120,
+      "reasoning_tokens": 44
+    },
+    {
+      "request_id": "eb691503-5015-443b-9402-0c0ffac58ac8",
+      "prompt_tokens": 39446,
+      "completion_tokens": 937,
+      "total_tokens": 40383,
+      "cached_tokens": 38144,
+      "reasoning_tokens": 396
+    },
+    {
+      "request_id": "0cb5d538-3a8c-41d9-935e-798c19a23dc2",
+      "prompt_tokens": 41514,
+      "completion_tokens": 1502,
+      "total_tokens": 43016,
+      "cached_tokens": 40320,
+      "reasoning_tokens": 363
+    }
+  ]
+}

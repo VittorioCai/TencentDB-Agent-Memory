@@ -1,0 +1,46 @@
+{
+  "turns": 4,
+  "responses_with_usage": 4,
+  "wall_seconds": 40,
+  "system_prompt_chars": 26500,
+  "prompt_tokens": 118148,
+  "completion_tokens": 2629,
+  "total_tokens": 120777,
+  "cached_tokens": 92288,
+  "reasoning_tokens": 1605,
+  "token_source": "final usage chunk of each streamed response in the capture",
+  "per_turn": [
+    {
+      "request_id": "ea147870-47d6-4353-b853-4e81a03d7637",
+      "prompt_tokens": 27505,
+      "completion_tokens": 1194,
+      "total_tokens": 28699,
+      "cached_tokens": 3328,
+      "reasoning_tokens": 990
+    },
+    {
+      "request_id": "3eb55b12-d64e-43fc-888b-b1413242220c",
+      "prompt_tokens": 29330,
+      "completion_tokens": 308,
+      "total_tokens": 29638,
+      "cached_tokens": 28672,
+      "reasoning_tokens": 68
+    },
+    {
+      "request_id": "d95c07de-6db0-4e11-8deb-fac2fbc80b82",
+      "prompt_tokens": 30270,
+      "completion_tokens": 537,
+      "total_tokens": 30807,
+      "cached_tokens": 29568,
+      "reasoning_tokens": 210
+    },
+    {
+      "request_id": "e8348427-b34d-494a-a810-d984725daeae",
+      "prompt_tokens": 31043,
+      "completion_tokens": 590,
+      "total_tokens": 31633,
+      "cached_tokens": 30720,
+      "reasoning_tokens": 337
+    }
+  ]
+}

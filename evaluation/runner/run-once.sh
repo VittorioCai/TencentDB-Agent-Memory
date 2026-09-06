@@ -338,46 +338,11 @@ info "outcomes …"
 # Collected every run, not only when someone remembers. Injection cost is paid
 # on every turn by every person, so a reuse rate with no cost beside it argues
 # only one side of the trade.
-python3 - "$CAPTURE" "$RUN_DIR/cost.json" "$START_EPOCH" <<'PY'
-import json, sys, time
-
-capture, out, started = sys.argv[1], sys.argv[2], int(sys.argv[3])
-turns = prompt = completion = 0
-system_chars = 0
-seen_usage = False
-
-for line in open(capture, encoding="utf-8"):
-    line = line.strip()
-    if not line:
-        continue
-    try:
-        e = json.loads(line)
-    except ValueError:
-        continue
-    body = (e.get("body") or {}).get("json") or {}
-    if e.get("event") == "http.request" and isinstance(body.get("messages"), list):
-        turns += 1
-        msgs = body["messages"]
-        if msgs and msgs[0].get("role") == "system":
-            c = msgs[0].get("content")
-            system_chars = max(system_chars, len(c if isinstance(c, str) else json.dumps(c)))
-    usage = body.get("usage") or {}
-    if usage:
-        seen_usage = True
-        prompt += usage.get("prompt_tokens") or 0
-        completion += usage.get("completion_tokens") or 0
-
-json.dump({
-    "turns": turns,
-    "wall_seconds": int(time.time()) - started,
-    "system_prompt_chars": system_chars,
-    # Null rather than zero when the capture carried no usage block. Zero reads
-    # as "measured, and it was free".
-    "prompt_tokens": prompt if seen_usage else None,
-    "completion_tokens": completion if seen_usage else None,
-    "token_source": "capture usage block" if seen_usage else "not present in this capture",
-}, open(out, "w", encoding="utf-8"), indent=2)
-PY
+# Token usage is in the final chunk of each streamed response (the upstream is
+# asked with stream_options.include_usage); cost.mjs reads it from there. The
+# earlier collector looked in request JSON and reported null for every run.
+(cd "$REPO_ROOT" && node "$EVAL/runner/cost.mjs" "$CAPTURE" "$RUN_DIR/cost.json" --started="$START_EPOCH") \
+  || warn "cost collection failed"
 
 # ── 5b. the identity the proxy actually resolved ─────────────────
 # Read from the proxy's own session-init log, never inferred from request

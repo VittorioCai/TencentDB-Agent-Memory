@@ -62,7 +62,7 @@ const BASELINE = { frozen_at: "2026-09-06T08:47:33Z", source_runs: [{ run_id: "p
 
 test("runFacts: null for every field when the run has no extras", () => {
   const f = runFacts(run("x", "PASS", "r"));
-  assert.deepEqual(f, { first_dial_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null });
+  assert.deepEqual(f, { first_dial_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null, prompt_tokens: null, total_tokens: null, cached_tokens: null });
 });
 
 test("the gate shows in seen / first-dial / corrected, while the pass rate is identical", () => {
@@ -105,4 +105,16 @@ test("without a baseline nothing is regrouped and the old table is unchanged", (
 
 test("loadRun returns null for a directory without run.json", () => {
   assert.equal(loadRun("/nonexistent/dir"), null);
+});
+
+test("token columns: means over runs that carried usage, dash when none did", () => {
+  const withTok = (id, label, p, t) => ({ ...richRun(label, id, { first: "right", seen: false, corrected: false, wall: 30, started_at: "2026-09-06T11:00:00Z" }), cost: { wall_seconds: 30, prompt_tokens: p, total_tokens: t, cached_tokens: 0 } });
+  const s = summarizeRuns([withTok("a", "gate-on", 100000, 104000), withTok("b", "gate-on", 120000, 125000), { ...richRun("gate-off", "c", { first: "wrong", seen: true, corrected: true, wall: 50, started_at: "2026-09-06T09:00:00Z" }), cost: { wall_seconds: 50 } }], { baseline: BASELINE });
+  const on = s.groups.find((g) => g.label === "gate-on"), off = s.groups.find((g) => g.label === "gate-off");
+  assert.equal(on.prompt_tokens_mean, 110000);
+  assert.equal(on.total_tokens_mean, 114500);
+  assert.equal(off.prompt_tokens_mean, null);
+  const text = renderRuns(s);
+  assert.match(text, /\| gate-on \| 0\/2 \| 0\/2 \| 0 \| 0 \| 2 \| 30 \| 110\.0k \| 114\.5k \|/);
+  assert.match(text, /\| gate-off \| 1\/1 \| 1\/1 \| 1 \| 1 \| 1 \| 50 \| — \| — \|/);
 });

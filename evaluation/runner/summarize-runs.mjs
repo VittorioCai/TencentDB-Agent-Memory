@@ -44,6 +44,10 @@ export function runFacts(run, { rejected = new Set() } = {}) {
     corrected: events ? events.filter((e) => e.state === "corrected").length : null,
     validated: events ? events.filter((e) => e.state === "validated").length : null,
     wall_seconds: run.cost?.wall_seconds ?? null,
+    // Null when the capture carried no usage chunk; never zero.
+    prompt_tokens: run.cost?.prompt_tokens ?? null,
+    total_tokens: run.cost?.total_tokens ?? null,
+    cached_tokens: run.cost?.cached_tokens ?? null,
   };
 }
 
@@ -99,6 +103,9 @@ export function summarizeRuns(runs, { baseline = null } = {}) {
       corrected: g.facts.some((f) => f.corrected != null) ? g.facts.reduce((a, f) => a + (f.corrected ?? 0), 0) : null,
       validated: g.facts.some((f) => f.validated != null) ? g.facts.reduce((a, f) => a + (f.validated ?? 0), 0) : null,
       wall_seconds_mean: mean(g.facts.map((f) => f.wall_seconds)),
+      prompt_tokens_mean: mean(g.facts.map((f) => f.prompt_tokens)),
+      total_tokens_mean: mean(g.facts.map((f) => f.total_tokens)),
+      cached_tokens_mean: mean(g.facts.map((f) => f.cached_tokens)),
     };
   });
 
@@ -142,11 +149,13 @@ export function renderRuns({ groups, total, rejected_assets = [], baseline_froze
     lines.push("address, times out, and then dials the right one still passes. The gate's");
     lines.push("effect is in the columns below, not in the pass rate.", "");
     const rej = rejected_assets.length ? ` (${rejected_assets.join(", ")})` : "";
-    lines.push(`| label | rejected asset seen${rej} | first dial failed | failed attempts | corrected | validated | mean wall s |`);
-    lines.push("|---|---|---|---|---|---|---|");
+    lines.push(`| label | rejected asset seen${rej} | first dial failed | failed attempts | corrected | validated | mean wall s | mean prompt tok | mean total tok |`);
+    lines.push("|---|---|---|---|---|---|---|---|---|");
+    const k = (x) => (x === null ? "—" : `${(x / 1000).toFixed(1)}k`);
     for (const g of withFacts) {
-      lines.push(`| ${g.label} | ${frac(g.rejected_seen)} | ${frac(g.first_dial_failed)} | ${num(g.failed_attempts)} | ${num(g.corrected)} | ${num(g.validated)} | ${g.wall_seconds_mean === null ? "—" : g.wall_seconds_mean.toFixed(0)} |`);
+      lines.push(`| ${g.label} | ${frac(g.rejected_seen)} | ${frac(g.first_dial_failed)} | ${num(g.failed_attempts)} | ${num(g.corrected)} | ${num(g.validated)} | ${g.wall_seconds_mean === null ? "—" : g.wall_seconds_mean.toFixed(0)} | ${k(g.prompt_tokens_mean)} | ${k(g.total_tokens_mean)} |`);
     }
+    lines.push("", "Tokens are the sum over a run's streamed responses of the usage the upstream reported (prompt includes cached tokens); \"—\" means no usage chunk was captured for any run in the group.");
     lines.push("", "\"seen\" means the asset appears at any lifecycle stage of the run — recalled,");
     lines.push("injected or fetched. A rejected asset that is never seen was hidden by the gate");
     lines.push("before the model could reach it; that is the product filtering, not this report.");

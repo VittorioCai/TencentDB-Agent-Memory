@@ -53,15 +53,28 @@ there cannot have been produced by the model.
 
 ## What the difference costs and saves
 
+| arm | mean wall s | mean prompt tokens | mean total tokens | of which cached (mean) |
+|---|---|---|---|---|
+| gate-off | 50 | 136.7k | 141.2k | ~108k |
+| gate-on | 33 | 123.6k | 127.7k | ~96k |
+| right asset hidden | 50 | 145.2k | 148.7k | ~118k |
+
 - **One wasted attempt per run** with the gate off: the wrong address, a
-  connect timeout, then the recovery. Mean wall time 50 s against 33 s. The
-  cost record has no token counts for this model (`token_source: not present
-  in this capture`), so the saving is reported in seconds and attempts, not
-  tokens.
+  connect timeout, then the recovery. That is the 17 s and the extra turn.
+- **Tokens are real, not estimated.** The upstream is asked with
+  `stream_options.include_usage` and reports usage in the final chunk of each
+  streamed response; `cost.mjs` sums those. Gate on saves about 13k prompt
+  tokens per run (≈10%) — one fewer turn carrying the 27k-character system
+  prompt. Roughly three quarters of every prompt is cache hits, so the
+  injection cost per turn is mostly cached; the saving is in turns, not in
+  the size of any one prompt.
 - **Three `corrected` events** with the gate off, zero with it on. With the
   gate on there is nothing left to correct; the evidence that would justify
   rejecting the asset was gathered in the evidence-base runs, and the
   comparison shows what happens once it has been acted on.
+- The first version of the cost collector reported "no usage in this
+  capture" for every run; it was reading request JSON while the usage sat in
+  the response stream. Fixed 2026-09-06 and recomputed for all fifteen runs.
 
 ## The two `needs_review` outcomes, and the rule revision
 
