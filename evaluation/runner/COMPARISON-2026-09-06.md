@@ -139,3 +139,21 @@ Each of the six runs now carries `receipt.json` (contract-valid) and
 (corrected, gate reject) beside `✓` or `○ eval-bridge-endpoint-b`. Gate on:
 only `eval-bridge-endpoint-b` appears at all. The receipts are the task-four
 deliverable for these runs; the comparison above is what they add up to.
+
+## Removing the right asset (leave-one-out, contrast 3 of task five)
+
+Four runs with `eval-bridge-endpoint-b` hidden (`run-once.sh --ablate`), the
+wrong asset left visible:
+
+| condition | started | pass | fail | first dial |
+|---|---|---|---|---|
+| right asset visible (gate-off + gate-on runs) | 6 | 6 | 0 | wrong 3/6, right 3/6 |
+| right asset hidden | 4 | 0 | **4** | wrong 4/4, then nothing |
+
+Here the pass rate does move: 100% → 0%. Without the asset the model has one
+address to try, tries it, times out, and stops. This is the "use the asset vs
+do not" contrast for the asset that carries the answer, and it is what
+calibrates the judge: the token 47318 never appears when the asset is hidden,
+so every `used` issued on it rests on content that came from the asset.
+Calibration table: `evaluation/calibration/loo-2026-09-06.md` — precision
+100% (n=11), recall 85% (n=13); the misses are the two needs_review runs.

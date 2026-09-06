@@ -33,28 +33,25 @@ used (needs_review or nothing) but acted and needed. Precision and recall are
 always printed with n. An asset with no hidden run is **undetermined**, never
 100%.
 
-## Current state (2026-09-06)
+## Current state (2026-09-06, after the hidden runs)
 
 | asset | present | acted | judged used | withheld | hidden | acted while hidden | truth | precision | recall |
 |---|---|---|---|---|---|---|---|---|---|
-| eval-bridge-endpoint-a (wrong) | 3 | 3 | 3 | 0 | 3 | 0 | needed | 100% (n=3) | 100% (n=3) |
-| eval-bridge-endpoint-b (right) | 6 | 6 | 4 | 2 | 0 | — | undetermined | — | — |
+| eval-bridge-endpoint-a (wrong) | 7 | 7 | 7 | 0 | 3 | 0 | needed | 100% (n=7) | 100% (n=7) |
+| eval-bridge-endpoint-b (right) | 6 | 6 | 4 | 2 | 4 | 0 | needed | 100% (n=4) | 67% (n=6) |
 
-The right asset needs hidden runs:
+Overall: precision 100% (n=11), recall 85% (n=13). Rendered table: `loo-2026-09-06.md`.
 
-```bash
-bash evaluation/runner/run-once.sh --ablate skl-oBaDO5CceKnr --auto   # ×3
-node evaluation/calibration/loo.mjs evaluation/runner/runs
-```
+The four runs with the right asset hidden all **failed**: the model dialled
+10.244.7.19:8096, timed out, and never reached 47318. With the asset visible,
+6/6 passed. Nothing else in the pool, the system prompt or the model's own
+knowledge supplied the port — which is what makes the token discriminative and
+the `used` claims on it supportable.
 
-If the model never dials 47318 without the asset, the right asset is
-`needed`, and the two `needs_review` runs become recall misses: the
-earliest-delivery rule withheld `used` because the token had appeared in a
-search snippet before the fetch. That is the rule's cost, and it will show
-here as recall below 100%, which is the honest reading. If the model does dial
-47318 without the asset, it knew the port from somewhere else, the token is
-not discriminative after all, and every `used` on it is a false positive.
-Either outcome is reported as found.
+The two recall misses are the two `needs_review` runs: the token had appeared
+in a search snippet before the fetch, and the earliest-delivery rule withheld
+`used`. The rule is conservative by design; this is its measured cost, 2 of 6,
+and it is reported as a miss rather than argued away.
 
 ## Limits
 
