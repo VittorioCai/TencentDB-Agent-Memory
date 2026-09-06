@@ -1,0 +1,14 @@
+{
+  "identities": {
+    "c": {
+      "username": "topic4-eval-author-c",
+      "user_id": "usr-8ypylzex49",
+      "agent_id": "agt-8ypy4vhft9",
+      "agent_name": "Topic4-Author-C",
+      "team_id": "team-5ezfoladb5",
+      "key_file": "deploy/global-images/.topic4-user-key-c",
+      "created_at": "2026-09-06T21:16:36Z",
+      "operator": "same person as every other evaluation identity; the id is what makes the author dimension computable, not an independent human"
+    }
+  }
+}
