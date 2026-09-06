@@ -1,0 +1,51 @@
+{
+  "mode": "apply",
+  "dry_run": false,
+  "at": "2026-09-06T08:48:16Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "asset_owners": [
+    "usr-n68ea5ythq"
+  ],
+  "key_is_owner": "accepted writes prove it",
+  "plan": {
+    "mode": "apply",
+    "changes": [
+      {
+        "asset_id": "skl-sZFb3KatWY6m",
+        "from": "team",
+        "to": "private",
+        "because": "gate: reject \u2192 private (rule reject: a corrected record exists (reason=wrong, 2 record(s)) \u2014 the call it fed dialled 10.244.7.19:8096 \u2014 the asset's own value (10.244.7.19) \u2014 and timed out; the content explains the failure (timed out))"
+      }
+    ],
+    "unchanged": [
+      {
+        "asset_id": "skl-oBaDO5CceKnr",
+        "visibility": "team",
+        "because": "gate: admit \u2192 baseline (team)"
+      }
+    ],
+    "unreadable": [],
+    "undecided": []
+  },
+  "visibility_before": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "visibility_after": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "private"
+  },
+  "writes": [
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "to": "private",
+      "accepted": true
+    }
+  ],
+  "verified": {
+    "skl-sZFb3KatWY6m": true,
+    "skl-oBaDO5CceKnr": true
+  },
+  "all_verified": true
+}

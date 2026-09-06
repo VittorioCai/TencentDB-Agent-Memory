@@ -134,3 +134,22 @@ demonstrated instead by initialising a throwaway session (one one-word model
 call, too small to trigger extraction) and calling the bridge directly — the
 same read-only diagnostic pattern used for the visibility negative. Record such
 probes as diagnostics, never as runs.
+
+## `--gate on|off`: both arms start from the same pool
+
+`run-once.sh --gate off` resets the scenario assets' `visibility` to the frozen
+baseline (`evaluation/gate/artifacts/gate_baseline.json`) before the session;
+`--gate on` resets and then hides what the baseline's decisions reject. The
+write is read back, and `run.json` records the state the product reported
+(`gate.visibility_at_start`, `gate.all_verified`), not the mode requested. If
+the gate cannot be applied and read back, the run does not start: a run whose
+gate state is unknown is not comparable with anything.
+
+The baseline is frozen once from preparation runs and never updated by a
+comparison run. Otherwise the third gate-on run would face a gate that learned
+from the first two, and the arms would no longer share an initial condition.
+
+After judgement, stage 4b writes `outcome-events.jsonl` (validated / corrected
+/ needs_review, each tied to the specific call the asset fed) and
+`gate-decisions.json` (what this run's evidence alone would decide). The
+decisions are informational; they are not applied.

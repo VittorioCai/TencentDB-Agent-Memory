@@ -36,13 +36,19 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 EVAL="$REPO_ROOT/evaluation"
 RUNS_DIR="${RUNS_DIR:-$EVAL/runner/runs}"
 
-LABEL="run"
+LABEL=""
 IDENTITY="b"
 SINCE="${SINCE:-30 MINUTE}"
 AUTO=0
+GATE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --label) LABEL="$2"; shift 2 ;;
+    # --gate on|off: reset the scenario assets' visibility to the frozen
+    # baseline before the session (off), or reset and then hide what the
+    # baseline's decisions reject (on). Both arms start from the same pool;
+    # the label defaults to gate-on / gate-off so the aggregate groups them.
+    --gate) GATE="$2"; shift 2 ;;
     --identity) IDENTITY="$2"; shift 2 ;;
     --since) SINCE="$2"; shift 2 ;;
     # Launch the task itself via run-codebuddy.sh -p instead of waiting for a
@@ -55,6 +61,12 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+case "$GATE" in
+  ""|on|off) ;;
+  *) echo "--gate must be on or off, got: $GATE" >&2; exit 2 ;;
+esac
+[[ -n "$LABEL" ]] || LABEL="${GATE:+gate-$GATE}"
+[[ -n "$LABEL" ]] || LABEL="run"
 
 if [[ -t 1 ]]; then C_R=$'\033[31m'; C_G=$'\033[32m'; C_Y=$'\033[33m'; C_B=$'\033[34m'; C_0=$'\033[0m'
 else C_R=""; C_G=""; C_Y=""; C_B=""; C_0=""; fi
@@ -77,6 +89,23 @@ STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
 info "run $RUN_ID → $RUN_DIR"
+
+# ── 0. the gate ──────────────────────────────────────────────────
+# Before the session, never after: the model must see the pool the gate left.
+# Both arms reset to the frozen baseline first, so the third gate-on run faces
+# the same gate as the first; nothing this run produces feeds back into it.
+# The state the product then reports is read back and kept with the run — a
+# run whose gate state is unknown is not comparable with anything, so a
+# failure here ends the run before a capture exists that could be misread.
+GATE_BASELINE="$EVAL/gate/artifacts/gate_baseline.json"
+if [[ -n "$GATE" && -z "${CAPTURE_FROM:-}" ]]; then
+  [[ -f "$GATE_BASELINE" ]] || die "gate $GATE requested but no baseline at $GATE_BASELINE (build it: node evaluation/gate/build-baseline.mjs …)"
+  GATE_MODE="reset"; [[ "$GATE" == "on" ]] && GATE_MODE="apply"
+  info "gate $GATE: $GATE_MODE visibility from the baseline frozen $(python3 -c "import json;print(json.load(open('$GATE_BASELINE'))['frozen_at'])")"
+  bash "$EVAL/gate/apply.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
+    || die "gate $GATE could not be applied and read back; the run is not started"
+  cp "$GATE_BASELINE" "$RUN_DIR/gate_baseline.json"
+fi
 
 # ── 1. the session ───────────────────────────────────────────────
 # The capture is produced by the observability probe sitting between proxy and
@@ -227,6 +256,27 @@ cp "$EVAL/attribution/artifacts/run-artifacts.json" "$RUN_DIR/run-artifacts.json
   "$RUN_DIR/events.jsonl" "$RUN_DIR/run-artifacts.json" "$EVAL/attribution/artifacts/tokens.json" \
   > "$RUN_DIR/judgement.md" 2>&1) || warn "judge failed; see $RUN_DIR/judgement.md"
 cp "$EVAL/attribution/artifacts/used-events.jsonl" "$RUN_DIR/used-events.jsonl" 2>/dev/null || : > "$RUN_DIR/used-events.jsonl"
+# The tokens the judgement was made with, kept beside it: versioned, and the
+# outcome judge below refuses to blame a version whose tokens it cannot see.
+cp "$EVAL/attribution/artifacts/tokens.json" "$RUN_DIR/tokens.json" 2>/dev/null || warn "no tokens.json to keep"
+
+# ── 4b. outcomes and what the gate would say ─────────────────────
+# Each used event is followed to the specific call it fed, and that call's own
+# outcome decides validated / corrected / needs_review — never the run's
+# overall verdict, which would validate the wrong asset in a run that
+# recovered from it. The decisions written here are what THIS run's evidence
+# alone would say; they are informational and never applied — the gate the
+# next run faces is the frozen baseline, not an accumulation.
+info "outcomes …"
+(cd "$REPO_ROOT" && node "$EVAL/attribution/judge-outcome.mjs" \
+  "$RUN_DIR/used-events.jsonl" "$RUN_DIR/verdict.json" "$RUN_DIR/tokens.json" \
+  --out="$RUN_DIR/outcome-events.jsonl" > "$RUN_DIR/outcome.md" 2>&1) \
+  || { warn "judge-outcome failed; see $RUN_DIR/outcome.md"; : > "$RUN_DIR/outcome-events.jsonl"; }
+(cd "$REPO_ROOT" && node "$EVAL/gate/decide.mjs" \
+  --events="$RUN_DIR/events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \
+  --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$RUN_DIR/tokens.json" \
+  --out="$RUN_DIR/gate-decisions.json" > "$RUN_DIR/gate-decisions.md" 2>&1) \
+  || warn "decide failed; see $RUN_DIR/gate-decisions.md"
 
 # ── 5. cost ──────────────────────────────────────────────────────
 # Collected every run, not only when someone remembers. Injection cost is paid
@@ -320,9 +370,21 @@ PY
 info "core auto-extraction: $EXTRACTION_ENABLED"
 
 # ── 6. manifest ──────────────────────────────────────────────────
-python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" <<'PY'
+python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" <<'PY'
 import json, os, re, sys
-run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction = sys.argv[1:10]
+run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction, gate = sys.argv[1:11]
+
+# The gate state this run actually started under, as read back from the
+# product after apply.sh wrote it — not the mode that was requested.
+gate_block = {"mode": gate or None, "baseline_frozen_at": None, "visibility_at_start": None, "all_verified": None}
+apply_p = os.path.join(run_dir, "gate-apply.json")
+if gate and os.path.exists(apply_p):
+    rec = json.load(open(apply_p, encoding="utf-8"))
+    gate_block["visibility_at_start"] = rec.get("visibility_after")
+    gate_block["all_verified"] = rec.get("all_verified")
+    base_p = os.path.join(run_dir, "gate_baseline.json")
+    if os.path.exists(base_p):
+        gate_block["baseline_frozen_at"] = json.load(open(base_p, encoding="utf-8")).get("frozen_at")
 
 def count(name):
     p = os.path.join(run_dir, name)
@@ -354,10 +416,11 @@ manifest = {
     "auto_extraction_enabled": {"true": True, "false": False}.get(extraction, None),
     "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
+    "gate": gate_block,
     "verdict": verdict,
     "counts": {n: count(n) for n in
                ("capture.jsonl", "tool-call-logs.jsonl", "candidate-log.jsonl",
-                "events.jsonl", "early-events.jsonl", "used-events.jsonl")},
+                "events.jsonl", "early-events.jsonl", "used-events.jsonl", "outcome-events.jsonl")},
     "note": "verdict ERROR means the run could not be judged, not that it failed; "
             "it stays in the denominator so a collection failure cannot hide",
 }
