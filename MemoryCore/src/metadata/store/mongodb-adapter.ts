@@ -1044,6 +1044,15 @@ export class MongoMetadataStore implements IMetadataStore {
     return d ? this.mapAssetOutcomeDoc(d) : null;
   }
 
+  async updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): Promise<AssetOutcomeEntity | null> {
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation"] as const;
+    const $set: Document = {};
+    for (const k of allowed) if (patch[k] !== undefined) $set[k] = patch[k];
+    if (Object.keys($set).length) await this.col("meta_asset_outcomes").updateOne({ id }, { $set });
+    const d = await this.col("meta_asset_outcomes").findOne({ id });
+    return d ? this.mapAssetOutcomeDoc(d) : null;
+  }
+
   /** Rows written before 2026-09-08 lack the trust fields; read them as untrusted. */
   private mapAssetOutcomeDoc(d: Document): AssetOutcomeEntity {
     const r = d as unknown as Partial<AssetOutcomeEntity>;

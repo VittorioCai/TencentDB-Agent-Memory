@@ -431,5 +431,7 @@ export const v2AuthContextSchema = z.object({
    * where only an admitted asset passes.
    */
   readPurpose: z.enum(["use", "manage"]).optional(),
+  /** x-tdai-user-key, when the caller sent one: `manage` is honoured only when this key resolves to the user_id the read is for. */
+  userKey: z.string().optional(),
 });
 export type V2AuthContext = z.infer<typeof v2AuthContextSchema>;

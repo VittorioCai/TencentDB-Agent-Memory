@@ -156,6 +156,8 @@ export interface IMetadataStore {
   appendAssetOutcome(input: AppendAssetOutcomeInput): MaybePromise<AssetOutcomeEntity>;
   /** The row already on file for a recorder's event_id, for idempotent delivery. */
   getAssetOutcomeByEvent(teamId: string, eventId: string): MaybePromise<AssetOutcomeEntity | null>;
+  /** A reviewer confirming a member's row: trust, submitter, call, version, evidence, relation. */
+  updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): MaybePromise<AssetOutcomeEntity | null>;
   listAssetOutcomes(
     filter: AssetOutcomeFilter,
     pagination?: PaginationParams | null,

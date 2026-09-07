@@ -1346,6 +1346,16 @@ export class SqliteMetadataStore implements IMetadataStore {
     return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE team_id = ? AND event_id = ?", teamId, eventId));
   }
 
+  updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): AssetOutcomeEntity | null {
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation"] as const;
+    const p: Record<string, unknown> = {};
+    for (const k of allowed) if (patch[k] !== undefined) p[k] = k === "trusted" ? (patch[k] ? 1 : 0) : patch[k];
+    if (Object.keys(p).length === 0) return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+    const sets = Object.keys(p).map((k) => `${k} = ?`).join(", ");
+    this.run(`UPDATE meta_asset_outcomes SET ${sets} WHERE id = ?`, ...(Object.values(p) as SQLInputValue[]), id);
+    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+  }
+
   listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {
     const conditions = ["o.team_id = ?"];
     const params: SQLInputValue[] = [filter.team_id];

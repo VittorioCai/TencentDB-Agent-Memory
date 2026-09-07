@@ -395,6 +395,25 @@ describe("the gate on the asset record", () => {
     expect(ownAuthor.outcome.relation).toBe("self");
   });
 
+  it("a member's untrusted row is confirmed in place by a reviewer's trusted submission of the same event; a different subject under the same event is a conflict", async () => {
+    await candidateSkill();
+    const first = await svc.appendAssetOutcomeForCaller({ team_id: team, asset_id: "skl-1", state: "validated", event_id: "evt-m1", task_id: "t1" }, ctx(b));
+    expect(first.outcome.trusted).toBe(false);
+    expect((await store.getAssetById("skl-1"))?.status).toBe("candidate");
+    // The same event, resubmitted trusted by a reviewer naming the consumer: confirmed, not duplicated, not blocked.
+    const conf = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-1", b), team_id: team, event_id: "evt-m1" }, ctx(r));
+    expect(conf.confirmed).toBe(true);
+    expect(conf.duplicate).toBe(false);
+    expect(conf.outcome.id).toBe(first.outcome.id);
+    expect(conf.outcome.trusted).toBe(true);
+    expect(conf.outcome.submitted_role).toBe("reviewer");
+    expect((await store.listAssetOutcomes({ team_id: team, asset_id: "skl-1" })).total).toBe(1);
+    expect((await store.getAssetById("skl-1"))?.status).toBe("approved"); // the confirmation re-decided
+    // Once trusted, a further redelivery is a duplicate; a different subject is a conflict.
+    expect((await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-1", b), team_id: team, event_id: "evt-m1" }, ctx(r))).duplicate).toBe(true);
+    await expect(svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-1", b, { state: "corrected", corrected_reason: "wrong" }), team_id: team, event_id: "evt-m1" }, ctx(r))).rejects.toMatchObject({ code: "event_id_conflict" });
+  });
+
   it("event_id makes delivery idempotent: a redelivery returns the row on file and adds nothing", async () => {
     await candidateSkill();
     const first = await trusted("skl-1", b, { event_id: "evt-1", call_id: "call-1" });
@@ -627,7 +646,11 @@ describe("the gate on the asset record", () => {
     await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, author_user_id: b })).rejects.toMatchObject({ code: "invalid_request" });
     await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, asset_version: 2 })).rejects.toMatchObject({ code: "invalid_request" });
     await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, evidence_cutoff: undefined })).rejects.toMatchObject({ code: "invalid_request" });
+    // The asset carries a hash: the assessment must name it; Core never fills it in.
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, content_hash: undefined })).rejects.toMatchObject({ code: "invalid_request" });
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, content_hash: "hB" })).rejects.toMatchObject({ code: "invalid_request" });
     const res = await svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), body);
+    expect(res.assessment.content_hash).toBe("hA");
     expect(res.assessment.written_by).toBe(r);
     expect(res.decision.signals.author.assessment?.competence).toBe("low");
     expect(res.decision.review_priority).toBe("high");

@@ -2051,7 +2051,7 @@ export class MetadataService {
     input: Omit<AppendAssetOutcomeInput, "consumer_user_id" | "trusted" | "untrusted_reason" | "submitted_by_user_id" | "submitted_role"> & { consumer_user_id?: string },
     ctx: V3AuthContext,
     opts: { evaluate?: boolean } = {},
-  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null; duplicate: boolean }> {
+  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null; duplicate: boolean; confirmed?: boolean }> {
     const member = await this.requireActiveTeamMember(ctx, input.team_id);
     const callerId = this.requireCallerId(ctx);
     const reviewerRole = member.role === "admin" || member.role === "reviewer";
@@ -2063,11 +2063,6 @@ export class MetadataService {
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${input.asset_id}`);
     if (asset.team_id !== input.team_id) throw new MetadataError("team_mismatch", `asset ${input.asset_id} belongs to team ${asset.team_id}, not ${input.team_id}`);
 
-    if (input.event_id) {
-      const existing = await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id);
-      if (existing) return { outcome: existing, gate: null, duplicate: true };
-    }
-
     const relation: AssetOutcomeEntity["relation"] = asset.owner_user_id === consumer ? "self" : "cross_user";
     const why: string[] = [];
     if (!reviewerRole) why.push(`submitted by a ${member.role}, not an admin or reviewer`);
@@ -2075,6 +2070,30 @@ export class MetadataService {
     if (input.asset_version === null || input.asset_version === undefined) why.push("no asset_version");
     if (!hasEvidence(input.evidence_json)) why.push("no evidence");
     const trusted = why.length === 0;
+
+    if (input.event_id) {
+      const existing = await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id);
+      if (existing) {
+        // The same event must be the same subject; a different asset, state
+        // or consumer under a known event id is a conflict, not a retry.
+        const sameSubject = existing.asset_id === input.asset_id && existing.state === input.state && existing.consumer_user_id === consumer
+          && (existing.corrected_reason ?? null) === (input.state === "corrected" ? (input.corrected_reason ?? "other") : null);
+        if (!sameSubject) throw new MetadataError("event_id_conflict", `event ${input.event_id} is already on file for ${existing.asset_id} ${existing.state} by ${existing.consumer_user_id}`);
+        // A trusted submission confirms an untrusted row on file (a member
+        // reported first, a reviewer confirmed with the call, the version and
+        // evidence): the row becomes trusted in place, with who confirmed it.
+        if (!existing.trusted && trusted) {
+          const confirmed = await this.store.updateAssetOutcome(existing.id, {
+            trusted: true, untrusted_reason: null, submitted_by_user_id: callerId, submitted_role: member.role,
+            call_id: input.call_id ?? existing.call_id, asset_version: input.asset_version ?? existing.asset_version,
+            evidence_json: input.evidence_json ?? existing.evidence_json, relation,
+          });
+          const gate = opts.evaluate !== false ? (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision : null;
+          return { outcome: confirmed ?? existing, gate, duplicate: false, confirmed: true };
+        }
+        return { outcome: existing, gate: null, duplicate: true };
+      }
+    }
 
     let outcome: AssetOutcomeEntity;
     try {
@@ -2144,10 +2163,16 @@ export class MetadataService {
     if (typeof input.evidence_cutoff !== "string" || Number.isNaN(Date.parse(input.evidence_cutoff))) throw bad("evidence_cutoff must be an ISO time (the latest record date the assessment used)");
     if (input.author_user_id !== asset.owner_user_id) throw bad(`author_user_id ${String(input.author_user_id)} is not the asset's author ${asset.owner_user_id}`);
     if (Number(input.asset_version) !== asset.version) throw bad(`asset_version ${String(input.asset_version)} is not the asset's current version ${asset.version}`);
-    if (input.content_hash && asset.content_hash && input.content_hash !== asset.content_hash) throw bad("content_hash does not match the asset's content");
+    // The hash the assessment read must be the hash the asset carries. When
+    // the asset has one, the submission must name it — Core never fills it
+    // in, because "what the asset is now" is not "what the assessment read".
+    if (asset.content_hash) {
+      if (!input.content_hash) throw bad(`the asset carries content hash ${asset.content_hash}; the assessment must name the hash it was made on`);
+      if (input.content_hash !== asset.content_hash) throw bad("content_hash does not match the asset's content");
+    }
     const acc = input.asset_claim_check as { verdict?: unknown } | null | undefined;
     if (acc && !["supports", "contradicts", "silent"].includes(String(acc.verdict))) throw bad("asset_claim_check.verdict must be supports | contradicts | silent");
-    const assessment = { ...input, author_user_id: asset.owner_user_id, asset_version: asset.version, content_hash: asset.content_hash ?? null, written_by: callerId, written_at: new Date().toISOString() };
+    const assessment = { ...input, author_user_id: asset.owner_user_id, asset_version: asset.version, content_hash: input.content_hash ?? null, written_by: callerId, written_at: new Date().toISOString() };
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
     m.gate = { ...gateOf(asset.metadata_json), author_assessment: assessment };

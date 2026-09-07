@@ -258,7 +258,7 @@ async function admissionFilter<T extends SkillLike>(
   ctx: { deps: SkillRouterDeps; auth: V2AuthContext; user_id?: string; team_id?: string; agent_id?: string },
 ): Promise<{ allowed: T[]; denied: Array<{ skill_id: string; reason: string }> }> {
   if (items.length === 0) return { allowed: [], denied: [] };
-  const purpose = ctx.auth.readPurpose === "manage" ? "manage" : "use";
+  let purpose: "use" | "manage" = ctx.auth.readPurpose === "manage" ? "manage" : "use";
   if (!ctx.deps.getMetadataService || !ctx.user_id) {
     if (purpose === "manage") return { allowed: items, denied: [] };
     const why = !ctx.user_id ? "no user_id on the request" : "no metadata service";
@@ -266,6 +266,16 @@ async function admissionFilter<T extends SkillLike>(
     return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })) };
   }
   const meta = await ctx.deps.getMetadataService(ctx.auth.serviceId);
+  // "manage" is a person's read: the request must carry a user key that
+  // resolves to the user it reads for. A model that reaches Core with the
+  // service credential and a header gets the model's path.
+  if (purpose === "manage") {
+    const keyUser = ctx.auth.userKey ? await meta.getUserByKey(ctx.auth.userKey).catch(() => null) : null;
+    if (!keyUser || keyUser.user_id !== ctx.user_id) {
+      ctx.deps.logger.warn(`[skill-admission] manage requested for ${ctx.user_id} without a matching user key; reading on the model path`);
+      purpose = "use";
+    }
+  }
   // What is about to be served, so the registry can refuse a version it has not admitted.
   const served: Record<string, { version?: number; content_hash?: string | null; team_id?: string; agent_id?: string; name?: string }> = {};
   for (const s of items) served[s.skill_id] = { version: s.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name };
