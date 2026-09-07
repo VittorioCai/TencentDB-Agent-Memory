@@ -1492,6 +1492,9 @@ export class MetadataService {
         if (params.version !== undefined && (params.version > cached.version || (params.content_hash && cached.content_hash && params.content_hash !== cached.content_hash))) {
           return (await this.syncSkillAssetVersion({ skill_id: assetId, version: params.version, content_hash: params.content_hash ?? null })).asset;
         }
+        if (params.content_hash && !cached.content_hash && (params.version === undefined || params.version === cached.version)) {
+          return this.updateAsset(assetId, { content_hash: params.content_hash }); // same version, hash not yet on file
+        }
         return cached;
       }
       this.ensuredSkillAssets.delete(assetId);
@@ -1566,6 +1569,8 @@ export class MetadataService {
         }
       } else if (asset && params.version !== undefined && (params.version > asset.version || (params.content_hash && asset.content_hash && params.content_hash !== asset.content_hash))) {
         asset = (await this.syncSkillAssetVersion({ skill_id: assetId, version: params.version, content_hash: params.content_hash ?? null })).asset;
+      } else if (asset && params.content_hash && !asset.content_hash && (params.version === undefined || params.version === asset.version)) {
+        asset = await this.updateAsset(assetId, { content_hash: params.content_hash }); // same version, hash not yet on file
       }
     }
 

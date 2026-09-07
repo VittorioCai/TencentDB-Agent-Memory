@@ -507,6 +507,12 @@ describe("the gate on the asset record", () => {
     expect(g.effective?.status).toBe("candidate");
     // Idempotent.
     expect((await svc.syncSkillAssetVersion({ skill_id: "skl-v", version: 2, content_hash: "h2" })).changed).toBe(false);
+    // A read that brings only the hash of the version on file fills it in without a sync.
+    await store.updateAsset("skl-v", { content_hash: null });
+    const filled = await svc.ensureSkillAsset({ skill_id: "skl-v", team_id: team, agent_id: agent.agent_id, name: "v", version: 2, content_hash: "h2" });
+    expect(filled.content_hash).toBe("h2");
+    expect(filled.version).toBe(2);
+    expect(filled.status).toBe("candidate");
     // A late correction of v1 is recorded and does not fail v2.
     await trusted("skl-v", b, { asset_version: 1, state: "corrected", corrected_reason: "wrong" });
     expect((await store.getAssetById("skl-v"))?.status).toBe("candidate");
