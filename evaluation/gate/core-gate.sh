@@ -135,10 +135,17 @@ PY
 # ── write helpers ────────────────────────────────────────────────
 set_status() {  # asset_id status visibility → appends to $TMP/actions.jsonl
   local id="$1" status="$2" vis="$3"
-  call "$OWNER_KEY_FILE" "/v3/meta/asset/update" "{\"asset_id\":\"$id\",\"status\":\"$status\",\"visibility\":\"$vis\"}" "$TMP/upd-$id.json"
+  # Since 2026-09-08 the owner cannot write status (audit field); the team
+  # admin may, as a management act, and only status/confidence. Visibility
+  # stays the owner's, so it is a second call with the owner key.
+  call "$SUBMITTER_KEY_FILE" "/v3/meta/asset/update" "{\"asset_id\":\"$id\",\"status\":\"$status\"}" "$TMP/upd-$id.json"
   local accepted=false; envelope_ok "$TMP/upd-$id.json" && accepted=true
-  echo "{\"op\":\"asset/update\",\"asset_id\":\"$id\",\"status\":\"$status\",\"visibility\":\"$vis\",\"accepted\":$accepted,\"message\":$(python3 -c "import json;print(json.dumps('$(envelope_msg "$TMP/upd-$id.json" | tr -d '"')'))")}" >> "$TMP/actions.jsonl"
+  echo "{\"op\":\"asset/update\",\"asset_id\":\"$id\",\"status\":\"$status\",\"by\":\"admin\",\"accepted\":$accepted,\"message\":$(python3 -c "import json;print(json.dumps('$(envelope_msg "$TMP/upd-$id.json" | tr -d '"')'))")}" >> "$TMP/actions.jsonl"
   $accepted || warn "asset/update $id → $status rejected: $(envelope_msg "$TMP/upd-$id.json")"
+  call "$OWNER_KEY_FILE" "/v3/meta/asset/update" "{\"asset_id\":\"$id\",\"visibility\":\"$vis\"}" "$TMP/updv-$id.json"
+  local vaccepted=false; envelope_ok "$TMP/updv-$id.json" && vaccepted=true
+  echo "{\"op\":\"asset/update\",\"asset_id\":\"$id\",\"visibility\":\"$vis\",\"by\":\"owner\",\"accepted\":$vaccepted,\"message\":$(python3 -c "import json;print(json.dumps('$(envelope_msg "$TMP/updv-$id.json" | tr -d '"')'))")}" >> "$TMP/actions.jsonl"
+  $vaccepted || warn "asset/update $id visibility → $vis rejected: $(envelope_msg "$TMP/updv-$id.json")"
 }
 # The gate acts on the evidence base only: as_of = the baseline's frozen_at, so
 # outcomes the comparison batch itself recorded (evaluate=false) are on file

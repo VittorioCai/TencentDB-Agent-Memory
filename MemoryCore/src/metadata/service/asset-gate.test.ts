@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { SqliteMetadataStore } from "../store/sqlite-adapter.js";
 import { MetadataService } from "./metadata-service.js";
-import { decideAsset, mergeGateIntoMetadata, collapseByCall, GATE_RULES_VERSION } from "./asset-gate.js";
+import { decideAsset, mergeGateIntoMetadata, collapseByCall, effectiveStatus, activeReview, expireReviews, GATE_RULES_VERSION } from "./asset-gate.js";
+import type { HumanReviewRecord } from "../types.js";
 import type { AssetOutcomeEntity, AssetEntity } from "../types.js";
 import type { V3AuthContext } from "../router/auth.js";
 
@@ -42,7 +43,7 @@ function outcome(over: Partial<AssetOutcomeEntity>): AssetOutcomeEntity {
     ...over,
   };
 }
-const asset = { asset_id: "skl-x", owner_user_id: "usr-a", metadata_json: "{}" };
+const asset = { asset_id: "skl-x", owner_user_id: "usr-a", metadata_json: "{}", version: 2, content_hash: "h2" };
 
 describe("decideAsset: three rules, in order", () => {
   it("rejects on a corrected(wrong) outcome even when cross-person validations exist", () => {
@@ -163,15 +164,66 @@ describe("decideAsset: what counts as evidence", () => {
   });
 });
 
+describe("decideAsset: the decision is about one version", () => {
+  it("only outcomes of the asset's current version decide it; others are reported", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ asset_version: 1 }), outcome({ asset_version: 1, state: "corrected", corrected_reason: "wrong" })], authorOutcomes: [], now: T0 });
+    expect(d.decision).toBe("pending"); // version 2 has no evidence of its own
+    expect(d.asset_version).toBe(2);
+    expect(d.content_hash).toBe("h2");
+    expect(d.signals.online.other_version).toBe(2);
+    expect(d.signals.online.calls).toBe(0);
+    expect(d.reasons.join("\n")).toMatch(/2 trusted call\(s\) are about other versions .* do not decide version 2/);
+  });
+
+  it("a late correction of the earlier version does not fail the version that fixed it", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ asset_version: 2 }), outcome({ asset_version: 1, state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-07T00:00:00Z" })], authorOutcomes: [], now: T0 });
+    expect(d.decision).toBe("admit");
+    expect(d.signals.online.other_version).toBe(1);
+  });
+
+  it("a row with no version is read as being about the current one", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ asset_version: null })], authorOutcomes: [], now: T0 });
+    expect(d.decision).toBe("admit");
+  });
+});
+
+describe("effectiveStatus and the review in force", () => {
+  const rev = (over: Partial<HumanReviewRecord>): HumanReviewRecord => ({ id: "rev-1", decision: "admit", status: "approved", by: "usr-r", at: "2026-09-08T00:00:00Z", note: null, asset_version: 2, content_hash: "h2", ...over });
+  const rule = (kind: "admit" | "reject" | "pending") => decideAsset({ asset, outcomes: kind === "admit" ? [outcome({})] : kind === "reject" ? [outcome({ state: "corrected", corrected_reason: "wrong" })] : [], authorOutcomes: [], now: T0 });
+
+  it("precedence: a reject from either side, then a human admit, then the rule's admit, else candidate", () => {
+    expect(effectiveStatus(rule("admit"), rev({ decision: "reject", status: "failed" }), T0)).toMatchObject({ status: "failed", source: "review", review_id: "rev-1" });
+    const outranked = effectiveStatus(rule("reject"), rev({}), T0);
+    expect(outranked).toMatchObject({ status: "failed", source: "rule", review_id: "rev-1" });
+    expect(outranked.reason).toMatch(/outranks the human admit/);
+    expect(effectiveStatus(rule("pending"), rev({}), T0)).toMatchObject({ status: "approved", source: "review" });
+    expect(effectiveStatus(rule("admit"), null, T0)).toMatchObject({ status: "approved", source: "rule", review_id: null });
+    expect(effectiveStatus(rule("pending"), null, T0)).toMatchObject({ status: "candidate", source: "rule" });
+  });
+
+  it("a review is in force only for the asset's current version and content; expired ones never are", () => {
+    const gate = { reviews: [rev({ id: "old", asset_version: 1 }), rev({ id: "cur" }), rev({ id: "exp", expired_at: "2026-09-08T01:00:00Z" })] };
+    expect(activeReview(gate, { version: 2, content_hash: "h2" })?.id).toBe("cur");
+    expect(activeReview(gate, { version: 3, content_hash: "h3" })).toBeNull();
+    expect(activeReview(gate, { version: 2, content_hash: "h2-changed" })).toBeNull();
+    expect(activeReview({ review: { decision: "admit", status: "approved", by: "usr-r", at: "t", note: null } }, { version: 0 })?.id).toBe("rev-legacy");
+    const expired = expireReviews(gate, "asset version changed from 2 to 3", T0);
+    expect((expired.reviews as HumanReviewRecord[]).every((r) => r.expired_at)).toBe(true);
+    expect((expired.reviews as HumanReviewRecord[])[1].expired_reason).toMatch(/2 to 3/);
+    expect((expired.reviews as HumanReviewRecord[])[2].expired_reason).toBeUndefined(); // already expired: untouched
+  });
+});
+
 describe("mergeGateIntoMetadata", () => {
   it("writes gate beside other keys and keeps the author assessment, the human review and the review request", () => {
     const d = decideAsset({ asset, outcomes: [], authorOutcomes: [], now: T0 });
-    const before = JSON.stringify({ other: 1, gate: { decision: "admit", stale_key: true, author_assessment: { competence: "high" }, review: { decision: "admit", by: "usr-r" }, review_request: { requested_at: "2026-09-08T00:00:00Z" } } });
+    const before = JSON.stringify({ other: 1, gate: { decision: "admit", stale_key: true, author_assessment: { competence: "high" }, reviews: [{ id: "rev-1", decision: "admit", by: "usr-r", asset_version: 2 }], review: { id: "rev-1", decision: "admit", by: "usr-r", asset_version: 2 }, review_request: { requested_at: "2026-09-08T00:00:00Z" } } });
     const after = JSON.parse(mergeGateIntoMetadata(before, d)) as Record<string, any>;
     expect(after.other).toBe(1);
     expect(after.gate.decision).toBe("pending");
     expect(after.gate.stale_key).toBeUndefined();
     expect(after.gate.author_assessment.competence).toBe("high");
+    expect(after.gate.reviews).toHaveLength(1);
     expect(after.gate.review.by).toBe("usr-r");
     expect(after.gate.review_request.requested_at).toBe("2026-09-08T00:00:00Z");
     expect(JSON.parse(mergeGateIntoMetadata("not json", d)).gate.decision).toBe("pending");
@@ -415,18 +467,98 @@ describe("the gate on the asset record", () => {
     expect((await svc.listAssetsForCaller(team, ctx(r), { limit: 50, offset: 0 }, { status: "candidate" })).items.map((x) => x.asset_id)).toEqual(["skl-priv"]);
     expect(await svc.checkAssetPermission({ user_id: b, asset_id: "skl-priv", action: "read" })).toEqual({ allowed: false, reason: "status_candidate" }); // a member still cannot
     expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-priv", action: "read", purpose: "use" })).allowed).toBe(false); // nor the model
-    // The reviewer may now admit it; the human review survives a re-evaluation.
-    const rev = await svc.reviewAssetGateForCaller("skl-priv", ctx(r), { decision: "admit", note: "ok" });
-    expect(rev.asset.status).toBe("approved");
-    const re = await svc.evaluateAssetGate("skl-priv", { apply: true });
-    expect(re.decision.decision).toBe("pending");
-    const after = JSON.parse((await store.getAssetById("skl-priv"))!.metadata_json).gate;
-    expect(after.review.decision).toBe("admit");
-    expect(after.review_request.requested_by).toBe(a);
-    // Withdraw: gone from the reviewer's sight again.
-    await svc.submitAssetForReviewForCaller("skl-priv", ctx(a), { withdraw: true }).catch(() => undefined); // status is candidate again after re-evaluation
+    // Withdraw: gone from the reviewer's sight again; submit once more.
+    await svc.submitAssetForReviewForCaller("skl-priv", ctx(a), { withdraw: true });
     expect((await svc.getAssetGateForCaller("skl-priv", ctx(a))).review_requested).toBe(false);
     await expect(svc.getAssetGateForCaller("skl-priv", ctx(r))).rejects.toMatchObject({ code: "permission_denied" });
+    await svc.submitAssetForReviewForCaller("skl-priv", ctx(a));
+    // The reviewer may now admit it; the human decision stays in force through a re-evaluation (2026-09-08b).
+    const rev = await svc.reviewAssetGateForCaller("skl-priv", ctx(r), { decision: "admit", note: "ok" });
+    expect(rev.asset.status).toBe("approved");
+    expect(rev.effective).toMatchObject({ status: "approved", source: "review", review_id: rev.review.id });
+    const re = await svc.evaluateAssetGate("skl-priv", { apply: true });
+    expect(re.decision.decision).toBe("pending"); // the rule's suggestion
+    expect(re.effective.source).toBe("review");
+    expect(re.asset.status).toBe("approved"); // no longer reverted by a re-evaluation
+    const after = JSON.parse((await store.getAssetById("skl-priv"))!.metadata_json).gate;
+    expect(after.review.decision).toBe("admit");
+    expect(after.reviews).toHaveLength(1);
+    expect(after.review_request.requested_by).toBe(a);
+  });
+
+  it("a new version expires the human decision and starts as a candidate; the old version's late correction does not fail it", async () => {
+    const agent = await store.createAgent({ team_id: team, owner_user_id: a, name: "A" });
+    await svc.ensureSkillAsset({ skill_id: "skl-v", team_id: team, agent_id: agent.agent_id, name: "v", version: 1, content_hash: "h1" });
+    await svc.updateAssetForCaller("skl-v", { visibility: "team" }, ctx(a));
+    await trusted("skl-v", b, { asset_version: 1 });
+    expect((await store.getAssetById("skl-v"))?.status).toBe("approved");
+    const rev = await svc.reviewAssetGateForCaller("skl-v", ctx(r), { decision: "admit", note: "looks right" });
+    expect(rev.review.asset_version).toBe(1);
+    // v2 arrives (the versioning hook or a patch handler).
+    const s1 = await svc.syncSkillAssetVersion({ skill_id: "skl-v", version: 2, content_hash: "h2" });
+    expect(s1.changed).toBe(true);
+    expect(s1.asset.version).toBe(2);
+    expect(s1.asset.content_hash).toBe("h2");
+    expect(s1.asset.status).toBe("candidate"); // nothing inherited
+    const g = await svc.getAssetGateForCaller("skl-v", ctx(a));
+    expect(g.review).toBeNull();
+    expect(g.reviews[0].expired_reason).toMatch(/version changed from 1 to 2/);
+    expect(g.gate?.signals.online.other_version).toBe(1);
+    expect(g.effective?.status).toBe("candidate");
+    // Idempotent.
+    expect((await svc.syncSkillAssetVersion({ skill_id: "skl-v", version: 2, content_hash: "h2" })).changed).toBe(false);
+    // A late correction of v1 is recorded and does not fail v2.
+    await trusted("skl-v", b, { asset_version: 1, state: "corrected", corrected_reason: "wrong" });
+    expect((await store.getAssetById("skl-v"))?.status).toBe("candidate");
+    // v2's own cross-person validation admits v2.
+    await trusted("skl-v", b, { asset_version: 2 });
+    expect((await store.getAssetById("skl-v"))?.status).toBe("approved");
+  });
+
+  it("on the model's path a served version the registry has not admitted is refused, and the registry catches up", async () => {
+    await candidateSkill("skl-w", a, "team", "approved");
+    await store.updateAsset("skl-w", { content_hash: "h1" });
+    const reads = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-w"], purpose: "use", served: { "skl-w": { version: 2, content_hash: "h2" } } });
+    expect(reads.get("skl-w")).toEqual({ allowed: false, reason: "version_mismatch:registry=1,served=2" });
+    await new Promise((r) => setTimeout(r, 20)); // the sync is fire-and-forget
+    const after = await store.getAssetById("skl-w");
+    expect(after?.version).toBe(2);
+    expect(after?.status).toBe("candidate");
+    // Same version, different content: refused too.
+    await store.updateAsset("skl-w", { status: "approved" });
+    expect((await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-w"], purpose: "use", served: { "skl-w": { version: 2, content_hash: "h2-edited" } } })).get("skl-w")?.reason).toBe("content_hash_mismatch");
+    await new Promise((r) => setTimeout(r, 20)); // that read synced the registry to the edited content, as a candidate
+    expect((await store.getAssetById("skl-w"))?.status).toBe("candidate");
+    // Matching: served.
+    await store.updateAsset("skl-w", { status: "approved", content_hash: "h2" });
+    expect((await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-w"], purpose: "use", served: { "skl-w": { version: 2, content_hash: "h2" } } })).get("skl-w")?.allowed).toBe(true);
+  });
+
+  it("a later review supersedes the earlier one for the same version; the history keeps both", async () => {
+    await candidateSkill("skl-h", a, "team");
+    const first = await svc.reviewAssetGateForCaller("skl-h", ctx(r), { decision: "reject", note: "wrong port" });
+    expect(first.asset.status).toBe("failed");
+    const second = await svc.reviewAssetGateForCaller("skl-h", ctx(admin), { decision: "admit", note: "port fixed by hand" });
+    expect(second.asset.status).toBe("approved");
+    const g = await svc.getAssetGateForCaller("skl-h", ctx(a));
+    expect(g.reviews.map((x) => [x.decision, !!x.expired_at])).toEqual([["reject", true], ["admit", false]]);
+    expect(g.reviews[0].expired_reason).toMatch(/superseded/);
+    expect(g.review?.id).toBe(second.review.id);
+    // A trusted correction now outranks the human admit; the review stays on file.
+    await trusted("skl-h", b, { state: "corrected", corrected_reason: "wrong" });
+    const g2 = await svc.getAssetGateForCaller("skl-h", ctx(a));
+    expect(g2.status).toBe("failed");
+    expect(g2.effective?.source).toBe("rule");
+    expect(g2.effective?.reason).toMatch(/outranks the human admit/);
+    expect(g2.review?.id).toBe(second.review.id);
+  });
+
+  it("a team admin who is not the owner may set status (the management act) and nothing else", async () => {
+    await candidateSkill("skl-adm2", a, "team");
+    const res = await svc.updateAssetForCaller("skl-adm2", { status: "approved" }, ctx(admin));
+    expect(res.status).toBe("approved");
+    await expect(svc.updateAssetForCaller("skl-adm2", { visibility: "private" }, ctx(admin))).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.updateAssetForCaller("skl-adm2", { status: "failed" }, ctx(r))).rejects.toMatchObject({ code: "permission_denied" });
   });
 
   it("audit fields: a member cannot set status or confidence through create/update; a member's registration enters as a candidate; the gate on file survives an update", async () => {
@@ -549,6 +681,7 @@ describe("human review", () => {
     expect(g.status).toBe("approved");
     await svc.evaluateAssetGate("skl-r", { apply: true });
     expect(JSON.parse((await store.getAssetById("skl-r"))!.metadata_json).gate.review.note).toBe("checked the address by hand");
+    expect((await store.getAssetById("skl-r"))?.status).toBe("approved");
     const rej = await svc.reviewAssetGateForCaller("skl-r", ctx(admin), { decision: "reject" });
     expect(rej.asset.status).toBe("failed");
   });

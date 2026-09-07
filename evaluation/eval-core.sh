@@ -40,7 +40,10 @@ PATCHED_DIR="$REPO_ROOT/MemoryCore/src/metadata"
 IN_IMAGE_DIR="/app/src/metadata"
 MARKER_FILE="service/asset-gate.ts"
 # Gateway files mounted one by one (relative to MemoryCore/src and /app/src).
-GATEWAY_FILES=(gateway/skill-handlers.ts gateway/v2-schemas.ts gateway/v2-router.ts)
+# Phase 2 (2026-09-08b) adds the versioning hook and its wiring:
+# skill-versioning.ts fires onSkillVersioned, tdai-core.ts and server.ts
+# hand it to the registry (syncSkillAssetVersion).
+GATEWAY_FILES=(gateway/skill-handlers.ts gateway/v2-schemas.ts gateway/v2-router.ts gateway/server.ts core/tdai-core.ts core/skill/skill-versioning.ts)
 GATEWAY_MARKER="admissionFilter"
 
 die() { echo "[error] $*" >&2; exit 1; }

@@ -247,6 +247,7 @@ export class SqliteMetadataStore implements IMetadataStore {
         last_used_at TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         content_ref TEXT,
+        content_hash TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         metadata_json TEXT NOT NULL DEFAULT '{}'
@@ -349,6 +350,15 @@ export class SqliteMetadataStore implements IMetadataStore {
     this.migrateUserTypeColumn();
     this.migrateLegacyUserKeys();
     this.migrateAssetOutcomeTrustColumns();
+    this.migrateAssetContentHashColumn();
+  }
+
+  /** Existing databases (2026-09-08): assets gain content_hash, filled in as skills are read or versioned. */
+  private migrateAssetContentHashColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'content_hash'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN content_hash TEXT"); } catch { /* concurrent init */ }
+    }
   }
 
   private migrateUserTypeColumn(): void {
@@ -1448,9 +1458,9 @@ export class SqliteMetadataStore implements IMetadataStore {
     this.run(
       `INSERT INTO meta_assets
         (asset_id, team_id, asset_type, name, description, owner_user_id, source_type, source_ref,
-         version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref,
+         version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref, content_hash,
          created_at, updated_at, metadata_json)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       assetId,
       input.team_id,
       input.asset_type,
@@ -1467,6 +1477,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       null,
       0,
       input.content_ref ?? null,
+      input.content_hash ?? null,
       now,
       now,
       input.metadata_json ?? "{}",
@@ -1479,7 +1490,7 @@ export class SqliteMetadataStore implements IMetadataStore {
   }
 
   updateAsset(assetId: string, patch: Partial<AssetEntity>): AssetEntity | null {
-    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "version", "source_ref", "metadata_json"] as const;
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"] as const;
     this.applyUpdate("meta_assets", "asset_id", assetId, allowed, patch);
     return this.getAssetById(assetId);
   }
@@ -1870,6 +1881,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       last_used_at: r.last_used_at != null ? String(r.last_used_at) : null,
       usage_count: Number(r.usage_count ?? 0),
       content_ref: r.content_ref != null ? String(r.content_ref) : null,
+      content_hash: r.content_hash != null ? String(r.content_hash) : null,
       created_at: String(r.created_at),
       updated_at: String(r.updated_at),
       metadata_json: String(r.metadata_json ?? "{}"),

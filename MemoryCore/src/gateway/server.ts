@@ -391,6 +391,20 @@ export class TdaiGateway {
               );
             });
         },
+        // 新版本：资产随之（版本、内容哈希、人工决定失效、回到候选）。fire-and-forget；
+        // 读路径会核对被服务的版本，钩子失败不会放行新正文。
+        onSkillVersioned: ({ skill_id, team_id, agent_id, name, version, content_hash }) => {
+          if (!team_id || !agent_id) return;
+          gatewayRef
+            .ensureMetadataService(skillAssetInstanceId)
+            .then((svc) => svc.syncSkillAssetVersion({ skill_id, team_id, agent_id, name, version, content_hash }))
+            .catch((err: unknown) => {
+              gatewayRef.logger.warn(
+                `[skill-asset-sync] syncSkillAssetVersion failed for ${skill_id} v${version}: `
+                  + (err instanceof Error ? err.message : String(err)),
+              );
+            });
+        },
         // 归档级联：fire-and-forget，异常吞掉。二次 delete 会重触发钩子，最终收敛。
         onSkillArchived: ({ skill_id, team_id }) => {
           gatewayRef
@@ -1922,6 +1936,14 @@ export class TdaiGateway {
         if (!team_id || !agent_id) return;
         const metaSvc = await resolveMetaSvc();
         await metaSvc.ensureSkillAsset({ skill_id, team_id, agent_id, name });
+      },
+      onSkillVersioned: ({ skill_id, team_id, agent_id, name, version, content_hash }) => {
+        if (!team_id || !agent_id) return;
+        resolveMetaSvc()
+          .then((svc) => svc.syncSkillAssetVersion({ skill_id, team_id, agent_id, name, version, content_hash }))
+          .catch((err: unknown) => {
+            logger.warn(`[skill-asset-sync] syncSkillAssetVersion failed for ${skill_id} v${version}: ${err instanceof Error ? err.message : String(err)}`);
+          });
       },
     });
 

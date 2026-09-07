@@ -1114,6 +1114,7 @@ export class MongoMetadataStore implements IMetadataStore {
       last_used_at: null,
       usage_count: 0,
       content_ref: input.content_ref ?? null,
+      content_hash: input.content_hash ?? null,
       created_at: now,
       updated_at: now,
       metadata_json: input.metadata_json ?? "{}",
@@ -1127,7 +1128,7 @@ export class MongoMetadataStore implements IMetadataStore {
   }
 
   async updateAsset(assetId: string, patch: Partial<AssetEntity>): Promise<AssetEntity | null> {
-    await this.patchOne("meta_assets", { asset_id: assetId }, patch, ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "version", "source_ref", "metadata_json"], true);
+    await this.patchOne("meta_assets", { asset_id: assetId }, patch, ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"], true);
     return this.getAssetById(assetId);
   }
 

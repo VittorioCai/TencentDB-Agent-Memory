@@ -45,17 +45,26 @@ import type {
   AuthorAssessmentSummary,
   GateDecision,
   GateDecisionKind,
+  GateEffective,
+  HumanReviewRecord,
   ReviewPriority,
 } from "../types.js";
 
-export const GATE_RULES_VERSION = "gate-rules-2026-09-08";
+/**
+ * gate-rules-2026-09-08b: the decision is about one version. Only trusted
+ * outcomes recorded against the asset's current version decide it; a
+ * later version starts as a candidate with no inherited verdict, and a
+ * late correction of an earlier version does not fail the version that
+ * fixed it. Human decisions are per version too (see effectiveStatus).
+ */
+export const GATE_RULES_VERSION = "gate-rules-2026-09-08b";
 export const RECENT_WRONG_WINDOW_DAYS = 30;
 /** `corrected` reasons that count against an asset (and its author). */
 export const DOWNWEIGHT_REASONS = new Set(["wrong", "stale"]);
 const CROSS_PERSON = new Set(["cross_user"]);
 
 export interface DecideInput {
-  asset: Pick<AssetEntity, "asset_id" | "owner_user_id" | "metadata_json">;
+  asset: Pick<AssetEntity, "asset_id" | "owner_user_id" | "metadata_json"> & { version?: number; content_hash?: string | null };
   /** Outcomes recorded for this asset. */
   outcomes: AssetOutcomeEntity[];
   /** Outcomes recorded for the author's OTHER assets (this one excluded by the caller or here). */
@@ -116,8 +125,14 @@ export function authorAssessmentOf(metadataJson: string | null | undefined): Aut
 
 export function decideAsset(input: DecideInput): GateDecision {
   const now = input.now ?? new Date();
+  const version = input.asset.version ?? 1;
   const ownTrust = trustedOnly(input.outcomes);
-  const own = collapseByCall(ownTrust.kept);
+  const ownAll = collapseByCall(ownTrust.kept);
+  // Version binding: a row with no version is read as being about the
+  // current one (recorded before versions were tracked); a row about
+  // another version is reported and never decides this one.
+  const own = ownAll.filter((o) => o.asset_version === null || o.asset_version === version);
+  const otherVersion = ownAll.length - own.length;
   const authorId = input.asset.owner_user_id;
   const others = collapseByCall(trustedOnly(input.authorOutcomes).kept).filter((o) => o.asset_id !== input.asset.asset_id);
 
@@ -135,6 +150,7 @@ export function decideAsset(input: DecideInput): GateDecision {
     distinct_tasks: new Set(own.filter((o) => o.state === "validated").map((o) => o.task_id).filter(Boolean)).size,
     calls: own.length,
     untrusted_ignored: ownTrust.ignored,
+    other_version: otherVersion,
   };
 
   // Author: the outcomes of this author's other assets, cross-person only.
@@ -192,6 +208,9 @@ export function decideAsset(input: DecideInput): GateDecision {
   if (ownTrust.ignored > 0) {
     reasons.push(`${ownTrust.ignored} row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read`);
   }
+  if (otherVersion > 0) {
+    reasons.push(`${otherVersion} trusted call(s) are about other versions of this asset and do not decide version ${version}`);
+  }
 
   // Review priority: only meaningful for a pending asset; never touches admit/reject.
   let review_priority: ReviewPriority | null = null;
@@ -231,6 +250,8 @@ export function decideAsset(input: DecideInput): GateDecision {
     schema_version: "gate-decision-v2",
     rules_version: GATE_RULES_VERSION,
     asset_id: input.asset.asset_id,
+    asset_version: version,
+    content_hash: input.asset.content_hash ?? null,
     decided_at: now.toISOString(),
     decision,
     status_target: decision === "admit" ? "approved" : decision === "reject" ? "failed" : "candidate",
@@ -248,17 +269,73 @@ export function decideAsset(input: DecideInput): GateDecision {
 /**
  * Keys under `metadata_json.gate` that are not the decision and must survive
  * a re-evaluation: the context-based author assessment, the human review
- * (2026-09-08: a re-evaluation used to drop it — that was a bug), and the
- * owner's request for review.
+ * history (`reviews`, append-only; `review` is the one in force, kept for
+ * readers of the earlier shape — a re-evaluation used to drop it, which was
+ * a bug), the owner's request for review, and the resolved `effective`.
  */
-export const GATE_KEPT_KEYS = ["author_assessment", "review", "review_request"] as const;
+export const GATE_KEPT_KEYS = ["author_assessment", "reviews", "review", "review_request", "effective"] as const;
+
+/** The human review history on an asset, oldest first. */
+export function reviewsOf(gate: Record<string, unknown>): HumanReviewRecord[] {
+  const arr = Array.isArray(gate.reviews) ? (gate.reviews as HumanReviewRecord[]) : [];
+  // An asset reviewed before the history existed carries a single `review`.
+  const legacy = gate.review && typeof gate.review === "object" && !Array.isArray(gate.review) && !("id" in (gate.review as object))
+    ? [{ id: "rev-legacy", asset_version: 0, content_hash: null, ...(gate.review as Omit<HumanReviewRecord, "id" | "asset_version" | "content_hash">) }]
+    : [];
+  return [...legacy, ...arr];
+}
+
+/**
+ * The human decision in force for this version: the latest review that is
+ * not expired and was made on the asset's current version (and content,
+ * when both hashes are known). A review from an earlier version is not in
+ * force even if nobody expired it — the version moved on.
+ */
+export function activeReview(gate: Record<string, unknown>, asset: { version: number; content_hash?: string | null }): HumanReviewRecord | null {
+  const rows = reviewsOf(gate).filter((r) => !r.expired_at);
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const r = rows[i];
+    if (r.asset_version !== asset.version) continue;
+    if (r.content_hash && asset.content_hash && r.content_hash !== asset.content_hash) continue;
+    return r;
+  }
+  return null;
+}
+
+/**
+ * What the asset's status resolves to. A reject from either side wins: a
+ * human reject is the team saying no, and a trusted correction after a human
+ * admit is evidence the admit was wrong — the review stays on file, marked
+ * outranked in the reason. Then a human admit, which lifts a pending; then
+ * the rule's admit; else candidate.
+ */
+export function effectiveStatus(decision: GateDecision, review: HumanReviewRecord | null, now: Date = new Date()): GateEffective {
+  const at = now.toISOString();
+  if (review?.decision === "reject") return { status: "failed", source: "review", review_id: review.id, reason: `human reject by ${review.by} on version ${review.asset_version}`, at };
+  if (decision.decision === "reject") {
+    return { status: "failed", source: "rule", review_id: review?.id ?? null, at,
+      reason: review ? `rule reject (corrected outcome) outranks the human admit by ${review.by}; the review stays on file` : "rule reject (corrected outcome)" };
+  }
+  if (review?.decision === "admit") return { status: "approved", source: "review", review_id: review.id, reason: `human admit by ${review.by} on version ${review.asset_version}`, at };
+  if (decision.decision === "admit") return { status: "approved", source: "rule", review_id: null, reason: "rule admit (cross-person validated, no corrected)", at };
+  return { status: "candidate", source: "rule", review_id: null, reason: "rule pending; no human decision in force for this version", at };
+}
+
+/** Mark every review in force as expired, with the reason; returns the new gate object. */
+export function expireReviews(gate: Record<string, unknown>, reason: string, now: Date = new Date()): Record<string, unknown> {
+  const rows = reviewsOf(gate).map((r) => (r.expired_at ? r : { ...r, expired_at: now.toISOString(), expired_reason: reason }));
+  const { review: _legacy, ...rest } = gate;
+  void _legacy;
+  return { ...rest, reviews: rows, review: null };
+}
 
 /**
  * Merge the decision into the asset's metadata_json without disturbing other
  * keys. Everything in GATE_KEPT_KEYS is carried over; the rest of the
- * previous decision is replaced.
+ * previous decision is replaced. `review` is refreshed to the review in
+ * force (or null) and `effective` to what was resolved.
  */
-export function mergeGateIntoMetadata(metadataJson: string | null | undefined, decision: GateDecision): string {
+export function mergeGateIntoMetadata(metadataJson: string | null | undefined, decision: GateDecision, resolved?: { effective: GateEffective; review: HumanReviewRecord | null }): string {
   let m: Record<string, unknown> = {};
   try {
     m = metadataJson ? (JSON.parse(metadataJson) as Record<string, unknown>) : {};
@@ -269,7 +346,8 @@ export function mergeGateIntoMetadata(metadataJson: string | null | undefined, d
   const gate = (m.gate && typeof m.gate === "object" && !Array.isArray(m.gate) ? (m.gate as Record<string, unknown>) : {});
   const kept: Record<string, unknown> = {};
   for (const k of GATE_KEPT_KEYS) if (gate[k] !== undefined) kept[k] = gate[k];
-  m.gate = { ...decision, ...kept };
+  if (kept.reviews === undefined && reviewsOf(gate).length > 0) kept.reviews = reviewsOf(gate);
+  m.gate = { ...decision, ...kept, ...(resolved ? { review: resolved.review, effective: resolved.effective } : {}) };
   return JSON.stringify(m);
 }
 

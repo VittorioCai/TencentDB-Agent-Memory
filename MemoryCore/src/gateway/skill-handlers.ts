@@ -252,7 +252,7 @@ async function precheckWrite<T>(
  * Fail closed: with no metadata service to ask, the model's path returns
  * nothing rather than everything.
  */
-type SkillLike = { skill_id: string; team_id?: string; owner_agent_id?: string; name?: string };
+type SkillLike = { skill_id: string; team_id?: string; owner_agent_id?: string; name?: string; version?: number; content_hash?: string };
 async function admissionFilter<T extends SkillLike>(
   items: T[],
   ctx: { deps: SkillRouterDeps; auth: V2AuthContext; user_id?: string; team_id?: string; agent_id?: string },
@@ -266,7 +266,10 @@ async function admissionFilter<T extends SkillLike>(
     return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })) };
   }
   const meta = await ctx.deps.getMetadataService(ctx.auth.serviceId);
-  const decisions = await meta.decideAssetReads({ user_id: ctx.user_id, asset_ids: items.map((s) => s.skill_id), purpose, agent_id: ctx.agent_id });
+  // What is about to be served, so the registry can refuse a version it has not admitted.
+  const served: Record<string, { version?: number; content_hash?: string | null; team_id?: string; agent_id?: string; name?: string }> = {};
+  for (const s of items) served[s.skill_id] = { version: s.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name };
+  const decisions = await meta.decideAssetReads({ user_id: ctx.user_id, asset_ids: items.map((s) => s.skill_id), purpose, agent_id: ctx.agent_id, served });
   const allowed: T[] = [];
   const denied: Array<{ skill_id: string; reason: string }> = [];
   for (const s of items) {
@@ -282,8 +285,35 @@ async function admissionFilter<T extends SkillLike>(
   return { allowed, denied };
 }
 
+/** The skill head as the registry needs it (version, content hash); the id alone when the head cannot be read. */
+async function headOf(core: SkillCore, ids: { skill_id: string; user_id?: string; team_id?: string; agent_id?: string; task_id?: string }): Promise<SkillLike> {
+  try {
+    const row = await core.get({ user_id: ids.user_id, team_id: ids.team_id, agent_id: ids.agent_id, task_id: ids.task_id, skill_id: ids.skill_id, include_content: false, include_manifest: false });
+    return { skill_id: row.skill_id, team_id: row.team_id, owner_agent_id: row.owner_agent_id, name: row.name, version: row.version, content_hash: row.content_hash };
+  } catch {
+    return { skill_id: ids.skill_id };
+  }
+}
+
 function notAdmitted(skillId: string, reason: string, requestId: string): ApiResponseEnvelope {
   return errorEnvelope(40301, `SKILL_NOT_ADMITTED: ${skillId} is not in the admitted pool (${reason})`, requestId);
+}
+
+/**
+ * After update / patch: the registry follows the new version (handler-level
+ * copy of the versioning hook, for the standalone core that has no hook;
+ * idempotent, so the two never disagree). Logged, never fatal: the write
+ * happened, and the read path refuses to serve the new content as admitted
+ * until the registry knows it.
+ */
+async function syncAssetVersion(deps: SkillRouterDeps, auth: V2AuthContext, r: Skill): Promise<void> {
+  if (!deps.getMetadataService || !r.team_id || !r.owner_agent_id) return;
+  try {
+    const meta = await deps.getMetadataService(auth.serviceId);
+    await meta.syncSkillAssetVersion({ skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version, content_hash: r.content_hash });
+  } catch (err) {
+    deps.logger.warn(`${TAG} syncSkillAssetVersion failed for ${r.skill_id} v${r.version}: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 // 把 Skill 行形成 SkillSummary 形态（不带 content；带 manifest 当 detail 时再加）
@@ -396,6 +426,7 @@ export async function handleUpdate(body: unknown, auth: V2AuthContext, requestId
 
   try {
     const r = await pre.core.update(pre.data);
+    await syncAssetVersion(deps, auth, r);
     try { trace.report("skill.update", { skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version }); } catch { /* noop */ }
     obsLogger.info("skill.handleUpdate.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: r.skill_id, name: r.name, version: r.version });
     return successEnvelope(toSummary(r), requestId);
@@ -420,6 +451,7 @@ export async function handlePatch(body: unknown, auth: V2AuthContext, requestId:
 
   try {
     const r = await pre.core.patch(pre.data);
+    await syncAssetVersion(deps, auth, r);
     try { trace.report("skill.patch", { skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version }); } catch { /* noop */ }
     obsLogger.info("skill.handlePatch.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: r.skill_id, name: r.name, version: r.version });
     return successEnvelope(toSummary(r), requestId);
@@ -633,7 +665,7 @@ export async function handleVersions(body: unknown, _auth: V2AuthContext, reques
   if (!pre.ok) { obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
     // Version history names and describes the skill; a candidate's is not for the model.
-    const admV = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const admV = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admV.allowed.length === 0) return notAdmitted(pre.data.skill_id, admV.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.listVersions(pre.data);
     if (r.total === 0) {
@@ -700,7 +732,7 @@ export async function handleFilesRead(body: unknown, _auth: V2AuthContext, reque
   const pre = await precheck(filesReadRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleFilesRead.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
-    const admF = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const admF = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admF.allowed.length === 0) return notAdmitted(pre.data.skill_id, admF.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.readFile(pre.data);
     obsLogger.info("skill.handleFilesRead.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id,
@@ -722,7 +754,7 @@ export async function handleExport(body: unknown, _auth: V2AuthContext, requestI
   }
   try {
     // Export carries the content; same gate as get.
-    const admE = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const admE = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admE.allowed.length === 0) return notAdmitted(pre.data.skill_id, admE.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.exportSkill(pre.data);
     obsLogger.info("skill.handleExport.done", {

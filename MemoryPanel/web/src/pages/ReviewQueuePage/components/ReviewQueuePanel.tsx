@@ -182,7 +182,21 @@ export default function ReviewQueuePanel() {
                     {r.gate?.review && (
                       <Text parent="div" theme="label" style={{ fontSize: 12 }}>
                         {t('review.reviewedBy', { d: t(`review.decision.${r.gate.review.decision}`), by: r.gate.review.by })}
+                        {r.gate.review.asset_version != null ? ` · v${r.gate.review.asset_version}` : ''}
                       </Text>
+                    )}
+                    {(r.gate?.reviews ?? []).filter((x) => x.expired_at).length > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>
+                        {t('review.expiredReviews', { n: (r.gate?.reviews ?? []).filter((x) => x.expired_at).length, why: (r.gate?.reviews ?? []).filter((x) => x.expired_at).slice(-1)[0]?.expired_reason ?? '' })}
+                      </Text>
+                    )}
+                    {r.gate?.effective && (
+                      <Text parent="div" style={{ fontSize: 12 }}>
+                        {t('review.effective', { s: t(`review.status.${r.gate.effective.status}`), src: t(`review.source.${r.gate.effective.source}`) })}
+                      </Text>
+                    )}
+                    {(g.signals.online.other_version ?? 0) > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.otherVersion', { n: g.signals.online.other_version, v: g.asset_version ?? r.gate?.version ?? '?' })}</Text>
                     )}
                   </div>
                 );

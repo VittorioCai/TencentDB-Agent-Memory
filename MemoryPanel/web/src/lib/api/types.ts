@@ -139,6 +139,8 @@ export interface GateDecision {
   decided_at: string;
   decision: GateDecisionKind;
   status_target: 'approved' | 'failed' | 'candidate';
+  asset_version?: number;
+  content_hash?: string | null;
   confidence: number | null;
   /** Denominator behind confidence: cross-person calls that validated or were corrected (2026-09-08). */
   confidence_n?: number;
@@ -146,13 +148,27 @@ export interface GateDecision {
   reasons: string[];
   evidence_refs: Array<{ outcome_id: string; state: string; relation: string; call_id?: string | null }>;
   signals: {
-    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number };
+    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number; other_version?: number };
     author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null };
   };
   review_priority: ReviewPriority | null;
   evidence_as_of?: string | null;
 }
-export interface HumanReview { decision: 'admit' | 'reject'; status: AssetStatus; by: string; at: string; note: string | null }
+export interface HumanReview {
+  id?: string;
+  decision: 'admit' | 'reject';
+  status: AssetStatus;
+  by: string;
+  at: string;
+  note: string | null;
+  /** The version and content the decision was made on (2026-09-08b). */
+  asset_version?: number;
+  content_hash?: string | null;
+  expired_at?: string | null;
+  expired_reason?: string | null;
+}
+/** The rule's suggestion and the human decision resolved to the status the asset carries. */
+export interface GateEffective { status: 'approved' | 'failed' | 'candidate'; source: 'rule' | 'review'; review_id: string | null; reason: string; at: string }
 /** The owner's request that the team review a candidate (2026-09-08). */
 export interface ReviewRequest { requested_at?: string; requested_by?: string; note?: string | null; asset_version?: number; withdrawn_at?: string; withdrawn_by?: string }
 export interface AssetGateView {
@@ -166,8 +182,13 @@ export interface AssetGateView {
   status: AssetStatus;
   confidence: number | null;
   version?: number;
+  content_hash?: string | null;
   gate: GateDecision | null;
+  /** The human decision in force for the current version, or null. */
   review: HumanReview | null;
+  /** The whole history, oldest first, expired ones included. */
+  reviews?: HumanReview[];
+  effective?: GateEffective | null;
   review_request?: ReviewRequest | null;
   review_requested?: boolean;
 }

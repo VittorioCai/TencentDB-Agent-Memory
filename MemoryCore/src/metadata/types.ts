@@ -186,6 +186,13 @@ export interface AssetEntity {
   last_used_at?: string | null;
   usage_count: number;
   content_ref?: string | null;
+  /**
+   * Hash of the content this row's `version` stands for (the skill store's
+   * content_hash for a skill). The gate binds outcomes, decisions and human
+   * reviews to `asset_id + version + content_hash` (2026-09-08); a read on
+   * the model's path checks the served content against it.
+   */
+  content_hash?: string | null;
   created_at: string;
   updated_at: string;
   metadata_json: string;
@@ -409,6 +416,7 @@ export interface CreateAssetInput {
   confidence?: number | null;
   expires_at?: string | null;
   content_ref?: string | null;
+  content_hash?: string | null;
   metadata_json?: string;
 }
 
@@ -588,6 +596,9 @@ export interface GateDecision {
   schema_version: "gate-decision-v2";
   rules_version: string;
   asset_id: string;
+  /** The version and content the decision is about; outcomes of other versions are reported, not used. */
+  asset_version: number;
+  content_hash: string | null;
   decided_at: string;
   decision: GateDecisionKind;
   /** The status the decision maps to: admit→approved, reject→failed, pending→candidate. */
@@ -616,6 +627,8 @@ export interface GateDecision {
       calls: number;
       /** Rows on file the gate did not read because they are not trusted. */
       untrusted_ignored: number;
+      /** Trusted calls about other versions of this asset: reported, never deciding this version. */
+      other_version: number;
     };
     author: {
       user_id: string;
@@ -635,6 +648,40 @@ export interface GateDecision {
    * the evidence base and not on the batch's own runs.
    */
   evidence_as_of?: string | null;
+}
+
+/**
+ * A human decision on one version of an asset (2026-09-08). Kept as an
+ * append-only history under `metadata_json.gate.reviews`; the one in force
+ * is the latest not expired for the asset's current version.
+ */
+export interface HumanReviewRecord {
+  id: string;
+  decision: "admit" | "reject";
+  /** The status the decision maps to. */
+  status: Extract<AssetStatus, "approved" | "failed">;
+  by: string;
+  at: string;
+  note: string | null;
+  asset_version: number;
+  content_hash: string | null;
+  /** Set when the decision stopped applying, with the reason (a new version, a later review). */
+  expired_at?: string | null;
+  expired_reason?: string | null;
+}
+
+/**
+ * What the asset's status is and why: the rule's suggestion and the human
+ * decision are kept apart, and this is what they resolve to. Precedence:
+ * a reject from either wins; then a human admit; then the rule's admit;
+ * else candidate.
+ */
+export interface GateEffective {
+  status: Extract<AssetStatus, "approved" | "failed" | "candidate">;
+  source: "rule" | "review";
+  review_id: string | null;
+  reason: string;
+  at: string;
 }
 
 /** The part of a context-based author assessment the gate reads. */
