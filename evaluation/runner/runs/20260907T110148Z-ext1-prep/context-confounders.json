@@ -1,0 +1,65 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T11:06:55.642Z",
+  "system_prompt": {
+    "chars": 26216,
+    "sha1": "9a97ca4ca9a01de9baa87f6c9098f2b651ce6a48"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "95734965c7f23b629ba9de0d343d4ad160f43920",
+      "chars": 1813,
+      "last_update": "2026-09-06T12:43:04.413Z",
+      "watch_hits": [
+        {
+          "line": 12,
+          "pattern": "get-by-name",
+          "text": "- **Lookup**: /skill/search → skill_id → /skill/get (include_content + include_manifest); never get-by-name (agent-scoped; cross-agent 404 by design); files/read covers manifest paths only."
+        }
+      ]
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [
+      "skill-bridge-http-access"
+    ],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-KPVMV2uB5rXM",
+      "skl-eM1xP28pXiYA",
+      "skl-MyrdnecjeYSb",
+      "skl-ImeA29HL3Djj",
+      "skl-lUWmwEYqsZDZ",
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "deploy-lookup-note-a",
+      "deploy-lookup-note-b",
+      "tdc-312fad",
+      "eval-bridge-endpoint-c",
+      "skill-bridge-http-access",
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "get-by-name",
+    "probe every documented candidate",
+    "skill_id",
+    "checklist"
+  ]
+}

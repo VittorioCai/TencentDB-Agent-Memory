@@ -1,0 +1,17 @@
+{
+  "verdict": "PASS",
+  "reason": "the final get of skl-MyrdnecjeYSb succeeded (code 0, marker qz7-312fad)",
+  "attempts": [
+    {
+      "session_key": "8df26905-633b-4581-a30e-c6e27abe19b6",
+      "call_id": "call_00_kI3nq3IXlL8yj9IZ0Otr2300",
+      "message_index": 12,
+      "host": "127.0.0.1",
+      "port": "8096",
+      "value": "skl-MyrdnecjeYSb",
+      "endpoint": "skill:get",
+      "ok": true,
+      "why": "code 0, marker qz7-312fad"
+    }
+  ]
+}

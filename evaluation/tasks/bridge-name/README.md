@@ -111,3 +111,52 @@ pair is reported as such.
 It is still one operator, and the consumer is still B. It adds an asset
 category, a failure class, an author and a second task id; it does not add a
 human.
+
+
+## First preparation runs (2026-09-07) — what the pool actually does
+
+Entered as author C (`enter-pool.sh`): checklist `tdc-312fad`
+(`skl-MyrdnecjeYSb`, marker `qz7-312fad`), right note `deploy-lookup-note-b`
+(`skl-eM1xP28pXiYA`), wrong note `deploy-lookup-note-a` (`skl-KPVMV2uB5rXM`,
+points at the fabricated `skl-Bwuta6kNQ6wq`). Two runs, consumer B, no gate:
+
+| run | verdict | what happened |
+|---|---|---|
+| 20260907T110148Z | FAIL (40301 on every get), 25 turns, 307 s | The three assets had entered Core as **candidates** — the candidate pool working as designed — so the consumer could not read them. `enter-pool.sh` now admits them as the scenario's starting state (the pool before the gate has an opinion), and a refused `get` is no longer written as `fetched` (build-events fix). |
+| 20260907T111053Z | PASS, 5 turns, 56 s | The model searched, read both notes, called `get` with the **wrong** id first (unmarked call, refused), then a marked `get` with the right id and reported the marker. |
+
+Attribution on the passing run, under the frozen rules:
+
+- **wrong note → `used`** (its fabricated id appeared in a call after its body
+  entered the context; the id is in no listing and no other asset). Outcome
+  `needs_review`: the call was not a marked acceptance attempt, and its
+  failure class (service refusal) is not one the outcome judge knows.
+- **right note → `needs_review`, by construction.** Its discriminative token is
+  the checklist's skill id, and the bridge's search listing at message 4
+  carried the checklist's own entry — id included — before either note's body
+  was read. The earliest-delivery rule (same asset's own entry is fine;
+  another asset's entry blocks) is right to refuse: the model could have taken
+  the id from the listing.
+
+The design note above assumed keyword opacity would keep the checklist out of
+the search results. It did not: the bridge returns every visible skill in a
+pool this small, whatever the query (the mainline saw the same — three results
+with scores around 6e-6). **An addressable handle of a listable asset is never
+a discriminative token.** That is a finding about attribution, not a defect
+of the judge, and it is reported as one.
+
+What this pair can and cannot show as designed:
+
+- It can show the gate **rejecting** the wrong note, once the outcome judge
+  knows the service-refusal class (listed for approval above) and the
+  acceptance counts every `skill/get` as an attempt rather than only marked
+  ones (the model marked only its final call).
+- It cannot show the right note **admitted** through attribution, because its
+  only token is listable. Two ways out, neither taken yet: point the notes at
+  something the skill listing never carries (a knowledge-base entry fetched
+  by id through the knowledge bridge), or pad the pool past the listing's
+  cap so the checklist drops out of the results — the second is a trick, the
+  first is a different channel and a day's work.
+
+No further runs of this pair are scheduled until the rule question is
+answered. The two runs above are kept as preparation, not as evidence.

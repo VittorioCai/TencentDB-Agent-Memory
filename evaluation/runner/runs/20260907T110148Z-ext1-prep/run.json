@@ -1,0 +1,45 @@
+{
+  "run_id": "20260907T110148Z-ext1-prep",
+  "label": "ext1-prep",
+  "task": "bridge-name",
+  "identity": "b",
+  "conversation_id": "fe9c9b6f-2077-48ba-8d1e-6eaf1ae66345",
+  "resolved_identity": {
+    "agent_id": "agt-5e0y4l8a7a",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-4u07qc2kuj",
+    "task_id": "task-5e6xp4mrrw"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "auto_extraction_enabled": false,
+  "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
+  "started_at": "2026-09-07T11:01:48Z",
+  "gate": {
+    "mode": null,
+    "hidden": [],
+    "baseline_frozen_at": null,
+    "mechanism": null,
+    "visibility_at_start": null,
+    "status_at_start": null,
+    "all_verified": null
+  },
+  "core_outcomes": null,
+  "verdict": "FAIL",
+  "context_confounders": {
+    "profile_memory_present": true,
+    "l3_watch_hits": 1,
+    "l3_sha1": "95734965c7f23b629ba9de0d343d4ad160f43920",
+    "non_pool_skills_in_listing": 0,
+    "non_pool_skill_reads": 0
+  },
+  "counts": {
+    "capture.jsonl": 50,
+    "tool-call-logs.jsonl": 70,
+    "candidate-log.jsonl": 23,
+    "events.jsonl": 7,
+    "early-events.jsonl": 49,
+    "used-events.jsonl": 4,
+    "outcome-events.jsonl": 0
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide"
+}

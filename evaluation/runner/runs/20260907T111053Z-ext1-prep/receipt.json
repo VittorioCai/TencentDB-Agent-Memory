@@ -1,0 +1,310 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "8df26905-633b-4581-a30e-c6e27abe19b6",
+  "run_id": "20260907T111053Z-ext1-prep",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-07T11:11:49Z",
+  "summary": {
+    "applied_count": 4,
+    "by_status": {
+      "validated": 0,
+      "used": 1,
+      "fetched": 3,
+      "provided": 1,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T11:01:27Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 5 (score 3.45) for the query \"deploy checklist not findable search failure\"",
+      "status": "used",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "producer_agent_id": "agt-8ypy4vhft9",
+        "relation": "cross_user"
+      },
+      "impact": "its value skl-Bwuta6kNQ6wq was used in tool call call_00_ptlWSY1E0y65kET62eFh2094 (message 9)",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(55f7909a-216e-4bdd-add6-086d22d41ceb):msg[9]:call_00_ptlWSY1E0y65kET62eFh2094:arguments",
+          "detail": "token skl-Bwuta6kNQ6wq; content of v1 entered the context at message 7, before this operation at message 9"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-07 19:11:22.405:skill-bridge:get",
+          "detail": "request names skl-KPVMV2uB5rXM"
+        },
+        {
+          "kind": "verify_result",
+          "ref": "20260907T111053Z-ext1-prep:verify.mjs:call=call_00_ptlWSY1E0y65kET62eFh2094:ok=n/a",
+          "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8df26905-633b-4581-a30e-c6e27abe19b6:call_00_ky0bwvNVXt0p6ruTthMH6383",
+          "detail": "skill:get answered at message 7; carrying content; version 1"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "used with hard evidence 1 time(s) but no outcome tied to those calls yet"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-07T11:11:49.406Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T11:01:27Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 5 (score 3.45) for the query \"deploy checklist not findable search failure\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "producer_agent_id": "agt-8ypy4vhft9",
+        "relation": "cross_user"
+      },
+      "impact": "its value skl-MyrdnecjeYSb was used in tool call call_01_slThx757YkkLClXRyIX19255 (message 9), but the token was in a search listing (message 4) before this operation, inside another asset's entry as well (tdc-312fad), so its use cannot be attributed to this asset",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(55f7909a-216e-4bdd-add6-086d22d41ceb):msg[9]:call_01_slThx757YkkLClXRyIX19255:arguments",
+          "detail": "token skl-MyrdnecjeYSb; the token was in a search listing (message 4) before this operation, inside another asset's entry as well (tdc-312fad), so its use cannot be attributed to this asset"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(f587b3c6-d1c5-4488-8d16-93e7b2c7e11d):msg[12]:call_00_kI3nq3IXlL8yj9IZ0Otr2300:arguments",
+          "detail": "token skl-MyrdnecjeYSb; the token was in a search listing (message 4) before this operation, inside another asset's entry as well (tdc-312fad), so its use cannot be attributed to this asset"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-07 19:11:22.413:skill-bridge:get",
+          "detail": "request names skl-eM1xP28pXiYA"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8df26905-633b-4581-a30e-c6e27abe19b6:call_01_yTj3yhnjBmaEc8XcqCB89659",
+          "detail": "skill:get answered at message 8; carrying content; version 1"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "needs_review",
+          "detail": "token skl-MyrdnecjeYSb; the token was in a search listing (message 4) before this operation, inside another asset's entry as well (tdc-312fad), so its use cannot be attributed to this asset"
+        },
+        {
+          "kind": "gate_pending",
+          "detail": "needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-07T11:11:49.406Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-lUWmwEYqsZDZ",
+      "name": "skill-bridge-http-access",
+      "asset_type": "skill",
+      "version": 3,
+      "updated_at": "2026-09-07T09:03:48Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 4 of 5 (score 0.14) for the query \"deploy checklist not findable search failure\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-4u07qc2kuj",
+        "producer_agent_id": "agt-5e0y4l8a7a",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "capture_line",
+          "ref": "8df26905-633b-4581-a30e-c6e27abe19b6:call_00_8zUjOyhGsu4XHEZPKWWQ8432",
+          "detail": "skill:get-by-name answered at message 3; carrying content; version 3; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-4u07qc2kuj has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-07T11:11:49.406Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T11:01:27Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 5 (score 1.18) for the query \"deploy checklist not findable search failure\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "producer_agent_id": "agt-8ypy4vhft9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-07 19:11:40.517:skill-bridge:get",
+          "detail": "request names skl-MyrdnecjeYSb"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8df26905-633b-4581-a30e-c6e27abe19b6:call_01_slThx757YkkLClXRyIX19255",
+          "detail": "skill:get answered at message 11; carrying content; version 1"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-07 19:11:44.237:skill-bridge:get",
+          "detail": "request names skl-MyrdnecjeYSb"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8df26905-633b-4581-a30e-c6e27abe19b6:call_00_kI3nq3IXlL8yj9IZ0Otr2300",
+          "detail": "skill:get answered at message 13; carrying content; version 1"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 2 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-07T11:11:49.406Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 5 of 5 (score 2.76e-6) for the query \"deploy checklist not findable search failure\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-oBaDO5CceKnr",
+          "detail": "carried in a tool result inside the request the model received; present in 4 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-oBaDO5CceKnr",
+          "detail": "skill:search returned 5 candidate(s), this one at rank 5; present in 4 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-07T11:11:49.407Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

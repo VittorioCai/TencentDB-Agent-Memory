@@ -1,0 +1,13 @@
+{
+  "schema": "core-outcomes-v1",
+  "run_id": "20260907T111053Z-ext1-prep",
+  "synced_at": "2026-09-07T11:11:49Z",
+  "consumer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key-b",
+  "evaluate": false,
+  "posted": [],
+  "skipped": [
+    {
+      "reason": "state needs_review is not an outcome"
+    }
+  ]
+}
