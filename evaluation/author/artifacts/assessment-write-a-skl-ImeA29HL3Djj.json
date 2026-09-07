@@ -1,0 +1,73 @@
+{
+  "schema": "assessment-write-record-v1",
+  "at": "2026-09-07T10:33:19Z",
+  "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+  "asset_id": "skl-ImeA29HL3Djj",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "as_of": null,
+  "written": {
+    "competence": "medium",
+    "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+    "assessed_at": "2026-09-07T10:33:19.304Z",
+    "citations": 4,
+    "asset_claim_check": {
+      "verdict": "contradicts",
+      "record_ids": [
+        "l0:msg-76898e301d59",
+        "l1:m_1788639285772_6a04e573"
+      ]
+    },
+    "pack_sha256": "004085df35583afcbbcf705fbbe456121c20a5dd9f2978e2aee6d5081ae0a895",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
+  },
+  "decision_after": {
+    "schema_version": "gate-decision-v2",
+    "rules_version": "gate-rules-2026-09-07",
+    "asset_id": "skl-ImeA29HL3Djj",
+    "decided_at": "2026-09-07T10:33:19.674Z",
+    "decision": "pending",
+    "status_target": "candidate",
+    "confidence": null,
+    "reasons": [
+      "cold start: no outcome recorded for this asset yet; pending by default",
+      "no corrected(wrong/stale) record, so reject did not trigger",
+      "context-based assessment: the author's own records contradict this asset's claim (l0:msg-76898e301d59, l1:m_1788639285772_6a04e573); review priority: high"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "validated": 0,
+        "corrected": 0,
+        "used": 0,
+        "cross_user_validated": 0,
+        "distinct_consumers": 0,
+        "distinct_tasks": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "validated": 12,
+        "corrected": 7,
+        "distinct_consumers": 1,
+        "recent_wrong_asset_ids": [
+          "skl-sZFb3KatWY6m"
+        ],
+        "assessment": {
+          "competence": "medium",
+          "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+          "assessed_at": "2026-09-07T10:33:19.304Z",
+          "citations": 4,
+          "asset_claim_check": {
+            "verdict": "contradicts",
+            "record_ids": [
+              "l0:msg-76898e301d59",
+              "l1:m_1788639285772_6a04e573"
+            ]
+          }
+        }
+      }
+    },
+    "review_priority": "high",
+    "evidence_as_of": null
+  },
+  "status_after": "candidate"
+}
