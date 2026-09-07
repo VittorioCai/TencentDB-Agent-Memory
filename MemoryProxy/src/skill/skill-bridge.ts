@@ -157,7 +157,16 @@ const ALLOWED_SUBPATHS = new Set<string>([
   "extract",
 ]);
 
-/** Write subpaths — rejected when `allowLlmWrite=false`. */
+/**
+ * Write subpaths — rejected when `allowLlmWrite=false`.
+ *
+ * `extract` is here on purpose. It does not edit a skill, but it makes the
+ * extractor create one from the current conversation, and a skill created that
+ * way lands in the team pool exactly like one written through `create`. A
+ * read-only session that can still mint skills is not read-only; the 2026-09-06
+ * instruction audit found the gate covering the six editing subpaths and
+ * leaving this one open.
+ */
 const WRITE_SUBPATHS = new Set<string>([
   "create",
   "update",
@@ -165,7 +174,13 @@ const WRITE_SUBPATHS = new Set<string>([
   "delete",
   "files/write",
   "files/remove",
+  "extract",
 ]);
+
+/** True when `sub` changes the skill pool and must be refused under `allowLlmWrite=false`. */
+export function isWriteSubpath(sub: string): boolean {
+  return WRITE_SUBPATHS.has(sub);
+}
 
 // Note: 曾经有 RESET_EXTRACT_SUBPATHS 用来在 write 成功或 extract 完成后
 // 清零 proxy 侧 buffer 计数器 (老链路 KvExtractStore)。老链路删除后计数器

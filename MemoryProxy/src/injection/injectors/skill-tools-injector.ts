@@ -13,10 +13,12 @@
  * session.
  *
  * Tools injected:
- *   Always (read-only): skill_search, skill_view, skill_files_read,
- *                       skill_extract
- *   Only when allowLlmWrite=true: skill_create, skill_update, skill_patch,
- *                                skill_delete, skill_files_write, skill_files_remove
+ *   Always (read-only): skill_search, skill_view, skill_files_read
+ *   Only when allowLlmWrite=true: skill_extract, skill_create, skill_update,
+ *                                skill_patch, skill_delete, skill_files_write,
+ *                                skill_files_remove
+ *   (skill_extract mints a skill through the extractor, so it is a write in
+ *   effect; the bridge refuses it under allowLlmWrite=false as well.)
  *
  * Note: skill_list is intentionally omitted — the <available_skills> block
  * already provides the agent's owned skill catalogue at session init.
@@ -97,7 +99,12 @@ export function renderSkillToolsBlock(
     `    body: {"skill_id": "skl-xxx", "path": "scripts/run.sh", "encoding": "utf-8|base64"}`,
     `    use:  读取单个资源文件内容。**必须先调 skill_view 拿 manifest**，从里面挑出 skill_id + path，本工具才能定位。默认返回 JSON 信封（含 base64/utf-8 编码的字节）。\n    若需下载到本地：在 curl 末尾加 -o <本地路径>，proxy 会返回原始字节直接写入文件，不进上下文。下载的脚本需 chmod +x 后再执行。`,
     `  </tool>`,
-    "",
+  ];
+
+  // `skill_extract` creates a skill through the extractor. It is offered only
+  // when the session may write, and the bridge refuses it otherwise
+  // (`isWriteSubpath("extract")`), so the catalogue and the gate agree.
+  const extractTool = [
     `  <tool name="skill_extract">`,
     `    path: ${bridge}/extract`,
     `    body: {"reason": "?可选，简要说明为什么觉得当前对话值得提取为 skill（写清楚有助于后台抽取器识别边界）"}`,
@@ -106,6 +113,8 @@ export function renderSkillToolsBlock(
   ];
 
   const writeTools = [
+    ...extractTool,
+    "",
     `  <tool name="skill_create">`,
     `    path: ${bridge}/create`,
     `    body: {"name": "string", "content": "SKILL.md 全文（含 frontmatter）", "resources": "?可选数组"}`,

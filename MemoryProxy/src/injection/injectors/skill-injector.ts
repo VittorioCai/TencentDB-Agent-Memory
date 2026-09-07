@@ -44,6 +44,14 @@ const TAG = "[skill-injector]";
 export interface SkillInjectorConfig {
   /** Core skill client config; passed to `getCoreSkillClient(config)`. */
   coreSkill: CoreSkillConfig;
+  /**
+   * Whether this session may write skills through the bridge
+   * (`skillRuntime.allowLlmWrite`). The mandatory-load directive tells the
+   * model to patch and create skills; under a read-only bridge those
+   * sentences order an action the tools refuse, so they are rendered only
+   * when the write path is open. Defaults to false, like the bridge.
+   */
+  allowLlmWrite?: boolean;
 }
 
 /**
@@ -72,14 +80,33 @@ const SKILL_LISTING_HEADER =
   + "even if you think you could handle the task with basic tools like web_search or terminal. "
   + "Skills also encode the user's preferred approach, conventions, and quality standards "
   + "for tasks like code review, planning, and testing — load them even for tasks you "
-  + "already know how to do, because the skill defines how it should be done here.\n"
-  + "If a skill has issues, fix it with the `skill_patch` skill-bridge tool.\n"
+  + "already know how to do, because the skill defines how it should be done here.\n";
+
+/**
+ * Appended to the header only when the bridge accepts writes. With
+ * `allowLlmWrite=false` the `<skill_tools>` block says "仅开放只读操作" and the
+ * bridge answers 40302 to patch/create — so a header that still orders the
+ * model to patch and create contradicts both. The read-only variant asks for
+ * a report instead, which is the action the session can actually take.
+ */
+const SKILL_LISTING_WRITE_DIRECTIVE =
+  "If a skill has issues, fix it with the `skill_patch` skill-bridge tool.\n"
   + "After difficult/iterative tasks, offer to save the approach as a new skill "
   + "(`skill_create`). If a skill you loaded was missing steps, had wrong commands, "
   + "or needed pitfalls you discovered, update it before finishing.\n";
 
+const SKILL_LISTING_READONLY_DIRECTIVE =
+  "Skill writes are disabled in this session. If a skill you loaded was missing steps, "
+  + "had wrong commands, or gave a value that did not work, say so in your reply "
+  + "(name the skill and what was wrong) instead of trying to patch or create one.\n";
+
 const SKILL_LISTING_FOOTER =
   "\nOnly proceed without loading a skill if genuinely none are relevant to the task.";
+
+export interface WrapAvailableSkillsOptions {
+  /** Defaults to false — the bridge's own default. */
+  allowLlmWrite?: boolean;
+}
 
 /**
  * Wrap the pre-rendered `<available_skills>` listing from plugin into a
@@ -92,9 +119,10 @@ const SKILL_LISTING_FOOTER =
  *   3. `<available_skills>` listing (verbatim from core).
  *   4. SKILL_LISTING_FOOTER — "only skip if genuinely nothing matches".
  */
-export function wrapAvailableSkillsBlock(listing: string): string {
+export function wrapAvailableSkillsBlock(listing: string, opts: WrapAvailableSkillsOptions = {}): string {
+  const allowLlmWrite = opts.allowLlmWrite ?? false;
   return [
-    SKILL_LISTING_HEADER,
+    SKILL_LISTING_HEADER + (allowLlmWrite ? SKILL_LISTING_WRITE_DIRECTIVE : SKILL_LISTING_READONLY_DIRECTIVE),
     "以下是你（当前 agent）自带的云端 skill 列表。这些 skill 存储在你的 agent 名下，",
     "优先使用它们完成任务。如果你觉得自带的 skill 不够，可以用 skill_search 工具",
     "在团队的 skill 库中检索更多（跨 agent 共享）。",
@@ -349,7 +377,7 @@ export class SkillInjector implements InjectionHook {
     const listing = result.listing;
     if (!listing || listing.includes("(none)")) return [];
 
-    const content = wrapAvailableSkillsBlock(listing);
+    const content = wrapAvailableSkillsBlock(listing, { allowLlmWrite: this.config.allowLlmWrite });
     return [{
       type: "text",
       content,
