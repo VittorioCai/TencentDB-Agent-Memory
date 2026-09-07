@@ -1,0 +1,5 @@
+{
+  "verdict": "ERROR",
+  "reason": "no request carrying the task marker (team-bridge-reachability) — the task was never carried out, which is not the same as carrying it out and failing",
+  "attempts": []
+}

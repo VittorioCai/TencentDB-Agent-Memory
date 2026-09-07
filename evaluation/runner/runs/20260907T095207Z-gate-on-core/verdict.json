@@ -1,0 +1,16 @@
+{
+  "verdict": "PASS",
+  "reason": "the final attempt at 127.0.0.1:47318 succeeded (code 0)",
+  "attempts": [
+    {
+      "session_key": "8f0148f7-2ee8-41c0-83e3-1ae96d4641f9",
+      "call_id": "call_00_1FoMPQbOZsFxs6bFXzFx7898",
+      "message_index": 7,
+      "host": "127.0.0.1",
+      "port": "47318",
+      "endpoint": "skill:search",
+      "ok": true,
+      "why": "code 0"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "schema": "core-gate-record-v1",
+  "mode": "reset",
+  "mechanism": "core-status",
+  "at": "2026-09-07T10:06:46Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "baseline_frozen_at": "2026-09-06T08:47:33Z",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "before": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject"
+    }
+  },
+  "actions": [],
+  "decisions": {},
+  "after": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit",
+      "confidence": 1,
+      "gate": {
+        "schema_version": "gate-decision-v2",
+        "rules_version": "gate-rules-2026-09-07",
+        "asset_id": "skl-oBaDO5CceKnr",
+        "decided_at": "2026-09-07T10:06:43.833Z",
+        "decision": "admit",
+        "status_target": "approved",
+        "confidence": 1,
+        "reasons": [
+          "rule admit: cross-person validated >= 1 (2 record(s)) and no corrected",
+          "reported signals: 1 distinct task(s), 1 distinct consumer(s); neither is a threshold",
+          "author usr-n68ea5ythq: 0 validated / 2 corrected on other assets (reported, not used)"
+        ],
+        "evidence_refs": [
+          {
+            "outcome_id": "ca7ff6fe-058a-44e8-b2e6-249996fae234",
+            "state": "validated",
+            "relation": "cross_user"
+          },
+          {
+            "outcome_id": "9a5a7eec-c215-4bb0-bf72-43e8cf23a286",
+            "state": "validated",
+            "relation": "cross_user"
+          }
+        ],
+        "signals": {
+          "online": {
+            "validated": 2,
+            "corrected": 0,
+            "used": 0,
+            "cross_user_validated": 2,
+            "distinct_consumers": 1,
+            "distinct_tasks": 1
+          },
+          "author": {
+            "user_id": "usr-n68ea5ythq",
+            "validated": 0,
+            "corrected": 2,
+            "distinct_consumers": 1,
+            "recent_wrong_asset_ids": [
+              "skl-sZFb3KatWY6m"
+            ],
+            "assessment": null
+          }
+        },
+        "review_priority": null,
+        "evidence_as_of": "2026-09-06T08:47:33Z"
+      }
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject",
+      "confidence": 0,
+      "gate": {
+        "schema_version": "gate-decision-v2",
+        "rules_version": "gate-rules-2026-09-07",
+        "asset_id": "skl-sZFb3KatWY6m",
+        "decided_at": "2026-09-07T10:06:43.885Z",
+        "decision": "reject",
+        "status_target": "failed",
+        "confidence": 0,
+        "reasons": [
+          "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:34:32.249Z by usr-4u07qc2kuj)",
+          "reported signals: 0 distinct task(s), 1 distinct consumer(s); neither is a threshold",
+          "author usr-n68ea5ythq: 2 validated / 0 corrected on other assets (reported, not used)"
+        ],
+        "evidence_refs": [
+          {
+            "outcome_id": "9dc6a672-217b-4763-b986-6f32cbe76fa8",
+            "state": "corrected",
+            "relation": "cross_user"
+          },
+          {
+            "outcome_id": "472b3355-9bce-4ff0-8003-2fbc154229cc",
+            "state": "corrected",
+            "relation": "cross_user"
+          }
+        ],
+        "signals": {
+          "online": {
+            "validated": 0,
+            "corrected": 2,
+            "used": 0,
+            "cross_user_validated": 0,
+            "distinct_consumers": 1,
+            "distinct_tasks": 0
+          },
+          "author": {
+            "user_id": "usr-n68ea5ythq",
+            "validated": 2,
+            "corrected": 0,
+            "distinct_consumers": 1,
+            "recent_wrong_asset_ids": [],
+            "assessment": null
+          }
+        },
+        "review_priority": null,
+        "evidence_as_of": "2026-09-06T08:47:33Z"
+      }
+    }
+  },
+  "status_at_start": {
+    "skl-oBaDO5CceKnr": "approved",
+    "skl-sZFb3KatWY6m": "failed"
+  },
+  "visibility_at_start": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "expected": {},
+  "verified": {},
+  "all_verified": null,
+  "baseline_check": null,
+  "note": "status read after the batch, after the as_of re-evaluation of 2026-09-07 (decided_at inside each decision); mode set from run.json.gate.mode"
+}

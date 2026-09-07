@@ -1,0 +1,30 @@
+{
+  "run_id": "20260905T200054Z-injector-probe",
+  "label": "injector-probe",
+  "identity": "a",
+  "started_at": "2026-09-05T20:00:54Z",
+  "verdict": "PASS",
+  "counts": {
+    "capture.jsonl": 8,
+    "tool-call-logs.jsonl": 9,
+    "candidate-log.jsonl": 1,
+    "events.jsonl": 2,
+    "early-events.jsonl": 6,
+    "used-events.jsonl": 2
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide",
+  "session_ids": [
+    "6ae29c1e-a7c8-468d-a988-35ec676b848a"
+  ],
+  "finished_at": "2026-09-05T20:03:56Z",
+  "postprocessed": true,
+  "postprocess_note": "Original runner outputs preserved in runner-original; session-scoped rows and SSE usage recovered without changing acceptance or attribution rules.",
+  "context_confounders": {
+    "profile_memory_present": false,
+    "l3_watch_hits": null,
+    "l3_sha1": null,
+    "non_pool_skills_in_listing": 0,
+    "non_pool_skill_reads": 0,
+    "backfilled_at": "2026-09-07T08:57:19Z"
+  }
+}

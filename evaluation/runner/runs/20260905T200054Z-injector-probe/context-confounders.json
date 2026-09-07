@@ -1,0 +1,36 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T08:57:19.862Z",
+  "system_prompt": {
+    "chars": 24444,
+    "sha1": "e1bce3698d501407ff8a9481a22ed2b30579125d"
+  },
+  "profile_memory": {
+    "present": false
+  },
+  "available_skills": {
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

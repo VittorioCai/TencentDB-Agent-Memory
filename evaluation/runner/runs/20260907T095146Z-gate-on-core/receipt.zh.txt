@@ -1,0 +1,24 @@
+# 资产使用回执 — 运行 20260907T095146Z-gate-on-core · 会话 6db33040 · 任务 task-5e6xp4mrrw · 2026-09-07T10:06:48Z
+
+本次应用 1 项团队资产
+- Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_00_d2QDklxh0SqHycqHKOwt4410 (message 6); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已验证，且有对照批次证明该版本带来正向增益
+
+◆ eval-bridge-endpoint-b  v2  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益
+    为何提供       offered at rank 2 of 2 (score 7.58e-6) for the query "skill bridge HTTP reach convention"
+    影响         its value 47318 was used in tool call call_00_d2QDklxh0SqHycqHKOwt4410 (message 6); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_00_d2QDklxh0SqHycqHKOwt4410) 通过
+    证据
+      verify_result   20260907T095146Z-gate-on-core:verify.mjs:call=call_00_d2QDklxh0SqHycqHKOwt4410:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(37dc7ab8-dd80-4cbc-babf-7ca7ac3845d1):msg[6]:call_00_d2QDklxh0SqHycqHKOwt4410:arguments  — token 47318; content of v2 entered the context at message 5, before this operation at message 6
+      capture_line    6db33040-8039-40c7-864f-8bb1db1a7217:call_00_8G1C2JDCgPVjIfPa8gW09995  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-07  — present 16 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 44.375 vs 50; prompt_tokens_mean 124719.688 vs 145197
+    闸门(Core) 准入 · 证据置信度 1 · 规则 gate-rules-2026-09-07
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

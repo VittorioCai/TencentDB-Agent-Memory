@@ -1,0 +1,78 @@
+{
+  "schema": "core-gate-record-v1",
+  "mode": "reset",
+  "mechanism": "core-status",
+  "at": "2026-09-07T09:44:30Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "baseline_frozen_at": "2026-09-06T08:47:33Z",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "before": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject"
+    }
+  },
+  "actions": [
+    {
+      "op": "asset/update",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "status": "approved",
+      "visibility": "team",
+      "accepted": true,
+      "message": "ok"
+    },
+    {
+      "op": "asset/update",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "status": "approved",
+      "visibility": "team",
+      "accepted": true,
+      "message": "ok"
+    }
+  ],
+  "decisions": {},
+  "after": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit",
+      "confidence": 1
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "reject",
+      "confidence": 0
+    }
+  },
+  "status_at_start": {
+    "skl-oBaDO5CceKnr": "approved",
+    "skl-sZFb3KatWY6m": "approved"
+  },
+  "visibility_at_start": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "expected": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "approved",
+      "visibility": "team"
+    }
+  },
+  "verified": {
+    "skl-oBaDO5CceKnr": true,
+    "skl-sZFb3KatWY6m": true
+  },
+  "all_verified": true,
+  "baseline_check": null
+}

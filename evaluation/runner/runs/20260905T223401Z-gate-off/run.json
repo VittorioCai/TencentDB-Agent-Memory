@@ -1,0 +1,32 @@
+{
+  "run_id": "20260905T223401Z-gate-off",
+  "label": "gate-off",
+  "identity": "b",
+  "conversation_id": "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
+  "resolved_identity": {
+    "agent_id": "agt-5e0y4l8a7a",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-4u07qc2kuj",
+    "task_id": "task-5e6xp4mrrw"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "started_at": "2026-09-05T22:34:01Z",
+  "verdict": "PASS",
+  "counts": {
+    "capture.jsonl": 8,
+    "tool-call-logs.jsonl": 12,
+    "candidate-log.jsonl": 1,
+    "events.jsonl": 2,
+    "early-events.jsonl": 4,
+    "used-events.jsonl": 2
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide",
+  "context_confounders": {
+    "profile_memory_present": true,
+    "l3_watch_hits": 0,
+    "l3_sha1": "9324de69ddfa66398237d7ecd6c6a51906ab7e90",
+    "non_pool_skills_in_listing": 1,
+    "non_pool_skill_reads": 1,
+    "backfilled_at": "2026-09-07T08:57:20Z"
+  }
+}

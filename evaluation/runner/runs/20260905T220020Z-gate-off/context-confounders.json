@@ -1,0 +1,74 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T08:57:19.973Z",
+  "system_prompt": {
+    "chars": 26965,
+    "sha1": "d01c3c1241fe0275cedddabe2c9eb38cb9d51837"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "f5d44fc5667eb1eb111277bf91d7d025e6799263",
+      "chars": 2194,
+      "last_update": "2026-09-05T21:51",
+      "watch_hits": []
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [
+      "skill-bridge-http-access"
+    ],
+    "not_in_pool": [
+      "skill-bridge-http-access"
+    ]
+  },
+  "non_pool_skill_reads": [
+    {
+      "timestamp": "2026-09-06 06:00:29.186",
+      "endpoint": "get-by-name",
+      "skill_id": null,
+      "skill_name": "skill-bridge-http-access",
+      "upstream_status": 200
+    },
+    {
+      "timestamp": "2026-09-06 06:00:48.844",
+      "endpoint": "get-by-name",
+      "skill_id": null,
+      "skill_name": "skl-sZFb3KatWY6m",
+      "upstream_status": 200
+    },
+    {
+      "timestamp": "2026-09-06 06:00:48.845",
+      "endpoint": "get-by-name",
+      "skill_id": null,
+      "skill_name": "skl-oBaDO5CceKnr",
+      "upstream_status": 200
+    }
+  ],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

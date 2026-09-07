@@ -69,6 +69,24 @@ token through would show up here as `acted while hidden > 0`.
 Both tables stay in the report. The first shows the calibration finding a
 real miss class; the second shows the fix measured by the same instrument.
 
+## Independent runs (2026-09-07, batch 2)
+
+The rule revision above was frozen at 44c3ca2 before any further run. Batch
+2 (five gate-off, five gate-on, in-Core gate; `runner/COMPARISON-2026-09-07.md`)
+adds 15 (run, asset) pairs the revision had never seen. Over all 25 runs
+(`loo-2026-09-07.md`):
+
+| asset | present | acted | judged used | withheld | hidden | acted while hidden | truth | precision | recall |
+|---|---|---|---|---|---|---|---|---|---|
+| eval-bridge-endpoint-a (wrong) | 12 | 12 | 12 | 0 | 8 | 0 | needed | 100% (n=12) | 100% (n=12) |
+| eval-bridge-endpoint-b (right) | 16 | 16 | 16 | 0 | 4 | 0 | needed | 100% (n=16) | 100% (n=16) |
+
+Every new pair was acted on and judged `used`; the wrong asset was never
+acted on in five more hidden runs. The 100% after the revision is therefore
+no longer a recomputation on the data that prompted it. Hidden-run status now
+counts `status = failed / candidate` as hidden alongside `visibility != team`,
+because the in-Core gate hides by status.
+
 ## Limits
 
 - Two assets, one token each. n is per (run, asset) pair; with three runs

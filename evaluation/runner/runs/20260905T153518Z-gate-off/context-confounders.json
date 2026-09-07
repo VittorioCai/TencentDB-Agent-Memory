@@ -1,0 +1,63 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T08:57:19.808Z",
+  "system_prompt": {
+    "chars": 24002,
+    "sha1": "c82c11723049823d23c9616af4c0311c2f6f0535"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "39c272f235ffeac6693a94d93064e470058553d1",
+      "chars": 1060,
+      "last_update": null,
+      "watch_hits": []
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [
+    {
+      "timestamp": "2026-09-05 23:38:53.676",
+      "endpoint": "get-by-name",
+      "skill_id": null,
+      "skill_name": "skl-sZFb3KatWY6m",
+      "upstream_status": 200
+    },
+    {
+      "timestamp": "2026-09-05 23:38:53.690",
+      "endpoint": "get-by-name",
+      "skill_id": null,
+      "skill_name": "skl-oBaDO5CceKnr",
+      "upstream_status": 200
+    }
+  ],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

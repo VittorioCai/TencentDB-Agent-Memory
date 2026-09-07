@@ -1,0 +1,55 @@
+{
+  "run_id": "20260907T094558Z-gate-off-core",
+  "label": "gate-off-core",
+  "identity": "b",
+  "conversation_id": "c738663a-aae7-4785-9b33-a47c249c1592",
+  "resolved_identity": {
+    "agent_id": "agt-5e0y4l8a7a",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-4u07qc2kuj",
+    "task_id": "task-5e6xp4mrrw"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "auto_extraction_enabled": false,
+  "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
+  "started_at": "2026-09-07T09:45:58Z",
+  "gate": {
+    "mode": "off",
+    "hidden": [],
+    "baseline_frozen_at": "2026-09-06T08:47:33Z",
+    "mechanism": "core-status",
+    "visibility_at_start": {
+      "skl-oBaDO5CceKnr": "team",
+      "skl-sZFb3KatWY6m": "team"
+    },
+    "status_at_start": {
+      "skl-oBaDO5CceKnr": "approved",
+      "skl-sZFb3KatWY6m": "approved"
+    },
+    "all_verified": true
+  },
+  "core_outcomes": {
+    "posted": 2,
+    "skipped": 0,
+    "synced_at": "2026-09-07T09:46:57Z",
+    "evaluate": false
+  },
+  "verdict": "PASS",
+  "context_confounders": {
+    "profile_memory_present": true,
+    "l3_watch_hits": 2,
+    "l3_sha1": "95734965c7f23b629ba9de0d343d4ad160f43920",
+    "non_pool_skills_in_listing": 1,
+    "non_pool_skill_reads": 0
+  },
+  "counts": {
+    "capture.jsonl": 8,
+    "tool-call-logs.jsonl": 9,
+    "candidate-log.jsonl": 14,
+    "events.jsonl": 2,
+    "early-events.jsonl": 4,
+    "used-events.jsonl": 2,
+    "outcome-events.jsonl": 2
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide"
+}

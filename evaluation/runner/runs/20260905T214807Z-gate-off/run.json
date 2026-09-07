@@ -1,0 +1,24 @@
+{
+  "run_id": "20260905T214807Z-gate-off",
+  "label": "gate-off",
+  "identity": "b",
+  "started_at": "2026-09-05T21:48:07Z",
+  "verdict": "ERROR",
+  "counts": {
+    "capture.jsonl": 20,
+    "tool-call-logs.jsonl": 15,
+    "candidate-log.jsonl": 12,
+    "events.jsonl": 0,
+    "early-events.jsonl": 0,
+    "used-events.jsonl": 0
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide",
+  "context_confounders": {
+    "profile_memory_present": true,
+    "l3_watch_hits": 0,
+    "l3_sha1": "57df3dd4574fa2a0fc8e829377187195d3c04c20",
+    "non_pool_skills_in_listing": 0,
+    "non_pool_skill_reads": 0,
+    "backfilled_at": "2026-09-07T08:57:19Z"
+  }
+}

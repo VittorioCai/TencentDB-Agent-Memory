@@ -1,0 +1,71 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T08:57:20.120Z",
+  "system_prompt": {
+    "chars": 26500,
+    "sha1": "0c059fcea1524df0701fb55db2b8aefd99941c64"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "7303c079664d44ae5d6e1f44d59a352b1942291a",
+      "chars": 1729,
+      "last_update": "2026-09-06T00:04:12.511Z",
+      "watch_hits": [
+        {
+          "line": 11,
+          "pattern": "get-by-name",
+          "text": "- **Lookup**: /skill/search → skill_id → /skill/get (include_content + include_manifest); never get-by-name (agent-scoped; cross-agent 404 by design); files/read = manifest-declared paths only (SKILL.md not always at root)."
+        },
+        {
+          "line": 12,
+          "pattern": "probe every documented candidate",
+          "text": "- **Reach & conflicts**: probe every documented candidate under a bounded timeout (--max-time 15) with its prescribed request; report each outcome incl. duration; a live code:0 reply outranks silent/unreachable records; no reply → report \"did not return\" + wait time."
+        }
+      ]
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [
+      "skill-bridge-http-access"
+    ],
+    "not_in_pool": [
+      "skill-bridge-http-access"
+    ]
+  },
+  "non_pool_skill_reads": [
+    {
+      "timestamp": "2026-09-06 17:31:20.136",
+      "endpoint": "get-by-name",
+      "skill_id": "skl-lUWmwEYqsZDZ",
+      "skill_name": null,
+      "upstream_status": 200
+    }
+  ],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

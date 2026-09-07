@@ -1,0 +1,16 @@
+{
+  "verdict": "FAIL",
+  "reason": "the final attempt at 10.244.7.19:8096 failed (timed out)",
+  "attempts": [
+    {
+      "session_key": "27990aa8-183a-4535-886b-3598245ff170",
+      "call_id": "call_00_pB0U647pM5lABOMqZ0Bd5979",
+      "message_index": 7,
+      "host": "10.244.7.19",
+      "port": "8096",
+      "endpoint": "skill:search",
+      "ok": false,
+      "why": "timed out"
+    }
+  ]
+}

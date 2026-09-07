@@ -1,0 +1,84 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "f4d59fb6-946e-493d-9a99-dcf588a31ddf",
+  "run_id": "20260907T095050Z-gate-on-core",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-07T10:06:47Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 1
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 2 (score 7.58e-6) for the query \"skill bridge http reach access convention\"",
+      "status": "contributed",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 47318 was used in tool call call_00_2pWToJVOQvlt8gIRw6xj8975 (message 7); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260907T095050Z-gate-on-core:verify.mjs:call=call_00_2pWToJVOQvlt8gIRw6xj8975:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(7a7c4ea5-362a-41af-b568-7930f4f51802):msg[7]:call_00_2pWToJVOQvlt8gIRw6xj8975:arguments",
+          "detail": "token 47318; content of v2 entered the context at message 6, before this operation at message 7"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-07 17:51:08.723:skill-bridge:get",
+          "detail": "request names skl-oBaDO5CceKnr"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "f4d59fb6-946e-493d-9a99-dcf588a31ddf:call_00_ZlWz3EwKBW93nhawLOXu2136",
+          "detail": "skill:get answered at message 6; carrying content; version 2"
+        },
+        {
+          "kind": "contrast_batch",
+          "ref": "loo-skl-oBaDO5CceKnr-2026-09-07",
+          "detail": "present 16 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 44.375 vs 50; prompt_tokens_mean 124719.688 vs 145197"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_00_2pWToJVOQvlt8gIRw6xj8975)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "admit",
+        "rules_version": "gate-rules-2026-09-07",
+        "decided_at": "2026-09-07T10:06:43.833Z",
+        "review_priority": null,
+        "applied": true,
+        "evidence_confidence": 1,
+        "author_assessment": null
+      }
+    }
+  ]
+}

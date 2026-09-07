@@ -1,0 +1,43 @@
+{
+  "mode": "hide",
+  "dry_run": false,
+  "at": "2026-09-06T12:41:53Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "asset_owners": [
+    "usr-n68ea5ythq"
+  ],
+  "key_is_owner": "not exercised (no writes)",
+  "plan": {
+    "mode": "hide",
+    "changes": [],
+    "unchanged": [
+      {
+        "asset_id": "skl-oBaDO5CceKnr",
+        "visibility": "private",
+        "because": "leave-one-out: hidden for this run (private)"
+      },
+      {
+        "asset_id": "skl-sZFb3KatWY6m",
+        "visibility": "team",
+        "because": "leave-one-out: kept at baseline (team)"
+      }
+    ],
+    "unreadable": [],
+    "undecided": []
+  },
+  "visibility_before": {
+    "skl-oBaDO5CceKnr": "private",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "visibility_after": {
+    "skl-oBaDO5CceKnr": "private",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "writes": [],
+  "verified": {
+    "skl-oBaDO5CceKnr": true,
+    "skl-sZFb3KatWY6m": true
+  },
+  "all_verified": true
+}

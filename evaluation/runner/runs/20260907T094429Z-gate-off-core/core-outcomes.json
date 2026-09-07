@@ -1,0 +1,24 @@
+{
+  "schema": "core-outcomes-v1",
+  "run_id": "20260907T094429Z-gate-off-core",
+  "synced_at": "2026-09-07T09:45:26Z",
+  "consumer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key-b",
+  "evaluate": false,
+  "posted": [
+    {
+      "event_id": "evt-ee0b3455c532",
+      "outcome_id": "8798e334-76fd-4e4a-a8ee-5452794f25cf",
+      "state": "corrected",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "relation": "cross_user"
+    },
+    {
+      "event_id": "evt-e5dfadaaaaef",
+      "outcome_id": "d040f72e-d65b-4df2-8ae8-8324b1d8195a",
+      "state": "validated",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "relation": "cross_user"
+    }
+  ],
+  "skipped": []
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T08:57:19.914Z",
+  "system_prompt": {
+    "chars": 26307,
+    "sha1": "343fe6ebf03ecaa5515e0bd5f54ecf53cf28f3a2"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "57df3dd4574fa2a0fc8e829377187195d3c04c20",
+      "chars": 3275,
+      "last_update": "2026-09-05T16:52",
+      "watch_hits": []
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

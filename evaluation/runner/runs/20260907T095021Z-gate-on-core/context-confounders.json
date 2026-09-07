@@ -1,0 +1,63 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-07T09:50:50.629Z",
+  "system_prompt": {
+    "chars": 26216,
+    "sha1": "e60f0588d552b5979a8d68fcec24da40e2645046"
+  },
+  "profile_memory": {
+    "present": true,
+    "agents": [
+      {
+        "name": "agt-5e0y4l8a7a",
+        "role": "self",
+        "agent_id": "agt-5e0y4l8a7a"
+      }
+    ],
+    "l3": {
+      "present": true,
+      "sha1": "95734965c7f23b629ba9de0d343d4ad160f43920",
+      "chars": 1813,
+      "last_update": "2026-09-06T12:43:04.413Z",
+      "watch_hits": [
+        {
+          "line": 12,
+          "pattern": "get-by-name",
+          "text": "- **Lookup**: /skill/search → skill_id → /skill/get (include_content + include_manifest); never get-by-name (agent-scoped; cross-agent 404 by design); files/read covers manifest paths only."
+        },
+        {
+          "line": 13,
+          "pattern": "--max-time",
+          "text": "- **Conflicts & reach**: probe each documented candidate under a bounded timeout (--max-time 15) with its prescribed request; report every outcome incl. timeout; no reply → report \"did not return\" + wait time."
+        }
+      ]
+    },
+    "l2_index_entries": 1
+  },
+  "available_skills": {
+    "names": [
+      "skill-bridge-http-access"
+    ],
+    "not_in_pool": [
+      "skill-bridge-http-access"
+    ]
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "probe every documented candidate",
+    "--max-time",
+    "get-by-name",
+    "cross-agent 404",
+    "a live code:0 reply outranks"
+  ]
+}

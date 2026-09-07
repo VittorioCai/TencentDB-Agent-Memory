@@ -1,0 +1,251 @@
+{
+  "schema": "core-gate-record-v1",
+  "mode": "apply",
+  "mechanism": "core-status",
+  "at": "2026-09-07T09:52:09Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "baseline_frozen_at": "2026-09-06T08:47:33Z",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "before": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject"
+    }
+  },
+  "actions": [
+    {
+      "op": "asset/update",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "status": "approved",
+      "visibility": "team",
+      "accepted": true,
+      "message": "ok"
+    },
+    {
+      "op": "asset/update",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "status": "approved",
+      "visibility": "team",
+      "accepted": true,
+      "message": "ok"
+    },
+    {
+      "op": "gate/evaluate",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "accepted": true
+    },
+    {
+      "op": "gate/evaluate",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "accepted": true
+    }
+  ],
+  "decisions": {
+    "skl-oBaDO5CceKnr": {
+      "schema_version": "gate-decision-v2",
+      "rules_version": "gate-rules-2026-09-07",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "decided_at": "2026-09-07T09:52:08.464Z",
+      "decision": "admit",
+      "status_target": "approved",
+      "confidence": 1,
+      "reasons": [
+        "rule admit: cross-person validated >= 1 (11 record(s)) and no corrected",
+        "reported signals: 1 distinct task(s), 1 distinct consumer(s); neither is a threshold",
+        "author usr-n68ea5ythq: 0 validated / 7 corrected on other assets (reported, not used)"
+      ],
+      "evidence_refs": [
+        {
+          "outcome_id": "030fa385-32cf-43db-832f-571b8318623e",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "15d2fcf1-e210-4657-b4bb-e4ca9b663699",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "035dbdfb-053a-439a-a0b4-cb5b597c88b3",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "a3b41994-815f-448b-ba7f-49e2187b3c73",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "8274f39c-b46d-4e99-a6c6-4fc7b7f732a2",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "69c96472-649a-4de3-9281-bcc6fd8f764f",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "50565191-9068-4221-8437-87fa703e4916",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "e3f38800-0cfe-4155-8cdd-a5b6ad900248",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "d040f72e-d65b-4df2-8ae8-8324b1d8195a",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "ca7ff6fe-058a-44e8-b2e6-249996fae234",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "9a5a7eec-c215-4bb0-bf72-43e8cf23a286",
+          "state": "validated",
+          "relation": "cross_user"
+        }
+      ],
+      "signals": {
+        "online": {
+          "validated": 11,
+          "corrected": 0,
+          "used": 0,
+          "cross_user_validated": 11,
+          "distinct_consumers": 1,
+          "distinct_tasks": 1
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "validated": 0,
+          "corrected": 7,
+          "distinct_consumers": 1,
+          "recent_wrong_asset_ids": [
+            "skl-sZFb3KatWY6m"
+          ],
+          "assessment": null
+        }
+      },
+      "review_priority": null
+    },
+    "skl-sZFb3KatWY6m": {
+      "schema_version": "gate-decision-v2",
+      "rules_version": "gate-rules-2026-09-07",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "decided_at": "2026-09-07T09:52:08.572Z",
+      "decision": "reject",
+      "status_target": "failed",
+      "confidence": 0,
+      "reasons": [
+        "rule reject: a corrected outcome exists (reason=wrong, 7 record(s); first 2026-09-07T09:50:07.490Z by usr-4u07qc2kuj)",
+        "reported signals: 0 distinct task(s), 1 distinct consumer(s); neither is a threshold",
+        "author usr-n68ea5ythq: 11 validated / 0 corrected on other assets (reported, not used)"
+      ],
+      "evidence_refs": [
+        {
+          "outcome_id": "34d10bab-fa92-434f-82f8-95146f1d47f1",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "97deb63f-527e-41ba-90a5-957427df8c8c",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "c8d6b594-3f2c-4869-bd6e-1c244f4c3239",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "0060c604-bf41-49c8-86be-4ad2b4fbc904",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "8798e334-76fd-4e4a-a8ee-5452794f25cf",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "9dc6a672-217b-4763-b986-6f32cbe76fa8",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "outcome_id": "472b3355-9bce-4ff0-8003-2fbc154229cc",
+          "state": "corrected",
+          "relation": "cross_user"
+        }
+      ],
+      "signals": {
+        "online": {
+          "validated": 0,
+          "corrected": 7,
+          "used": 0,
+          "cross_user_validated": 0,
+          "distinct_consumers": 1,
+          "distinct_tasks": 0
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "validated": 11,
+          "corrected": 0,
+          "distinct_consumers": 1,
+          "recent_wrong_asset_ids": [],
+          "assessment": null
+        }
+      },
+      "review_priority": null
+    }
+  },
+  "after": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit",
+      "confidence": 1
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject",
+      "confidence": 0
+    }
+  },
+  "status_at_start": {
+    "skl-oBaDO5CceKnr": "approved",
+    "skl-sZFb3KatWY6m": "failed"
+  },
+  "visibility_at_start": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "expected": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team"
+    }
+  },
+  "verified": {
+    "skl-oBaDO5CceKnr": true,
+    "skl-sZFb3KatWY6m": true
+  },
+  "all_verified": true,
+  "baseline_check": null
+}

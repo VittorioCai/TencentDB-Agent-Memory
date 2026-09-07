@@ -1,0 +1,93 @@
+[
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-oBaDO5CceKnr",
+    "asset_type": "skill",
+    "asset_name": "eval-bridge-endpoint-b",
+    "decided_at": "2026-09-07T09:51:46.551Z",
+    "decision": "admit",
+    "reasons": [
+      "rule admit: cross_user validated >= 1 (1 record(s)) and no corrected",
+      "reported signals: 1 distinct task(s), 1 distinct consumer(s); neither is a threshold at this stage",
+      "author confidence 0.583 (1 validated, 0 corrected, prior 0.5: neutral 0.5: no other author has cross-person outcomes)"
+    ],
+    "evidence_refs": [
+      {
+        "event_id": "evt-ac79810b0fc3",
+        "state": "validated",
+        "relation": "cross_user"
+      },
+      {
+        "event_id": "evt-4a5810fc517e",
+        "state": "used",
+        "relation": "cross_user"
+      }
+    ],
+    "signals": {
+      "online": {
+        "fetched": 1,
+        "used_hard": 1,
+        "used_soft": 0,
+        "validated": 1,
+        "corrected": 0,
+        "distinct_actors": 1,
+        "distinct_tasks": 1,
+        "cross_user_validated": 1
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "agent_id": "agt-5e4hna56j9",
+        "confidence": 0.583,
+        "computable": true,
+        "distinct_tasks": 1
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": true,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-sZFb3KatWY6m",
+    "asset_type": "skill",
+    "asset_name": "eval-bridge-endpoint-a",
+    "decided_at": "2026-09-07T09:51:46.552Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence 0.583 (1 validated, 0 corrected, after shrinkage); review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "agent_id": "agt-5e4hna56j9",
+        "confidence": 0.583,
+        "computable": true,
+        "distinct_tasks": 1
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": true,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  }
+]

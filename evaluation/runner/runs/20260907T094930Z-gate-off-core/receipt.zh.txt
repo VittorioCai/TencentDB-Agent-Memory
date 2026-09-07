@@ -1,0 +1,43 @@
+# 资产使用回执 — 运行 20260907T094930Z-gate-off-core · 会话 eb8de0a7 · 任务 task-5e6xp4mrrw · 2026-09-07T10:06:46Z
+
+本次应用 2 项团队资产
+- Skill：eval-bridge-endpoint-a — its value 10.244.7.19 was used in tool call call_00_UleJzftBm6vGgZWUBO3N2611 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-07T09:50:13Z), so the content explains the failure (timed out)
+- Skill：eval-bridge-endpoint-b — its value 47318 was used in tool call call_01_KChV8bAoIWiwHnRQXbZh6575 (message 7); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已验证，且有对照批次证明该版本带来正向增益
+- 1 项被证明错误——已采用，且它引出的调用因其内容而失败
+
+✗ eval-bridge-endpoint-a  v2  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已纠错——已采用，且它引出的调用因其内容而失败
+    为何提供       offered at rank 2 of 3 (score 5.92e-6) for the query "skill bridge HTTP 地址 访问"
+    影响         its value 10.244.7.19 was used in tool call call_00_UleJzftBm6vGgZWUBO3N2611 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-07T09:50:13Z), so the content explains the failure (timed out)
+    作用点        tool_call
+    相关测试 verify.mjs: dial 10.244.7.19:8096 (call_00_UleJzftBm6vGgZWUBO3N2611) 失败
+    证据
+      verify_result   20260907T094930Z-gate-off-core:verify.mjs:call=call_00_UleJzftBm6vGgZWUBO3N2611:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-07T09:50:13Z), so the content explains the failure (timed out)
+      tool_arg        request(0b64f720-6bf1-42f4-8440-c69396d49895):msg[7]:call_00_UleJzftBm6vGgZWUBO3N2611:arguments  — token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 7
+      capture_line    eb8de0a7-2cb6-4be1-9b45-b71742ead4aa:call_00_m1OKPoUqZrZdGLsqhj9W0153  — skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap
+    闸门(Core) 拒绝 · 证据置信度 0 · 规则 gate-rules-2026-09-07 · 未应用（本次闸门关闭）
+    风险         闸门拒绝: rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:34:32.249Z by usr-4u07qc2kuj)
+    风险         冲突: supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run
+
+◆ eval-bridge-endpoint-b  v2  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已产生贡献——已验证，且有命名对照批次证明该版本带来正向增益
+    为何提供       offered at rank 3 of 3 (score 5.92e-6) for the query "skill bridge HTTP 地址 访问"
+    影响         its value 47318 was used in tool call call_01_KChV8bAoIWiwHnRQXbZh6575 (message 7); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_01_KChV8bAoIWiwHnRQXbZh6575) 通过
+    证据
+      verify_result   20260907T094930Z-gate-off-core:verify.mjs:call=call_01_KChV8bAoIWiwHnRQXbZh6575:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(0b64f720-6bf1-42f4-8440-c69396d49895):msg[7]:call_01_KChV8bAoIWiwHnRQXbZh6575:arguments  — token 47318; content of v2 entered the context at message 6, before this operation at message 7; the token had first reached the model at message 3 through this asset's own search entry (rank 3) — the same asset by another channel, credited either way
+      capture_line    eb8de0a7-2cb6-4be1-9b45-b71742ead4aa:call_01_WePs5xfpKVgGfKHcmWnN3032  — skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap
+      contrast_batch  loo-skl-oBaDO5CceKnr-2026-09-07  — present 16 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 44.375 vs 50; prompt_tokens_mean 124719.688 vs 145197
+    闸门(Core) 准入 · 证据置信度 1 · 规则 gate-rules-2026-09-07 · 未应用（本次闸门关闭）
+    风险         冲突: supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

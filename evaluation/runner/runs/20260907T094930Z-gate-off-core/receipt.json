@@ -1,0 +1,146 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "eb8de0a7-2cb6-4be1-9b45-b71742ead4aa",
+  "run_id": "20260907T094930Z-gate-off-core",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-07T10:06:46Z",
+  "summary": {
+    "applied_count": 2,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 1,
+      "contributed": 1
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 5.92e-6) for the query \"skill bridge HTTP 地址 访问\"",
+      "status": "corrected",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 10.244.7.19 was used in tool call call_00_UleJzftBm6vGgZWUBO3N2611 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-07T09:50:13Z), so the content explains the failure (timed out)",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260907T094930Z-gate-off-core:verify.mjs:call=call_00_UleJzftBm6vGgZWUBO3N2611:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (10.244.7.19) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-07T09:50:13Z), so the content explains the failure (timed out)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(0b64f720-6bf1-42f4-8440-c69396d49895):msg[7]:call_00_UleJzftBm6vGgZWUBO3N2611:arguments",
+          "detail": "token 10.244.7.19; content of v2 entered the context at message 5, before this operation at message 7"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "eb8de0a7-2cb6-4be1-9b45-b71742ead4aa:call_00_m1OKPoUqZrZdGLsqhj9W0153",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 10.244.7.19:8096 (call_00_UleJzftBm6vGgZWUBO3N2611)",
+          "passed": false
+        }
+      ],
+      "risks": [
+        {
+          "kind": "gate_rejected",
+          "detail": "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:34:32.249Z by usr-4u07qc2kuj)"
+        },
+        {
+          "kind": "conflict",
+          "detail": "supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run"
+        }
+      ],
+      "gate_decision": "reject",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "reject",
+        "rules_version": "gate-rules-2026-09-07",
+        "decided_at": "2026-09-07T10:06:43.885Z",
+        "review_priority": null,
+        "applied": false,
+        "evidence_confidence": 0,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-05T15:07:26Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 5.92e-6) for the query \"skill bridge HTTP 地址 访问\"",
+      "status": "contributed",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value 47318 was used in tool call call_01_KChV8bAoIWiwHnRQXbZh6575 (message 7); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260907T094930Z-gate-off-core:verify.mjs:call=call_01_KChV8bAoIWiwHnRQXbZh6575:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(0b64f720-6bf1-42f4-8440-c69396d49895):msg[7]:call_01_KChV8bAoIWiwHnRQXbZh6575:arguments",
+          "detail": "token 47318; content of v2 entered the context at message 6, before this operation at message 7; the token had first reached the model at message 3 through this asset's own search entry (rank 3) — the same asset by another channel, credited either way"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "eb8de0a7-2cb6-4be1-9b45-b71742ead4aa:call_01_WePs5xfpKVgGfKHcmWnN3032",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        },
+        {
+          "kind": "contrast_batch",
+          "ref": "loo-skl-oBaDO5CceKnr-2026-09-07",
+          "detail": "present 16 run(s) vs absent 4: pass_rate 1 vs 0; failed_attempts_mean 0.5 vs 1; wall_seconds_mean 44.375 vs 50; prompt_tokens_mean 124719.688 vs 145197"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_01_KChV8bAoIWiwHnRQXbZh6575)",
+          "passed": true
+        }
+      ],
+      "risks": [
+        {
+          "kind": "conflict",
+          "detail": "supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run"
+        }
+      ],
+      "gate_decision": "admit",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "admit",
+        "rules_version": "gate-rules-2026-09-07",
+        "decided_at": "2026-09-07T10:06:43.833Z",
+        "review_priority": null,
+        "applied": false,
+        "evidence_confidence": 1,
+        "author_assessment": null
+      }
+    }
+  ]
+}

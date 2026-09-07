@@ -1,0 +1,44 @@
+{
+  "run_id": "20260906T112957Z-gate-on",
+  "label": "gate-on",
+  "identity": "b",
+  "conversation_id": "61da9c39-9ab3-498f-8abe-55a7c2eabd17",
+  "resolved_identity": {
+    "agent_id": "agt-5e0y4l8a7a",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-4u07qc2kuj",
+    "task_id": "task-5e6xp4mrrw"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "auto_extraction_enabled": false,
+  "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
+  "started_at": "2026-09-06T11:29:57Z",
+  "gate": {
+    "mode": "on",
+    "baseline_frozen_at": "2026-09-06T08:47:33Z",
+    "visibility_at_start": {
+      "skl-oBaDO5CceKnr": "team",
+      "skl-sZFb3KatWY6m": "private"
+    },
+    "all_verified": true
+  },
+  "verdict": "PASS",
+  "counts": {
+    "capture.jsonl": 8,
+    "tool-call-logs.jsonl": 10,
+    "candidate-log.jsonl": 7,
+    "events.jsonl": 1,
+    "early-events.jsonl": 2,
+    "used-events.jsonl": 1,
+    "outcome-events.jsonl": 0
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide",
+  "context_confounders": {
+    "profile_memory_present": true,
+    "l3_watch_hits": 2,
+    "l3_sha1": "7303c079664d44ae5d6e1f44d59a352b1942291a",
+    "non_pool_skills_in_listing": 1,
+    "non_pool_skill_reads": 1,
+    "backfilled_at": "2026-09-07T08:57:20Z"
+  }
+}

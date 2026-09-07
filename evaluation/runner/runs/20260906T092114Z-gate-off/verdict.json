@@ -1,0 +1,26 @@
+{
+  "verdict": "PASS",
+  "reason": "the final attempt at 127.0.0.1:47318 succeeded (code 0) after 1 earlier failure(s)",
+  "attempts": [
+    {
+      "session_key": "7e576bd6-d232-4503-88d1-6cd716427f12",
+      "call_id": "call_00_jQAsNzB0fmeqxhF9pbnS9470",
+      "message_index": 8,
+      "host": "10.244.7.19",
+      "port": "8096",
+      "endpoint": "skill:search",
+      "ok": false,
+      "why": "timed out"
+    },
+    {
+      "session_key": "7e576bd6-d232-4503-88d1-6cd716427f12",
+      "call_id": "call_01_2VnyERt2SFuKjZiNaRtS2494",
+      "message_index": 8,
+      "host": "127.0.0.1",
+      "port": "47318",
+      "endpoint": "skill:search",
+      "ok": true,
+      "why": "code 0"
+    }
+  ]
+}

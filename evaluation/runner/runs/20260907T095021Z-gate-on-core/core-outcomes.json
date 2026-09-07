@@ -1,0 +1,17 @@
+{
+  "schema": "core-outcomes-v1",
+  "run_id": "20260907T095021Z-gate-on-core",
+  "synced_at": "2026-09-07T09:50:49Z",
+  "consumer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key-b",
+  "evaluate": false,
+  "posted": [
+    {
+      "event_id": "evt-1ff8edad2f26",
+      "outcome_id": "a3b41994-815f-448b-ba7f-49e2187b3c73",
+      "state": "validated",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "relation": "cross_user"
+    }
+  ],
+  "skipped": []
+}
