@@ -592,6 +592,12 @@ export interface AuthorAssessmentSummary {
   domain: string;
   assessed_at: string;
   citations: number;
+  /**
+   * Whether the author's own records support, contradict, or say nothing
+   * about what the asset asserts — verified citations only. A contradiction
+   * from the author's own history is the strongest cold-start signal there is.
+   */
+  asset_claim_check?: { verdict: "supports" | "contradicts" | "silent"; record_ids?: string[] } | null;
 }
 
 // ============================

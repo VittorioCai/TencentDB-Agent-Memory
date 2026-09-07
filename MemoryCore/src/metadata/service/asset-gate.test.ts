@@ -268,3 +268,17 @@ describe("as_of: the gate can be asked to act on the evidence base only", () => 
     expect((await store.getAssetById("skl-z"))?.status).toBe("failed");
   });
 });
+
+describe("the author's own records contradicting the asset", () => {
+  it("makes a pending asset high priority, and is reported on a decided one without moving it", () => {
+    const meta = JSON.stringify({ gate: { author_assessment: { competence: "medium", domain: "bridge address", assessed_at: "2026-09-07T10:00:00Z", citations: 4, asset_claim_check: { verdict: "contradicts", record_ids: ["l0:msg-1"] } } } });
+    const pending = decideAsset({ asset: { ...asset, metadata_json: meta }, outcomes: [], authorOutcomes: [], now: T0 });
+    expect(pending.review_priority).toBe("high");
+    expect(pending.reasons.join("\n")).toMatch(/own records contradict this asset's claim \(l0:msg-1\)/);
+    expect(pending.signals.author.assessment?.asset_claim_check?.verdict).toBe("contradicts");
+    const admitted = decideAsset({ asset: { ...asset, metadata_json: meta }, outcomes: [outcome({})], authorOutcomes: [], now: T0 });
+    expect(admitted.decision).toBe("admit");
+    expect(admitted.review_priority).toBeNull();
+    expect(admitted.reasons.join("\n")).toMatch(/reported, not used/);
+  });
+});

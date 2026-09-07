@@ -65,11 +65,15 @@ export function authorAssessmentOf(metadataJson: string | null | undefined): Aut
     const m = JSON.parse(metadataJson) as { gate?: { author_assessment?: unknown } };
     const a = m?.gate?.author_assessment as Partial<AuthorAssessmentSummary> | undefined;
     if (!a || typeof a.competence !== "string") return null;
+    const acc = a.asset_claim_check && typeof a.asset_claim_check === "object" && typeof a.asset_claim_check.verdict === "string"
+      ? { verdict: a.asset_claim_check.verdict, record_ids: Array.isArray(a.asset_claim_check.record_ids) ? a.asset_claim_check.record_ids.map(String) : [] }
+      : null;
     return {
       competence: a.competence as AuthorAssessmentSummary["competence"],
       domain: String(a.domain ?? ""),
       assessed_at: String(a.assessed_at ?? ""),
       citations: Number(a.citations ?? 0),
+      asset_claim_check: acc,
     };
   } catch {
     return null;
@@ -151,8 +155,12 @@ export function decideAsset(input: DecideInput): GateDecision {
 
   // Review priority: only meaningful for a pending asset; never touches admit/reject.
   let review_priority: ReviewPriority | null = null;
+  const contradicted = assessment?.asset_claim_check?.verdict === "contradicts";
   if (decision === "pending") {
-    if (recentWrong.length > 0) {
+    if (contradicted) {
+      review_priority = "high";
+      reasons.push(`context-based assessment: the author's own records contradict this asset's claim (${(assessment?.asset_claim_check?.record_ids ?? []).join(", ") || "records cited in the assessment"}); review priority: high`);
+    } else if (recentWrong.length > 0) {
       review_priority = "high";
       reasons.push(`author ${authorId} has ${recentWrong.length} other asset(s) judged wrong within ${RECENT_WRONG_WINDOW_DAYS} days (${recentWrong.join(", ")}); review priority: high`);
     } else if (assessment && (assessment.competence === "low" || assessment.competence === "unknown")) {
@@ -171,6 +179,9 @@ export function decideAsset(input: DecideInput): GateDecision {
     }
   } else {
     reasons.push(`author ${authorId}: ${author.validated} validated / ${author.corrected} corrected on other assets (reported, not used)`);
+    if (assessment) {
+      reasons.push(`context-based assessment on file: competence ${assessment.competence} for "${assessment.domain}"${contradicted ? "; the author's own records contradict this asset's claim" : assessment.asset_claim_check?.verdict === "supports" ? "; the author's own records support this asset's claim" : ""} (reported, not used: the decision rests on outcomes)`);
+    }
   }
 
   const crossTotal = own.filter(isCross).filter((o) => o.state === "validated" || (o.state === "corrected" && o.corrected_reason != null && DOWNWEIGHT_REASONS.has(o.corrected_reason))).length;
