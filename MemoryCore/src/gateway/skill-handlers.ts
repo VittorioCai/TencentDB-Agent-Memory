@@ -278,7 +278,7 @@ async function admissionFilter<T extends SkillLike>(
     denied.push({ skill_id: s.skill_id, reason: d?.reason ?? "unknown" });
     if (d?.reason === "unregistered" && s.team_id && s.owner_agent_id && s.name) {
       // Register it as a candidate so a human sees it; never on the request's critical path.
-      meta.ensureSkillAsset({ skill_id: s.skill_id, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name })
+      meta.ensureSkillAsset({ skill_id: s.skill_id, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name, version: s.version, content_hash: s.content_hash ?? null })
         .catch((err: unknown) => ctx.deps.logger.warn(`[skill-admission] ensureSkillAsset ${s.skill_id} failed: ${(err as Error).message}`));
     }
   }

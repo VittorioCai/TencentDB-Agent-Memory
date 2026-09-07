@@ -383,6 +383,10 @@ export class TdaiGateway {
               team_id: skill.team_id!,
               agent_id: skill.owner_agent_id!,
               name: skill.name,
+              // The registry follows the head it just served (2026-09-08b):
+              // an asset registered before versions were tracked catches up here.
+              version: skill.version,
+              content_hash: skill.content_hash,
             }))
             .catch((err: unknown) => {
               gatewayRef.logger.warn(
