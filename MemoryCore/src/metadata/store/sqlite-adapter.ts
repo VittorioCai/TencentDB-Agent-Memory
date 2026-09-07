@@ -319,8 +319,10 @@ export class SqliteMetadataStore implements IMetadataStore {
       );
       CREATE INDEX IF NOT EXISTS idx_meta_ao_team_asset_occurred ON meta_asset_outcomes(team_id, asset_id, occurred_at DESC);
       CREATE INDEX IF NOT EXISTS idx_meta_ao_team_consumer_occurred ON meta_asset_outcomes(team_id, consumer_user_id, occurred_at DESC);
-      -- One row per recorder event: a redelivery finds this and adds nothing.
-      CREATE UNIQUE INDEX IF NOT EXISTS ux_meta_ao_team_event ON meta_asset_outcomes(team_id, event_id) WHERE event_id IS NOT NULL;
+      -- The unique index on (team_id, event_id) is created by
+      -- migrateAssetOutcomeTrustColumns(), after the column exists on
+      -- databases that predate it: in this block it would fail before the
+      -- ALTER ran.
 
       CREATE TABLE IF NOT EXISTS meta_config_params (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
