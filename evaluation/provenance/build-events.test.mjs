@@ -683,3 +683,12 @@ test("identity augmentation does not merge two genuinely different calls", () =>
   assert.equal(alice.observation, "bridge+wire");
   assert.match(alice.proof_refs[0].ref, /13:05:00/, "paired with skl-alice's row, not skl-late's");
 });
+
+test("a refused envelope is a known non-delivery, and no fetch is written for it", () => {
+  const refused = inspectDelivery('{"code":40301,"message":"not_visible","request_id":"r1","data":null}', "skl-x");
+  assert.equal(refused.delivered, false);
+  assert.equal(refused.refused, 40301);
+  const unknown = inspectDelivery("not json at all", "skl-x");
+  assert.equal(unknown.delivered, null);
+  assert.equal(unknown.refused, undefined);
+});

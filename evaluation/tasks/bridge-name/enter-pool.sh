@@ -136,6 +136,24 @@ for pair in "checklist:$CHECKLIST_ID" "right:$RIGHT_NOTE_ID" "wrong:$WRONG_NOTE_
 done
 (( CHECK_ONLY )) && { info "check only — pool not frozen"; exit 0; }
 
+# ── 3b. admitted, as the scenario's starting state ──────────────
+# Since 2026-09-07 a newly created skill enters Core as a `candidate`, which
+# the consumer cannot read — the candidate pool working as designed, and
+# exactly what stopped the first preparation run (every get answered 40301).
+# The scenario's premise is the pool *before* the gate has an opinion: both
+# notes and the checklist admitted and visible to the consumer, so that the
+# runs can produce the outcomes the gate will later act on. The owner sets
+# `status: approved` here and the record says so; --reset does the same for
+# the baseline assets before every gate-off run.
+for pair in "checklist:$CHECKLIST_ID" "right:$RIGHT_NOTE_ID" "wrong:$WRONG_NOTE_ID"; do
+  role="${pair%%:*}"; id="${pair#*:}"
+  st="$(python3 -c "import json;print(json.load(open('$TMP/asset-$role.json'))['data'].get('status'))")"
+  if [[ "$st" == "approved" ]]; then ok "$role: status=approved"; continue; fi
+  call "/v3/meta/asset/update" "{\"asset_id\":\"$id\",\"status\":\"approved\"}" "$TMP/st-$role.json"
+  envelope_ok "$TMP/st-$role.json" || die "could not set status on $id: $(envelope_msg "$TMP/st-$role.json")"
+  ok "$role: status $st → approved (the scenario's starting state; the gate decides later)"
+done
+
 # ── 4. freeze, record, screen ────────────────────────────────────
 info "freezing the pool …"
 # The frozen pool for THIS scenario lives beside the task; the mainline's

@@ -1,0 +1,46 @@
+{
+  "scenario": "bridge-name",
+  "team_id": "team-5ezfoladb5",
+  "author_agent_id": "agt-8ypy4vhft9",
+  "author_user_id": "usr-8ypylzex49",
+  "consumer_agent_id": "agt-5e0y4l8a7a",
+  "task_marker": "team-checklist-lookup",
+  "suffix": "312fad",
+  "checklist_marker": "qz7-312fad",
+  "wrong_id": "skl-Bwuta6kNQ6wq",
+  "pool_snapshot_at": "2026-09-07T11:10:15Z",
+  "pool_asset_count": 7,
+  "assets": [
+    {
+      "role": "checklist",
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "version": 1,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "agt-8ypy4vhft9"
+    },
+    {
+      "role": "right",
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "version": 1,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "agt-8ypy4vhft9"
+    },
+    {
+      "role": "wrong",
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "version": 1,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "agt-8ypy4vhft9"
+    }
+  ],
+  "discriminative_tokens": {
+    "right": "skl-MyrdnecjeYSb",
+    "wrong": "skl-Bwuta6kNQ6wq"
+  },
+  "failure_class_when_wrong": "service refusal (core 40401 SKILL_NOT_FOUND / bridge 403 not_visible), not reachability",
+  "expected_relation": "cross_user",
+  "operated_by": "one person running every identity; author C is a distinct user id, not an independent human"
+}

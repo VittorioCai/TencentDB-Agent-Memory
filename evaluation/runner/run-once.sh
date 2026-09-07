@@ -278,9 +278,13 @@ VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json')
 # harness opens its own TCP connection to every host:port the run attempted,
 # right now, and records the result. The outcome judge calls an asset wrong
 # only when this probe also fails to reach the address it gave.
-[[ -f "$TASK_DIR/probe-reachability.mjs" ]] && (cd "$REPO_ROOT" && node "$TASK_DIR/probe-reachability.mjs" --verdict="$RUN_DIR/verdict.json" \
-  --out="$RUN_DIR/reachability.json" --source="harness probe at run time" --timeout-ms=5000 > "$RUN_DIR/reachability.log" 2>&1) \
-  || warn "reachability probe failed; see $RUN_DIR/reachability.log (outcomes will be unconfirmed)"
+if [[ -f "$TASK_DIR/probe-reachability.mjs" ]]; then
+  (cd "$REPO_ROOT" && node "$TASK_DIR/probe-reachability.mjs" --verdict="$RUN_DIR/verdict.json" \
+    --out="$RUN_DIR/reachability.json" --source="harness probe at run time" --timeout-ms=5000 > "$RUN_DIR/reachability.log" 2>&1) \
+    || warn "reachability probe failed; see $RUN_DIR/reachability.log (outcomes will be unconfirmed)"
+else
+  info "no independent probe for this scenario ($TASK_NAME); outcomes that need one stay unconfirmed"
+fi
 [[ -f "$RUN_DIR/reachability.json" ]] && info "reachability: $(tr '\n' ';' < "$RUN_DIR/reachability.log")"
 
 # ── 4. attribution ───────────────────────────────────────────────

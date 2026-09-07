@@ -172,6 +172,16 @@ export function inspectDelivery(output, assetId) {
   const envelope = firstJsonObject(output);
   if (!envelope) return { delivered: null, version: null };
 
+  // An explicit refusal — the envelope's own non-zero code (40301 not
+  // visible, 40401 not found, 40302 write disabled …) — is a known
+  // non-delivery, not an unknown one. Nothing of the asset came back, and a
+  // later stage must not read "fetched" into it (found on the second
+  // scenario's first preparation run, where every get was refused and the
+  // receipt would have said 已取回).
+  if (typeof envelope.code === "number" && envelope.code !== 0) {
+    return { delivered: false, version: null, refused: envelope.code };
+  }
+
   // The asset may be the whole payload or one item inside a list.
   const data = envelope.data ?? envelope;
   const candidates = [data, ...(Array.isArray(data?.items) ? data.items : [])];
@@ -369,9 +379,9 @@ export function extractAssetMentions(events, assets) {
         // *result*, not the call: a model can emit several calls in one
         // message, and the second was written before the first one's result
         // existed.
-        const { delivered, version } = inspectDelivery(output, asset.asset_id);
+        const { delivered, version, refused = null } = inspectDelivery(output, asset.asset_id);
         bucket.responses.push({
-          callId, endpoint, messageIndex: index, delivered, version,
+          callId, endpoint, messageIndex: index, delivered, version, refused,
           requestPayload: requestPayloadOf(command),
         });
       }
@@ -535,6 +545,9 @@ export function buildEvents({ snapshot, toolCallRows, captureEvents }) {
 
       for (const response of bucket.responses) {
         const row = rowFor(response);
+        // A refused call is an attempt, not a fetch: the acceptance and the
+        // service rows keep the attempt; no fetched event is written for it.
+        if (response.refused != null) continue;
         const actor = row?.actor ?? calls[0]?.actor ?? { user_id: "", agent_id: "" };
         const observation = row ? "bridge+wire" : "wire_only";
 
