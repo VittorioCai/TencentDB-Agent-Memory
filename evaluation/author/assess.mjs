@@ -120,6 +120,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const a = parseArgs(process.argv.slice(2));
   if (!a.pack || !a.domain || !a["asset-claim"]) { console.error("usage: node assess.mjs --pack=F --domain=… --asset-claim=… [--asset=ID] [--budget-chars=N] [--model=M] [--out=F] [--dry-run]"); process.exit(2); }
   const pack = JSON.parse(readFileSync(a.pack, "utf8"));
+  // --recheck=F: re-run the citation check on a saved assessment's raw model
+  // output (after a checker change) without another model call; the pack
+  // must be the one the assessment was made from.
+  if (a.recheck) {
+    const prev = JSON.parse(readFileSync(a.recheck, "utf8"));
+    if (prev.pack?.sha256 !== pack.sha256) { console.error(`recheck: pack sha mismatch (${prev.pack?.sha256} vs ${pack.sha256})`); process.exit(1); }
+    let raw = {}; try { raw = JSON.parse(prev.raw_model_output); } catch { raw = {}; }
+    const packMap = new Map(pack.records.map((r) => [r.record_id, r.text]));
+    const verified = checkAssessment(raw, packMap);
+    prev.verified = verified;
+    prev.rechecked_at = new Date().toISOString();
+    prev.summary_for_gate = { ...prev.summary_for_gate, competence: verified.competence, citations: verified.counts.citations, asset_claim_check: { verdict: verified.asset_claim_check.verdict, record_ids: verified.asset_claim_check.record_ids } };
+    writeFileSync(a.recheck, JSON.stringify(prev, null, 2) + "\n");
+    console.log(`recheck: competence=${verified.competence}${verified.competence_downgraded ? ` (said ${verified.competence_as_said})` : ""} asset_claim=${verified.asset_claim_check.verdict} kept=${verified.counts.kept} dropped=${verified.counts.dropped} → ${a.recheck}`);
+    process.exit(0);
+  }
   const budget = a["budget-chars"] ? Number(a["budget-chars"]) : 60000;
   const sel = selectRecords(pack, { domain: a.domain, keywords: pack.keywords ?? [], budgetChars: budget });
   const prompt = buildPrompt({ pack, chosen: sel.chosen, domain: a.domain, assetClaim: a["asset-claim"], assetId: a.asset ?? pack.asset_id ?? null });

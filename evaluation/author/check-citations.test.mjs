@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkAssessment, quoteFound, verifyCitation } from "./check-citations.mjs";
+import { checkAssessment, quoteFound, resolveRecordId, verifyCitation } from "./check-citations.mjs";
 
 const pack = new Map([
   ["l1:m1", "The agent is probing both documented skill bridge endpoint addresses (10.244.7.19:8096 and 127.0.0.1:47318) with a reachability check"],
@@ -73,4 +73,13 @@ test("labels are folded onto the vocabulary; evidence is not", () => {
   const bad = checkAssessment({ competence: "excellent", claims: raw.claims, asset_claim_check: { verdict: "maybe", record_ids: ["l0:msg1"], quote: "10.244.7.19:8096 timed out" } }, pack);
   assert.equal(bad.competence, "unknown");
   assert.match(bad.asset_claim_check.reason, /not in the vocabulary/);
+});
+
+test("a cited id missing its kind prefix resolves when unambiguous; an unknown id does not", () => {
+  assert.equal(resolveRecordId("msg1", pack), "l0:msg1");
+  assert.equal(resolveRecordId("m1", pack), "l1:m1");
+  assert.equal(resolveRecordId("nope", pack), null);
+  const v = verifyCitation({ record_ids: ["msg1"], quote: "127.0.0.1:47318 answered code 0" }, pack);
+  assert.equal(v.ok, true);
+  assert.deepEqual(v.record_ids, ["l0:msg1"]);
 });

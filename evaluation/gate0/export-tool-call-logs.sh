@@ -13,6 +13,7 @@
 #   ./export-tool-call-logs.sh                       # last 24 hours
 #   SINCE="2 HOUR" ./export-tool-call-logs.sh        # custom window
 #   SESSION_KEY=codebuddy:conv-abc ./export-tool-call-logs.sh
+#   USER_ID=usr-n68ea5ythq SINCE="30 DAY" ./export-tool-call-logs.sh   # one author, for the evidence pack
 #   OUT=/tmp/rows.jsonl ./export-tool-call-logs.sh
 #
 # Then:
@@ -67,6 +68,12 @@ if [[ -n "$SESSION_KEY" ]]; then
   # Escape single quotes so a quote inside a session key cannot truncate the string
   ESCAPED="${SESSION_KEY//\'/\'\'}"
   WHERE="$WHERE AND session_key = '$ESCAPED'"
+fi
+# USER_ID=usr-… : one user's calls across sessions (the author evidence pack).
+USER_ID="${USER_ID:-}"
+if [[ -n "$USER_ID" ]]; then
+  ESCAPED_USER="${USER_ID//\'/\'\'}"
+  WHERE="$WHERE AND user_id = '$ESCAPED_USER'"
 fi
 
 read -r -d '' QUERY <<SQL || true

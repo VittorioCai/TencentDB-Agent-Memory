@@ -1,0 +1,83 @@
+{
+  "schema": "assessment-write-record-v1",
+  "at": "2026-09-07T10:23:54Z",
+  "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
+  "asset_id": "skl-sZFb3KatWY6m",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "as_of": "2026-09-06T08:47:33Z",
+  "written": {
+    "competence": "medium",
+    "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+    "assessed_at": "2026-09-07T10:21:40.423Z",
+    "citations": 5,
+    "asset_claim_check": {
+      "verdict": "contradicts",
+      "record_ids": [
+        "l0:msg-76898e301d59",
+        "outcome:472b3355-9bce-4ff0-8003-2fbc154229cc"
+      ]
+    },
+    "pack_sha256": "0416e98fd7f6f28fa0e4a1f3416913588c22ab60395b9783be29f4bd769be3ef",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
+  },
+  "decision_after": {
+    "schema_version": "gate-decision-v2",
+    "rules_version": "gate-rules-2026-09-07",
+    "asset_id": "skl-sZFb3KatWY6m",
+    "decided_at": "2026-09-07T10:23:54.917Z",
+    "decision": "reject",
+    "status_target": "failed",
+    "confidence": 0,
+    "reasons": [
+      "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:34:32.249Z by usr-4u07qc2kuj)",
+      "reported signals: 0 distinct task(s), 1 distinct consumer(s); neither is a threshold",
+      "author usr-n68ea5ythq: 2 validated / 0 corrected on other assets (reported, not used)",
+      "context-based assessment on file: competence medium for \"reaching the team skill bridge over HTTP from an agent session: which address answers\"; the author's own records contradict this asset's claim (reported, not used: the decision rests on outcomes)"
+    ],
+    "evidence_refs": [
+      {
+        "outcome_id": "9dc6a672-217b-4763-b986-6f32cbe76fa8",
+        "state": "corrected",
+        "relation": "cross_user"
+      },
+      {
+        "outcome_id": "472b3355-9bce-4ff0-8003-2fbc154229cc",
+        "state": "corrected",
+        "relation": "cross_user"
+      }
+    ],
+    "signals": {
+      "online": {
+        "validated": 0,
+        "corrected": 2,
+        "used": 0,
+        "cross_user_validated": 0,
+        "distinct_consumers": 1,
+        "distinct_tasks": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "validated": 2,
+        "corrected": 0,
+        "distinct_consumers": 1,
+        "recent_wrong_asset_ids": [],
+        "assessment": {
+          "competence": "medium",
+          "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+          "assessed_at": "2026-09-07T10:21:40.423Z",
+          "citations": 5,
+          "asset_claim_check": {
+            "verdict": "contradicts",
+            "record_ids": [
+              "l0:msg-76898e301d59",
+              "outcome:472b3355-9bce-4ff0-8003-2fbc154229cc"
+            ]
+          }
+        }
+      }
+    },
+    "review_priority": null,
+    "evidence_as_of": "2026-09-06T08:47:33Z"
+  },
+  "status_after": "failed"
+}

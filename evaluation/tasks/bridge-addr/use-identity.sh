@@ -14,6 +14,7 @@
 # Usage:
 #   bash use-identity.sh a      # author  (topic4-dev)
 #   bash use-identity.sh b      # consumer (topic4-eval-consumer)
+#   bash use-identity.sh c      # second author (topic4-eval-author-c)
 #   bash use-identity.sh show   # which one is active
 
 set -euo pipefail
@@ -28,7 +29,8 @@ key_for() {
   case "$1" in
     a) cat "$ENV_DIR/.topic4-user-key" ;;
     b) cat "$ENV_DIR/.topic4-user-key-b" ;;
-    *) echo "unknown identity: $1 (use a or b)" >&2; exit 2 ;;
+    c) cat "$ENV_DIR/.topic4-user-key-c" ;;
+    *) echo "unknown identity: $1 (use a, b or c)" >&2; exit 2 ;;
   esac
 }
 

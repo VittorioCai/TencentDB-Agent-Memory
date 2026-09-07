@@ -40,6 +40,8 @@ PROBE_UPSTREAM="http://host.docker.internal:${PROBE_PORT}"
 
 AUTHOR_AGENT="${AUTHOR_AGENT:-agt-5e4hna56j9}"
 CONSUMER_AGENT="${CONSUMER_AGENT:-agt-5e0y4l8a7a}"
+# Identity C: the second author (evaluation/tasks/identities.json).
+AUTHOR_C_AGENT="${AUTHOR_C_AGENT:-agt-8ypy4vhft9}"
 
 if [[ -t 1 ]]; then C_R=$'\033[31m'; C_G=$'\033[32m'; C_Y=$'\033[33m'; C_B=$'\033[34m'; C_0=$'\033[0m'
 else C_R=""; C_G=""; C_Y=""; C_B=""; C_0=""; fi
@@ -178,6 +180,7 @@ case "${1:---status}" in
     case "$ag" in
       "$CONSUMER_AGENT") echo "  forced identity:  $ag  (consumer — mainline runs)" ;;
       "$AUTHOR_AGENT")   echo "  forced identity:  $ag  (author — injector probe)" ;;
+      "$AUTHOR_C_AGENT") echo "  forced identity:  $ag  (second author C)" ;;
       *)                 echo "  forced identity:  $ag  ${C_Y}(neither evaluation agent)${C_0}" ;;
     esac
     # The product's auto-extraction switch, read from the core config the
@@ -210,7 +213,8 @@ PY
     case "${2:-}" in
       a) AGENT="$AUTHOR_AGENT";   WHO="author (injector probe)" ;;
       b) AGENT="$CONSUMER_AGENT"; WHO="consumer (mainline)" ;;
-      *) die "usage: $0 --identity a|b" ;;
+      c) AGENT="$AUTHOR_C_AGENT"; WHO="second author (history for the context-based assessment; extension pair)" ;;
+      *) die "usage: $0 --identity a|b|c" ;;
     esac
 
     cp "$CONFIG" "$CONFIG.bak"
@@ -268,5 +272,5 @@ PY
     echo "  Then: bash evaluation/runner/run-once.sh --label <name> --identity $2"
     ;;
 
-  *) die "usage: $0 [--identity a|b | --status | --teardown]" ;;
+  *) die "usage: $0 [--identity a|b|c | --status | --teardown]" ;;
 esac

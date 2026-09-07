@@ -49,13 +49,31 @@ export function quoteFound(quote, text) {
   return fold(text).includes(q);
 }
 
+const KIND_PREFIXES = ["l0:", "l1:", "persona:", "skill:", "outcome:", "call:"];
+
+/**
+ * A record id is a key, not evidence. A model that writes `msg-1` for
+ * `l0:msg-1` has dropped the kind prefix, not invented a record; the id is
+ * resolved when exactly one pack key matches it with a prefix. Anything
+ * ambiguous or absent stays unresolved and the claim is dropped.
+ */
+export function resolveRecordId(id, pack) {
+  const s = String(id);
+  if (pack.has(s)) return s;
+  const withPrefix = KIND_PREFIXES.map((p) => p + s).filter((k) => pack.has(k));
+  if (withPrefix.length === 1) return withPrefix[0];
+  const suffix = [...pack.keys()].filter((k) => k.endsWith(":" + s));
+  return suffix.length === 1 ? suffix[0] : null;
+}
+
 /**
  * Verify one cited statement against the pack.
  * @returns {{ ok: boolean, reason?: string, record_ids: string[] }}
  */
 export function verifyCitation(item, pack) {
-  const ids = Array.isArray(item?.record_ids) ? item.record_ids.map(String) : [];
-  if (ids.length === 0) return { ok: false, reason: "no record cited", record_ids: [] };
+  const rawIds = Array.isArray(item?.record_ids) ? item.record_ids.map(String) : [];
+  if (rawIds.length === 0) return { ok: false, reason: "no record cited", record_ids: [] };
+  const ids = rawIds.map((id) => resolveRecordId(id, pack) ?? id);
   const missing = ids.filter((id) => !pack.has(id));
   if (missing.length) return { ok: false, reason: `cited record(s) not in the pack: ${missing.join(", ")}`, record_ids: ids };
   const quote = item?.quote;

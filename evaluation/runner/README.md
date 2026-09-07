@@ -14,7 +14,14 @@ can be reopened**:
 | `verdict.json` | the acceptance result and its reason |
 | `used-events.jsonl` | the hard-evidence judgement |
 | `cost.json` | turns, wall time, system prompt size, tokens |
-| `run.json` | the manifest tying them together |
+| `run.json` | the manifest tying them together (gate mechanism and status at start, Core sync, confounder summary) |
+| `gate-apply.json` | what the gate wrote before the session and read back: status / visibility per asset, Core's decision per asset (core-status) |
+| `outcome-events.jsonl` | validated / corrected / needs_review, each tied to the call it fed |
+| `core-outcomes.json` | the outcome ids Core assigned when this run's outcomes were recorded (evaluate=false) |
+| `core-gate-state.json` | the decision on file per asset as Core holds it (what the receipt shows) |
+| `context-confounders.json` | what else was in context: the consumer's injected L3 memory (watched lines), skills outside the frozen pool listed or read |
+| `reachability.json` | the harness's own probe of every address the model dialled |
+| `receipt.json` / `.txt` / `.zh.txt` | the task-four receipt for this run |
 
 Raw inputs are kept from the **first** run, not once the pipeline looks
 finished. A run whose capture was not saved cannot be re-judged when the judge
