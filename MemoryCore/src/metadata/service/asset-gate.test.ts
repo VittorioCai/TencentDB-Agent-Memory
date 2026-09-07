@@ -282,3 +282,27 @@ describe("the author's own records contradicting the asset", () => {
     expect(admitted.reasons.join("\n")).toMatch(/reported, not used/);
   });
 });
+
+describe("human review", () => {
+  it("a reviewer admits or rejects a candidate by hand; the owner and a plain member may not", async () => {
+    const store = new SqliteMetadataStore(":memory:"); store.init();
+    const svc = new MetadataService(store, "test");
+    const admin = (await svc.createNormalUser({ username: `adm-${Date.now()}` })).user_id;
+    const a = (await svc.createNormalUser({ username: `a-${Date.now()}` })).user_id;
+    const b = (await svc.createNormalUser({ username: `b-${Date.now()}` })).user_id;
+    const r = (await svc.createNormalUser({ username: `r-${Date.now()}` })).user_id;
+    const team = (await store.createTeam({ name: "t", owner_user_id: admin })).team_id;
+    for (const [u, role] of [[a, "member"], [b, "member"], [r, "reviewer"]] as const) await store.addTeamMember({ team_id: team, user_id: u, role });
+    await store.createAsset({ asset_id: "skl-r", team_id: team, asset_type: "skill", name: "r", owner_user_id: a, source_type: "test", visibility: "team", status: "candidate" });
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(a), { decision: "admit" })).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(b), { decision: "admit" })).rejects.toMatchObject({ code: "permission_denied" });
+    const res = await svc.reviewAssetGateForCaller("skl-r", ctx(r), { decision: "admit", note: "checked the address by hand" });
+    expect(res.asset.status).toBe("approved");
+    expect(res.review.by).toBe(r);
+    const g = await svc.getAssetGateForCaller("skl-r", ctx(b));
+    expect((g.review as { decision: string }).decision).toBe("admit");
+    expect(g.status).toBe("approved");
+    const rej = await svc.reviewAssetGateForCaller("skl-r", ctx(admin), { decision: "reject" });
+    expect(rej.asset.status).toBe("failed");
+  });
+});

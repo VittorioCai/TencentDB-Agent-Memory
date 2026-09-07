@@ -494,3 +494,8 @@ export const assetGateEvaluateSchema = z.object({
   as_of: z.string().datetime().optional(),
 });
 export const assetGateGetSchema = z.object({ asset_id: nonEmpty });
+export const assetGateReviewSchema = z.object({
+  asset_id: nonEmpty,
+  decision: z.enum(["admit", "reject"]),
+  note: z.string().max(2000).nullable().optional(),
+});

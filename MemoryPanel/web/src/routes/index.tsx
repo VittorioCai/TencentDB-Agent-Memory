@@ -15,6 +15,8 @@ import { MembersPage } from '@/pages/MembersPage';
 import { AgentsPage } from '@/pages/AgentsPage';
 import { ApiKeysPage } from '@/pages/ApiKeysPage';
 import { GuidePage } from '@/pages/GuidePage';
+import { ReviewQueuePage } from '@/pages/ReviewQueuePage';
+import { MemberManageGuard } from '@/components/RouteGuards';
 
 export const routes: RouteObject[] = [
   {
@@ -29,6 +31,8 @@ export const routes: RouteObject[] = [
       { path: 'team/members', element: <MembersPage /> },
       { path: 'team/agents', element: <AgentsPage /> },
       { path: 'team/api-keys', element: <ApiKeysPage /> },
+      // The admission gate's human queue: admins and reviewers act; a member is sent back to the board.
+      { path: 'review', element: <MemberManageGuard allowedRoles={['admin', 'reviewer']}><ReviewQueuePage /></MemberManageGuard> },
       { path: 'guide', element: <GuidePage /> },
     ],
   },

@@ -121,3 +121,62 @@ export interface FixedAssetBinding {
   injection_mode?: 'direct' | 'summary' | 'tool' | 'reference';
   priority?: number;
 }
+
+// ===== Admission gate (Core, 2026-09-07) =====
+export type GateDecisionKind = 'admit' | 'pending' | 'reject';
+export type ReviewPriority = 'high' | 'normal' | 'low';
+export interface AuthorAssessmentSummary {
+  competence: 'high' | 'medium' | 'low' | 'unknown';
+  domain: string;
+  assessed_at: string;
+  citations: number;
+  asset_claim_check?: { verdict: 'supports' | 'contradicts' | 'silent'; record_ids?: string[] } | null;
+}
+export interface GateDecision {
+  schema_version: string;
+  rules_version: string;
+  asset_id: string;
+  decided_at: string;
+  decision: GateDecisionKind;
+  status_target: 'approved' | 'failed' | 'candidate';
+  confidence: number | null;
+  reasons: string[];
+  evidence_refs: Array<{ outcome_id: string; state: string; relation: string }>;
+  signals: {
+    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number };
+    author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null };
+  };
+  review_priority: ReviewPriority | null;
+  evidence_as_of?: string | null;
+}
+export interface HumanReview { decision: 'admit' | 'reject'; status: AssetStatus; by: string; at: string; note: string | null }
+export interface AssetGateView {
+  asset_id: string;
+  name: string;
+  asset_type: AssetType;
+  owner_user_id: string;
+  visibility: Asset['visibility'];
+  created_at: string;
+  updated_at: string;
+  status: AssetStatus;
+  confidence: number | null;
+  gate: GateDecision | null;
+  review: HumanReview | null;
+}
+export interface AssetOutcome {
+  id: string;
+  team_id: string;
+  asset_id: string;
+  asset_version: number | null;
+  state: 'validated' | 'corrected' | 'used';
+  relation: 'cross_user' | 'cross_agent' | 'self' | 'unknown';
+  corrected_reason: 'wrong' | 'stale' | 'other' | null;
+  consumer_user_id: string;
+  consumer_agent_id: string | null;
+  task_id: string | null;
+  run_id: string | null;
+  source: string;
+  evidence_json: string;
+  occurred_at: string;
+  created_at: string;
+}

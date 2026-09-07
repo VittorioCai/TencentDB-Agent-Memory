@@ -259,6 +259,9 @@ const routeTable: Record<string, Handler> = {
     s.evaluateAssetGateForCaller(d.asset_id, c, { apply: d.apply ?? true, asOf: d.as_of ?? null }),
   ),
   [`${V3_PREFIX}/asset/gate/get`]: bind(S.assetGateGetSchema, (d, c, s) => s.getAssetGateForCaller(d.asset_id, c)),
+  [`${V3_PREFIX}/asset/gate/review`]: bind(S.assetGateReviewSchema, (d, c, s) =>
+    s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null }),
+  ),
 
   // Asset
   [`${V3_PREFIX}/asset/create`]: bind(S.assetCreateSchema, (d, c, s) => s.createAssetForCaller(d, c)),

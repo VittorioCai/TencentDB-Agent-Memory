@@ -63,7 +63,7 @@ export {
 } from './api/users';
 
 // ── Assets ──
-export { assetsApi } from './api/assets';
+export { assetsApi, gateApi } from './api/assets';
 
 // ── Skills ──
 export {

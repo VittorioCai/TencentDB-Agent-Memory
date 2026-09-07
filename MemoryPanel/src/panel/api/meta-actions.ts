@@ -14,6 +14,7 @@ export const META_LIST_ACTIONS = new Set([
   'task-agent/list',
   'asset/list',
   'asset/list-accessible',
+  'asset/outcome/list',
   'agent-fixed-asset/list',
   'agent-fixed-asset/list-with-detail',
   // summary-by-agents 非分页 list 信封，不进 META_LIST_ACTIONS
@@ -68,6 +69,13 @@ export const META_ACTIONS = [
   'asset/list',
   'asset/list-accessible',
   'asset/touch-usage',
+  // The admission gate inside Core (2026-09-07): outcomes, the decision on
+  // file, re-evaluation, and the reviewer's own verdict.
+  'asset/outcome/append',
+  'asset/outcome/list',
+  'asset/gate/get',
+  'asset/gate/evaluate',
+  'asset/gate/review',
   'agent-fixed-asset/set',
   'agent-fixed-asset/list',
   'agent-fixed-asset/list-with-detail',

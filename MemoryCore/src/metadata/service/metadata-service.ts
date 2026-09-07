@@ -1935,19 +1935,54 @@ export class MetadataService {
     return this.evaluateAssetGate(assetId, opts);
   }
 
+  /**
+   * A human review: an admin or a reviewer admits or rejects a candidate by
+   * hand. Recorded on the asset beside the gate's own decision
+   * (metadata_json.gate.review) so the two are never confused, and applied
+   * as status. The owner may not review their own asset — self-approval is
+   * the thing the gate exists to prevent.
+   */
+  async reviewAssetGateForCaller(
+    assetId: string,
+    ctx: V3AuthContext,
+    input: { decision: "admit" | "reject"; note?: string | null },
+  ): Promise<{ asset: AssetEntity; review: { decision: "admit" | "reject"; status: AssetStatus; by: string; at: string; note: string | null } }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const callerId = this.requireCallerId(ctx);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") {
+      throw new MetadataError("permission_denied", "only a team admin or a reviewer may review an asset");
+    }
+    if (asset.owner_user_id === callerId) {
+      throw new MetadataError("permission_denied", "an author may not review their own asset");
+    }
+    const status: AssetStatus = input.decision === "admit" ? "approved" : "failed";
+    const review = { decision: input.decision, status, by: callerId, at: new Date().toISOString(), note: input.note ?? null };
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    const gate = (m.gate && typeof m.gate === "object" && !Array.isArray(m.gate) ? (m.gate as Record<string, unknown>) : {});
+    m.gate = { ...gate, review };
+    const updated = await this.updateAsset(asset.asset_id, { status, metadata_json: JSON.stringify(m) });
+    return { asset: updated, review };
+  }
+
   /** The decision on file (metadata_json.gate), or null when the gate has not run. */
-  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null }> {
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: unknown }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.requireActiveTeamMember(ctx, asset.team_id);
     let gate: GateDecision | null = null;
+    let review: unknown = null;
     try {
-      const m = JSON.parse(asset.metadata_json || "{}") as { gate?: GateDecision };
+      const m = JSON.parse(asset.metadata_json || "{}") as { gate?: GateDecision & { review?: unknown } };
       gate = m.gate && typeof m.gate === "object" && "decision" in m.gate ? m.gate : null;
+      review = m.gate && typeof m.gate === "object" && "review" in m.gate ? m.gate.review : null;
     } catch {
       gate = null;
     }
-    return { asset_id: asset.asset_id, status: asset.status, confidence: asset.confidence ?? null, gate };
+    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, created_at: asset.created_at, updated_at: asset.updated_at,
+      status: asset.status, confidence: asset.confidence ?? null, gate, review };
   }
 
   private async assertCallerMayReview(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {

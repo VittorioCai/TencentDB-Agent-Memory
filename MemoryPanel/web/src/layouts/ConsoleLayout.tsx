@@ -26,6 +26,7 @@ const PATH_TO_PAGE: Record<string, PageId> = {
   '/team/members': 'team_members',
   '/team/agents': 'team_agents',
   '/team/api-keys': 'api_keys',
+  '/review': 'review_queue',
 };
 
 /** PageId → 路由 path */
@@ -44,6 +45,7 @@ function legacyHashToPath(): string | null {
   if (leaf === 'agents' || leaf === 'team_agents') return '/team/agents';
   if (leaf === 'team' || leaf === 'members' || leaf === 'team_members') return '/team/members';
   if (leaf === 'api_keys' || leaf === 'apikey' || leaf === 'api-keys') return '/team/api-keys';
+  if (leaf === 'review' || leaf === 'review_queue') return '/review';
   return null;
 }
 
@@ -139,6 +141,8 @@ export function ConsoleLayout() {
 
     for (const meta of Object.values(PAGE_META)) {
       if (userRole === 'reviewer' && meta.id === 'team_members') continue;
+      // 「待复核队列」：reviewer / admin 可见；member 不可见（候选资产对成员不可读）
+      if (userRole === 'member' && meta.id === 'review_queue') continue;
       const list = byGroup.get(meta.group) ?? [];
       list.push(meta);
       byGroup.set(meta.group, list);

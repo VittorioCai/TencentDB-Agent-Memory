@@ -2,7 +2,7 @@
  * api/assets.ts — 资产管理（meta/asset/*）。
  */
 import { metaPost, metaListAll, getCurrentUser } from './base';
-import type { Asset, AssetType, AssetStatus } from './types';
+import type { Asset, AssetType, AssetStatus, AssetGateView, AssetOutcome } from './types';
 
 function newExternalAssetId(assetType: AssetType): string {
   const prefix = { skill: 'skl', llm_wiki: 'wiki', code_graph: 'cg', chat_memory: 'mem' }[assetType];
@@ -98,4 +98,19 @@ export const assetsApi = {
       visibility: params?.visibility,
     });
   },
+};
+
+/**
+ * The admission gate inside Core (2026-09-07): the decision on file per
+ * asset, re-evaluation from recorded outcomes, the reviewer's own verdict,
+ * and the outcomes themselves.
+ */
+export const gateApi = {
+  get: (assetId: string) => metaPost<AssetGateView>('asset/gate/get', { asset_id: assetId }),
+  evaluate: (assetId: string, apply = true) =>
+    metaPost<{ decision: AssetGateView['gate']; applied: boolean; asset: Asset }>('asset/gate/evaluate', { asset_id: assetId, apply }),
+  review: (assetId: string, decision: 'admit' | 'reject', note?: string) =>
+    metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', { asset_id: assetId, decision, note: note ?? null }),
+  outcomes: (teamId: string, params?: { asset_id?: string; owner_user_id?: string }) =>
+    metaListAll<AssetOutcome>('asset/outcome/list', { team_id: teamId, asset_id: params?.asset_id, owner_user_id: params?.owner_user_id }),
 };
