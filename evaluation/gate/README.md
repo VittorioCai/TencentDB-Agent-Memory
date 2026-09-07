@@ -114,12 +114,45 @@ registry; they cannot make it serve new content as admitted.
 **Human decisions.** `gate.reviews` is an append-only history; `gate.review`
 is the one in force for the current version (null when none);
 `gate.effective` is what the rule's suggestion and the human decision
-resolve to, with the source and the reason. Precedence: a reject from
-either side, then a human admit, then the rule's admit, else candidate —
-so a re-evaluation no longer reverts a human admit, a later review
-supersedes the earlier one (expired: `superseded by a later review`), and
-a trusted correction after a human admit outranks it and says so while
-the review stays on file. `evaluate` writes `status = effective.status`.
+resolve to, with the source and the reason. Precedence: a human reject;
+then a rule reject — a trusted correction on this version and content —
+but only one that **arrived after** the human admit (evidence the reviewer
+never saw; a correction already on file when they admitted was overruled
+by them); then a human admit; then the rule's admit; else candidate. A
+mistaken correction is retracted through `asset/outcome/retract` (admin or
+reviewer, reason required): it stays on file, the gate stops reading it,
+the asset is re-decided. A later review supersedes the earlier one
+(expired: `superseded by a later review`). `evaluate` writes
+`status = effective.status`.
+
+**After the phase-2 review (2026-09-08c).** Five boundaries closed, each a
+test and each seen live on a throwaway private skill:
+
+- *no window*: a new version lands in one conditional write with its hash,
+  `status=candidate` and the expired decisions and request; B's read in the
+  same second as A's update is `40301 not_admitted:candidate`;
+- *every write-back is conditional* on the version, hash and `updated_at`
+  as read (`stale_write` / `stale_review`): a review of v1 cannot land on
+  v2, two reviews from one read cannot both win;
+- *outcomes are bound to content*: rows carry `content_hash`; only a row
+  with the asset's version AND hash decides it; rows with no version, or
+  no hash while the asset has one, are unbound history (`unbound_ignored`).
+  The evidence base was re-recorded with the hash of each asset at the
+  outcome's version (`--sync` fetches it; hashless trusted rows confirmed
+  in place); `artifacts/core-apply-asof-2026-09-08c.json` shows both
+  decisions bound to v2 + hash, `other_version 0`, `unbound_ignored 0`;
+- *reads check the row they serve*: files/read, export and versions
+  resolve the requested version, check that row and pin it on the read;
+  `export(version=1)` of a skill whose v1 was once admitted and whose head
+  is v2 is refused; on the model path `versions` lists only the admitted
+  version;
+- *a review names what was read* (`expected_version`,
+  `expected_content_hash`; the panel sends what it rendered) and is refused
+  as `stale_review` when the asset moved on; *the owner's request is bound
+  to the text*: it expires with the version (history in
+  `review_requests`), and the permission rule checks version and hash —
+  the admin could read the submitted private v1, was refused on v2, and
+  could read again only after A resubmitted.
 
 **Seen live (2026-09-08, commits 2ed7e93…33967f8).** A throwaway skill,
 end to end: A creates it (candidate v1, hash on file) → A shares it → the
@@ -184,6 +217,7 @@ the asset carries and never fills it in.
 | `artifacts/core-seed-2026-09-07.json` | The seed: 4 outcomes from the two evidence-base runs recorded in Core; Core's decisions agree with the frozen baseline (admit / reject) |
 | `artifacts/core-apply-asof-2026-09-07.json` | The apply with `as_of`: each decision cites exactly the evidence-base records |
 | `artifacts/core-seed-2026-09-08.json` | The evidence base re-recorded as trusted rows after phase 1; decisions unchanged |
+| `artifacts/core-seed-2026-09-08c.json`, `core-apply-asof-2026-09-08c.json` | The evidence base re-recorded with content hashes (confirmed in place) and the apply that binds both decisions to v2 + hash |
 | `decide.mjs`, `author-confidence.mjs`, `render-decision.mjs` | The earlier evaluation-side decision (gate-decision-v1). Still run per run as an informational recomputation; the author-confidence formula in it was rejected in review and is not used by Core |
 | `plan-visibility.mjs`, `apply.sh` | The earlier mechanism: flip `visibility` from outside. Kept for ablation (`--hide`) and for a like-for-like rerun of the 2026-09-06 batch (`GATE_MECHANISM=visibility`) |
 | `build-baseline.mjs` | Freezes the evidence and decisions every comparison run starts from |

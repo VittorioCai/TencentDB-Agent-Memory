@@ -293,6 +293,7 @@ const trustedBody = (assetId: string, consumer: string, over: Record<string, unk
   team_id: "", asset_id: assetId, state: "validated" as const, consumer_user_id: consumer, asset_version: 1,
   call_id: `call-${++seq}`, evidence_json: JSON.stringify({ proof_refs: ["capture:1"] }), source: "test", ...over,
 });
+const gateOfAsset = (a: AssetEntity): Record<string, unknown> => { try { return (JSON.parse(a.metadata_json || "{}").gate ?? {}) as Record<string, unknown>; } catch { return {}; } };
 /** A review request body naming what the reviewer read. */
 const seen = (a: { version: number; content_hash?: string | null }) => ({ expected_version: a.version, expected_content_hash: a.content_hash ?? null });
 
@@ -714,6 +715,9 @@ describe("the gate on the asset record", () => {
     expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-atomic", action: "read" })).allowed).toBe(false);
     await svc.submitAssetForReviewForCaller("skl-atomic", ctx(a));
     expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-atomic", action: "read" })).allowed).toBe(true);
+    const gh = gateOfAsset((await store.getAssetById("skl-atomic"))!);
+    expect((gh.review_requests as Array<{ asset_version: number; expired_reason?: string }>).map((x) => [x.asset_version, !!x.expired_reason])).toEqual([[1, true]]); // the expired v1 request is history; v2's is current
+    expect((gh.review_request as { asset_version: number }).asset_version).toBe(2);
     // v1's validated row does not decide v2 (other content).
     const g2 = await svc.evaluateAssetGate("skl-atomic", { apply: false });
     expect(g2.decision.signals.online.other_version).toBe(1);

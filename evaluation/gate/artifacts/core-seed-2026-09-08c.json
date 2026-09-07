@@ -1,0 +1,475 @@
+{
+  "schema": "core-gate-record-v1",
+  "mode": "seed",
+  "mechanism": "core-status",
+  "at": "2026-09-07T20:25:39Z",
+  "baseline": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/gate/artifacts/gate_baseline.json",
+  "baseline_frozen_at": "2026-09-06T08:47:33Z",
+  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "before": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject"
+    }
+  },
+  "actions": [
+    {
+      "op": "gate/evaluate",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "accepted": true
+    },
+    {
+      "op": "gate/evaluate",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "accepted": true
+    }
+  ],
+  "decisions": {
+    "skl-oBaDO5CceKnr": {
+      "schema_version": "gate-decision-v2",
+      "rules_version": "gate-rules-2026-09-08b",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_version": 2,
+      "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
+      "decided_at": "2026-09-07T20:25:39.040Z",
+      "decision": "admit",
+      "status_target": "approved",
+      "confidence": 1,
+      "confidence_n": 2,
+      "evidence_policy": "trusted-only",
+      "reasons": [
+        "rule admit: cross-person validated >= 1 (2 record(s)) and no corrected",
+        "reported signals: 2 call(s) from 2 trusted row(s), 1 distinct task(s), 1 distinct consumer(s); none is a threshold",
+        "2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read",
+        "author usr-n68ea5ythq: 0 validated / 2 corrected on other assets (reported, not used)"
+      ],
+      "evidence_refs": [
+        {
+          "outcome_id": "6880f384-846b-419c-b97f-26615da03912",
+          "state": "validated",
+          "relation": "cross_user",
+          "call_id": "call_01_zEo9sgfRF9BvaP8sOaqG1636"
+        },
+        {
+          "outcome_id": "07f08901-8967-4f43-ab7a-6b84d5416174",
+          "state": "validated",
+          "relation": "cross_user",
+          "call_id": "call_01_ebKwaVNqWpkSBzI7UgpE6226"
+        }
+      ],
+      "signals": {
+        "online": {
+          "validated": 2,
+          "corrected": 0,
+          "used": 0,
+          "cross_user_validated": 2,
+          "distinct_consumers": 1,
+          "distinct_tasks": 1,
+          "calls": 2,
+          "untrusted_ignored": 2,
+          "other_version": 0,
+          "unbound_ignored": 0,
+          "retracted_ignored": 0
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "validated": 0,
+          "corrected": 2,
+          "distinct_consumers": 1,
+          "recent_wrong_asset_ids": [
+            "skl-sZFb3KatWY6m"
+          ],
+          "assessment": null,
+          "assessment_ignored": null
+        }
+      },
+      "review_priority": null,
+      "reject_evidence_latest_at": null,
+      "evidence_as_of": "2026-09-06T08:47:33Z"
+    },
+    "skl-sZFb3KatWY6m": {
+      "schema_version": "gate-decision-v2",
+      "rules_version": "gate-rules-2026-09-08b",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_version": 2,
+      "content_hash": "163c539025f09af8205023ec6d312a38",
+      "decided_at": "2026-09-07T20:25:39.088Z",
+      "decision": "reject",
+      "status_target": "failed",
+      "confidence": 0,
+      "confidence_n": 2,
+      "evidence_policy": "trusted-only",
+      "reasons": [
+        "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:01:22.682Z by usr-4u07qc2kuj)",
+        "reported signals: 2 call(s) from 2 trusted row(s), 0 distinct task(s), 1 distinct consumer(s); none is a threshold",
+        "2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read",
+        "author usr-n68ea5ythq: 2 validated / 0 corrected on other assets (reported, not used)",
+        "context-based assessment on file: competence medium for \"reaching the team skill bridge over HTTP from an agent session: which address answers\"; the author's own records contradict this asset's claim (reported, not used: the decision rests on outcomes)"
+      ],
+      "evidence_refs": [
+        {
+          "outcome_id": "ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+          "state": "corrected",
+          "relation": "cross_user",
+          "call_id": "call_00_G9aDxkOvysoOoLobMkc56726"
+        },
+        {
+          "outcome_id": "c91cdca6-40f5-4e84-b03b-f65713584044",
+          "state": "corrected",
+          "relation": "cross_user",
+          "call_id": "call_00_po2EaBdfFVj3or2ywENy5238"
+        }
+      ],
+      "signals": {
+        "online": {
+          "validated": 0,
+          "corrected": 2,
+          "used": 0,
+          "cross_user_validated": 0,
+          "distinct_consumers": 1,
+          "distinct_tasks": 0,
+          "calls": 2,
+          "untrusted_ignored": 2,
+          "other_version": 0,
+          "unbound_ignored": 0,
+          "retracted_ignored": 0
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "validated": 2,
+          "corrected": 0,
+          "distinct_consumers": 1,
+          "recent_wrong_asset_ids": [],
+          "assessment": {
+            "schema": "author-assessment-summary-v2",
+            "competence": "medium",
+            "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+            "assessed_at": "2026-09-07T19:59:34.950Z",
+            "evidence_cutoff": "2026-09-06T08:47:33.000Z",
+            "citations": 7,
+            "execution_claims": {
+              "success": 5,
+              "failure": 2,
+              "calls": 7,
+              "ledgers": {
+                "own_business": {
+                  "success": 0,
+                  "failure": 0
+                },
+                "others_on_assets": {
+                  "success": 2,
+                  "failure": 2
+                },
+                "own_transport": {
+                  "success": 3,
+                  "failure": 0
+                }
+              }
+            },
+            "asset_claim_check": {
+              "verdict": "contradicts",
+              "record_ids": [
+                "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+                "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+              ],
+              "strength": "strong"
+            },
+            "author_user_id": "usr-n68ea5ythq",
+            "asset_version": 2,
+            "content_hash": "163c539025f09af8205023ec6d312a38",
+            "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+            "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
+            "written_by": "usr-n3h5ewx4ja",
+            "written_at": "2026-09-07T20:03:02.551Z"
+          },
+          "assessment_ignored": null
+        }
+      },
+      "review_priority": null,
+      "reject_evidence_latest_at": "2026-09-05T22:34:32.249Z",
+      "evidence_as_of": "2026-09-06T08:47:33Z"
+    }
+  },
+  "after": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team",
+      "gate_decision": "admit",
+      "confidence": 1,
+      "gate": {
+        "schema_version": "gate-decision-v2",
+        "rules_version": "gate-rules-2026-09-08b",
+        "asset_id": "skl-oBaDO5CceKnr",
+        "asset_version": 2,
+        "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
+        "decided_at": "2026-09-07T20:25:39.040Z",
+        "decision": "admit",
+        "status_target": "approved",
+        "confidence": 1,
+        "confidence_n": 2,
+        "evidence_policy": "trusted-only",
+        "reasons": [
+          "rule admit: cross-person validated >= 1 (2 record(s)) and no corrected",
+          "reported signals: 2 call(s) from 2 trusted row(s), 1 distinct task(s), 1 distinct consumer(s); none is a threshold",
+          "2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read",
+          "author usr-n68ea5ythq: 0 validated / 2 corrected on other assets (reported, not used)"
+        ],
+        "evidence_refs": [
+          {
+            "outcome_id": "6880f384-846b-419c-b97f-26615da03912",
+            "state": "validated",
+            "relation": "cross_user",
+            "call_id": "call_01_zEo9sgfRF9BvaP8sOaqG1636"
+          },
+          {
+            "outcome_id": "07f08901-8967-4f43-ab7a-6b84d5416174",
+            "state": "validated",
+            "relation": "cross_user",
+            "call_id": "call_01_ebKwaVNqWpkSBzI7UgpE6226"
+          }
+        ],
+        "signals": {
+          "online": {
+            "validated": 2,
+            "corrected": 0,
+            "used": 0,
+            "cross_user_validated": 2,
+            "distinct_consumers": 1,
+            "distinct_tasks": 1,
+            "calls": 2,
+            "untrusted_ignored": 2,
+            "other_version": 0,
+            "unbound_ignored": 0,
+            "retracted_ignored": 0
+          },
+          "author": {
+            "user_id": "usr-n68ea5ythq",
+            "validated": 0,
+            "corrected": 2,
+            "distinct_consumers": 1,
+            "recent_wrong_asset_ids": [
+              "skl-sZFb3KatWY6m"
+            ],
+            "assessment": null,
+            "assessment_ignored": null
+          }
+        },
+        "review_priority": null,
+        "reject_evidence_latest_at": null,
+        "evidence_as_of": "2026-09-06T08:47:33Z",
+        "reviews": [],
+        "review": null,
+        "effective": {
+          "status": "approved",
+          "source": "rule",
+          "review_id": null,
+          "reason": "rule admit (cross-person validated, no corrected)",
+          "at": "2026-09-07T20:25:39.041Z"
+        }
+      }
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team",
+      "gate_decision": "reject",
+      "confidence": 0,
+      "gate": {
+        "schema_version": "gate-decision-v2",
+        "rules_version": "gate-rules-2026-09-08b",
+        "asset_id": "skl-sZFb3KatWY6m",
+        "asset_version": 2,
+        "content_hash": "163c539025f09af8205023ec6d312a38",
+        "decided_at": "2026-09-07T20:25:39.088Z",
+        "decision": "reject",
+        "status_target": "failed",
+        "confidence": 0,
+        "confidence_n": 2,
+        "evidence_policy": "trusted-only",
+        "reasons": [
+          "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-05T22:01:22.682Z by usr-4u07qc2kuj)",
+          "reported signals: 2 call(s) from 2 trusted row(s), 0 distinct task(s), 1 distinct consumer(s); none is a threshold",
+          "2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read",
+          "author usr-n68ea5ythq: 2 validated / 0 corrected on other assets (reported, not used)",
+          "context-based assessment on file: competence medium for \"reaching the team skill bridge over HTTP from an agent session: which address answers\"; the author's own records contradict this asset's claim (reported, not used: the decision rests on outcomes)"
+        ],
+        "evidence_refs": [
+          {
+            "outcome_id": "ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+            "state": "corrected",
+            "relation": "cross_user",
+            "call_id": "call_00_G9aDxkOvysoOoLobMkc56726"
+          },
+          {
+            "outcome_id": "c91cdca6-40f5-4e84-b03b-f65713584044",
+            "state": "corrected",
+            "relation": "cross_user",
+            "call_id": "call_00_po2EaBdfFVj3or2ywENy5238"
+          }
+        ],
+        "signals": {
+          "online": {
+            "validated": 0,
+            "corrected": 2,
+            "used": 0,
+            "cross_user_validated": 0,
+            "distinct_consumers": 1,
+            "distinct_tasks": 0,
+            "calls": 2,
+            "untrusted_ignored": 2,
+            "other_version": 0,
+            "unbound_ignored": 0,
+            "retracted_ignored": 0
+          },
+          "author": {
+            "user_id": "usr-n68ea5ythq",
+            "validated": 2,
+            "corrected": 0,
+            "distinct_consumers": 1,
+            "recent_wrong_asset_ids": [],
+            "assessment": {
+              "schema": "author-assessment-summary-v2",
+              "competence": "medium",
+              "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+              "assessed_at": "2026-09-07T19:59:34.950Z",
+              "evidence_cutoff": "2026-09-06T08:47:33.000Z",
+              "citations": 7,
+              "execution_claims": {
+                "success": 5,
+                "failure": 2,
+                "calls": 7,
+                "ledgers": {
+                  "own_business": {
+                    "success": 0,
+                    "failure": 0
+                  },
+                  "others_on_assets": {
+                    "success": 2,
+                    "failure": 2
+                  },
+                  "own_transport": {
+                    "success": 3,
+                    "failure": 0
+                  }
+                }
+              },
+              "asset_claim_check": {
+                "verdict": "contradicts",
+                "record_ids": [
+                  "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+                  "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+                ],
+                "strength": "strong"
+              },
+              "author_user_id": "usr-n68ea5ythq",
+              "asset_version": 2,
+              "content_hash": "163c539025f09af8205023ec6d312a38",
+              "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+              "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
+              "written_by": "usr-n3h5ewx4ja",
+              "written_at": "2026-09-07T20:03:02.551Z"
+            },
+            "assessment_ignored": null
+          }
+        },
+        "review_priority": null,
+        "reject_evidence_latest_at": "2026-09-05T22:34:32.249Z",
+        "evidence_as_of": "2026-09-06T08:47:33Z",
+        "author_assessment": {
+          "schema": "author-assessment-summary-v2",
+          "competence": "medium",
+          "competence_as_said": "medium",
+          "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+          "assessed_at": "2026-09-07T19:59:34.950Z",
+          "evidence_cutoff": "2026-09-06T08:47:33.000Z",
+          "citations": 7,
+          "execution_claims": {
+            "success": 5,
+            "failure": 2,
+            "calls": 7,
+            "ledgers": {
+              "own_business": {
+                "success": 0,
+                "failure": 0
+              },
+              "others_on_assets": {
+                "success": 2,
+                "failure": 2
+              },
+              "own_transport": {
+                "success": 3,
+                "failure": 0
+              }
+            }
+          },
+          "asset_claim_check": {
+            "verdict": "contradicts",
+            "record_ids": [
+              "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+              "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+            ],
+            "strength": "strong"
+          },
+          "asset_claim_as_said": "contradicts",
+          "author_user_id": "usr-n68ea5ythq",
+          "asset_version": 2,
+          "content_hash": "163c539025f09af8205023ec6d312a38",
+          "chain_complete": false,
+          "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+          "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
+          "written_by": "usr-n3h5ewx4ja",
+          "written_at": "2026-09-07T20:03:02.551Z"
+        },
+        "reviews": [],
+        "review": null,
+        "effective": {
+          "status": "failed",
+          "source": "rule",
+          "review_id": null,
+          "at": "2026-09-07T20:25:39.088Z",
+          "reason": "rule reject (corrected outcome)"
+        }
+      }
+    }
+  },
+  "status_at_start": {
+    "skl-oBaDO5CceKnr": "approved",
+    "skl-sZFb3KatWY6m": "failed"
+  },
+  "visibility_at_start": {
+    "skl-oBaDO5CceKnr": "team",
+    "skl-sZFb3KatWY6m": "team"
+  },
+  "expected": {
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "visibility": "team"
+    },
+    "skl-sZFb3KatWY6m": {
+      "status": "failed",
+      "visibility": "team"
+    }
+  },
+  "verified": {
+    "skl-oBaDO5CceKnr": true,
+    "skl-sZFb3KatWY6m": true
+  },
+  "all_verified": true,
+  "baseline_check": {
+    "skl-oBaDO5CceKnr": {
+      "frozen": "admit",
+      "core": "admit",
+      "agree": true
+    },
+    "skl-sZFb3KatWY6m": {
+      "frozen": "reject",
+      "core": "reject",
+      "agree": true
+    }
+  }
+}

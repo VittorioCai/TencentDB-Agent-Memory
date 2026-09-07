@@ -2216,8 +2216,10 @@ export class MetadataService {
       : { requested_at: now, requested_by: callerId, note: input.note ?? null, asset_version: asset.version, content_hash: asset.content_hash ?? null };
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    // History keeps every past request (expired or withdrawn); the current one lives in review_request.
     const history = Array.isArray(gate.review_requests) ? (gate.review_requests as unknown[]) : [];
-    m.gate = { ...gate, review_request, review_requests: input.withdraw ? history : [...history.filter((h) => (h as { requested_at?: unknown }).requested_at !== prev.requested_at), review_request] };
+    const past = prev.requested_at && !history.some((h) => (h as { requested_at?: unknown }).requested_at === prev.requested_at) ? [...history, input.withdraw ? review_request : prev] : history;
+    m.gate = { ...gate, review_request, review_requests: past };
     const updated = await this.writeAssetAsRead(asset, { metadata_json: JSON.stringify(m) }, input.withdraw ? "withdraw review request" : "submit for review");
     return { asset: updated, review_request };
   }
