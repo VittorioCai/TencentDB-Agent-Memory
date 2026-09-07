@@ -106,6 +106,7 @@ export interface SkillAssetHooks {
     user_id?: string;
     name: string;
     description: string;
+    content_hash?: string;
   }) => Promise<void>;
   onSkillAccessed?: (skill: Skill) => void;
   onSkillArchived?: (params: { skill_id: string; team_id?: string }) => void;

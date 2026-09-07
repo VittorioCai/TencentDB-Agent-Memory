@@ -368,10 +368,10 @@ export class TdaiGateway {
         // v1 首创前置 await：抛异常 = create 失败（避免「skill 已落库但 asset
         // 缺失」的静默不一致）。standalone 模式下唯一的登记入口除了 handler 层的
         // handleCreate 兜底之外就是这里 —— 无论谁调 SkillCore.create 都能触发。
-        onSkillCreated: async ({ skill_id, team_id, agent_id, name }) => {
+        onSkillCreated: async ({ skill_id, team_id, agent_id, name, content_hash }) => {
           if (!team_id || !agent_id) return; // 无租户上下文 → 跳过（OpenClaw local scope 等）
           const metaSvc = await gatewayRef.ensureMetadataService(skillAssetInstanceId);
-          await metaSvc.ensureSkillAsset({ skill_id, team_id, agent_id, name });
+          await metaSvc.ensureSkillAsset({ skill_id, team_id, agent_id, name, version: 1, content_hash: content_hash ?? null });
         },
         // 读时自愈：fire-and-forget，异常吞掉。补历史 / 迁移 / 误删产生的孤儿 skill。
         onSkillAccessed: (skill) => {
@@ -1936,10 +1936,10 @@ export class TdaiGateway {
       onSkillVdbChanged: (delta: number) => {
         quotaMgr?.reportUsage(instanceId, delta, 0, "Skill").catch(() => {});
       },
-      onSkillCreated: async ({ skill_id, team_id, agent_id, name }) => {
+      onSkillCreated: async ({ skill_id, team_id, agent_id, name, content_hash }) => {
         if (!team_id || !agent_id) return;
         const metaSvc = await resolveMetaSvc();
-        await metaSvc.ensureSkillAsset({ skill_id, team_id, agent_id, name });
+        await metaSvc.ensureSkillAsset({ skill_id, team_id, agent_id, name, version: 1, content_hash: content_hash ?? null });
       },
       onSkillVersioned: ({ skill_id, team_id, agent_id, name, version, content_hash }) => {
         if (!team_id || !agent_id) return;
@@ -1964,6 +1964,9 @@ export class TdaiGateway {
             team_id: skill.team_id,
             agent_id: skill.owner_agent_id,
             name: skill.name,
+            // The registry follows the head it just served (2026-09-08b).
+            version: skill.version,
+            content_hash: skill.content_hash,
           }))
           .catch((err: unknown) => {
             logger.warn(

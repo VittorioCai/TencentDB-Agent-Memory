@@ -74,6 +74,8 @@ export interface SkillVersioningOptions {
     user_id?: string;
     name: string;
     description: string;
+    /** Hash of the v1 content, so the registry binds from the first version (2026-09-08b). */
+    content_hash?: string;
   }) => Promise<void>;
   /**
    * A new version was written (2026-09-08b). The asset registry follows:
@@ -190,6 +192,7 @@ export class SkillVersioning {
     if (this.onSkillCreated) {
       try {
         await this.onSkillCreated({
+          content_hash: computeContentHash(mut.content),
           skill_id: skillId,
           team_id: ctx.team_id,
           agent_id: ctx.agent_id,
