@@ -77,6 +77,14 @@ real miss class; the second shows the fix measured by the same instrument.
 - The behavioural signal is token presence in calls. An asset that changes
   behaviour without its token appearing (a decision not to do something) is
   not captured; `avoided_option` is in the contract and not measured here.
+- The consumer's own injected L3 memory was in context for every run of
+  2026-09-06 (`context-confounders.json` per run; summary table in
+  `runner/summary-2026-09-06.md`). Its SOP says "probe every documented
+  candidate", so the model dialling both addresses in the off arm is
+  prescribed, not spontaneous. The present/hidden truth used here does not
+  depend on why the model dialled — only on whether the token appeared with
+  the asset hidden — so the precision/recall figures stand; what the note
+  removes is any reading of the off arm as self-correction.
 
 ## Two corrections after review (2026-09-06, evening)
 
@@ -122,7 +130,7 @@ the rules commit ride on the event so a reader can recompute it.
 
 Current (`contributed-events.jsonl`, rules commit 44c3ca2):
 
-| asset | present | absent | pass rate | failed attempts | wall s | prompt tokens | contributed |
+| asset | present | absent | endpoint success rate | failed attempts | wall s | prompt tokens | contributed |
 |---|---|---|---|---|---|---|---|
 | eval-bridge-endpoint-b v2 | 6 | 4 | 1.0 vs 0.0 | 0.5 vs 1.0 | 41.8 vs 50 | 130.2k vs 145.2k | **yes** |
 | eval-bridge-endpoint-a v2 | 7 | 3 | — | — | — | — | no: no validated event |

@@ -10,13 +10,21 @@
  * passed, reported as 100%. The rate that matters is over runs *started*, and
  * the unjudgeable ones are named so the number can be read honestly.
  *
- * Second rule, learned from the first comparison: **pass rate is not where the
- * gate shows.** The acceptance lets the last attempt decide, so a run that
- * dials the wrong address, times out, and then dials the right one passes —
+ * Second rule, learned from the first comparison: **the success rate is not
+ * where the gate shows.** The acceptance lets the last attempt decide, so a run
+ * that dials the wrong address, times out, and then dials the right one passes —
  * and both arms read 100%. What the gate changes is whether the wrong asset
  * was ever seen, whether the first dial failed, whether a corrected event
  * exists, and how long the run took. Those are counted per group beside the
- * pass rate, so a reader sees the difference where it is, not where it is not.
+ * rate, so a reader sees the difference where it is, not where it is not.
+ *
+ * Third rule, from the 2026-09-06 review: the rate is named for what it
+ * measures. `verify.mjs` passes a run when its last acceptance attempt got
+ * code 0 from the bridge; `task.md` says an accurately reported failure is
+ * also a completed task. So the column is the **endpoint request success
+ * rate**, never "task completion rate" — the two disagree on exactly the runs
+ * this evaluation is about. The JSON key `pass_rate` is kept for readers of
+ * earlier summaries; the rendered heading and the note beneath it say what it is.
  *
  * Runs that predate the frozen baseline, or that the baseline lists as its
  * evidence, are grouped apart: they are not part of the comparison, and
@@ -60,6 +68,10 @@ export function runFacts(run, { rejected = new Set() } = {}) {
     prompt_tokens: run.cost?.prompt_tokens ?? null,
     total_tokens: run.cost?.total_tokens ?? null,
     cached_tokens: run.cost?.cached_tokens ?? null,
+    // What else was in context (context-confounders.json). Null = not recorded.
+    profile_memory_present: run.confounders?.profile_memory?.present ?? null,
+    l3_watch_hits: run.confounders?.profile_memory?.l3?.present ? (run.confounders.profile_memory.l3.watch_hits?.length ?? 0) : null,
+    non_pool_skill_read: run.confounders?.non_pool_skill_reads ? run.confounders.non_pool_skill_reads.length > 0 : null,
   };
 }
 
@@ -120,6 +132,9 @@ export function summarizeRuns(runs, { baseline = null } = {}) {
       prompt_tokens_mean: mean(g.facts.map((f) => f.prompt_tokens)),
       total_tokens_mean: mean(g.facts.map((f) => f.total_tokens)),
       cached_tokens_mean: mean(g.facts.map((f) => f.cached_tokens)),
+      profile_memory_present: countTrue(g.facts.map((f) => f.profile_memory_present)),
+      l3_watch_hits_any: countTrue(g.facts.map((f) => (f.l3_watch_hits === null ? null : f.l3_watch_hits > 0))),
+      non_pool_skill_read: countTrue(g.facts.map((f) => f.non_pool_skill_read)),
     };
   });
 
@@ -137,15 +152,20 @@ export function renderRuns({ groups, total, rejected_assets = [], baseline_froze
     return lines.join("\n");
   }
 
-  lines.push("| label | started | pass | fail | unjudgeable | pass rate |");
+  lines.push("| label | started | pass | fail | unjudgeable | endpoint success rate |");
   lines.push("|---|---|---|---|---|---|");
   for (const g of groups) {
     lines.push(`| ${g.label} | ${g.started} | ${g.pass} | ${g.fail} | ${g.error} | ${pct(g.pass_rate)} |`);
   }
+  lines.push("");
+  lines.push("PASS means the run's last acceptance attempt against the bridge returned code 0.");
+  lines.push("The task text counts an accurately reported failure as a completed task, so this");
+  lines.push("column is the **endpoint request success rate**, not a task completion rate;");
+  lines.push("a run that reports a timeout truthfully is FAIL here and complete by the task's own words.");
 
   const broken = groups.filter((g) => g.error > 0);
   if (broken.length > 0) {
-    lines.push("", "The pass rate is over runs **started**. Unjudgeable runs stay in it:");
+    lines.push("", "The rate is over runs **started**. Unjudgeable runs stay in it:");
     for (const g of broken) {
       lines.push(`  - ${g.label}: ${g.error} of ${g.started} could not be judged; over judged runs alone it would read ${pct(g.pass_rate_of_judged)}`);
       for (const r of g.runs.filter((x) => x.verdict !== "PASS" && x.verdict !== "FAIL")) {
@@ -176,6 +196,25 @@ export function renderRuns({ groups, total, rejected_assets = [], baseline_froze
     lines.push("before the model could reach it; that is the product filtering, not this report.");
   }
 
+  const withConf = groups.filter((g) => g.facts.some((f) => f.profile_memory_present !== null || f.non_pool_skill_read !== null));
+  if (withConf.length > 0) {
+    lines.push("", "## What else was in context", "");
+    lines.push("Recorded per run from the captured system prompt and the service's rows");
+    lines.push("(`context-confounders.json`). The consumer agent's own injected L3 memory can");
+    lines.push("prescribe the behaviour a comparison would otherwise credit to the model, and a");
+    lines.push("skill outside the frozen pool is a source the pool did not account for. Neither");
+    lines.push("is excluded here; the columns say where they were.", "");
+    lines.push("| label | L3 memory block present | L3 carried a watched line | read a skill outside the pool |");
+    lines.push("|---|---|---|---|");
+    for (const g of withConf) {
+      lines.push(`| ${g.label} | ${frac(g.profile_memory_present)} | ${frac(g.l3_watch_hits_any)} | ${frac(g.non_pool_skill_read)} |`);
+    }
+    lines.push("", "A watched line is one the task's `confounders.watch` names — for bridge-addr,");
+    lines.push("\"probe every documented candidate\" and \"never get-by-name (cross-agent 404)\".");
+    lines.push("Where both arms carry it, the arms stay comparable with each other; what it takes");
+    lines.push("away is the reading \"the model recovered on its own\" for the off arm's second dial.");
+  }
+
   if (baseline_frozen_at) {
     lines.push("", `Baseline frozen ${baseline_frozen_at}. Runs marked (evidence base) fed the baseline's`);
     lines.push("decisions; runs marked (pre-baseline) predate it. Neither is part of the comparison.");
@@ -197,6 +236,7 @@ export function loadRun(dir) {
     verdict_doc: readJson(join(dir, "verdict.json")),
     events: present.length ? present.flat() : null,
     cost: readJson(join(dir, "cost.json")),
+    confounders: readJson(join(dir, "context-confounders.json")),
   };
 }
 

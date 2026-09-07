@@ -418,6 +418,17 @@ PY
 )"
 info "core auto-extraction: $EXTRACTION_ENABLED"
 
+# ── 5d. what else was in the model's context ─────────────────────
+# The 2026-09-06 review found every comparison run carrying the consumer
+# agent's own L3 memory — learned from the evidence-base runs — with an SOP
+# that says "probe every documented candidate". That prescribes the off arm's
+# second dial. It is the product working, not a fault, but a run that does not
+# record it cannot say what its numbers rest on. The task's `confounders.watch`
+# lists the phrases to look for; the record is written beside the run either way.
+node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
+  --watch="$EVAL/tasks/bridge-addr/confounders.watch" 2>"$RUN_DIR/context-confounders.log" \
+  || warn "context-confounders failed (see context-confounders.log)"
+
 # ── 6. manifest ──────────────────────────────────────────────────
 python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
 import json, os, re, sys
@@ -469,6 +480,17 @@ manifest = {
     "started_at": started,
     "gate": gate_block,
     "verdict": verdict,
+    # What else the model had in context: the consumer's injected L3 memory
+    # (present? which lines the task watches for?) and skills outside the
+    # frozen pool that were listed or read. Nulls mean the record is missing,
+    # never that nothing was there. Full detail in context-confounders.json.
+    "context_confounders": (lambda p: (lambda c: {
+        "profile_memory_present": c.get("profile_memory", {}).get("present"),
+        "l3_watch_hits": len(c.get("profile_memory", {}).get("l3", {}).get("watch_hits", []) or []) if c.get("profile_memory", {}).get("l3", {}).get("present") else None,
+        "l3_sha1": c.get("profile_memory", {}).get("l3", {}).get("sha1"),
+        "non_pool_skills_in_listing": len((c.get("available_skills") or {}).get("not_in_pool", [])) if c.get("available_skills") is not None else None,
+        "non_pool_skill_reads": len(c.get("non_pool_skill_reads") or []) if c.get("non_pool_skill_reads") is not None else None,
+    })(json.load(open(p, encoding="utf-8"))) if os.path.exists(p) else None)(os.path.join(run_dir, "context-confounders.json")),
     "counts": {n: count(n) for n in
                ("capture.jsonl", "tool-call-logs.jsonl", "candidate-log.jsonl",
                 "events.jsonl", "early-events.jsonl", "used-events.jsonl", "outcome-events.jsonl")},

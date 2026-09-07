@@ -1,0 +1,8 @@
+# Lines of the consumer's injected L3 memory that steer this task's behaviour,
+# one regex per line (case-insensitive). Found in the 2026-09-06 review; kept
+# here so every run records whether they were in context.
+probe every documented candidate
+--max-time
+get-by-name
+cross-agent 404
+a live code:0 reply outranks

@@ -8,7 +8,7 @@ The full rendered table is `summary-2026-09-06.md`; this file is the reading.
 
 ## The headline that is not the result
 
-| arm | started | pass | pass rate |
+| arm | started | pass | endpoint success rate |
 |---|---|---|---|
 | gate-off | 3 | 3 | 100% |
 | gate-on | 3 | 3 | 100% |
@@ -97,7 +97,7 @@ Established, n = 3 per arm:
   the real client path. The consumer never dialled its address.
 - With the gate off, the same asset is retrieved and acted on every time, and
   the run pays for it in one failed attempt and roughly 17 s.
-- The verdict itself does not move. A report that showed only the pass rate
+- The verdict itself does not move. A report that showed only the endpoint success rate
   would show nothing.
 
 Not established:
@@ -167,7 +167,7 @@ wrong asset left visible:
 | right asset visible (gate-off + gate-on runs) | 6 | 6 | 0 | wrong 3/6, right 3/6 |
 | right asset hidden | 4 | 0 | **4** | wrong 4/4, then nothing |
 
-Here the pass rate does move: 100% → 0%. Without the asset the model has one
+Here the endpoint success rate does move: 100% → 0%. Without the asset the model has one
 address to try, tries it, times out, and stops. This is the "use the asset vs
 do not" contrast for the asset that carries the answer, and it is what
 calibrates the judge: the token 47318 never appears when the asset is hidden,
@@ -198,3 +198,47 @@ The outcome judge was also tightened after review: `corrected(wrong)` now
 requires the harness's own reachability probe to reproduce the failure
 (`reachability.json` per run). The three off-arm corrected events stand under
 that rule; the probe reaches 127.0.0.1:47318 and times out on 10.244.7.19:8096.
+
+## Confounders found in review (2026-09-07)
+
+Two things were in the model's context in every comparison run besides the
+two pool assets. Both are the product working as designed; neither was named
+above, and both change how one row of this comparison may be read. Recorded
+per run in `context-confounders.json` from now on (stage 5d of `run-once.sh`),
+backfilled for the fifteen runs here, and tabulated in `summary-2026-09-06.md`
+under "What else was in context".
+
+1. **The consumer agent's own L3 memory.** `<tdai_profile_memory>` for
+   `agt-5e0y4l8a7a` (identity B), last updated 2026-09-06T00:04Z — learned
+   by the product from B's evidence-base runs the evening before. Its SOP
+   reads: "probe every documented candidate under a bounded timeout
+   (--max-time 15) … a live code:0 reply outranks silent/unreachable
+   records", and "never get-by-name (agent-scoped; cross-agent 404 by
+   design)". Present in 3/3 off runs, 3/3 on runs and 4/4 leave-one-out runs;
+   byte-identical across the six comparison runs (the system-prompt hash row
+   above already showed that). **Consequence:** the off arm dialling both
+   addresses is prescribed by this block. It must not be read as the model
+   recovering on its own — the first-batch note above said the two calls were
+   issued together; this says why. The between-arm columns (rejected asset
+   seen, first batch, corrected, wall, tokens) stay valid: both arms carried
+   the same block, and the on arm had one candidate to probe because the gate
+   had removed the other.
+2. **A consumer-owned auto-extracted skill outside the frozen pool.**
+   `skill-bridge-http-access` (`skl-lUWmwEYqsZDZ`, owner B, created
+   2026-09-05T22:02Z from the first evidence-base run, before auto-extraction
+   was switched off). Listed in `<available_skills>` in every 2026-09-06 run
+   and read by the model in 3/3 off, 2/3 on and 2/4 leave-one-out runs. Its
+   body carries neither `10.244.7.19` nor `47318` (checked above), so no
+   `used` rests on it; it carries the outdated get-by-name claim and the
+   acceptance marker query `team-bridge-reachability`, which is task
+   knowledge that leaked into a team asset. A corrected version is published
+   separately, with v2 kept and its applicability stated.
+
+Also renamed in this file: the "pass rate" column is the **endpoint success
+rate**. `task.md` counts an accurately reported failure as a completed task;
+`verify.mjs` does not. The number is right; its old name was not.
+
+None of the figures above were re-measured after these changes. A new
+comparison under the in-Core gate, with the L3 block and the extra skill
+recorded per run, is the next batch; until it exists, no improvement in
+success rate or tokens is claimed from any change made since 2026-09-06.

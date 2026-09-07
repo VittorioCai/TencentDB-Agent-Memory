@@ -62,7 +62,7 @@ const BASELINE = { frozen_at: "2026-09-06T08:47:33Z", source_runs: [{ run_id: "p
 
 test("runFacts: null for every field when the run has no extras", () => {
   const f = runFacts(run("x", "PASS", "r"));
-  assert.deepEqual(f, { first_dial_failed: null, first_batch_size: null, first_batch_all_ok: null, first_batch_any_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null, prompt_tokens: null, total_tokens: null, cached_tokens: null });
+  assert.deepEqual(f, { first_dial_failed: null, first_batch_size: null, first_batch_all_ok: null, first_batch_any_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null, prompt_tokens: null, total_tokens: null, cached_tokens: null, profile_memory_present: null, l3_watch_hits: null, non_pool_skill_read: null });
 });
 
 test("the gate shows in seen / first-dial / corrected, while the pass rate is identical", () => {
