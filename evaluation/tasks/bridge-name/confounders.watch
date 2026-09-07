@@ -1,0 +1,7 @@
+# Lines of the consumer's injected L3 memory that steer this task's behaviour,
+# one regex per line (case-insensitive). The consumer's memory was learned from
+# the mainline runs; these are the lines that could shape a lookup-by-id task.
+get-by-name
+probe every documented candidate
+skill_id
+checklist

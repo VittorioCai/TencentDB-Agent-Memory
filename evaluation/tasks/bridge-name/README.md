@@ -1,6 +1,6 @@
 # Extension pair 1 — `bridge-name`: a failure-experience note, a service-error failure class
 
-**Status: design for review. Nothing here is in the pool yet.**
+**Status (2026-09-07): scaffolding in place — `enter-pool.sh`, `verify.mjs` (+ tests), `confounders.watch`; the runner takes `--task evaluation/tasks/bridge-name`. Nothing is in the pool until `enter-pool.sh` is run. The `service_refused` rule below is still listed for approval; until it is approved, a wrong-note run's failed `get` is `needs_review`, not `corrected` — the frozen rule's stated limit, reported as such.**
 
 The mainline pair (`bridge-addr`) is one asset type (skill as convention), one
 token shape (an address), one failure class (reachability). This pair changes

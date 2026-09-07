@@ -34,16 +34,21 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 EVAL="$REPO_ROOT/evaluation"
+# Resolved after the options are parsed (below), so --task can override.
 RUNS_DIR="${RUNS_DIR:-$EVAL/runner/runs}"
 
 LABEL=""
 IDENTITY="b"
+TASK_DIR=""
 SINCE="${SINCE:-30 MINUTE}"
 AUTO=0
 GATE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --label) LABEL="$2"; shift 2 ;;
+    # --task <dir>: the scenario directory (task.md, verify.mjs, confounders.watch,
+    # optional tokens.json / gate_baseline.json / probe-*.mjs). Default: the mainline.
+    --task) TASK_DIR="$2"; shift 2 ;;
     # --gate on|off: reset the scenario assets' visibility to the frozen
     # baseline before the session (off), or reset and then hide what the
     # baseline's decisions reject (on). Both arms start from the same pool;
@@ -73,6 +78,9 @@ ABLATE="${ABLATE:-}"
 if [[ -n "$ABLATE" && -n "$GATE" ]]; then
   echo "--ablate and --gate are different experiments; pick one" >&2; exit 2
 fi
+TASK_DIR="${TASK_DIR:-$EVAL/tasks/bridge-addr}"
+[[ -d "$TASK_DIR" && -f "$TASK_DIR/task.md" && -f "$TASK_DIR/verify.mjs" ]] || { echo "--task must name a scenario directory with task.md and verify.mjs, got: $TASK_DIR" >&2; exit 2; }
+TASK_NAME="$(basename "$TASK_DIR")"
 [[ -n "$LABEL" ]] || LABEL="${GATE:+gate-$GATE}"
 [[ -n "$LABEL" ]] || LABEL="${ABLATE:+loo-${ABLATE##*-}}"
 [[ -n "$LABEL" ]] || LABEL="run"
@@ -107,6 +115,7 @@ info "run $RUN_ID → $RUN_DIR"
 # run whose gate state is unknown is not comparable with anything, so a
 # failure here ends the run before a capture exists that could be misread.
 GATE_BASELINE="$EVAL/gate/artifacts/gate_baseline.json"
+[[ -f "$TASK_DIR/gate_baseline.json" ]] && GATE_BASELINE="$TASK_DIR/gate_baseline.json"
 if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
   [[ -f "$GATE_BASELINE" ]] || die "gate/ablation requested but no baseline at $GATE_BASELINE (build it: node evaluation/gate/build-baseline.mjs …)"
   FROZEN="$(python3 -c "import json;print(json.load(open('$GATE_BASELINE'))['frozen_at'])")"
@@ -164,7 +173,7 @@ else
   bash "$EVAL/tasks/bridge-addr/use-identity.sh" "$IDENTITY" >/dev/null \
     || die "could not switch to identity $IDENTITY"
 
-  TASK_FILE="$EVAL/tasks/bridge-addr/task.md"
+  TASK_FILE="$TASK_DIR/task.md"
   if (( AUTO )); then
     info "launching a fresh single-prompt CodeBuddy session (run-codebuddy.sh -p)"
     # -p spawns a new process, runs one prompt to completion (the agent still
@@ -259,7 +268,7 @@ CANDIDATES="$EVAL/provenance/artifacts/candidate-log.jsonl"
 # a fact about the run; whether an asset helped is a judgement about that fact.
 # Letting the second decide the first is how a scenario starts grading itself.
 info "acceptance …"
-node "$EVAL/tasks/bridge-addr/verify.mjs" "$CAPTURE" --json > "$RUN_DIR/verdict.json" 2>"$RUN_DIR/verify.log"
+node "$TASK_DIR/verify.mjs" "$CAPTURE" --json > "$RUN_DIR/verdict.json" 2>"$RUN_DIR/verify.log"
 VERDICT_CODE=$?
 VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json'))['verdict'])" 2>/dev/null || echo ERROR)"
 
@@ -269,7 +278,7 @@ VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json')
 # harness opens its own TCP connection to every host:port the run attempted,
 # right now, and records the result. The outcome judge calls an asset wrong
 # only when this probe also fails to reach the address it gave.
-(cd "$REPO_ROOT" && node "$EVAL/tasks/bridge-addr/probe-reachability.mjs" --verdict="$RUN_DIR/verdict.json" \
+[[ -f "$TASK_DIR/probe-reachability.mjs" ]] && (cd "$REPO_ROOT" && node "$TASK_DIR/probe-reachability.mjs" --verdict="$RUN_DIR/verdict.json" \
   --out="$RUN_DIR/reachability.json" --source="harness probe at run time" --timeout-ms=5000 > "$RUN_DIR/reachability.log" 2>&1) \
   || warn "reachability probe failed; see $RUN_DIR/reachability.log (outcomes will be unconfirmed)"
 [[ -f "$RUN_DIR/reachability.json" ]] && info "reachability: $(tr '\n' ';' < "$RUN_DIR/reachability.log")"
@@ -289,7 +298,10 @@ for stale in "$EVAL/provenance/artifacts/provenance-events.jsonl" \
   rm -f "$stale"
 done
 
+# The frozen pool this scenario was entered with: beside the task when the
+# scenario keeps its own (bridge-name), else the fixed path (the mainline).
 SNAPSHOT="$EVAL/provenance/artifacts/asset-pool-snapshot.json"
+[[ -f "$TASK_DIR/asset-pool-snapshot.json" ]] && SNAPSHOT="$TASK_DIR/asset-pool-snapshot.json"
 cp "$SNAPSHOT" "$RUN_DIR/asset-pool-snapshot.json" 2>/dev/null || warn "no pool snapshot to copy"
 
 # ── 3b. has the pool moved since it was frozen? ──────────────────
@@ -345,16 +357,16 @@ cp "$EVAL/provenance/artifacts/early-events.jsonl" "$RUN_DIR/early-events.jsonl"
 
 info "judgement …"
 (cd "$REPO_ROOT" && node "$EVAL/attribution/collect-artifacts.mjs" "$CAPTURE" \
-  --task="$EVAL/tasks/bridge-addr/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null 2>&1) || warn "collect-artifacts failed"
+  --task="$TASK_DIR/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null 2>&1) || warn "collect-artifacts failed"
 cp "$EVAL/attribution/artifacts/run-artifacts.json" "$RUN_DIR/run-artifacts.json" 2>/dev/null \
   || { warn "no artifacts collected"; echo "[]" > "$RUN_DIR/run-artifacts.json"; }
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-hard.mjs" \
-  "$RUN_DIR/events.jsonl" "$RUN_DIR/run-artifacts.json" "$EVAL/attribution/artifacts/tokens.json" \
+  "$RUN_DIR/events.jsonl" "$RUN_DIR/run-artifacts.json" "$( [[ -f "$TASK_DIR/tokens.json" ]] && echo "$TASK_DIR/tokens.json" || echo "$EVAL/attribution/artifacts/tokens.json" )" \
   > "$RUN_DIR/judgement.md" 2>&1) || warn "judge failed; see $RUN_DIR/judgement.md"
 cp "$EVAL/attribution/artifacts/used-events.jsonl" "$RUN_DIR/used-events.jsonl" 2>/dev/null || : > "$RUN_DIR/used-events.jsonl"
 # The tokens the judgement was made with, kept beside it: versioned, and the
 # outcome judge below refuses to blame a version whose tokens it cannot see.
-cp "$EVAL/attribution/artifacts/tokens.json" "$RUN_DIR/tokens.json" 2>/dev/null || warn "no tokens.json to keep"
+if [[ -f "$TASK_DIR/tokens.json" ]]; then cp "$TASK_DIR/tokens.json" "$RUN_DIR/tokens.json"; else cp "$EVAL/attribution/artifacts/tokens.json" "$RUN_DIR/tokens.json" 2>/dev/null || warn "no tokens.json to keep"; fi
 
 # ── 4b. outcomes and what the gate would say ─────────────────────
 # Each used event is followed to the specific call it fed, and that call's own
@@ -454,11 +466,11 @@ info "core auto-extraction: $EXTRACTION_ENABLED"
 # record it cannot say what its numbers rest on. The task's `confounders.watch`
 # lists the phrases to look for; the record is written beside the run either way.
 node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
-  --watch="$EVAL/tasks/bridge-addr/confounders.watch" 2>"$RUN_DIR/context-confounders.log" \
+  --watch="$TASK_DIR/confounders.watch" 2>"$RUN_DIR/context-confounders.log" \
   || warn "context-confounders failed (see context-confounders.log)"
 
 # ── 6. manifest ──────────────────────────────────────────────────
-python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
+RUN_TASK_NAME="$TASK_NAME" python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
 import json, os, re, sys
 run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction, gate, ablate = sys.argv[1:12]
 
@@ -507,6 +519,7 @@ if resolved_line:
 manifest = {
     "run_id": run_id,
     "label": label,
+    "task": os.environ.get("RUN_TASK_NAME") or None,
     "identity": identity,
     "conversation_id": conv_id or None,
     # What the proxy actually bound this session to. Null fields mean the log
