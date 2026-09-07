@@ -494,6 +494,7 @@ export const assetOutcomeListSchema = z
     occurred_before: z.string().datetime().optional(),
   })
   .merge(paginationInputSchema);
+export const assetGateBackfillSchema = z.object({ team_id: nonEmpty, dry_run: z.boolean().optional() });
 export const assetGateSubmitSchema = z.object({
   asset_id: nonEmpty,
   /** Take a pending request back; admins and reviewers stop seeing a private candidate. */

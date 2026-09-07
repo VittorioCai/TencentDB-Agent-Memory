@@ -1,23 +1,34 @@
 {
-  "schema": "core-outcomes-v1",
+  "schema": "core-outcomes-v2",
   "run_id": "20260905T220020Z-gate-off",
-  "synced_at": "2026-09-07T09:40:47Z",
-  "consumer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key-b",
+  "synced_at": "2026-09-07T14:30:39Z",
+  "submitter_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
   "evaluate": false,
+  "trusted": 2,
+  "untrusted": 0,
+  "duplicates": 0,
   "posted": [
     {
       "event_id": "evt-92df4d4d47f4",
-      "outcome_id": "472b3355-9bce-4ff0-8003-2fbc154229cc",
+      "outcome_id": "ba8e0c6e-7515-4757-8160-368f5b7ecc47",
       "state": "corrected",
       "asset_id": "skl-sZFb3KatWY6m",
-      "relation": "cross_user"
+      "relation": "cross_user",
+      "call_id": "call_00_G9aDxkOvysoOoLobMkc56726",
+      "trusted": true,
+      "untrusted_reason": null,
+      "duplicate": false
     },
     {
       "event_id": "evt-2ff3007ccbe5",
-      "outcome_id": "9a5a7eec-c215-4bb0-bf72-43e8cf23a286",
+      "outcome_id": "6880f384-846b-419c-b97f-26615da03912",
       "state": "validated",
       "asset_id": "skl-oBaDO5CceKnr",
-      "relation": "cross_user"
+      "relation": "cross_user",
+      "call_id": "call_01_zEo9sgfRF9BvaP8sOaqG1636",
+      "trusted": true,
+      "untrusted_reason": null,
+      "duplicate": false
     }
   ],
   "skipped": []

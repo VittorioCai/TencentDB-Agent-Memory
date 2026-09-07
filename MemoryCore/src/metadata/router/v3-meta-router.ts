@@ -265,6 +265,9 @@ const routeTable: Record<string, Handler> = {
   [`${V3_PREFIX}/asset/gate/review`]: bind(S.assetGateReviewSchema, (d, c, s) =>
     s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null }),
   ),
+  [`${V3_PREFIX}/asset/gate/backfill`]: bind(S.assetGateBackfillSchema, (d, c, s) =>
+    s.backfillAssetGateForCaller(d.team_id, c, { dry_run: d.dry_run }),
+  ),
   [`${V3_PREFIX}/asset/gate/submit`]: bind(S.assetGateSubmitSchema, (d, c, s) =>
     s.submitAssetForReviewForCaller(d.asset_id, c, { withdraw: d.withdraw, note: d.note ?? null }),
   ),

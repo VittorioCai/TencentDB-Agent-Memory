@@ -632,6 +632,9 @@ export async function handleVersions(body: unknown, _auth: V2AuthContext, reques
   const pre = await precheck(versionsRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
+    // Version history names and describes the skill; a candidate's is not for the model.
+    const admV = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admV.allowed.length === 0) return notAdmitted(pre.data.skill_id, admV.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.listVersions(pre.data);
     if (r.total === 0) {
       obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: 40401, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id, reason: "not_found" });
@@ -718,6 +721,9 @@ export async function handleExport(body: unknown, _auth: V2AuthContext, requestI
     return pre.envelope;
   }
   try {
+    // Export carries the content; same gate as get.
+    const admE = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admE.allowed.length === 0) return notAdmitted(pre.data.skill_id, admE.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.exportSkill(pre.data);
     obsLogger.info("skill.handleExport.done", {
       req_id: requestId, code: 0, dur_ms: Date.now() - t0,

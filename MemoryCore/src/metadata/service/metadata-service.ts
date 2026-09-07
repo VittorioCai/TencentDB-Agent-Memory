@@ -93,6 +93,7 @@ import type {
   AppendAssetOutcomeInput,
   AssetOutcomeFilter,
   GateDecision,
+  GateDecisionKind,
 } from "../types.js";
 import { formatListResult, paginateArray, resolvePagination, wrapPaginated, DEFAULT_PAGINATION } from "../pagination.js";
 import { generateId, ID_PREFIX } from "../utils/id-generator.js";
@@ -1154,6 +1155,39 @@ export class MetadataService {
       offset += limit;
     }
     return paginateArray(visible, pagination);
+  }
+
+  /**
+   * Bring legacy rows under the gate (2026-09-08, team admin). An asset
+   * whose status is not one the gate knows — "active" from before the
+   * candidate pool existed, or any other stray value — was never admitted
+   * by anything, so it becomes a candidate and is decided once: it shows
+   * up in the review queue, not in the model's context. `draft` (a manual
+   * registration) is counted and left alone; approved / failed /
+   * deprecated / archived are untouched. A migration never approves.
+   */
+  async backfillAssetGateForCaller(teamId: string, ctx: V3AuthContext, opts: { dry_run?: boolean } = {}): Promise<{ moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }>; drafts: number; untouched: number; dry_run: boolean }> {
+    await this.assertCallerIsTeamAdmin(ctx, teamId);
+    const known = new Set<string>(["candidate", "approved", "failed", "deprecated", "archived", "draft"]);
+    const moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }> = [];
+    let drafts = 0; let untouched = 0;
+    let offset = 0;
+    const limit = 100;
+    while (true) {
+      const page = await this.store.listAssetsByTeam(teamId, { limit, offset });
+      for (const asset of page.items) {
+        const status = String(asset.status);
+        if (status === "draft") { drafts += 1; continue; }
+        if (known.has(status)) { untouched += 1; continue; }
+        if (opts.dry_run) { moved.push({ asset_id: asset.asset_id, from: status, decision: null }); continue; }
+        await this.updateAsset(asset.asset_id, { status: "candidate" });
+        const { decision } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
+        moved.push({ asset_id: asset.asset_id, from: status, decision: decision.decision });
+      }
+      if (offset + page.items.length >= page.total) break;
+      offset += limit;
+    }
+    return { moved, drafts, untouched, dry_run: !!opts.dry_run };
   }
 
   /** One asset on the management path: the caller must be able to read it. */

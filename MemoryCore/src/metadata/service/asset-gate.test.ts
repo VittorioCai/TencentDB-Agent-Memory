@@ -449,6 +449,23 @@ describe("the gate on the asset record", () => {
     expect(byAdmin.status).toBe("approved");
   });
 
+  it("backfill: a legacy status becomes a candidate decided once; draft is counted and left; nothing is approved by migration", async () => {
+    await store.createAsset({ asset_id: "skl-legacy", team_id: team, asset_type: "skill", name: "legacy", owner_user_id: a, source_type: "test", visibility: "team", status: "active" as unknown as AssetEntity["status"] });
+    await candidateSkill("skl-draft", a, "team", "draft");
+    await candidateSkill("skl-ok", a, "team", "approved");
+    await expect(svc.backfillAssetGateForCaller(team, ctx(r))).rejects.toMatchObject({ code: "permission_denied" });
+    const dry = await svc.backfillAssetGateForCaller(team, ctx(admin), { dry_run: true });
+    expect(dry.moved).toEqual([{ asset_id: "skl-legacy", from: "active", decision: null }]);
+    expect((await store.getAssetById("skl-legacy"))?.status).toBe("active");
+    const done = await svc.backfillAssetGateForCaller(team, ctx(admin));
+    expect(done.moved).toEqual([{ asset_id: "skl-legacy", from: "active", decision: "pending" }]);
+    expect(done.drafts).toBe(1);
+    expect(done.untouched).toBe(1);
+    expect((await store.getAssetById("skl-legacy"))?.status).toBe("candidate");
+    expect((await store.getAssetById("skl-draft"))?.status).toBe("draft");
+    expect((await store.getAssetById("skl-ok"))?.status).toBe("approved");
+  });
+
   it("a new skill enters as a candidate with the cold-start decision written; the author's record sets its priority", async () => {
     const agent = await store.createAgent({ team_id: team, owner_user_id: a, name: "A" });
     const first = await svc.ensureSkillAsset({ skill_id: "skl-new-1", team_id: team, agent_id: agent.agent_id, name: "new-1" });

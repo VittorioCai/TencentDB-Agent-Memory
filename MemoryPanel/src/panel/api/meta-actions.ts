@@ -78,6 +78,8 @@ export const META_ACTIONS = [
   'asset/gate/review',
   // The owner's request for team review of a private candidate (2026-09-08).
   'asset/gate/submit',
+  // Team admin: legacy statuses ("active") become candidates, decided once; never approved by migration.
+  'asset/gate/backfill',
   'agent-fixed-asset/set',
   'agent-fixed-asset/list',
   'agent-fixed-asset/list-with-detail',
