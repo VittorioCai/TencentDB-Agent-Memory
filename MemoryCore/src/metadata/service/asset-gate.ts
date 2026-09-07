@@ -50,6 +50,8 @@ export interface DecideInput {
   /** Outcomes recorded for the author's OTHER assets (this one excluded by the caller or here). */
   authorOutcomes: AssetOutcomeEntity[];
   now?: Date;
+  /** Recorded on the decision when the caller restricted the outcomes to occurred_at <= asOf. */
+  asOf?: string | null;
 }
 
 function daysBetween(a: string, b: Date): number {
@@ -186,6 +188,7 @@ export function decideAsset(input: DecideInput): GateDecision {
     evidence_refs,
     signals: { online, author },
     review_priority,
+    evidence_as_of: input.asOf ?? null,
   };
 }
 

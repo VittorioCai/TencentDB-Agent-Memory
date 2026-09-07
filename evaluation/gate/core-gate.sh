@@ -104,7 +104,9 @@ if os.path.exists(gatep):
 print(json.dumps({"asset_id": aid, "name": d.get("name"), "owner_user_id": d.get("owner_user_id"),
                   "status": d.get("status"), "visibility": d.get("visibility"), "confidence": d.get("confidence"),
                   "gate_decision": (g or {}).get("decision"), "gate_decided_at": (g or {}).get("decided_at"),
-                  "gate_rules_version": (g or {}).get("rules_version")}))
+                  "gate_rules_version": (g or {}).get("rules_version"),
+                  # the full gate-decision-v2 document Core wrote onto the asset; the receipt reads it
+                  "gate": g}))
 PY
     else
       echo "{\"asset_id\":\"$id\",\"status\":null,\"visibility\":null,\"error\":\"$(envelope_msg "$TMP/get-$id.json" | tr -d '"')\"}" >> "$TMP/rows.jsonl"
@@ -133,9 +135,13 @@ set_status() {  # asset_id status visibility → appends to $TMP/actions.jsonl
   echo "{\"op\":\"asset/update\",\"asset_id\":\"$id\",\"status\":\"$status\",\"visibility\":\"$vis\",\"accepted\":$accepted,\"message\":$(python3 -c "import json;print(json.dumps('$(envelope_msg "$TMP/upd-$id.json" | tr -d '"')'))")}" >> "$TMP/actions.jsonl"
   $accepted || warn "asset/update $id → $status rejected: $(envelope_msg "$TMP/upd-$id.json")"
 }
+# The gate acts on the evidence base only: as_of = the baseline's frozen_at, so
+# outcomes the comparison batch itself recorded (evaluate=false) are on file
+# but do not decide the batch they belong to. Core records as_of on the decision.
+FROZEN_AT="$(python3 -c "import json;print(json.load(open('$BASELINE')).get('frozen_at',''))")"
 evaluate() {  # asset_id → appends decision to $TMP/decisions.jsonl
   local id="$1"
-  call "$OWNER_KEY_FILE" "/v3/meta/asset/gate/evaluate" "{\"asset_id\":\"$id\",\"apply\":true}" "$TMP/eval-$id.json"
+  call "$OWNER_KEY_FILE" "/v3/meta/asset/gate/evaluate" "{\"asset_id\":\"$id\",\"apply\":true${FROZEN_AT:+,\"as_of\":\"$FROZEN_AT\"}}" "$TMP/eval-$id.json"
   if envelope_ok "$TMP/eval-$id.json"; then
     python3 -c "import json;d=json.load(open('$TMP/eval-$id.json'))['data'];print(json.dumps({'asset_id':'$id','applied':d.get('applied'),'decision':d.get('decision')}))" >> "$TMP/decisions.jsonl"
     echo "{\"op\":\"gate/evaluate\",\"asset_id\":\"$id\",\"accepted\":true}" >> "$TMP/actions.jsonl"
@@ -269,7 +275,7 @@ rec = {
     "before": {aid: (None if r is None else {"status": r.get("status"), "visibility": r.get("visibility"), "gate_decision": r.get("gate_decision")}) for aid, r in before.items()},
     "actions": actions,
     "decisions": {aid: d.get("decision") for aid, d in decisions.items()},
-    "after": {aid: (None if r is None else {"status": r.get("status"), "visibility": r.get("visibility"), "gate_decision": r.get("gate_decision"), "confidence": r.get("confidence")}) for aid, r in after.items()},
+    "after": {aid: (None if r is None else {"status": r.get("status"), "visibility": r.get("visibility"), "gate_decision": r.get("gate_decision"), "confidence": r.get("confidence"), "gate": r.get("gate")}) for aid, r in after.items()},
     "status_at_start": {aid: (None if r is None else r.get("status")) for aid, r in after.items()},
     "visibility_at_start": {aid: (None if r is None else r.get("visibility")) for aid, r in after.items()},
     "expected": expected, "verified": verified,

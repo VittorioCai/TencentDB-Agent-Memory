@@ -299,3 +299,53 @@ test("stale: age past the threshold is a review prompt, never a judgement, and t
   assert.ok(tight.items[0].risks.some((x) => x.kind === "stale"));
   assert.deepEqual(validate(SCHEMA, r), []);
 });
+
+// ── The product's own decision (gate-decision-v2, 2026-09-07) ──
+//
+// Core writes the decision onto the asset; the runner records it per run in
+// a core-gate record. It carries no author score — that ratio was the review's
+// objection — so the receipt shows the decision, the evidence share, the
+// review priority, and the context-based author assessment when on file.
+
+const CORE_RECORD = {
+  schema: "core-gate-record-v1", mode: "apply", mechanism: "core-status",
+  after: {
+    [WRONG]: { status: "failed", gate: { schema_version: "gate-decision-v2", rules_version: "gate-rules-2026-09-07", asset_id: WRONG, decided_at: "2026-09-07T09:40:48Z", decision: "reject", status_target: "failed", confidence: 0, reasons: ["rule reject: a corrected outcome exists (reason=wrong, 2 record(s))"], evidence_refs: [], signals: { online: {}, author: { user_id: AUTHOR, validated: 2, corrected: 0, distinct_consumers: 1, recent_wrong_asset_ids: [], assessment: null } }, review_priority: null } },
+    [RIGHT]: { status: "approved", gate: { schema_version: "gate-decision-v2", rules_version: "gate-rules-2026-09-07", asset_id: RIGHT, decided_at: "2026-09-07T09:40:48Z", decision: "admit", status_target: "approved", confidence: 1, reasons: ["rule admit: cross-person validated >= 1 (2 record(s)) and no corrected"], evidence_refs: [], signals: { online: {}, author: { user_id: AUTHOR, validated: 0, corrected: 2, distinct_consumers: 1, recent_wrong_asset_ids: [WRONG], assessment: null } }, review_priority: null } },
+  },
+};
+
+test("Core decision: the receipt carries the product's gate, and no author score", () => {
+  const r = buildReceipt({ events: mainlineEvents(), snapshot: SNAPSHOT, decisions: CORE_RECORD, runId: "run-c", taskId: "task-t", generatedAt: "2026-09-07T10:00:00Z" });
+  assert.deepEqual(validate(SCHEMA, r), []);
+  const by = Object.fromEntries(r.items.map((i) => [i.asset_id, i]));
+  assert.equal(by[WRONG].gate_decision, "reject");
+  assert.equal(by[WRONG].author_confidence, null);
+  assert.deepEqual(by[WRONG].gate, { mechanism: "core-status", decision: "reject", rules_version: "gate-rules-2026-09-07", decided_at: "2026-09-07T09:40:48Z", review_priority: null, applied: true, evidence_confidence: 0, author_assessment: null });
+  // No low_confidence risk: the number it referred to no longer exists.
+  assert.deepEqual(by[WRONG].risks.map((x) => x.kind), ["gate_rejected"]);
+  assert.deepEqual(by[RIGHT].risks.map((x) => x.kind), []);
+  assert.equal(by[RIGHT].gate.evidence_confidence, 1);
+  const en = renderItem(by[RIGHT]); const zh = renderItem(by[RIGHT], "zh");
+  assert.match(en, /gate \(Core\) admit · evidence confidence 1 · rules gate-rules-2026-09-07/);
+  assert.match(zh, /闸门\(Core\) 准入 · 证据置信度 1 · 规则 gate-rules-2026-09-07/);
+  assert.ok(!/author confidence|作者置信度/.test(en + zh));
+});
+
+test("Core decision: a pending asset with high review priority is a risk, and the assessment shows", () => {
+  const decision = {
+    schema_version: "gate-decision-v2", rules_version: "gate-rules-2026-09-07", asset_id: RIGHT, decided_at: "2026-09-07T09:40:48Z",
+    decision: "pending", status_target: "candidate", confidence: null,
+    reasons: ["cold start: no outcome recorded for this asset yet; pending by default", "context-based assessment: author competence low for \"bridge address from the host\" (3 cited record(s), 2026-09-07T09:00:00Z); review priority: high"],
+    evidence_refs: [], review_priority: "high",
+    signals: { online: {}, author: { user_id: AUTHOR, validated: 0, corrected: 0, distinct_consumers: 0, recent_wrong_asset_ids: [], assessment: { competence: "low", domain: "bridge address from the host", assessed_at: "2026-09-07T09:00:00Z", citations: 3 } } },
+    mechanism: "core-status",
+  };
+  const item = buildItem({ assetId: RIGHT, events: [ev("fetched", RIGHT)], snapshot: SNAPSHOT, decision });
+  assert.deepEqual(item.risks.map((x) => x.kind).sort(), ["gate_pending", "review_priority_high"]);
+  assert.match(item.risks.find((x) => x.kind === "review_priority_high").detail, /competence low/);
+  assert.deepEqual(item.gate.author_assessment, { competence: "low", domain: "bridge address from the host" });
+  const zh = renderItem(item, "zh");
+  assert.match(zh, /闸门\(Core\) 待定 · 尚无跨人结果 · 复核优先级 高 · 作者评估 low（bridge address from the host）/);
+  assert.match(zh, /复核优先级高:/);
+});

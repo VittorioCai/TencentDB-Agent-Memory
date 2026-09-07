@@ -88,7 +88,7 @@ const T = {
   },
 };
 
-const RISK_ZH = { stale: "过期", low_confidence: "低置信", conflict: "冲突", not_head: "非最新版", gate_pending: "闸门待定", gate_rejected: "闸门拒绝", needs_review: "待复核" };
+const RISK_ZH = { stale: "过期", low_confidence: "低置信", conflict: "冲突", not_head: "非最新版", gate_pending: "闸门待定", gate_rejected: "闸门拒绝", needs_review: "待复核", review_priority_high: "复核优先级高" };
 
 export function renderItem(item, lang = "en") {
   const t = T[lang] ?? T.en;
@@ -107,7 +107,23 @@ export function renderItem(item, lang = "en") {
     lines.push(`    ${t.evidence}`);
     for (const e of item.evidence) lines.push(`      ${e.kind.padEnd(15)} ${e.ref}${e.detail ? `  — ${e.detail}` : ""}`);
   }
-  lines.push(`    ${t.gate(item.gate_decision)} · ${t.confidence(item.author_confidence)}`);
+  if (item.gate && item.gate.mechanism === "core-status") {
+    // The product's own decision (gate-decision-v2): no author score. What
+    // it carries is the decision, the share of cross-person outcomes that
+    // validated, the review priority of a pending asset, and the
+    // context-based author assessment when one is on file.
+    const g = item.gate;
+    const parts = [lang === "zh" ? `闸门(Core) ${{ admit: "准入", pending: "待定", reject: "拒绝" }[g.decision] ?? g.decision ?? "无判定"}` : `gate (Core) ${g.decision ?? "no decision"}`];
+    if (g.evidence_confidence != null) parts.push(lang === "zh" ? `证据置信度 ${g.evidence_confidence}` : `evidence confidence ${g.evidence_confidence}`);
+    else parts.push(lang === "zh" ? "尚无跨人结果" : "no cross-person outcome yet");
+    if (g.review_priority) parts.push(lang === "zh" ? `复核优先级 ${{ high: "高", normal: "中", low: "低" }[g.review_priority] ?? g.review_priority}` : `review priority ${g.review_priority}`);
+    if (g.author_assessment) parts.push(lang === "zh" ? `作者评估 ${g.author_assessment.competence}${g.author_assessment.domain ? `（${g.author_assessment.domain}）` : ""}` : `author assessment ${g.author_assessment.competence}${g.author_assessment.domain ? ` (${g.author_assessment.domain})` : ""}`);
+    if (g.rules_version) parts.push(lang === "zh" ? `规则 ${g.rules_version}` : `rules ${g.rules_version}`);
+    if (g.applied === false) parts.push(lang === "zh" ? "未应用（本次闸门关闭）" : "not applied (gate off for this run)");
+    lines.push(`    ${parts.join(" · ")}`);
+  } else {
+    lines.push(`    ${t.gate(item.gate_decision)} · ${t.confidence(item.author_confidence)}`);
+  }
   for (const r of item.risks ?? []) lines.push(`    ${t.risk.padEnd(10)} ${lang === "zh" ? (RISK_ZH[r.kind] ?? r.kind) : r.kind}: ${r.detail}`);
   return lines.join("\n");
 }

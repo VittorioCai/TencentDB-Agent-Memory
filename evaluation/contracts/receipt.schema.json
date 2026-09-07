@@ -293,7 +293,8 @@
                     "not_head",
                     "gate_pending",
                     "gate_rejected",
-                    "needs_review"
+                    "needs_review",
+                    "review_priority_high"
                   ]
                 },
                 "detail": {
@@ -323,6 +324,108 @@
             "minimum": 0,
             "maximum": 1,
             "description": "Null when not computable; rendered as 'no cross-person validation yet', never as 0."
+          },
+          "gate": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The gate decision the run faced, as written by the product (mechanism core-status, gate-decision-v2) or by the evaluation script for earlier runs. Core's document carries no author score: a review priority, the share of cross-person outcomes that validated, and the context-based author assessment when one is on file.",
+            "properties": {
+              "mechanism": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "core-status",
+                  "evaluation-script",
+                  null
+                ]
+              },
+              "decision": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "admit",
+                  "pending",
+                  "reject",
+                  null
+                ]
+              },
+              "rules_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "decided_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "review_priority": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "high",
+                  "normal",
+                  "low",
+                  null
+                ]
+              },
+              "evidence_confidence": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Share of this asset's cross-person outcomes that validated; null with none. A description of the evidence, not a prior."
+              },
+              "author_assessment": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "competence": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "domain": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "competence"
+                ]
+              },
+              "applied": {
+                "type": [
+                  "boolean",
+                  "null"
+                ],
+                "description": "true when the run faced this decision (gate on), false when the gate was off for the run and the decision stayed on file unapplied, null when unknown."
+              }
+            },
+            "required": [
+              "mechanism",
+              "decision"
+            ]
           }
         }
       }

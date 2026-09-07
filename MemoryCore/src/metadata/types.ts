@@ -578,6 +578,12 @@ export interface GateDecision {
     };
   };
   review_priority: ReviewPriority | null;
+  /**
+   * When set, only outcomes with occurred_at <= evidence_as_of were read. An
+   * evaluation batch passes its frozen baseline time here so the gate acts on
+   * the evidence base and not on the batch's own runs.
+   */
+  evidence_as_of?: string | null;
 }
 
 /** The part of a context-based author assessment the gate reads. */

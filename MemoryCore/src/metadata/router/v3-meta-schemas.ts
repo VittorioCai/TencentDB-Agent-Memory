@@ -490,5 +490,7 @@ export const assetGateEvaluateSchema = z.object({
   asset_id: nonEmpty,
   /** Write status / confidence / metadata_json.gate (default true); false = decide only. */
   apply: z.boolean().optional(),
+  /** Read only outcomes with occurred_at <= as_of (an evaluation batch passes its frozen baseline time). */
+  as_of: z.string().datetime().optional(),
 });
 export const assetGateGetSchema = z.object({ asset_id: nonEmpty });

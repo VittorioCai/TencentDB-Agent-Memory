@@ -552,6 +552,14 @@ PY
 # this run's own evidence would decide; that stays in gate-decisions.json.
 RECEIPT_DECISIONS="$RUN_DIR/gate-decisions.json"
 [[ ( -n "$GATE" || -n "$ABLATE" ) && -f "$RUN_DIR/gate_baseline.json" ]] && RECEIPT_DECISIONS="$RUN_DIR/gate_baseline.json"
+# Under the in-Core gate the record written before the session carries the
+# product's own decision per asset (gate-decision-v2) and whether the run
+# faced it (apply) or ran with the gate off (reset). That is what the receipt
+# shows; the frozen baseline stays the record of the evidence it rests on.
+if [[ -n "$GATE" && -f "$RUN_DIR/gate-apply.json" ]] \
+   && python3 -c "import json,sys; sys.exit(0 if json.load(open('$RUN_DIR/gate-apply.json')).get('mechanism')=='core-status' else 1)" 2>/dev/null; then
+  RECEIPT_DECISIONS="$RUN_DIR/gate-apply.json"
+fi
 info "receipt …"
 # contributed is a cross-run claim (a contrast batch); the receipt looks it up
 # from the calibration output, never derives it from this run. The verdict

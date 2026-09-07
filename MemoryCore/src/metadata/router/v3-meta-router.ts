@@ -256,7 +256,7 @@ const routeTable: Record<string, Handler> = {
     return s.listAssetOutcomesForCaller(filter, c, resolvePagination(d));
   }),
   [`${V3_PREFIX}/asset/gate/evaluate`]: bind(S.assetGateEvaluateSchema, (d, c, s) =>
-    s.evaluateAssetGateForCaller(d.asset_id, c, { apply: d.apply ?? true }),
+    s.evaluateAssetGateForCaller(d.asset_id, c, { apply: d.apply ?? true, asOf: d.as_of ?? null }),
   ),
   [`${V3_PREFIX}/asset/gate/get`]: bind(S.assetGateGetSchema, (d, c, s) => s.getAssetGateForCaller(d.asset_id, c)),
 

@@ -242,3 +242,29 @@ describe("the gate on the asset record", () => {
     expect(second.status).toBe("candidate");
   });
 });
+
+describe("as_of: the gate can be asked to act on the evidence base only", () => {
+  it("outcomes after as_of are not read, and the decision says so", async () => {
+    const store = new SqliteMetadataStore(":memory:"); store.init();
+    const svc = new MetadataService(store, "test");
+    const admin = (await svc.createNormalUser({ username: `adm-${Date.now()}` })).user_id;
+    const a = (await svc.createNormalUser({ username: `a-${Date.now()}` })).user_id;
+    const b = (await svc.createNormalUser({ username: `b-${Date.now()}` })).user_id;
+    const team = (await store.createTeam({ name: "t", owner_user_id: admin })).team_id;
+    await store.addTeamMember({ team_id: team, user_id: a, role: "member" });
+    await store.addTeamMember({ team_id: team, user_id: b, role: "member" });
+    await store.createAsset({ asset_id: "skl-z", team_id: team, asset_type: "skill", name: "z", owner_user_id: a, source_type: "test", visibility: "team", status: "candidate" });
+    // Evidence base: one validated at T1. Later batch: a corrected at T2, recorded but not acted on.
+    await svc.appendAssetOutcomeForCaller({ team_id: team, asset_id: "skl-z", state: "validated", occurred_at: "2026-09-06T08:00:00.000Z" }, ctx(b), { evaluate: false });
+    await svc.appendAssetOutcomeForCaller({ team_id: team, asset_id: "skl-z", state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-07T10:00:00.000Z" }, ctx(b), { evaluate: false });
+    const frozen = await svc.evaluateAssetGate("skl-z", { apply: true, asOf: "2026-09-06T08:47:33.000Z" });
+    expect(frozen.decision.decision).toBe("admit");
+    expect(frozen.decision.evidence_as_of).toBe("2026-09-06T08:47:33.000Z");
+    expect(frozen.decision.signals.online.corrected).toBe(0);
+    expect((await store.getAssetById("skl-z"))?.status).toBe("approved");
+    const all = await svc.evaluateAssetGate("skl-z", { apply: true });
+    expect(all.decision.decision).toBe("reject");
+    expect(all.decision.evidence_as_of).toBeNull();
+    expect((await store.getAssetById("skl-z"))?.status).toBe("failed");
+  });
+});

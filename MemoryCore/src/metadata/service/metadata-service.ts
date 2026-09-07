@@ -1906,12 +1906,17 @@ export class MetadataService {
    * metadata_json.gate. Service-level: no caller check, so the extraction
    * hook and the outcome append can call it.
    */
-  async evaluateAssetGate(assetId: string, opts: { apply?: boolean; now?: Date } = {}): Promise<{ decision: GateDecision; applied: boolean; asset: AssetEntity }> {
+  async evaluateAssetGate(assetId: string, opts: { apply?: boolean; now?: Date; asOf?: string | null } = {}): Promise<{ decision: GateDecision; applied: boolean; asset: AssetEntity }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
-    const own = await this.allOutcomes({ team_id: asset.team_id, asset_id: asset.asset_id });
-    const author = await this.allOutcomes({ team_id: asset.team_id, owner_user_id: asset.owner_user_id });
-    const decision = decideAsset({ asset, outcomes: own, authorOutcomes: author, now: opts.now });
+    // as_of: read only outcomes that occurred at or before this time. An
+    // evaluation batch passes its frozen baseline so the gate acts on the
+    // evidence base and not on the batch's own runs, which are recorded
+    // (evaluate=false) but must not decide the batch they belong to.
+    const filter = opts.asOf ? { occurred_before: opts.asOf } : {};
+    const own = await this.allOutcomes({ team_id: asset.team_id, asset_id: asset.asset_id, ...filter });
+    const author = await this.allOutcomes({ team_id: asset.team_id, owner_user_id: asset.owner_user_id, ...filter });
+    const decision = decideAsset({ asset, outcomes: own, authorOutcomes: author, now: opts.now, asOf: opts.asOf ?? null });
     if (opts.apply === false) return { decision, applied: false, asset };
     const patch: Partial<AssetEntity> = {
       status: decision.status_target,
@@ -1923,7 +1928,7 @@ export class MetadataService {
   }
 
   /** Owner, team admin or reviewer may run the gate by hand. */
-  async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean } = {}) {
+  async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean; asOf?: string | null } = {}) {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.assertCallerMayReview(ctx, asset);

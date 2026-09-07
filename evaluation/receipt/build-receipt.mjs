@@ -50,6 +50,19 @@ function stateOf(e) { return EARLY.has(e.state) ? "provided" : e.state; }
 
 /** Decisions from a gate-decisions.json array or a gate_baseline.json document. */
 export function decisionsMap(doc) {
+  // A core-gate record (core-gate.sh --status/--apply --out) carries the
+  // product's own decision per asset under after[asset].gate — the
+  // gate-decision-v2 document Core wrote onto the asset. That is the decision
+  // the run actually faced, so it takes precedence over any local recomputation.
+  if (doc && doc.schema === "core-gate-record-v1" && doc.after && typeof doc.after === "object") {
+    const m = new Map();
+    for (const [assetId, row] of Object.entries(doc.after)) {
+      // applied: did the run face this decision (apply/seed), or was the gate off (reset)?
+      const applied = doc.mode === "apply" || doc.mode === "seed" ? true : doc.mode === "reset" ? false : null;
+      if (row && row.gate && typeof row.gate === "object") m.set(assetId, { ...row.gate, mechanism: doc.mechanism ?? "core-status", status_now: row.status ?? null, applied });
+    }
+    return m;
+  }
   const list = Array.isArray(doc) ? doc : doc?.decisions ?? [];
   return new Map(list.map((d) => [d.asset_id, d]));
 }
@@ -172,9 +185,35 @@ export function buildItem({ assetId, events, snapshot, decision, contributed = [
   }
   if (decision?.decision === "reject") risks.push({ kind: "gate_rejected", detail: decision.reasons?.[0] ?? "rejected by the gate" });
   if (decision?.decision === "pending") risks.push({ kind: "gate_pending", detail: decision.reasons?.[0] ?? "gate decision pending; handed to a human" });
-  const conf = decision?.signals?.author?.confidence ?? null;
   const author = top.producer_user_id || snap.producer_user_id || "";
-  if (decision && conf === null) {
+  // Two decision documents exist. gate-decision-v2 is what Core writes onto
+  // the asset (2026-09-07): no author score — a review priority, an
+  // evidence share, and, when one is on file, the context-based assessment
+  // of the author. The earlier v1 (evaluation/gate/decide.mjs) carried the
+  // smoothed author ratio the review rejected; it is still read for old runs,
+  // never produced for new ones.
+  const isV2 = decision?.schema_version === "gate-decision-v2";
+  const conf = isV2 ? null : (decision?.signals?.author?.confidence ?? null);
+  const gate = decision
+    ? {
+        mechanism: decision.mechanism ?? (isV2 ? "core-status" : "evaluation-script"),
+        decision: decision.decision ?? null,
+        rules_version: decision.rules_version ?? null,
+        decided_at: decision.decided_at ?? null,
+        review_priority: isV2 ? (decision.review_priority ?? null) : null,
+        applied: isV2 ? (decision.applied ?? null) : null,
+        evidence_confidence: isV2 ? (decision.confidence ?? null) : null,
+        author_assessment: isV2 && decision.signals?.author?.assessment
+          ? { competence: decision.signals.author.assessment.competence, domain: decision.signals.author.assessment.domain ?? null }
+          : null,
+      }
+    : null;
+  if (isV2) {
+    if (decision.review_priority === "high") {
+      const why = decision.reasons?.find((r) => /review priority: high/.test(r)) ?? "review priority high";
+      risks.push({ kind: "review_priority_high", detail: why });
+    }
+  } else if (decision && conf === null) {
     risks.push({ kind: "low_confidence", detail: `author ${author} has no cross-person validation yet; confidence not computable` });
   } else if (conf !== null && conf < LOW_CONFIDENCE_BELOW) {
     risks.push({ kind: "low_confidence", detail: `author confidence ${conf} (after shrinkage)` });
@@ -207,6 +246,7 @@ export function buildItem({ assetId, events, snapshot, decision, contributed = [
     risks,
     gate_decision: decision?.decision ?? null,
     author_confidence: conf,
+    gate,
   };
 }
 
