@@ -1,6 +1,7 @@
 {
-  "schema": "author-assessment-v1",
-  "assessed_at": "2026-09-07T10:26:56.055Z",
+  "schema": "author-assessment-v2",
+  "assessed_at": "2026-09-07T16:09:38.314Z",
+  "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "b",
     "user_id": "usr-4u07qc2kuj",
@@ -8,13 +9,338 @@
     "team_id": "team-5ezfoladb5"
   },
   "asset_id": "skl-lUWmwEYqsZDZ",
+  "asset": {
+    "asset_id": "skl-lUWmwEYqsZDZ",
+    "name": "skill-bridge-http-access",
+    "version": 3,
+    "content_hash": "50636f458d57384d9035dd04a27fadba",
+    "owner_user_id": "usr-4u07qc2kuj",
+    "status": "candidate",
+    "tokens": [
+      "127.0.0.1:8096"
+    ],
+    "tokens_from": "asset body"
+  },
+  "chain": {
+    "asset_version": 3,
+    "content_hash": "50636f458d57384d9035dd04a27fadba",
+    "producer": {
+      "owner_user_id": "usr-4u07qc2kuj",
+      "owner_agent_id": "agt-5e0y4l8a7a",
+      "operator": "unknown"
+    },
+    "source_sessions": [
+      "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
+      "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
+      "fbd80e17-a3e0-4332-bb31-4ea1fa5ab320",
+      "e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f",
+      "62a164d0-073c-41ac-87d8-a556b0d4d3a0",
+      "87f53648-6c52-4d47-a42a-20138c76f947",
+      "4454916b-43c0-4025-800c-6d0ed63a880a"
+    ],
+    "naming_messages": [
+      "l0:msg-cc1f39cd95b0",
+      "l0:msg-ee7b5442f001",
+      "l0:msg-cac810a7864b",
+      "l0:msg-cd345421e56e",
+      "l0:msg-06d0e8bf4baa",
+      "l0:msg-f3efa32691ae",
+      "l0:msg-8261a6ea14b7",
+      "l0:msg-67520a4039cd",
+      "l0:msg-1a3c35c2aa20",
+      "l0:msg-e2e065208bc8",
+      "l0:msg-112ab1c45241",
+      "l0:msg-fb37bcee04df",
+      "l0:msg-1246eeed623a",
+      "l0:msg-7d81e2ca7daa",
+      "l0:msg-068620cebc8b",
+      "l0:msg-22f70e43c940",
+      "l0:msg-da9a1b44a6ed",
+      "l0:msg-0eb5954434f5",
+      "l0:msg-7a952befa5c5",
+      "l0:msg-dcc658f1e5e8",
+      "l0:msg-098c14b2566d",
+      "l0:msg-0080a50807fd",
+      "l0:msg-da78c2bbd75c",
+      "l0:msg-88be8f13da8b",
+      "l0:msg-9ca82ffc78f5",
+      "l0:msg-4ea708dd13d9",
+      "l0:msg-712bb8a57625",
+      "l0:msg-50f9f45ff61b",
+      "l0:msg-858280a2dcd7",
+      "l0:msg-de0f825e417f",
+      "l0:msg-3c9ea2512acb",
+      "l0:msg-c80b709d73f0"
+    ],
+    "operations": [
+      {
+        "record_id": "call:294f30a9d2653fc3",
+        "at": "2026-09-05T07:25:34.144Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:69916d113931f2f6",
+        "at": "2026-09-05T07:26:47.951Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:98d9db1fb4c06c5f",
+        "at": "2026-09-05T07:28:23.791Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:6f695285f3fb1fcb",
+        "at": "2026-09-05T07:29:38.271Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:7682f9ceccd2e3f2",
+        "at": "2026-09-05T07:30:05.979Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:2f8a03aaf89c51af",
+        "at": "2026-09-05T07:30:30.478Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:842c5b65f2e3dd78",
+        "at": "2026-09-05T23:35:52.390Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:db474b60c92e6b78",
+        "at": "2026-09-05T23:35:55.880Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:e05b2f810cb3a37f",
+        "at": "2026-09-05T23:35:55.880Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:ac9282e2df99fbea",
+        "at": "2026-09-05T23:36:07.133Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:81e15bfce422359b",
+        "at": "2026-09-05T23:36:07.133Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:abe0633b588c1bd1",
+        "at": "2026-09-05T23:36:15.504Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:74e700246a88dd9a",
+        "at": "2026-09-05T23:36:15.504Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:828438f947f1ebbd",
+        "at": "2026-09-05T23:36:28.316Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:1762d2222cf0668f",
+        "at": "2026-09-05T23:36:28.316Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:4f6ea96fce97a0ec",
+        "at": "2026-09-05T23:36:42.489Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:c215bea11a32a0cf",
+        "at": "2026-09-05T23:37:50.601Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:559faf51073e20bf",
+        "at": "2026-09-05T23:38:53.590Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:88b040bc1457eb09",
+        "at": "2026-09-06T05:48:20.634Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:d98f58c3d408694a",
+        "at": "2026-09-06T05:48:20.634Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:91ac388ee12ae046",
+        "at": "2026-09-06T05:48:46.076Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:7c46a7c596d67073",
+        "at": "2026-09-06T05:48:48.321Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:e229c44f851ddd13",
+        "at": "2026-09-06T06:00:29.068Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:8c06276e4b92dc8d",
+        "at": "2026-09-06T06:00:29.068Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:5eaa5cb9c39cb866",
+        "at": "2026-09-06T06:00:29.186Z",
+        "status": 200,
+        "kind": "bridge_call"
+      },
+      {
+        "record_id": "call:734c110224715931",
+        "at": "2026-09-06T06:00:33.963Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:2768d3d969d1bf4e",
+        "at": "2026-09-06T06:00:33.963Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:bd158bf74ccaab2c",
+        "at": "2026-09-06T06:00:41.913Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:a0199444eee3b887",
+        "at": "2026-09-06T06:00:41.913Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:054b29230e55f3ed",
+        "at": "2026-09-06T06:00:48.777Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:2402ba78900ccb1f",
+        "at": "2026-09-06T06:00:48.777Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:b0b3d4c432676bf3",
+        "at": "2026-09-06T06:01:00.001Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:743a636bc9632cda",
+        "at": "2026-09-06T06:01:00.001Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:6498c4d29ed0fe6b",
+        "at": "2026-09-06T06:01:05.587Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:aadad5caa4cd7f7e",
+        "at": "2026-09-06T06:01:08.551Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:6f865a3825698484",
+        "at": "2026-09-06T06:01:08.551Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:18ae37cccdf67b63",
+        "at": "2026-09-06T06:34:08.881Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:549ec8f785fb34a8",
+        "at": "2026-09-06T06:34:08.881Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:e77a50ec52d6c1d4",
+        "at": "2026-09-06T06:34:12.552Z",
+        "status": 0,
+        "kind": "model_intent"
+      },
+      {
+        "record_id": "call:df53daa33e1103db",
+        "at": "2026-09-06T06:34:12.552Z",
+        "status": 0,
+        "kind": "model_intent"
+      }
+    ],
+    "results": [],
+    "complete": false,
+    "breaks": [
+      "producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown",
+      "results: no trusted outcome is recorded on this asset at or before the cutoff"
+    ]
+  },
   "domain": "reading team skills through the skill bridge by name across agents",
-  "asset_claim": "get-by-name is scoped to your own agent: asking for another agent's skill returns 40401 SKILL_NOT_FOUND",
+  "asset_claim": "get-by-name through the skill bridge returns 40401 SKILL_NOT_FOUND for a skill owned by another agent; search first and get by skill_id instead",
   "pack": {
     "file": "evaluation/author/artifacts/evidence-pack-b.json",
-    "sha256": "dec2cca13816818cbe24ec5c992a7a3b693325ff5da070a62c563553bb48db71",
-    "record_count": 392,
-    "shown": 50,
+    "sha256": "d27a89e8ffe5945e4d837c5681db886f06510b3c95e2e407622fc789f6d9e554",
+    "record_count": 271,
+    "by_class": {
+      "user_instruction": 45,
+      "assistant_report": 44,
+      "derived_memory": 31,
+      "proxy_observed": 151
+    },
+    "excluded": {
+      "after_cutoff": 755,
+      "no_timestamp": 0,
+      "untrusted_outcomes": 0,
+      "persona_after_cutoff": true,
+      "other_users_calls": 0
+    },
+    "shown": 157,
     "left_out": [
       "l0:msg-6a1ed53b743b",
       "l0:msg-c80b709d73f0",
@@ -54,12 +380,13 @@
       "l0:msg-0080a50807fd",
       "l0:msg-142cf102b680",
       "l0:msg-098c14b2566d",
-      "l1:m_1788622665051_bcd4ba73",
       "l1:m_1788622665051_f4b343bb",
       "l0:msg-27db3be059c3",
+      "l0:msg-dcc658f1e5e8",
       "l0:msg-d1f1a4a055af",
       "l0:msg-883ddebc2841",
       "l0:msg-479bb5ddd7d2",
+      "l0:msg-7a952befa5c5",
       "l0:msg-6d2168b651bf",
       "l1:m_1788622792562_c8257b32",
       "l1:m_1788622792562_4802d739",
@@ -107,11 +434,10 @@
       "l0:msg-86d7be45bae7",
       "l0:msg-06d0e8bf4baa",
       "l0:msg-6141ddd167f0",
+      "l0:msg-52fde6da3574",
       "l0:msg-2c32f004b62a",
-      "l1:m_1788645698514_fa2c0e31",
       "l1:m_1788645698514_182278e1",
       "l1:m_1788645698514_ce32d1b8",
-      "l1:m_1788645820841_4fbf556c",
       "l1:m_1788645820841_e2550133",
       "l1:m_1788645820841_c1d78686",
       "l1:m_1788645903658_d226fafc",
@@ -122,251 +448,23 @@
       "l0:msg-342ab7ea69ef",
       "l0:msg-ee7b5442f001",
       "l0:msg-732f857f1e3f",
+      "l0:msg-4a5751c34a00",
       "l1:m_1788647674845_444ff426",
       "l1:m_1788647674845_3416e9f0",
       "l0:msg-03e42f81b5a1",
+      "l0:msg-cc1f39cd95b0",
+      "l1:m_1788647790881_b741461d",
       "l1:m_1788647790882_5c8b8486",
-      "l1:m_1788647790882_327bdc4d",
-      "l0:msg-08a25f0c73de",
-      "l0:msg-cf109b69c2d5",
-      "l0:msg-ceeabf194093",
-      "l0:msg-3b708f156ab0",
-      "l0:msg-c14e7c9f407a",
-      "l0:msg-03b6c702cb75",
-      "l1:m_1788686508073_27db4609",
-      "l1:m_1788686508073_a7a02416",
-      "l0:msg-47fc78b5c390",
-      "l1:m_1788686569101_091f830f",
-      "l1:m_1788686569102_2c218e77",
-      "l1:m_1788686569102_ffe5975d",
-      "l0:msg-65d8c928f91a",
-      "l0:msg-60f98a6dab49",
-      "l0:msg-1e41b8a3eaed",
-      "l0:msg-09b8e8eedbf3",
-      "l0:msg-1582cb2a1b3a",
-      "l0:msg-d7cde77169d5",
-      "l1:m_1788687131448_9535c3a9",
-      "l1:m_1788687131449_0906f2b1",
-      "l1:m_1788687168234_8d70fa81",
-      "l1:m_1788687168234_90b409ec",
-      "l0:msg-1a1a9ee3eaa3",
-      "l0:msg-ec7c86b40955",
-      "l0:msg-cbfb90bc5129",
-      "l0:msg-4ab5fa11bf76",
-      "l0:msg-c0f25b249c1e",
-      "l0:msg-93b732ca50f7",
-      "l0:msg-1bd9942e677f",
-      "l0:msg-294e7d948f1b",
-      "l1:m_1788693512158_c68aebde",
-      "l1:m_1788693512158_73948a78",
-      "l0:msg-2eb57dea4d75",
-      "l0:msg-b4bda32a012b",
-      "l0:msg-6c9117ab1fd1",
-      "l0:msg-23a300d61ec9",
-      "l0:msg-97db135fafa2",
-      "l0:msg-14f6e32e5674",
-      "l1:m_1788694184359_90d236db",
-      "l0:msg-6c7f487dc893",
-      "l0:msg-c3ca38923ae1",
-      "l0:msg-3cfdc8ec8b6c",
-      "l0:msg-937d15244c38",
-      "l0:msg-505970d75fdc",
-      "l0:msg-3bc3fd121569",
-      "l1:m_1788694224042_931da738",
-      "l1:m_1788694224043_0c33607e",
-      "l1:m_1788694224043_203b8863",
-      "l0:msg-46a4379a25fe",
-      "l0:msg-d70eeb80c52e",
-      "l1:m_1788694242235_023a1766",
-      "l0:msg-9625e52b2f5f",
-      "l0:msg-fef872b3b2da",
-      "l0:msg-2219c9ca576c",
-      "l0:msg-e9758d96fa2a",
-      "l0:msg-4df6855e89f7",
-      "l0:msg-f264302ea78b",
-      "l0:msg-1af76291cab1",
-      "l0:msg-33e064dadc48",
-      "l0:msg-08a527e9131c",
-      "l1:m_1788694295369_764655a5",
-      "l1:m_1788694295369_1226dd35",
-      "l1:m_1788694295369_1dbff022",
-      "l1:m_1788694296900_963aa522",
-      "l1:m_1788694296900_93667f1c",
-      "l1:m_1788694296900_a161e8a8",
-      "l1:m_1788694374616_395c8ddb",
-      "l1:m_1788694374616_f1eaa1ee",
-      "l0:msg-f1b339718490",
-      "l0:msg-48c057467a48",
-      "l0:msg-0bbb43dde492",
-      "l0:msg-c6648bc9e08d",
-      "l0:msg-73f9a105a8a4",
-      "l0:msg-f99bcb67ea49",
-      "l0:msg-1b0a29057a6d",
-      "l0:msg-08218c185642",
-      "l1:m_1788698258014_bee39648",
-      "l0:msg-50367183d288",
-      "l0:msg-a0ac064a9e44",
-      "l1:m_1788698354284_a7ad2b5e",
-      "l1:m_1788698354285_a0e84dc7",
-      "l1:m_1788698354285_4b15fa00",
-      "l0:msg-75cc830385e2",
-      "l0:msg-46412e83bf85",
-      "l0:msg-7c0c15cde112",
-      "l0:msg-d7ff56960924",
-      "l0:msg-4ef957041efd",
-      "l0:msg-db8aee354079",
-      "l0:msg-9b223102d6a1",
-      "l0:msg-b7b1bfb3db10",
-      "l0:msg-f1e8cb7e7637",
-      "l0:msg-843590464e7b",
-      "l0:msg-0eefce16dcef",
-      "l0:msg-973d7607cee2",
-      "l0:msg-c21d3705fe3d",
-      "l0:msg-2c27cc0b1b95",
-      "l0:msg-22b019752009",
-      "l0:msg-264446f2a6eb",
-      "l0:msg-f29f19d29226",
-      "l0:msg-820de0b3edeb",
-      "l1:m_1788698559522_f11bd864",
-      "l1:m_1788698559523_1f0f659a",
-      "l1:m_1788698565510_899c4f0a",
-      "l1:m_1788698640512_74cb8e8c",
-      "l1:m_1788698640513_ab333a89",
-      "l1:m_1788698648354_63a8e0ed",
-      "l0:msg-460f51867e2b",
-      "l0:msg-666a6c117719",
-      "l0:msg-6c3ce1d9ffb4",
-      "l0:msg-942354c1c95a",
-      "l0:msg-bed878aeb930",
-      "l0:msg-ed65aa61c1c8",
-      "l1:m_1788698748914_12d3d140",
-      "l1:m_1788698748914_ae4e0825",
-      "l0:msg-84ee6c6c8157",
-      "l0:msg-87aae9243fa0",
-      "l0:msg-6423f4145b4e",
-      "l0:msg-5a5e7d1a156a",
-      "l1:m_1788698784144_3bf55670",
-      "l0:msg-e4cb035ebae9",
-      "l0:msg-8498a6fc257f",
-      "l0:msg-5425742ab23f",
-      "l0:msg-638f54032be6",
-      "l0:msg-01d98910d6b7",
-      "l1:m_1788774310652_f1316edf",
-      "l1:m_1788774310653_ea75437b",
-      "l1:m_1788774316447_30b5faa4",
-      "l1:m_1788774316447_a46efb41",
-      "l0:msg-7a01799a9f10",
-      "l0:msg-8fb1167f5765",
-      "l0:msg-82595a440a9d",
-      "l0:msg-3da38b413cda",
-      "l0:msg-3d507ced61b9",
-      "l0:msg-f5ce84c0b25a",
-      "l0:msg-d585430d4d94",
-      "l0:msg-ec3ae5c19eee",
-      "l1:m_1788774426366_fc0fad6e",
-      "l1:m_1788774426370_3f2d3018",
-      "l0:msg-3e220addbc96",
-      "l0:msg-841346da944f",
-      "l1:m_1788774434749_6d2857ad",
-      "l1:m_1788774434750_8f395a88",
-      "l1:m_1788774434750_b6d553c1",
-      "l0:msg-d74f3c829353",
-      "l0:msg-b1b3b1ce8e83",
-      "l0:msg-9d365e6e8d42",
-      "l1:m_1788774482043_1f3fdcd8",
-      "l1:m_1788774482043_cd4d51e4",
-      "l0:msg-38a719a72190",
-      "l1:m_1788774509054_7fdb06b6",
-      "l0:msg-0b2536b4c10c",
-      "l0:msg-ed5e135a8e1f",
-      "l0:msg-6fad4246f707",
-      "l0:msg-935d82baf8cf",
-      "l0:msg-2d1d2f0e9181",
-      "l0:msg-1907d37d79ce",
-      "l1:m_1788774576373_633ed980",
-      "l0:msg-afc92d86d47d",
-      "l0:msg-5bddc3fb1dda",
-      "l0:msg-5a8fa9ff5000",
-      "l0:msg-065efe26b65f",
-      "l0:msg-418d0ef6c946",
-      "l1:m_1788774596374_757fd723",
-      "l1:m_1788774596374_500579fa",
-      "l1:m_1788774596374_cb865bcd",
-      "l0:msg-4f0489afecac",
-      "l0:msg-dbb1861cdb61",
-      "l0:msg-d967a8424cde",
-      "l1:m_1788774634499_f8e8799e",
-      "l0:msg-0918c5a2d4f7",
-      "l0:msg-0d5a914183bf",
-      "l0:msg-ddbb57246e34",
-      "l0:msg-e1654c59f40c",
-      "l0:msg-a616fd59598f",
-      "l0:msg-720af4c2cb82",
-      "l0:msg-cb39c46a434f",
-      "l0:msg-18165fb45942",
-      "l0:msg-2cb9323bcfd6",
-      "l0:msg-cd96e6286058",
-      "l0:msg-643f2e306ff0",
-      "l0:msg-8cdcac1e9e6c",
-      "l0:msg-e41bec695d5f",
-      "l0:msg-de48de7f34b2",
-      "l1:m_1788774685402_70d3a0a6",
-      "l1:m_1788774685402_5ac4dc40",
-      "l0:msg-b5ba9d4bea97",
-      "l0:msg-86ca167c0021",
-      "l1:m_1788774695140_ee0c2d4f",
-      "l1:m_1788774695140_32f1516e",
-      "l1:m_1788774695140_422ade3e",
-      "l0:msg-b0e724761686",
-      "l0:msg-51df07a48904",
-      "l0:msg-3838ef7996ca",
-      "l0:msg-20465de1c6c7",
-      "l0:msg-506bb76846d5",
-      "l0:msg-ccf616e5e3f3",
-      "l0:msg-64ff823ccd01",
-      "l0:msg-94a5306b7341",
-      "l1:m_1788774717927_688554d9",
-      "l1:m_1788774717927_4fff8709",
-      "l0:msg-71d6a045f592",
-      "l0:msg-21b6d1ab4abd",
-      "l0:msg-69711182a3f5",
-      "l0:msg-f7384b96206b",
-      "l0:msg-6d48a8841820",
-      "l0:msg-e97f5b8296af",
-      "l1:m_1788774735909_4f1959b8",
-      "l0:msg-0e536debf8db",
-      "l0:msg-9f043aa21021",
-      "l1:m_1788774748603_20705416",
-      "l1:m_1788774748603_fbc1fcaa",
-      "l0:msg-1dbbc05cd685",
-      "l0:msg-59f74fff5bf4",
-      "l0:msg-0402eeced95a",
-      "l0:msg-adad627a7a51",
-      "l1:m_1788774755765_93440033",
-      "l1:m_1788774755766_47452dda",
-      "l0:msg-64c95765dc4b",
-      "l0:msg-3fd21ab4f94b",
-      "l1:m_1788774775064_7860c5b0",
-      "l1:m_1788774775065_6f8f7d4a",
-      "l1:m_1788774775065_ac3c30e3",
-      "l1:m_1788774775065_a9d303b2",
-      "l1:m_1788774777899_b20b05d7",
-      "l1:m_1788774777899_aec9ffe1",
-      "l1:m_1788774809455_5aab5679",
-      "l1:m_1788774905611_03990682",
-      "l1:m_1788774905611_92e33626",
-      "l1:m_1788774948991_320ee9bc",
-      "l1:m_1788774948991_5e0c607a",
-      "l1:m_1788774948991_434b41d8"
+      "l0:msg-08a25f0c73de"
     ],
-    "chars": 59958,
+    "chars": 59980,
     "terms": [
-      "skill bridge address",
-      "10.244.7.19",
-      "127.0.0.1:47318",
-      "timed out",
-      "reachability",
       "get-by-name",
+      "40401",
+      "skill_not_found",
+      "skill_id",
+      "search",
+      "other agent",
       "reading",
       "team",
       "skills",
@@ -382,96 +480,194 @@
     "url": "https://api.deepseek.com",
     "model": "deepseek-v4-flash",
     "usage": {
-      "prompt_tokens": 20241,
-      "completion_tokens": 20976,
-      "total_tokens": 41217,
+      "prompt_tokens": 26525,
+      "completion_tokens": 19857,
+      "total_tokens": 46382,
       "prompt_tokens_details": {
-        "cached_tokens": 256
+        "cached_tokens": 0
       },
       "completion_tokens_details": {
-        "reasoning_tokens": 20446
+        "reasoning_tokens": 18588
       },
-      "prompt_cache_hit_tokens": 256,
-      "prompt_cache_miss_tokens": 19985
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 26525
     },
     "temperature": 0
   },
-  "raw_model_output": "{\"competence\": \"high\", \"domain\": \"reading team skills through the skill bridge by name across agents\", \"claims\": [{\"statement\": \"The person repeatedly tried get-by-name from the skill bridge when reading team convention skills owned by another agent and accurately recorded that it scopes to their own agent and returns 40401 SKILL_NOT_FOUND.\", \"record_ids\": [\"msg-55deb935c699\", \"msg-dcc658f1e5e8\"], \"quote\": \"`get-by-name` returned `40401 SKILL_NOT_FOUND\"}, {\"statement\": \"They diagnosed the 404 as by-design agent scoping and worked around it by reading cross-agent skill content through the search index and GET /skill/get by skill_id rather than relying on get-by-name.\", \"record_ids\": [\"msg-55deb935c699\", \"msg-cd345421e56e\"], \"quote\": \"I read their content through the search index instead.\"}, {\"statement\": \"When convention skills conflicted, the person operated by an explicit rule not to pick one silently but to probe every documented candidate and report every outcome.\", \"record_ids\": [\"msg-326f61391ee8\"], \"quote\": \"when convention skills disagree on the address, don't pick one silently\"}], \"counter_evidence\": [{\"statement\": \"The person's own current skill asset explicitly states that the earlier 'get-by-name is owner-only' rule from Version 2 is no longer true after proxy commit 87bb79a, so their most recent asset record contradicts an unqualified present-tense claim that cross-agent get-by-name returns 40401.\", \"record_ids\": [\"skill:skl-lUWmwEYqsZDZ@3\"], \"quote\": \"and is not true now.\"}], \"asset_claim_check\": {\"verdict\": \"contradicts\", \"record_ids\": [\"skill:skl-lUWmwEYqsZDZ@3\"], \"quote\": \"and is not true now.\"}, \"summary\": \"Session records show the agent repeatedly and accurately handled cross-agent skill reads, recognising get-by-name's 40401 scoping in earlier exercises and reading other agents' skills through search-index snippets or by skill_id, which shows strong operational knowledge. However, their own asset record (skill-bridge-http-access v3) explicitly says the former 'get-by-name is owner-only' rule 'is not true now,' so the asserted unconditional asset claim is contradicted by the agent's most recent skill content even though earlier session records supported it.\"}",
+  "raw_model_output": "{\n  \"competence\": \"medium\",\n  \"domain\": \"reading team skills through the skill bridge by name across agents\",\n  \"claims\": [\n    {\n      \"statement\": \"The agent ran a team-scope search against the skill bridge at 127.0.0.1:8096 and the bridge logged HTTP 200 for the search.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:2f8a03aaf89c51af\", \"call:d146f6c92f5b0680\"],\n      \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search\",\n      \"relation_to_asset\": \"supports\"\n    },\n    {\n      \"statement\": \"The agent fetched another agent's skill by skill_id through POST /skill/get on the 127.0.0.1:8096 bridge, and the bridge logged HTTP 200 for that get.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:df53daa33e1103db\", \"call:5e983b9cd7a13f24\"],\n      \"quote\": \"http://127.0.0.1:8096/skill-bridge/v3/skill/get\",\n      \"relation_to_asset\": \"supports\"\n    },\n    {\n      \"statement\": \"A derived-memory record (source unavailable) matches the asset's rule: on the 127.0.0.1:8096 bridge, POST /skill/get-by-name is agent-scoped and reading another agent's skill by name returns 404, while resolution by skill_id is possible.\",\n      \"type\": \"model_inference\",\n      \"outcome\": null,\n      \"record_ids\": [\"l1:m_1788645820841_4fbf556c\"],\n      \"quote\": \"The team skill-bridge HTTP API is reachable at http://127.0.0.1:8096/skill-bridge/v3. Its POST /skill/get-by-name endpoint only resolves skills inside the caller's agent scope: reading another agent's skill by name returns 404.\",\n      \"relation_to_asset\": \"supports\"\n    },\n    {\n      \"statement\": \"The assistant reported that get-by-name 404s for another agent's convention skills and that GET /skill/get by skill_id works; this is a narration, not a proxy-observed or harness-verified outcome.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"l0:msg-cd345421e56e\"],\n      \"quote\": \"`get-by-name` 404s on them, but `GET /skill/get` by skill_id works\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent's get-by-name requests to 127.0.0.1:8096 for skills owned by another agent logged HTTP 200 at the transport level, not an HTTP-level 404 or 403.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:734c110224715931\", \"call:3f18169a67726d8d\", \"call:2768d3d969d1bf4e\", \"call:635e25262515af3a\"],\n      \"quote\": \"http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The records contain no harness-verified outcome on asset skl-lUWmwEYqsZDZ and no proxy log body showing the string SKILL_NOT_FOUND; the claimed 40401 is attested only by assistant reports and derived memories with unavailable source.\",\n      \"type\": \"coverage_unknown\",\n      \"outcome\": null,\n      \"record_ids\": [],\n      \"quote\": \"\",\n      \"relation_to_asset\": \"silent\"\n    }\n  ],\n  \"counter_evidence\": [\n    {\n      \"statement\": \"Proxy-observed HTTP status for get-by-name calls to the 127.0.0.1:8096 bridge on another agent's skills was 200 on multiple occasions; because an application-level 40401 could appear inside a 200 body, these HTTP 200s do not establish or refute the asset's 40401 claim.\",\n      \"type\": \"model_inference\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:734c110224715931\", \"call:3f18169a67726d8d\", \"call:2768d3d969d1bf4e\", \"call:635e25262515af3a\"],\n      \"quote\": \"http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name\",\n      \"relation_to_asset\": \"silent\"\n    }\n  ],\n  \"asset_claim_check\": {\n    \"verdict\": \"silent\",\n    \"type\": \"coverage_unknown\",\n    \"outcome\": null,\n    \"record_ids\": [],\n    \"quote\": \"\"\n  },\n  \"summary\": \"The agent repeatedly used the team-scope search and skill_id-based /skill/get routes on the 127.0.0.1:8096 bridge with HTTP 200 responses, aligning with the asset's recommended workflow. The specific 40401 SKILL_NOT_FOUND behavior for get-by-name is only present in assistant reports and source-unavailable derived memories, not in any harness-verified or body-level proxy result, and some get-by-name calls logged HTTP 200 at the transport level. Overall the agent shows a strong operational method for reading team skills by search and skill_id, but the asset's error-code assertion remains unverified by trusted outcomes.\"\n}",
   "verified": {
     "competence": "high",
-    "competence_as_said": "high",
-    "competence_downgraded": false,
-    "asset_claim_check": {
-      "verdict": "contradicts",
-      "record_ids": [
-        "skill:skl-lUWmwEYqsZDZ@3"
-      ],
-      "quote": "and is not true now.",
-      "found_in": "skill:skl-lUWmwEYqsZDZ@3"
+    "competence_basis": "3 recorded success(es)",
+    "competence_as_said": "medium",
+    "competence_downgraded": true,
+    "execution_claims": {
+      "success": 3,
+      "failure": 0
     },
+    "asset_claim_check": {
+      "verdict": "supports",
+      "record_ids": [
+        "call:2f8a03aaf89c51af",
+        "call:d146f6c92f5b0680"
+      ],
+      "quote": "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search",
+      "strength": "strong",
+      "basis": [
+        "call:d146f6c92f5b0680",
+        "call:5e983b9cd7a13f24"
+      ]
+    },
+    "asset_claim_as_said": "silent",
     "claims_kept": [
       {
         "group": "claim",
-        "statement": "The person repeatedly tried get-by-name from the skill bridge when reading team convention skills owned by another agent and accurately recorded that it scopes to their own agent and returns 40401 SKILL_NOT_FOUND.",
+        "statement": "The agent ran a team-scope search against the skill bridge at 127.0.0.1:8096 and the bridge logged HTTP 200 for the search.",
         "record_ids": [
-          "l0:msg-55deb935c699",
-          "l0:msg-dcc658f1e5e8"
+          "call:2f8a03aaf89c51af",
+          "call:d146f6c92f5b0680"
         ],
-        "quote": "`get-by-name` returned `40401 SKILL_NOT_FOUND",
-        "found_in": "l0:msg-55deb935c699"
+        "quote": "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "supports",
+        "strength": "strong",
+        "by_identity": false,
+        "found_in": "call:d146f6c92f5b0680",
+        "evidence_class": "proxy_observed"
       },
       {
         "group": "claim",
-        "statement": "They diagnosed the 404 as by-design agent scoping and worked around it by reading cross-agent skill content through the search index and GET /skill/get by skill_id rather than relying on get-by-name.",
+        "statement": "The agent fetched another agent's skill by skill_id through POST /skill/get on the 127.0.0.1:8096 bridge, and the bridge logged HTTP 200 for that get.",
         "record_ids": [
-          "l0:msg-55deb935c699",
+          "call:df53daa33e1103db",
+          "call:5e983b9cd7a13f24"
+        ],
+        "quote": "http://127.0.0.1:8096/skill-bridge/v3/skill/get",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "supports",
+        "strength": "strong",
+        "by_identity": false,
+        "found_in": "call:5e983b9cd7a13f24",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The assistant reported that get-by-name 404s for another agent's convention skills and that GET /skill/get by skill_id works; this is a narration, not a proxy-observed or harness-verified outcome.",
+        "record_ids": [
           "l0:msg-cd345421e56e"
         ],
-        "quote": "I read their content through the search index instead.",
-        "found_in": "l0:msg-55deb935c699"
+        "quote": "`get-by-name` 404s on them, but `GET /skill/get` by skill_id works",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "found_in": "l0:msg-cd345421e56e",
+        "evidence_class": "assistant_report"
       },
       {
         "group": "claim",
-        "statement": "When convention skills conflicted, the person operated by an explicit rule not to pick one silently but to probe every documented candidate and report every outcome.",
+        "statement": "The agent's get-by-name requests to 127.0.0.1:8096 for skills owned by another agent logged HTTP 200 at the transport level, not an HTTP-level 404 or 403.",
         "record_ids": [
-          "l0:msg-326f61391ee8"
+          "call:734c110224715931",
+          "call:3f18169a67726d8d",
+          "call:2768d3d969d1bf4e",
+          "call:635e25262515af3a"
         ],
-        "quote": "when convention skills disagree on the address, don't pick one silently",
-        "found_in": "l0:msg-326f61391ee8"
+        "quote": "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "found_in": "call:3f18169a67726d8d",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The records contain no harness-verified outcome on asset skl-lUWmwEYqsZDZ and no proxy log body showing the string SKILL_NOT_FOUND; the claimed 40401 is attested only by assistant reports and derived memories with unavailable source.",
+        "record_ids": [],
+        "quote": "",
+        "type": "coverage_unknown",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "found_in": null,
+        "note": "statement of absence; not evidence"
       },
       {
         "group": "counter_evidence",
-        "statement": "The person's own current skill asset explicitly states that the earlier 'get-by-name is owner-only' rule from Version 2 is no longer true after proxy commit 87bb79a, so their most recent asset record contradicts an unqualified present-tense claim that cross-agent get-by-name returns 40401.",
+        "statement": "Proxy-observed HTTP status for get-by-name calls to the 127.0.0.1:8096 bridge on another agent's skills was 200 on multiple occasions; because an application-level 40401 could appear inside a 200 body, these HTTP 200s do not establish or refute the asset's 40401 claim.",
         "record_ids": [
-          "skill:skl-lUWmwEYqsZDZ@3"
+          "call:734c110224715931",
+          "call:3f18169a67726d8d",
+          "call:2768d3d969d1bf4e",
+          "call:635e25262515af3a"
         ],
-        "quote": "and is not true now.",
-        "found_in": "skill:skl-lUWmwEYqsZDZ@3"
+        "quote": "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name",
+        "type": "model_inference",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "found_in": "call:734c110224715931",
+        "evidence_class": "proxy_observed"
       }
     ],
-    "claims_dropped": [],
+    "claims_dropped": [
+      {
+        "group": "claim",
+        "statement": "A derived-memory record (source unavailable) matches the asset's rule: on the 127.0.0.1:8096 bridge, POST /skill/get-by-name is agent-scoped and reading another agent's skill by name returns 404, while resolution by skill_id is possible.",
+        "record_ids": [
+          "l1:m_1788645820841_4fbf556c"
+        ],
+        "quote": "The team skill-bridge HTTP API is reachable at http://127.0.0.1:8096/skill-bridge/v3. Its POST /skill/get-by-name endpoint only resolves skills inside the caller's agent scope: reading another agent's skill by name returns 404.",
+        "type": "model_inference",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "reason": "a model_inference claim cannot support or contradict the asset"
+      }
+    ],
     "counts": {
-      "claims": 3,
+      "claims": 6,
       "counter_evidence": 1,
-      "kept": 4,
-      "dropped": 0,
-      "citations": 3
+      "kept": 6,
+      "dropped": 1,
+      "citations": 4,
+      "execution": 3
     },
-    "summary": "Session records show the agent repeatedly and accurately handled cross-agent skill reads, recognising get-by-name's 40401 scoping in earlier exercises and reading other agents' skills through search-index snippets or by skill_id, which shows strong operational knowledge. However, their own asset record (skill-bridge-http-access v3) explicitly says the former 'get-by-name is owner-only' rule 'is not true now,' so the asserted unconditional asset claim is contradicted by the agent's most recent skill content even though earlier session records supported it."
+    "summary": "competence high: 3 recorded success(es). asset claim supports on call:d146f6c92f5b0680, call:5e983b9cd7a13f24 (strong). 5 claim(s) kept, 1 dropped (a model_inference claim cannot support or contradict the asset).",
+    "summary_as_said": "The agent repeatedly used the team-scope search and skill_id-based /skill/get routes on the 127.0.0.1:8096 bridge with HTTP 200 responses, aligning with the asset's recommended workflow. The specific 40401 SKILL_NOT_FOUND behavior for get-by-name is only present in assistant reports and source-unavailable derived memories, not in any harness-verified or body-level proxy result, and some get-by-name calls logged HTTP 200 at the transport level. Overall the agent shows a strong operational method for reading team skills by search and skill_id, but the asset's error-code assertion remains unverified by trusted outcomes."
   },
   "summary_for_gate": {
+    "schema": "author-assessment-summary-v2",
     "competence": "high",
+    "competence_as_said": "medium",
     "domain": "reading team skills through the skill bridge by name across agents",
-    "assessed_at": "2026-09-07T10:26:56.055Z",
-    "citations": 3,
-    "asset_claim_check": {
-      "verdict": "contradicts",
-      "record_ids": [
-        "skill:skl-lUWmwEYqsZDZ@3"
-      ]
+    "assessed_at": "2026-09-07T16:09:38.314Z",
+    "evidence_cutoff": "2026-09-06T08:47:33.000Z",
+    "citations": 4,
+    "execution_claims": {
+      "success": 3,
+      "failure": 0
     },
-    "pack_sha256": "dec2cca13816818cbe24ec5c992a7a3b693325ff5da070a62c563553bb48db71",
-    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
+    "asset_claim_check": {
+      "verdict": "supports",
+      "record_ids": [
+        "call:2f8a03aaf89c51af",
+        "call:d146f6c92f5b0680"
+      ],
+      "strength": "strong"
+    },
+    "asset_claim_as_said": "silent",
+    "author_user_id": "usr-4u07qc2kuj",
+    "asset_version": 3,
+    "content_hash": "50636f458d57384d9035dd04a27fadba",
+    "chain_complete": false,
+    "pack_sha256": "d27a89e8ffe5945e4d837c5681db886f06510b3c95e2e407622fc789f6d9e554",
+    "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
-  "rechecked_at": "2026-09-07T10:28:03.246Z"
+  "rechecked_at": "2026-09-07T16:11:41.305Z"
 }

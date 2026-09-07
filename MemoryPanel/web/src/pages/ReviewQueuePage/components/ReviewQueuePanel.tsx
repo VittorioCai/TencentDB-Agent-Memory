@@ -206,17 +206,19 @@ export default function ReviewQueuePanel() {
               key: 'assessment', header: t('review.table.assessment'), width: 240,
               render: (r: Row) => {
                 const a = r.gate?.gate?.signals?.author?.assessment;
-                if (!a) return <Text theme="label" style={{ fontSize: 12 }}>{t('review.noAssessment')}</Text>;
+                const ignored = r.gate?.gate?.signals?.author?.assessment_ignored;
+                if (!a) return <Text theme="label" style={{ fontSize: 12 }}>{ignored ? t('review.assessmentIgnored', { why: ignored }) : t('review.noAssessment')}</Text>;
                 const claim = a.asset_claim_check?.verdict;
                 return (
                   <div>
-                    <Text parent="div" style={{ fontSize: 12 }}>{t('review.competence', { c: t(`review.competenceWord.${a.competence}`) })}</Text>
+                    <Text parent="div" style={{ fontSize: 12 }}>{t('review.competence', { c: t(`review.competenceWord.${a.competence}`) })}{a.competence_as_said && a.competence_as_said !== a.competence ? ` (${t('review.asSaid', { s: t(`review.competenceWord.${a.competence_as_said}`) })})` : ''}</Text>
                     {claim && (
                       <Tag theme={claim === 'contradicts' ? 'error' : claim === 'supports' ? 'success' : 'default'}>
-                        {t(`review.claim.${claim}`)}
+                        {t(`review.claim.${claim}`)}{a.asset_claim_check?.strength ? ` · ${a.asset_claim_check.strength}` : ''}
                       </Tag>
                     )}
-                    <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.citations', { n: a.citations })} · {a.domain}</Text>
+                    <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.citations', { n: a.citations })}{a.execution_claims ? ` · ${t('review.executionClaims', { s: a.execution_claims.success, f: a.execution_claims.failure })}` : ''} · {a.domain}</Text>
+                    {a.evidence_cutoff && <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.evidenceCutoff', { t: a.evidence_cutoff })}{a.written_by ? ` · ${t('review.signedBy', { by: a.written_by })}` : ''}</Text>}
                   </div>
                 );
               },

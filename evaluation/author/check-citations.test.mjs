@@ -12,7 +12,7 @@ const pack = new Map([
   ["call:c1", rec("call", "2026-09-06 bridge_call search status=200 http://127.0.0.1:8096/skill-bridge/v3/skill/search", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")],
   ["call:c2", rec("call", "2026-09-06 bridge_call get-by-name status=404 http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name", { kind: "bridge_call", upstream_status: 404 }, "proxy_observed")],
   ["call:c3", rec("call", "2026-09-06 model_intent Bash curl http://10.244.7.19:8096/skill-bridge/v3/skill/search", { kind: "model_intent", upstream_status: 0 }, "proxy_observed")],
-  ["outcome:o1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05; address 10.244.7.19:8096 timed out for the consumer", { state: "corrected", asset_id: "skl-a" }, "harness_verified")],
+  ["outcome:o1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05; address 10.244.7.19:8096 timed out for the consumer", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a" }, "harness_verified")],
 ]);
 const tokens = ["10.244.7.19:8096"];
 
@@ -63,6 +63,13 @@ test("an observed operation needs a message, a call, an outcome, or a traceable 
   assert.equal(verifyFact({ type: "environment_applicability", quote: "Probe-all, trust-reachability" }, pack, "persona:1:3").ok, true);
 });
 
+test("a host:port token is named by its host alone, as an outcome record on another asset carries it", () => {
+  const p2 = new Map([...pack, ["outcome:o2", rec("outcome", "corrected(wrong) on asset skl-a v2 (asset tokens: 10.244.7.19) by usr-b", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a" }, "harness_verified")]]);
+  const r = verifyFact({ type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-a", relation_to_asset: "contradicts" }, p2, "outcome:o2", ["10.244.7.19:8096"], "skl-new");
+  assert.deepEqual([r.ok, r.relation, r.strength], [true, "contradicts", "strong"]);
+  assert.equal(verifyFact({ type: "observed_operation", quote: "Both documented addresses probed", relation_to_asset: "contradicts" }, p2, "l0:msg1", ["10.244.7.190:8096"], "skl-new").ok, false); // 10.244.7.19 does not name 10.244.7.190
+});
+
 test("supporting or contradicting the asset takes the asset's own token; inferences never do", () => {
   const ok = verifyFact({ type: "execution_result", outcome: "failure", quote: "10.244.7.19:8096 timed out for the consumer", relation_to_asset: "contradicts" }, pack, "outcome:o1", tokens);
   assert.deepEqual([ok.ok, ok.strength], [true, "strong"]);
@@ -70,6 +77,34 @@ test("supporting or contradicting the asset takes the asset's own token; inferen
   assert.deepEqual([weak.ok, weak.strength], [true, "weak"]);
   assert.match(verifyFact({ type: "execution_result", outcome: "success", quote: "status=200", relation_to_asset: "supports" }, pack, "call:c1", tokens).reason, /names the asset's token/);
   assert.match(verifyFact({ type: "model_inference", quote: "Probe-all, trust-reachability", relation_to_asset: "contradicts" }, pack, "persona:1:3", tokens).reason, /cannot support or contradict/);
+});
+
+test("a harness outcome on the assessed asset is about it by identity: its state is the relation, whatever the model labelled", () => {
+  const r = verifyFact({ type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-a" }, pack, "outcome:o1", [], "skl-a");
+  assert.deepEqual([r.ok, r.relation, r.strength, r.by_identity], [true, "contradicts", "strong", true]);
+  assert.match(verifyFact({ type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-a", relation_to_asset: "supports" }, pack, "outcome:o1", [], "skl-a").reason, /is a corrected\(wrong\) outcome on this very asset, which contradicts it/);
+  // Another asset's outcome is not about this one; the token rule applies as usual.
+  assert.equal(verifyFact({ type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-a" }, pack, "outcome:o1", ["10.244.7.19:8096"], "skl-other").relation, "silent");
+  const whole = checkAssessment({ competence: "medium", claims: [{ statement: "the consumer's use was corrected", type: "execution_result", outcome: "failure", record_ids: ["outcome:o1"], quote: "corrected(wrong) on asset skl-a" }] }, pack, { assetId: "skl-a" });
+  assert.equal(whole.asset_claim_check.verdict, "contradicts");
+  assert.equal(whole.asset_claim_check.strength, "strong");
+});
+
+test("a claim citing the intent row and the call row stands on the row that can carry it", () => {
+  const p2 = new Map([...pack, ["call:c4", rec("call", "2026-09-06 model_intent Bash curl -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search status=0", { kind: "model_intent", upstream_status: 0 }, "proxy_observed")],
+    ["call:c5", rec("call", "2026-09-06 bridge_call search status=200 http://127.0.0.1:8096/skill-bridge/v3/skill/search", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]);
+  const r = checkAssessment({ competence: "medium", claims: [{ statement: "searched", type: "execution_result", outcome: "success", record_ids: ["call:c4", "call:c5"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p2);
+  assert.equal(r.claims_kept.length, 1);
+  assert.equal(r.claims_kept[0].found_in, "call:c5");
+  assert.equal(r.competence, "medium");
+  const only = checkAssessment({ competence: "medium", claims: [{ statement: "searched", type: "execution_result", outcome: "success", record_ids: ["call:c4"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p2);
+  assert.match(only.claims_dropped[0].reason, /intent only/);
+  // The quote sits only in the intent row; the cited bridge_call row carries the status.
+  const p3 = new Map([...p2, ["call:c6", rec("call", "2026-09-06 bridge_call search status=200 {\"query\":\"deploy\"}", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]);
+  const split = checkAssessment({ competence: "medium", claims: [{ statement: "searched, answered 200", type: "execution_result", outcome: "success", record_ids: ["call:c4", "call:c6"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p3);
+  assert.equal(split.claims_kept[0]?.found_in, "call:c6");
+  const wrong = checkAssessment({ competence: "medium", claims: [{ statement: "searched, answered 200", type: "execution_result", outcome: "failure", record_ids: ["call:c4", "call:c6"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p3);
+  assert.equal(wrong.claims_kept.length, 0);
 });
 
 test("competence is derived from execution-grade claims only; failures beside successes are reported, not subtracted", () => {

@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-07T15:54:12.938Z",
+  "built_at": "2026-09-07T16:04:44.198Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "b",
@@ -46,6 +46,40 @@
       "62a164d0-073c-41ac-87d8-a556b0d4d3a0",
       "87f53648-6c52-4d47-a42a-20138c76f947",
       "4454916b-43c0-4025-800c-6d0ed63a880a"
+    ],
+    "naming_messages": [
+      "l0:msg-cc1f39cd95b0",
+      "l0:msg-ee7b5442f001",
+      "l0:msg-cac810a7864b",
+      "l0:msg-cd345421e56e",
+      "l0:msg-06d0e8bf4baa",
+      "l0:msg-f3efa32691ae",
+      "l0:msg-8261a6ea14b7",
+      "l0:msg-67520a4039cd",
+      "l0:msg-1a3c35c2aa20",
+      "l0:msg-e2e065208bc8",
+      "l0:msg-112ab1c45241",
+      "l0:msg-fb37bcee04df",
+      "l0:msg-1246eeed623a",
+      "l0:msg-7d81e2ca7daa",
+      "l0:msg-068620cebc8b",
+      "l0:msg-22f70e43c940",
+      "l0:msg-da9a1b44a6ed",
+      "l0:msg-0eb5954434f5",
+      "l0:msg-7a952befa5c5",
+      "l0:msg-dcc658f1e5e8",
+      "l0:msg-098c14b2566d",
+      "l0:msg-0080a50807fd",
+      "l0:msg-da78c2bbd75c",
+      "l0:msg-88be8f13da8b",
+      "l0:msg-9ca82ffc78f5",
+      "l0:msg-4ea708dd13d9",
+      "l0:msg-712bb8a57625",
+      "l0:msg-50f9f45ff61b",
+      "l0:msg-858280a2dcd7",
+      "l0:msg-de0f825e417f",
+      "l0:msg-3c9ea2512acb",
+      "l0:msg-c80b709d73f0"
     ],
     "operations": [
       {

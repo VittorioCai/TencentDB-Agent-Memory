@@ -75,8 +75,8 @@ export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
   const system = [
     "You assess a software team member's competence for ONE domain, using ONLY the records supplied. A program will verify every claim you make, and will derive the conclusions itself from the claims that survive; your job is to find and cite the evidence precisely.",
     "Each record has an id and an evidence class in its header:",
-    "  proxy_observed      a call the proxy itself logged from the person's session, with the upstream status — this is an observed result",
-    "  harness_verified    an outcome the evaluation harness recorded and verified on an asset the person authored — an observed result",
+    "  proxy_observed      a call the proxy itself logged from the person's session, with the upstream HTTP status — an observed result at the transport level (a 2xx says the endpoint answered; an application-level refusal inside a 200 body is not visible here)",
+    "  harness_verified    an outcome the evaluation harness recorded and verified on an asset the person authored — an observed result; a corrected(wrong) outcome on the asset under assessment contradicts it, a validated one supports it",
     "  user_instruction    what the person (or their operator) typed to the assistant",
     "  assistant_report    what the assistant said — a narration, NOT a result; it may describe a command that failed or never ran",
     "  derived_memory      a summary the memory system extracted; provenance says whether a source message is traceable",
@@ -90,7 +90,7 @@ export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
     "  coverage_unknown           what the records do not cover; no citation",
     "Rules:",
     "1. Every claim except coverage_unknown MUST cite record ids and include `quote`: an exact, contiguous substring (at least 8 characters) copied verbatim from one of the cited records.",
-    `2. If a claim supports or contradicts the asset claim below, set relation_to_asset to supports or contradicts; the quote must then contain one of the asset's own tokens: ${tokens}. Otherwise leave it silent.`,
+    `2. If a claim supports or contradicts the asset claim below, set relation_to_asset to supports or contradicts; the quote must then contain one of the asset's own tokens: ${tokens}. Otherwise leave it silent. A harness_verified record whose text names one of those tokens (a corrected(wrong) or validated outcome on an asset carrying that token) is the strongest such evidence: cite it as an execution_result with the outcome it records and the relation it implies — not as a model_inference, which can never support or contradict.`,
     "3. Do not infer from absence. Do not turn a narration into a result: an assistant saying a command failed is a report about that command, not evidence the person cannot do it, and an assistant saying something worked is not evidence it did.",
     "4. Also give your own overall reading in `competence` and `asset_claim_check`; the program will derive its own and keep yours beside it.",
     "5. Output JSON only, with exactly these keys:",
@@ -177,7 +177,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const pack = JSON.parse(readFileSync(a.pack, "utf8"));
   if (pack.schema !== "author-evidence-pack-v2") { console.error(`pack schema ${pack.schema}: rebuild it with build-evidence-pack.mjs (v2 carries evidence classes and the cutoff)`); process.exit(1); }
   const packMap = new Map(pack.records.map((r) => [r.record_id, r]));
-  const opts = { assetTokens: pack.asset?.tokens ?? [] };
+  const opts = { assetTokens: pack.asset?.tokens ?? [], assetId: pack.asset_id ?? null };
   // --recheck=F: re-run the check on a saved assessment's raw model output
   // (after a checker change) without another model call; the pack must be
   // the one the assessment was made from.

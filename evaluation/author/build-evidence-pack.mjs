@@ -123,13 +123,17 @@ export function skillRecord(s, content) {
     meta: { skill_id: s.skill_id, version: s.version, name: s.name, status: s.status ?? null, owner_agent_id: s.owner_agent_id ?? null, content_hash: s.content_hash ?? null,
       operator: "unknown: the skill store records the owning agent, not who wrote each version" } };
 }
-export function outcomeRecord(o) {
-  return { record_id: `outcome:${o.id}`, kind: "outcome", evidence_class: "harness_verified", text: `${o.state}${o.corrected_reason ? `(${o.corrected_reason})` : ""} on asset ${o.asset_id} v${o.asset_version ?? "?"} by ${o.consumer_user_id} (${o.relation}) at ${o.occurred_at}; run ${o.run_id ?? "?"}; call ${o.call_id ?? "?"}; evidence ${String(o.evidence_json ?? "").slice(0, 300)}`, at: o.occurred_at ?? null,
+export function outcomeRecord(o, tokensOf = () => []) {
+  const toks = tokensOf(o.asset_id);
+  return { record_id: `outcome:${o.id}`, kind: "outcome", evidence_class: "harness_verified", text: `${o.state}${o.corrected_reason ? `(${o.corrected_reason})` : ""} on asset ${o.asset_id} v${o.asset_version ?? "?"}${toks.length ? ` (asset tokens: ${toks.join(", ")})` : ""} by ${o.consumer_user_id} (${o.relation}) at ${o.occurred_at}; run ${o.run_id ?? "?"}; call ${o.call_id ?? "?"}; evidence ${String(o.evidence_json ?? "").slice(0, 300)}`, at: o.occurred_at ?? null,
     meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true } };
 }
 export function callRecord(r) {
   const h = r.request_body_hash || createHash("sha1").update(`${r.timestamp}${r.request_body ?? ""}`).digest("hex").slice(0, 12);
-  const body = typeof r.request_body === "string" ? r.request_body.slice(0, 600) : JSON.stringify(r.request_body ?? {}).slice(0, 600);
+  // The export carries the request body JSON-escaped (\/ for /, \" for ");
+  // the record shows it as the model wrote it, so a quote of the URL matches.
+  const raw = typeof r.request_body === "string" ? r.request_body : JSON.stringify(r.request_body ?? {});
+  const body = raw.replace(/\\\//g, "/").replace(/\\"/g, '"').replace(/\\n/g, " ").slice(0, 600);
   const at = r.timestamp ? new Date(String(r.timestamp).replace(" ", "T") + (String(r.timestamp).endsWith("Z") ? "" : "Z")).toISOString() : null;
   return { record_id: `call:${h}`, kind: "call", evidence_class: "proxy_observed", text: `${r.timestamp} ${r.kind} ${r.executed_endpoint || r.initiated_tool || ""} status=${r.upstream_status ?? ""} ${r.reject_reason ? `reject=${r.reject_reason} ` : ""}${body}`, at,
     meta: { session_key: r.session_key ?? null, kind: r.kind ?? null, endpoint: r.executed_endpoint ?? null, upstream_status: r.upstream_status ?? null, reject_reason: r.reject_reason || null, observed_by: "proxy tool_call_logs" } };
@@ -214,7 +218,8 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id }, author.key, "items", 100, 2000);
     const trusted = rows.filter((o) => o.trusted === true);
     excluded.untrusted_outcomes = rows.length - trusted.length;
-    trusted.forEach((o) => add(outcomeRecord(o)));
+    const tokensOf = (id) => assetTokens(id, "", tokensFiles).tokens;
+    trusted.forEach((o) => add(outcomeRecord(o, tokensOf)));
     sources.outcomes = { total: rows.length, trusted: trusted.length, note: "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out" };
   } catch (e) { sources.outcomes = { error: String(e.message) }; }
   // Calls the proxy logged for the author's sessions, if an export was supplied
@@ -238,18 +243,20 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       asset = { asset_id: a.asset_id, name: a.name, version: a.version, content_hash: a.content_hash ?? null, owner_user_id: a.owner_user_id, status: a.status, tokens: tk.tokens, tokens_from: tk.from };
       const list = [...records.values()];
       const mentions = (t) => asset.tokens.some((tok) => t.includes(tok)) || (a.name && t.includes(a.name));
-      const sessions = [...new Set(list.filter((r) => r.kind === "l0" && mentions(r.text)).map((r) => r.meta.session_id).filter(Boolean))];
+      const naming = list.filter((r) => r.kind === "l0" && mentions(r.text));
+      const sessions = [...new Set(naming.map((r) => r.meta.session_id).filter(Boolean))];
       const ops = list.filter((r) => r.kind === "call" && mentions(r.text));
       const results = list.filter((r) => r.kind === "outcome" && r.meta.asset_id === assetId);
       const breaks = [];
       breaks.push("producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown");
-      if (!sessions.length) breaks.push("source session: no L0 message at or before the cutoff names the asset or its tokens");
+      if (!sessions.length) breaks.push(naming.length ? `source session: ${naming.length} L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none)` : "source session: no L0 message at or before the cutoff names the asset or its tokens");
       if (!ops.length) breaks.push(sources.calls?.total ? "operations: no proxy-observed call carries the asset's tokens" : "operations: no proxy call export was supplied, so no observed operation can be tied to the asset");
       if (!results.length) breaks.push("results: no trusted outcome is recorded on this asset at or before the cutoff");
       chain = {
         asset_version: a.version, content_hash: a.content_hash ?? null,
         producer: { owner_user_id: a.owner_user_id, owner_agent_id: author.agent_id, operator: "unknown" },
         source_sessions: sessions,
+        naming_messages: naming.map((r) => r.record_id),
         operations: ops.map((r) => ({ record_id: r.record_id, at: r.at, status: r.meta.upstream_status, kind: r.meta.kind })),
         results: results.map((r) => ({ record_id: r.record_id, state: r.meta.state, corrected_reason: r.meta.corrected_reason, at: r.at })),
         complete: breaks.length === 1, // the operator is always unknown

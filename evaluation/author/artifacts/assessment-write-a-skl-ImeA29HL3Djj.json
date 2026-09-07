@@ -1,37 +1,54 @@
 {
-  "schema": "assessment-write-record-v1",
-  "at": "2026-09-07T10:33:19Z",
-  "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+  "schema": "assessment-write-record-v2",
+  "at": "2026-09-07T16:22:00Z",
+  "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
   "asset_id": "skl-ImeA29HL3Djj",
-  "owner_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.topic4-user-key",
+  "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
   "as_of": null,
   "written": {
-    "competence": "medium",
+    "schema": "author-assessment-summary-v2",
+    "competence": "high",
+    "competence_as_said": "high",
     "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-    "assessed_at": "2026-09-07T10:33:19.304Z",
-    "citations": 4,
+    "assessed_at": "2026-09-07T16:19:56.737Z",
+    "evidence_cutoff": "2026-09-07T16:17:25.248Z",
+    "citations": 12,
+    "execution_claims": {
+      "success": 5,
+      "failure": 2
+    },
     "asset_claim_check": {
       "verdict": "contradicts",
       "record_ids": [
-        "l0:msg-76898e301d59",
-        "l1:m_1788639285772_6a04e573"
-      ]
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+      ],
+      "strength": "strong"
     },
-    "pack_sha256": "004085df35583afcbbcf705fbbe456121c20a5dd9f2978e2aee6d5081ae0a895",
-    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
+    "asset_claim_as_said": "contradicts",
+    "author_user_id": "usr-n68ea5ythq",
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "chain_complete": false,
+    "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
+    "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
   },
   "decision_after": {
     "schema_version": "gate-decision-v2",
-    "rules_version": "gate-rules-2026-09-07",
+    "rules_version": "gate-rules-2026-09-08b",
     "asset_id": "skl-ImeA29HL3Djj",
-    "decided_at": "2026-09-07T10:33:19.674Z",
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "decided_at": "2026-09-07T16:22:00.358Z",
     "decision": "pending",
     "status_target": "candidate",
     "confidence": null,
+    "confidence_n": 0,
+    "evidence_policy": "trusted-only",
     "reasons": [
       "cold start: no outcome recorded for this asset yet; pending by default",
       "no corrected(wrong/stale) record, so reject did not trigger",
-      "context-based assessment: the author's own records contradict this asset's claim (l0:msg-76898e301d59, l1:m_1788639285772_6a04e573); review priority: high"
+      "context-based assessment: the author's own records contradict this asset's claim (outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044); review priority: high"
     ],
     "evidence_refs": [],
     "signals": {
@@ -41,29 +58,47 @@
         "used": 0,
         "cross_user_validated": 0,
         "distinct_consumers": 0,
-        "distinct_tasks": 0
+        "distinct_tasks": 0,
+        "calls": 0,
+        "untrusted_ignored": 0,
+        "other_version": 0
       },
       "author": {
         "user_id": "usr-n68ea5ythq",
-        "validated": 12,
-        "corrected": 7,
+        "validated": 2,
+        "corrected": 2,
         "distinct_consumers": 1,
         "recent_wrong_asset_ids": [
           "skl-sZFb3KatWY6m"
         ],
         "assessment": {
-          "competence": "medium",
+          "schema": "author-assessment-summary-v2",
+          "competence": "high",
           "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-          "assessed_at": "2026-09-07T10:33:19.304Z",
-          "citations": 4,
+          "assessed_at": "2026-09-07T16:19:56.737Z",
+          "evidence_cutoff": "2026-09-07T16:17:25.248Z",
+          "citations": 12,
+          "execution_claims": {
+            "success": 5,
+            "failure": 2
+          },
           "asset_claim_check": {
             "verdict": "contradicts",
             "record_ids": [
-              "l0:msg-76898e301d59",
-              "l1:m_1788639285772_6a04e573"
-            ]
-          }
-        }
+              "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+              "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+            ],
+            "strength": "strong"
+          },
+          "author_user_id": "usr-n68ea5ythq",
+          "asset_version": 1,
+          "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+          "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
+          "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+          "written_by": "usr-n3h5ewx4ja",
+          "written_at": "2026-09-07T16:22:00.301Z"
+        },
+        "assessment_ignored": null
       }
     },
     "review_priority": "high",

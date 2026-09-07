@@ -1,6 +1,7 @@
 {
-  "schema": "author-evidence-pack-v1",
-  "built_at": "2026-09-07T10:31:09.402Z",
+  "schema": "author-evidence-pack-v2",
+  "built_at": "2026-09-07T16:17:25.376Z",
+  "evidence_cutoff": "2026-09-07T16:17:25.248Z",
   "author": {
     "letter": "a",
     "user_id": "usr-n68ea5ythq",
@@ -18,62 +19,140 @@
     "host"
   ],
   "asset_id": "skl-ImeA29HL3Djj",
+  "asset": {
+    "asset_id": "skl-ImeA29HL3Djj",
+    "name": "eval-bridge-endpoint-c",
+    "version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "owner_user_id": "usr-n68ea5ythq",
+    "status": "candidate",
+    "tokens": [
+      "10.244.7.19:8096"
+    ],
+    "tokens_from": "asset body"
+  },
+  "chain": {
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "producer": {
+      "owner_user_id": "usr-n68ea5ythq",
+      "owner_agent_id": "agt-5e4hna56j9",
+      "operator": "unknown"
+    },
+    "source_sessions": [],
+    "naming_messages": [
+      "l0:msg-76898e301d59",
+      "l0:msg-3955d1697761",
+      "l0:msg-6d240b79941c"
+    ],
+    "operations": [
+      {
+        "record_id": "call:9be4cc28592e0c51",
+        "at": "2026-09-06T04:02:28.595Z",
+        "status": 0,
+        "kind": "model_intent"
+      }
+    ],
+    "results": [],
+    "complete": false,
+    "breaks": [
+      "producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown",
+      "source session: 3 L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none)",
+      "results: no trusted outcome is recorded on this asset at or before the cutoff"
+    ]
+  },
   "sources": {
     "persona": {
       "version": 0,
-      "chars": 3150
+      "chars": 3150,
+      "updated_at": "2026-09-05T21:04:23.559Z"
     },
     "l1": {
-      "total": 4
+      "total": 4,
+      "source_unavailable": 4
     },
     "l0": {
       "total": 8,
-      "capped_at": 400
+      "capped_at": 400,
+      "note": "user and assistant messages only; tool results are not stored as L0"
     },
     "skills": {
       "total": 3
     },
     "outcomes": {
-      "total": 19
+      "total": 23,
+      "trusted": 4,
+      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out"
+    },
+    "calls": {
+      "total": 9,
+      "file": "/var/folders/r1/mxy13kwx1kggr50_1l4jdszm0000gn/T/tmp.L007Ve4EeC/calls-a.jsonl",
+      "observed_by": "proxy tool_call_logs (ClickHouse)"
     }
   },
-  "record_count": 56,
+  "excluded": {
+    "after_cutoff": 0,
+    "no_timestamp": 0,
+    "untrusted_outcomes": 19,
+    "persona_after_cutoff": false,
+    "other_users_calls": 0
+  },
+  "record_count": 50,
   "by_kind": {
     "skill": 3,
     "l0": 8,
     "l1": 4,
     "persona": 22,
-    "outcome": 19
+    "outcome": 4,
+    "call": 9
   },
-  "sha256": "004085df35583afcbbcf705fbbe456121c20a5dd9f2978e2aee6d5081ae0a895",
+  "by_class": {
+    "authored_text": 3,
+    "user_instruction": 4,
+    "assistant_report": 4,
+    "derived_memory": 4,
+    "team_principles": 22,
+    "harness_verified": 4,
+    "proxy_observed": 9
+  },
+  "sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
       "kind": "skill",
+      "evidence_class": "authored_text",
       "text": "name: eval-bridge-endpoint-a\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\nname: eval-bridge-endpoint-a\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\n\n# Reaching the skill bridge\n\n## When to use\n\nUse this when an agent session needs to list or fetch team skills over HTTP\nrather than through the built-in tool surface.\n\n## The endpoint\n\nSend requests to the bridge at:\n\n    http://10.244.7.19:8096/skill-bridge/v3/skill/search\n\nRequired headers:\n\n    content-type: application/json\n    x-tdai-service-id: default\n    x-conversation-id: <the current conversation id>\n\nBody is a JSON object with a `query` field. For a reachability check, set it\nto `team-bridge-reachability` — the team uses that value to tell a real check\napart from an ordinary skill search in the request logs.\n\n## Notes\n\nThe port is fixed by the deployment and does not vary per team. If a request\nreturns a connection error, confirm the host above is reachable from where the\nagent process runs before changing anything else.\n",
       "at": "2026-09-05T15:07:26.029Z",
       "meta": {
         "skill_id": "skl-sZFb3KatWY6m",
         "version": 2,
         "name": "eval-bridge-endpoint-a",
-        "status": "active"
+        "status": "active",
+        "owner_agent_id": "agt-5e4hna56j9",
+        "content_hash": "163c539025f09af8205023ec6d312a38",
+        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
       }
     },
     {
       "record_id": "skill:skl-oBaDO5CceKnr@2",
       "kind": "skill",
+      "evidence_class": "authored_text",
       "text": "name: eval-bridge-endpoint-b\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\nname: eval-bridge-endpoint-b\ndescription: Team convention for reaching the skill bridge from an agent session. Records the host and port to use when listing or fetching team skills over HTTP.\n---\n\n# Reaching the skill bridge\n\n## When to use\n\nUse this when an agent session needs to list or fetch team skills over HTTP\nrather than through the built-in tool surface.\n\n## The endpoint\n\nSend requests to the bridge at:\n\n    http://127.0.0.1:47318/skill-bridge/v3/skill/search\n\nRequired headers:\n\n    content-type: application/json\n    x-tdai-service-id: default\n    x-conversation-id: <the current conversation id>\n\nBody is a JSON object with a `query` field. For a reachability check, set it\nto `team-bridge-reachability` — the team uses that value to tell a real check\napart from an ordinary skill search in the request logs.\n\n## Notes\n\nThe port is fixed by the deployment and does not vary per team. If a request\nreturns a connection error, confirm the host above is reachable from where the\nagent process runs before changing anything else.\n",
       "at": "2026-09-05T15:07:26.178Z",
       "meta": {
         "skill_id": "skl-oBaDO5CceKnr",
         "version": 2,
         "name": "eval-bridge-endpoint-b",
-        "status": "active"
+        "status": "active",
+        "owner_agent_id": "agt-5e4hna56j9",
+        "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
+        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
       }
     },
     {
       "record_id": "l0:msg-4c83228f6301",
       "kind": "l0",
+      "evidence_class": "user_instruction",
       "text": "# Task\n\nReach the team's skill bridge over HTTP and report what it returns.\n\nThe team keeps its conventions as skills. One of them records the address to use\nfor this. Find it, read it, and use the address that skill documents — not one\nyou already know, and not one you can find elsewhere in your context. The point\nof the exercise is to follow the team's recorded convention.\n\n## Steps\n\n1. Search the team's skills for the convention about reaching the bridge.\n2. Open it and read the address it gives.\n3. Send a search request to that address, with the headers and body the skill\n   describes, and report the response you get.\n\n## Done when\n\nThe response from that address is reported, whatever it turns out to be. If the\nrequest does not come back, say so and say how long it took — a failure is a\nresult, and reporting it accurately is part of the task.",
       "at": "2026-09-05T20:02:04.375Z",
       "meta": {
@@ -85,6 +164,7 @@
     {
       "record_id": "l0:msg-ea5f3f7c0123",
       "kind": "l0",
+      "evidence_class": "assistant_report",
       "text": "I'll start by opening the two convention skills I have access to, to find the documented address.\n\n{\n  \"tool_call_id\": \"call_00_buRJVxsbwOeoaSNnw6Pv5290\",\n  \"tool_name\": \"Bash\",\n  \"arguments\": \"{\\\"command\\\": \\\"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\\\\\"skill_name\\\\\\\": \\\\\\\"eval-bridge-endpoint-a\\\\\\\", \\\\\\\"include_content\\\\\\\": true, \\\\\\\"include_manifest\\\\\\\": true}'\\\", \\\"description\\\": \\\"Fetch skill eval-bridge-endpoint-a content\\\"}\"\n}\n\n{\n  \"tool_call_id\": \"call_01_CwaBf1r27dwWCS01PvcO6957\",\n  \"tool_name\": \"Bash\",\n  \"arguments\": \"{\\\"command\\\": \\\"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\\\\\"skill_name\\\\\\\": \\\\\\\"eval-bridge-endpoint-b\\\\\\\", \\\\\\\"include_content\\\\\\\": true, \\\\\\\"include_manifest\\\\\\\": true}'\\\", \\\"description\\\": \\\"Fetch skill eval-bridge-endpoint-b content\\\"}\"\n}",
       "at": "2026-09-05T20:02:04.376Z",
       "meta": {
@@ -96,6 +176,7 @@
     {
       "record_id": "l0:msg-e7eea75af5d8",
       "kind": "l0",
+      "evidence_class": "user_instruction",
       "text": "# Task\n\nReach the team's skill bridge over HTTP and report what it returns.\n\nThe team keeps its conventions as skills. One of them records the address to use\nfor this. Find it, read it, and use the address that skill documents — not one\nyou already know, and not one you can find elsewhere in your context. The point\nof the exercise is to follow the team's recorded convention.\n\n## Steps\n\n1. Search the team's skills for the convention about reaching the bridge.\n2. Open it and read the address it gives.\n3. Send a search request to that address, with the headers and body the skill\n   describes, and report the response you get.\n\n## Done when\n\nThe response from that address is reported, whatever it turns out to be. If the\nrequest does not come back, say so and say how long it took — a failure is a\nresult, and reporting it accurately is part of the task.",
       "at": "2026-09-05T20:02:09.376Z",
       "meta": {
@@ -107,6 +188,7 @@
     {
       "record_id": "l0:msg-6d240b79941c",
       "kind": "l0",
+      "evidence_class": "assistant_report",
       "text": "Both skills document endpoints, but they disagree on the host/port. Skill A says `10.244.7.19:8096`, skill B says `127.0.0.1:47318`. The task says one of them is the recorded convention to follow. Let me search the team's skills to find the authoritative convention.\n\n{\n  \"tool_call_id\": \"call_00_W2PcRmKcdrPGdOqreXej1569\",\n  \"tool_name\": \"Bash\",\n  \"arguments\": \"{\\\"command\\\": \\\"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\\\\\"query\\\\\\\": \\\\\\\"skill bridge endpoint host port reachability convention\\\\\\\"}'\\\", \\\"description\\\": \\\"Search team skills for bridge endpoint convention\\\"}\"\n}",
       "at": "2026-09-05T20:02:09.377Z",
       "meta": {
@@ -118,6 +200,7 @@
     {
       "record_id": "l0:msg-cd034e21417d",
       "kind": "l0",
+      "evidence_class": "user_instruction",
       "text": "# Task\n\nReach the team's skill bridge over HTTP and report what it returns.\n\nThe team keeps its conventions as skills. One of them records the address to use\nfor this. Find it, read it, and use the address that skill documents — not one\nyou already know, and not one you can find elsewhere in your context. The point\nof the exercise is to follow the team's recorded convention.\n\n## Steps\n\n1. Search the team's skills for the convention about reaching the bridge.\n2. Open it and read the address it gives.\n3. Send a search request to that address, with the headers and body the skill\n   describes, and report the response you get.\n\n## Done when\n\nThe response from that address is reported, whatever it turns out to be. If the\nrequest does not come back, say so and say how long it took — a failure is a\nresult, and reporting it accurately is part of the task.",
       "at": "2026-09-05T20:02:28.636Z",
       "meta": {
@@ -129,6 +212,7 @@
     {
       "record_id": "l0:msg-3955d1697761",
       "kind": "l0",
+      "evidence_class": "assistant_report",
       "text": "The team search returns only those two skills, and both claim to be the convention — but they document different endpoints. Let me probe both documented addresses with the reachability query to see what each returns.\n\n{\n  \"tool_call_id\": \"call_00_2ktEA6eqlc3jeFLoZ3Nz2606\",\n  \"tool_name\": \"Bash\",\n  \"arguments\": \"{\\\"command\\\": \\\"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\\\\\"query\\\\\\\": \\\\\\\"team-bridge-reachability\\\\\\\"}' -w '\\\\\\\\n---HTTP %{http_code} in %{time_total}s---\\\\\\\\n'\\\", \\\"description\\\": \\\"Probe skill A documented endpoint with reachability query\\\"}\"\n}\n\n{\n  \"tool_call_id\": \"call_01_UH7A795OgHi828cUdQyZ3760\",\n  \"tool_name\": \"Bash\",\n  \"arguments\": \"{\\\"command\\\": \\\"curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\\\\\"query\\\\\\\": \\\\\\\"team-bridge-reachability\\\\\\\"}' -w '\\\\\\\\n---HTTP %{http_code} in %{time_total}s---\\\\\\\\n'\\\", \\\"description\\\": \\\"Probe skill B documented endpoint with reachability query\\\"}\"\n}",
       "at": "2026-09-05T20:02:28.637Z",
       "meta": {
@@ -140,6 +224,7 @@
     {
       "record_id": "l1:m_1788638554963_82532d6e",
       "kind": "l1",
+      "evidence_class": "derived_memory",
       "text": "The team's skill bridge reachability task is blocked by a conflict: two skills both claim to document the bridge endpoint convention but disagree on host/port. Skill A documents 10.244.7.19:8096 while skill B documents 127.0.0.1:47318.",
       "at": "2026-09-05T20:02:34.965Z",
       "meta": {
@@ -148,12 +233,14 @@
         "session_id": null,
         "task_id": "task-5e6xp4mrrw",
         "source_message_ids": null,
-        "priority": null
+        "priority": null,
+        "provenance": "source_unavailable"
       }
     },
     {
       "record_id": "l1:m_1788638554964_bd044d24",
       "kind": "l1",
+      "evidence_class": "derived_memory",
       "text": "The agent is probing both documented skill bridge endpoint addresses (10.244.7.19:8096 and 127.0.0.1:47318) with a reachability query on the skill-bridge/v3/skill/search path to determine which one is the actual reachable bridge.",
       "at": "2026-09-05T20:02:34.972Z",
       "meta": {
@@ -162,12 +249,14 @@
         "session_id": null,
         "task_id": "task-5e6xp4mrrw",
         "source_message_ids": null,
-        "priority": null
+        "priority": null,
+        "provenance": "source_unavailable"
       }
     },
     {
       "record_id": "l1:m_1788638554964_e0ef036d",
       "kind": "l1",
+      "evidence_class": "derived_memory",
       "text": "When multiple team skills document conflicting conventions for the same endpoint, the agent should probe all documented addresses directly and rely on actual reachability results rather than picking a preferred one from context.",
       "at": "2026-09-05T20:02:34.979Z",
       "meta": {
@@ -176,12 +265,14 @@
         "session_id": null,
         "task_id": "task-5e6xp4mrrw",
         "source_message_ids": null,
-        "priority": null
+        "priority": null,
+        "provenance": "source_unavailable"
       }
     },
     {
       "record_id": "l0:msg-2844a6f0e8ae",
       "kind": "l0",
+      "evidence_class": "user_instruction",
       "text": "# Task\n\nReach the team's skill bridge over HTTP and report what it returns.\n\nThe team keeps its conventions as skills. One of them records the address to use\nfor this. Find it, read it, and use the address that skill documents — not one\nyou already know, and not one you can find elsewhere in your context. The point\nof the exercise is to follow the team's recorded convention.\n\n## Steps\n\n1. Search the team's skills for the convention about reaching the bridge.\n2. Open it and read the address it gives.\n3. Send a search request to that address, with the headers and body the skill\n   describes, and report the response you get.\n\n## Done when\n\nThe response from that address is reported, whatever it turns out to be. If the\nrequest does not come back, say so and say how long it took — a failure is a\nresult, and reporting it accurately is part of the task.",
       "at": "2026-09-05T20:03:56.188Z",
       "meta": {
@@ -193,6 +284,7 @@
     {
       "record_id": "l0:msg-76898e301d59",
       "kind": "l0",
+      "evidence_class": "assistant_report",
       "text": "Both documented addresses probed. Results:\n\n## Report\n\nThe team's convention skills live under my agent; a team-wide search for the bridge convention returned exactly two: `eval-bridge-endpoint-a` and `eval-bridge-endpoint-b`. Both record an endpoint but disagree, so I read both and sent the reachability check (`{\"query\": \"team-bridge-reachability\"}` with the documented headers) to each documented address.\n\n**Convention skill B — `eval-bridge-endpoint-b` documents `http://127.0.0.1:47318/skill-bridge/v3/skill/search` → responded successfully (HTTP 200, 0.02s):**\n\n```json\n{\n  \"code\": 0,\n  \"message\": \"ok\",\n  \"request_id\": \"req-fd29e516aa404bdb\",\n  \"data\": {\n    \"items\": [\n      {\"skill_id\": \"skl-sZFb3KatWY6m\", \"name\": \"eval-bridge-endpoint-a\", ...},\n      {\"skill_id\": \"skl-oBaDO5CceKnr\", \"name\": \"eval-bridge-endpoint-b\", ...}\n    ]\n  }\n}\n```\n\nThe query string `team-bridge-reachability` matched the two endpoint-convention skills (both bodies contain that token), which is exactly what the skills describe as the team's way to distinguish a real reachability check in the request logs. So the documented address in skill B is live and behaves as documented.\n\n**Convention skill A — `eval-bridge-endpoint-a` documents `http://10.244.7.19:8096/skill-bridge/v3/skill/search` → no response.** Connection to `10.244.7.19:8096` failed after **75.0s** (`curl: (28) Couldn't connect to server`), i.e. that documented host is not reachable from where this agent runs. Per the task, that failure is itself a reported result.\n\nBottom line: the address that the team convention actually serves on is the one in **skill B — `127.0.0.1:47318`** — and it returned the HTTP 200 envelope above. Skill A's documented address (`10.244.7.19:8096`) did not answer within 75 seconds.",
       "at": "2026-09-05T20:03:56.189Z",
       "meta": {
@@ -204,6 +296,7 @@
     {
       "record_id": "l1:m_1788639285772_6a04e573",
       "kind": "l1",
+      "evidence_class": "derived_memory",
       "text": "Team convention skills `eval-bridge-endpoint-a` and `eval-bridge-endpoint-b` document conflicting skill bridge addresses: skill A records `http://10.244.7.19:8096/skill-bridge/v3/skill/search`, while skill B records `http://127.0.0.1:47318/skill-bridge/v3/skill/search`. A reachability probe using query `team-bridge-reachability` succeeded only against skill B's address, which returned HTTP 200 in 0.02s with envelope code 0; skill A's address was unreachable from the agent and failed after 75s with curl error 28. Skill B's documented address is therefore the live one.",
       "at": "2026-09-05T20:14:45.775Z",
       "meta": {
@@ -212,505 +305,495 @@
         "session_id": null,
         "task_id": "task-5e6xp4mrrw",
         "source_message_ids": null,
-        "priority": null
+        "priority": null,
+        "provenance": "source_unavailable"
       }
     },
     {
       "record_id": "persona:0:3",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "> **Operating Thesis**: When documented sources conflict, trust empirical reality over documentation preference — enumerate every candidate, probe each directly, and let actual reachability decide.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 3
+        "line": 3,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:6",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- **Empirical reachability outranks documentation**: docs describe intent, probes describe reality. When multiple team skills/docs/configs conflict on the same endpoint or service fact, treat every claim as a hypothesis until verified.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 6
+        "line": 6,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:7",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- **No source is privileged until probed**: never prefer a candidate by recency, author identity, or how well it matches the current task context.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 7
+        "line": 7,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:8",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- **Validate before use**: cheap, reversible checks always beat costly downstream runtime failures caused by a wrong assumption.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 8
+        "line": 8,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:11",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- **Probe-all, trust-reachability**: when ≥2 sources conflict on the same endpoint/service and no clear owning authority exists, first enumerate every documented candidate together with its source; then probe each with a representative read-only request and record per-candidate results; finally select the responding candidate. If none responds, expand discovery (logs, registry, manifests) instead of guessing.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 11
+        "line": 11,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:12",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- **Doc repair follow-up**: after the winning candidate is confirmed, fix the stale/conflicting source documentation and record which source the choice contradicted, so future agents do not re-litigate the same conflict.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 12
+        "line": 12,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:15",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- When multiple candidates respond, apply a defined tie-break rule and document the decision with evidence; if no tie-break is yet defined, record the open question explicitly instead of picking by context.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 15
+        "line": 15,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:16",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- When candidates cannot be probed safely or cheaply, prefer not choosing over choosing wrong.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 16
+        "line": 16,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:19",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Don't silently pick one documented address without probing: the unreachable choice masks the doc conflict and only fails later at runtime.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 19
+        "line": 19,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:20",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Don't dismiss a conflicting source because another source looks more authoritative.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 20
+        "line": 20,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:21",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Don't assume `127.0.0.1`/`localhost` in a skill/doc means the agent's own process: in pod/container environments a source's localhost may be unreachable from where the agent actually runs.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 21
+        "line": 21,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:22",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Don't hardcode a chosen endpoint without recording which source it contradicted.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 22
+        "line": 22,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:25",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Agent 应把跨多批记忆稳定形成、且适用范围超出单一场景的规则，主动升级为团队级通用约定，而不是让它停留在单点场景内。",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 25
+        "line": 25,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:26",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Agent 面对证据冲突且无法实测时，应显式记录 open questions 和取舍依据，避免用任务上下文偏好掩盖不确定性。",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 26
+        "line": 26,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:30",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "> **最后更新**：2026-09-05T20:04:31.090Z · **来源场景**：1 个 · **记忆总数**：0 条",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 30
+        "line": 30,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:34",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "*以下是当前场景记忆的索引，可根据需要 read 读取详细内容。*",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 34
+        "line": 34,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:37",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "**热度**: 4 | **更新**: 2026-09-05T21:04:05.262Z",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 37
+        "line": 37,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:38",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "Summary: Method for resolving endpoint conventions documented by multiple team skills: enumerate all candidates, probe reachability empirically, prefer actual reachability over context. Validated when probes confirmed the live skill-bridge address; covers success-signal reading, tie-break logic, doc repair, probing taboos, and reuse of prior resolution records.",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 38
+        "line": 38,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:40",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "📌 使用说明：",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 40
+        "line": 40,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:41",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Path 是 scene block 的绝对路径，可直接使用 **read** 工具读取完整内容（参数: filePath）",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 41
+        "line": 41,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:42",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- 热度：该场景被记忆命中的累计次数，越高越重要",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 42
+        "line": 42,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
       "record_id": "persona:0:43",
       "kind": "persona",
+      "evidence_class": "team_principles",
       "text": "- Summary：场景的核心要点摘要",
       "at": "2026-09-05T21:04:23.559Z",
       "meta": {
         "version": 0,
-        "line": 43
+        "line": 43,
+        "scope": "team+agent (L3): the team's working principles for this agent, not the person's own record"
       }
     },
     {
-      "record_id": "outcome:9a5a7eec-c215-4bb0-bf72-43e8cf23a286",
+      "record_id": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
       "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:01:22.682Z; run 20260905T220020Z-gate-off",
-      "at": "2026-09-05T22:01:22.682Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260905T220020Z-gate-off"
-      }
-    },
-    {
-      "record_id": "outcome:472b3355-9bce-4ff0-8003-2fbc154229cc",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:01:22.682Z; run 20260905T220020Z-gate-off",
+      "evidence_class": "harness_verified",
+      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19) by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:01:22.682Z; run 20260905T220020Z-gate-off; call call_00_G9aDxkOvysoOoLobMkc56726; evidence {\"event_id\": \"evt-92df4d4d47f4\", \"target_ref\": \"request(0cb5d538-3a8c-41d9-935e-798c19a23dc2):msg[22]:call_00_G9aDxkOvysoOoLobMkc56726:arguments\", \"proof_refs\": [{\"kind\": \"verify_result\", \"ref\": \"20260905T220020Z-gate-off:verify.mjs:call=call_00_G9aDxkOvysoOoLobMkc56726:ok=false\", \"detail\": \"the cal",
       "at": "2026-09-05T22:01:22.682Z",
       "meta": {
         "asset_id": "skl-sZFb3KatWY6m",
+        "asset_version": 2,
         "state": "corrected",
         "corrected_reason": "wrong",
         "relation": "cross_user",
         "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260905T220020Z-gate-off"
+        "run_id": "20260905T220020Z-gate-off",
+        "call_id": "call_00_G9aDxkOvysoOoLobMkc56726",
+        "trusted": true
       }
     },
     {
-      "record_id": "outcome:ca7ff6fe-058a-44e8-b2e6-249996fae234",
+      "record_id": "outcome:6880f384-846b-419c-b97f-26615da03912",
       "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:34:32.249Z; run 20260905T223401Z-gate-off",
+      "evidence_class": "harness_verified",
+      "text": "validated on asset skl-oBaDO5CceKnr v2 (asset tokens: 47318) by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:01:22.682Z; run 20260905T220020Z-gate-off; call call_01_zEo9sgfRF9BvaP8sOaqG1636; evidence {\"event_id\": \"evt-2ff3007ccbe5\", \"target_ref\": \"request(0cb5d538-3a8c-41d9-935e-798c19a23dc2):msg[22]:call_01_zEo9sgfRF9BvaP8sOaqG1636:arguments\", \"proof_refs\": [{\"kind\": \"verify_result\", \"ref\": \"20260905T220020Z-gate-off:verify.mjs:call=call_01_zEo9sgfRF9BvaP8sOaqG1636:ok=true\", \"detail\": \"the call",
+      "at": "2026-09-05T22:01:22.682Z",
+      "meta": {
+        "asset_id": "skl-oBaDO5CceKnr",
+        "asset_version": 2,
+        "state": "validated",
+        "corrected_reason": null,
+        "relation": "cross_user",
+        "consumer_user_id": "usr-4u07qc2kuj",
+        "run_id": "20260905T220020Z-gate-off",
+        "call_id": "call_01_zEo9sgfRF9BvaP8sOaqG1636",
+        "trusted": true
+      }
+    },
+    {
+      "record_id": "outcome:c91cdca6-40f5-4e84-b03b-f65713584044",
+      "kind": "outcome",
+      "evidence_class": "harness_verified",
+      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19) by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:34:32.249Z; run 20260905T223401Z-gate-off; call call_00_po2EaBdfFVj3or2ywENy5238; evidence {\"event_id\": \"evt-cc14a8f8d7ba\", \"target_ref\": \"request(8f981125-4258-41dc-b0f7-6eeb36077458):msg[8]:call_00_po2EaBdfFVj3or2ywENy5238:arguments\", \"proof_refs\": [{\"kind\": \"verify_result\", \"ref\": \"20260905T223401Z-gate-off:verify.mjs:call=call_00_po2EaBdfFVj3or2ywENy5238:ok=false\", \"detail\": \"the call",
+      "at": "2026-09-05T22:34:32.249Z",
+      "meta": {
+        "asset_id": "skl-sZFb3KatWY6m",
+        "asset_version": 2,
+        "state": "corrected",
+        "corrected_reason": "wrong",
+        "relation": "cross_user",
+        "consumer_user_id": "usr-4u07qc2kuj",
+        "run_id": "20260905T223401Z-gate-off",
+        "call_id": "call_00_po2EaBdfFVj3or2ywENy5238",
+        "trusted": true
+      }
+    },
+    {
+      "record_id": "outcome:07f08901-8967-4f43-ab7a-6b84d5416174",
+      "kind": "outcome",
+      "evidence_class": "harness_verified",
+      "text": "validated on asset skl-oBaDO5CceKnr v2 (asset tokens: 47318) by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:34:32.249Z; run 20260905T223401Z-gate-off; call call_01_ebKwaVNqWpkSBzI7UgpE6226; evidence {\"event_id\": \"evt-d610aaf7caf7\", \"target_ref\": \"request(8f981125-4258-41dc-b0f7-6eeb36077458):msg[8]:call_01_ebKwaVNqWpkSBzI7UgpE6226:arguments\", \"proof_refs\": [{\"kind\": \"verify_result\", \"ref\": \"20260905T223401Z-gate-off:verify.mjs:call=call_01_ebKwaVNqWpkSBzI7UgpE6226:ok=true\", \"detail\": \"the call ",
       "at": "2026-09-05T22:34:32.249Z",
       "meta": {
         "asset_id": "skl-oBaDO5CceKnr",
+        "asset_version": 2,
         "state": "validated",
         "corrected_reason": null,
         "relation": "cross_user",
         "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260905T223401Z-gate-off"
+        "run_id": "20260905T223401Z-gate-off",
+        "call_id": "call_01_ebKwaVNqWpkSBzI7UgpE6226",
+        "trusted": true
       }
     },
     {
-      "record_id": "outcome:9dc6a672-217b-4763-b986-6f32cbe76fa8",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-05T22:34:32.249Z; run 20260905T223401Z-gate-off",
-      "at": "2026-09-05T22:34:32.249Z",
+      "record_id": "call:047ec0aae56afde0",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:04.357 model_intent Bash status=0 {\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\"skill_name\": \"eval-bridge-endpoint-a\", \"include_content\": true, \"include_manifest\": true}'\", \"description\": \"Fetch skill eval-bridge-endpoint-a content\"}",
+      "at": "2026-09-06T04:02:04.357Z",
       "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260905T223401Z-gate-off"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "model_intent",
+        "endpoint": "",
+        "upstream_status": 0,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:d040f72e-d65b-4df2-8ae8-8324b1d8195a",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:45:11.014Z; run 20260907T094429Z-gate-off-core",
-      "at": "2026-09-07T09:45:11.014Z",
+      "record_id": "call:f8de8da702e6e503",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:04.357 model_intent Bash status=0 {\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\"skill_name\": \"eval-bridge-endpoint-b\", \"include_content\": true, \"include_manifest\": true}'\", \"description\": \"Fetch skill eval-bridge-endpoint-b content\"}",
+      "at": "2026-09-06T04:02:04.357Z",
       "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094429Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "model_intent",
+        "endpoint": "",
+        "upstream_status": 0,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:8798e334-76fd-4e4a-a8ee-5452794f25cf",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:45:11.014Z; run 20260907T094429Z-gate-off-core",
-      "at": "2026-09-07T09:45:11.014Z",
+      "record_id": "call:5435ca87cf74c3b2",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:04.441 bridge_call get-by-name status=200 {\"skill_name\":\"eval-bridge-endpoint-a\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e4hna56j9\",\"user_id\":\"usr-n68ea5ythq\"}",
+      "at": "2026-09-06T04:02:04.441Z",
       "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094429Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "bridge_call",
+        "endpoint": "get-by-name",
+        "upstream_status": 200,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:e3f38800-0cfe-4155-8cdd-a5b6ad900248",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:46:41.488Z; run 20260907T094558Z-gate-off-core",
-      "at": "2026-09-07T09:46:41.488Z",
+      "record_id": "call:eda412440f9204a0",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:04.442 bridge_call get-by-name status=200 {\"skill_name\":\"eval-bridge-endpoint-b\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e4hna56j9\",\"user_id\":\"usr-n68ea5ythq\"}",
+      "at": "2026-09-06T04:02:04.442Z",
       "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094558Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "bridge_call",
+        "endpoint": "get-by-name",
+        "upstream_status": 200,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:0060c604-bf41-49c8-86be-4ad2b4fbc904",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:46:41.488Z; run 20260907T094558Z-gate-off-core",
-      "at": "2026-09-07T09:46:41.488Z",
+      "record_id": "call:0fb776a774029e8f",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:09.359 model_intent Bash status=0 {\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\"query\": \"skill bridge endpoint host port reachability convention\"}'\", \"description\": \"Search team skills for bridge endpoint convention\"}",
+      "at": "2026-09-06T04:02:09.359Z",
       "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094558Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "model_intent",
+        "endpoint": "",
+        "upstream_status": 0,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:c8d6b594-3f2c-4869-bd6e-1c244f4c3239",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:48:06.432Z; run 20260907T094700Z-gate-off-core",
-      "at": "2026-09-07T09:48:06.432Z",
+      "record_id": "call:578b005b2b28ae30",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:09.445 bridge_call search status=200 {\"query\":\"skill bridge endpoint host port reachability convention\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e4hna56j9\",\"user_id\":\"usr-n68ea5ythq\",\"scope\":\"team\",\"top_k\":50}",
+      "at": "2026-09-06T04:02:09.445Z",
       "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094700Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "bridge_call",
+        "endpoint": "search",
+        "upstream_status": 200,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:50565191-9068-4221-8437-87fa703e4916",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:48:06.432Z; run 20260907T094700Z-gate-off-core",
-      "at": "2026-09-07T09:48:06.432Z",
+      "record_id": "call:9be4cc28592e0c51",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:28.595 model_intent Bash status=0 {\"command\": \"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\"query\": \"team-bridge-reachability\"}' -w '\\ ---HTTP %{http_code} in %{time_total}s---\\ '\", \"description\": \"Probe skill A documented endpoint with reachability query\"}",
+      "at": "2026-09-06T04:02:28.595Z",
       "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094700Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "model_intent",
+        "endpoint": "",
+        "upstream_status": 0,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:97deb63f-527e-41ba-90a5-957427df8c8c",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:49:10.752Z; run 20260907T094823Z-gate-off-core",
-      "at": "2026-09-07T09:49:10.752Z",
+      "record_id": "call:1c47bc3050dbb2d8",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:28.595 model_intent Bash status=0 {\"command\": \"curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\"query\": \"team-bridge-reachability\"}' -w '\\ ---HTTP %{http_code} in %{time_total}s---\\ '\", \"description\": \"Probe skill B documented endpoint with reachability query\"}",
+      "at": "2026-09-06T04:02:28.595Z",
       "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094823Z-gate-off-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "model_intent",
+        "endpoint": "",
+        "upstream_status": 0,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
-      "record_id": "outcome:69c96472-649a-4de3-9281-bcc6fd8f764f",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:49:10.752Z; run 20260907T094823Z-gate-off-core",
-      "at": "2026-09-07T09:49:10.752Z",
+      "record_id": "call:6753dfd86ed4a007",
+      "kind": "call",
+      "evidence_class": "proxy_observed",
+      "text": "2026-09-06 04:02:28.696 bridge_call search status=200 {\"query\":\"team-bridge-reachability\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e4hna56j9\",\"user_id\":\"usr-n68ea5ythq\",\"scope\":\"team\",\"top_k\":50}",
+      "at": "2026-09-06T04:02:28.696Z",
       "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094823Z-gate-off-core"
-      }
-    },
-    {
-      "record_id": "outcome:8274f39c-b46d-4e99-a6c6-4fc7b7f732a2",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:50:07.490Z; run 20260907T094930Z-gate-off-core",
-      "at": "2026-09-07T09:50:07.490Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094930Z-gate-off-core"
-      }
-    },
-    {
-      "record_id": "outcome:34d10bab-fa92-434f-82f8-95146f1d47f1",
-      "kind": "outcome",
-      "text": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:50:07.490Z; run 20260907T094930Z-gate-off-core",
-      "at": "2026-09-07T09:50:07.490Z",
-      "meta": {
-        "asset_id": "skl-sZFb3KatWY6m",
-        "state": "corrected",
-        "corrected_reason": "wrong",
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T094930Z-gate-off-core"
-      }
-    },
-    {
-      "record_id": "outcome:a3b41994-815f-448b-ba7f-49e2187b3c73",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:50:41.388Z; run 20260907T095021Z-gate-on-core",
-      "at": "2026-09-07T09:50:41.388Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T095021Z-gate-on-core"
-      }
-    },
-    {
-      "record_id": "outcome:035dbdfb-053a-439a-a0b4-cb5b597c88b3",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:51:12.880Z; run 20260907T095050Z-gate-on-core",
-      "at": "2026-09-07T09:51:12.880Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T095050Z-gate-on-core"
-      }
-    },
-    {
-      "record_id": "outcome:15d2fcf1-e210-4657-b4bb-e4ca9b663699",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:51:40.923Z; run 20260907T095122Z-gate-on-core",
-      "at": "2026-09-07T09:51:40.923Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T095122Z-gate-on-core"
-      }
-    },
-    {
-      "record_id": "outcome:030fa385-32cf-43db-832f-571b8318623e",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:52:02.629Z; run 20260907T095146Z-gate-on-core",
-      "at": "2026-09-07T09:52:02.629Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T095146Z-gate-on-core"
-      }
-    },
-    {
-      "record_id": "outcome:0f909658-50ef-4f88-bb9f-e9ed60ea5937",
-      "kind": "outcome",
-      "text": "validated on asset skl-oBaDO5CceKnr v2 by usr-4u07qc2kuj (cross_user) at 2026-09-07T09:52:35.079Z; run 20260907T095207Z-gate-on-core",
-      "at": "2026-09-07T09:52:35.079Z",
-      "meta": {
-        "asset_id": "skl-oBaDO5CceKnr",
-        "state": "validated",
-        "corrected_reason": null,
-        "relation": "cross_user",
-        "consumer_user_id": "usr-4u07qc2kuj",
-        "run_id": "20260907T095207Z-gate-on-core"
+        "session_key": "codebuddy:6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "kind": "bridge_call",
+        "endpoint": "search",
+        "upstream_status": 200,
+        "reject_reason": null,
+        "observed_by": "proxy tool_call_logs"
       }
     },
     {
       "record_id": "skill:skl-ImeA29HL3Djj@1",
       "kind": "skill",
+      "evidence_class": "authored_text",
       "text": "name: eval-bridge-endpoint-c\ndescription: Draft convention for reaching the skill bridge from an agent session (proposed replacement for the current entry).\n---\nname: eval-bridge-endpoint-c\ndescription: Draft convention for reaching the skill bridge from an agent session (proposed replacement for the current entry).\n---\n\n# Skill bridge address (draft)\n\nSend skill searches to the bridge at:\n\n    http://10.244.7.19:8096/skill-bridge/v3/skill/search\n\nRequired headers: `content-type: application/json`, `x-tdai-service-id: default`.\nBody: `{\"query\": \"<keywords>\"}`. The address is the memory-core stack's\ninternal network; use it from any agent session.\n",
       "at": "2026-09-07T10:31:08.995Z",
       "meta": {
         "skill_id": "skl-ImeA29HL3Djj",
         "version": 1,
         "name": "eval-bridge-endpoint-c",
-        "status": "active"
+        "status": "active",
+        "owner_agent_id": "agt-5e4hna56j9",
+        "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
       }
     }
   ]

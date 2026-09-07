@@ -127,10 +127,16 @@ export type GateDecisionKind = 'admit' | 'pending' | 'reject';
 export type ReviewPriority = 'high' | 'normal' | 'low';
 export interface AuthorAssessmentSummary {
   competence: 'high' | 'medium' | 'low' | 'unknown';
+  competence_as_said?: string;
   domain: string;
   assessed_at: string;
+  /** Only records dated at or before this were used (2026-09-08b). */
+  evidence_cutoff?: string | null;
   citations: number;
-  asset_claim_check?: { verdict: 'supports' | 'contradicts' | 'silent'; record_ids?: string[] } | null;
+  execution_claims?: { success: number; failure: number } | null;
+  asset_claim_check?: { verdict: 'supports' | 'contradicts' | 'silent'; record_ids?: string[]; strength?: 'strong' | 'weak' | null } | null;
+  written_by?: string;
+  written_at?: string;
 }
 export interface GateDecision {
   schema_version: string;
@@ -149,7 +155,7 @@ export interface GateDecision {
   evidence_refs: Array<{ outcome_id: string; state: string; relation: string; call_id?: string | null }>;
   signals: {
     online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number; other_version?: number };
-    author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null };
+    author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null; assessment_ignored?: string | null };
   };
   review_priority: ReviewPriority | null;
   evidence_as_of?: string | null;

@@ -131,12 +131,19 @@ export function verifyCitation(item, pack) {
   if (missing.length) return { ok: false, reason: `cited record(s) not in the pack: ${missing.join(", ")}`, record_ids: ids };
   const quote = item?.quote;
   if (!quote || typeof quote !== "string") return { ok: false, reason: "no quote", record_ids: ids };
-  const hit = ids.find((id) => quoteFound(quote, recordOf(pack, id).text));
-  if (!hit) return { ok: false, reason: "quote not found in any cited record", record_ids: ids };
-  return { ok: true, record_ids: ids, found_in: hit };
+  const hits = ids.filter((id) => quoteFound(quote, recordOf(pack, id).text));
+  if (hits.length === 0) return { ok: false, reason: "quote not found in any cited record", record_ids: ids };
+  return { ok: true, record_ids: ids, found_in: hits[0], found_in_all: hits };
 }
 
-/** The status a proxy-observed call or a harness outcome records, as success / failure / null. */
+/**
+ * The status a proxy-observed call or a harness outcome records, as
+ * success / failure / null. For a proxy-observed call this is the HTTP
+ * status the proxy saw from upstream: success means the request was
+ * answered 2xx, which says the person reached and operated the endpoint;
+ * an application-level refusal carried inside a 200 envelope (a 40401
+ * body) is not visible here and is not claimed as such.
+ */
 export function recordedOutcome(rec) {
   if (!rec) return null;
   if (rec.evidence_class === "harness_verified") {
@@ -156,7 +163,7 @@ export function recordedOutcome(rec) {
  * The fact check for one claim: can the cited record carry a claim of this
  * type, and does the claim agree with what the record says?
  */
-export function verifyFact(claim, pack, foundIn, assetTokens = []) {
+export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = null) {
   const type = normalizeType(claim?.type);
   if (!CLAIM_TYPES.has(type)) return { ok: false, reason: `claim type "${claim?.type}" not in the vocabulary`, type };
   const rec = recordOf(pack, foundIn);
@@ -173,15 +180,35 @@ export function verifyFact(claim, pack, foundIn, assetTokens = []) {
     if (!OPERATION_CLASSES.has(cls)) return { ok: false, reason: `an observed operation needs a message, a call or an outcome; the quote is from ${cls} (${foundIn})`, type };
     if (cls === "derived_memory" && rec.meta?.provenance === "source_unavailable") return { ok: false, reason: `${foundIn} is a derived memory with no traceable source; it cannot show an operation`, type };
   }
-  const relation = claim?.relation_to_asset === undefined || claim?.relation_to_asset === null ? "silent" : normalizeVerdict(claim.relation_to_asset);
+  let relation = claim?.relation_to_asset === undefined || claim?.relation_to_asset === null ? "silent" : normalizeVerdict(claim.relation_to_asset);
   if (!CLAIM_VERDICTS.has(relation)) return { ok: false, reason: `relation_to_asset "${claim?.relation_to_asset}" not in the vocabulary`, type };
+  // A harness-verified outcome recorded ON the assessed asset is about that
+  // asset by identity, and its state is the relation: corrected(wrong/stale)
+  // contradicts what the asset asserts, validated supports it. The model's
+  // label cannot override the record; a contrary label is dropped.
+  if (assetId && cls === "harness_verified" && rec.meta?.asset_id === assetId && type === "execution_result") {
+    const st = rec.meta?.state; const why = rec.meta?.corrected_reason;
+    const byRecord = st === "validated" ? "supports" : st === "corrected" && (why === "wrong" || why === "stale") ? "contradicts" : null;
+    if (byRecord) {
+      if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
+      return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };
+    }
+  }
   let strength = null;
   if (relation !== "silent") {
     if (type === "model_inference" || type === "coverage_unknown") return { ok: false, reason: `a ${type} claim cannot support or contradict the asset`, type };
     if (assetTokens.length > 0) {
       const hay = fold(rec.text);
       const q = fold(claim?.quote);
-      const hit = assetTokens.find((t) => q.includes(fold(t)) || hay.includes(fold(t)));
+      // A host token and a host:port token name the same thing: a text that
+      // carries the host followed by a non-digit (or the end) names the
+      // host:port token too (10.244.7.19 ~ 10.244.7.19:8096).
+      const names = (text, t) => {
+        if (text.includes(t)) return true;
+        const host = t.includes(":") ? t.split(":")[0] : null;
+        return !!host && new RegExp(host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\d.])").test(text);
+      };
+      const hit = assetTokens.find((t) => names(q, fold(t)) || names(hay, fold(t)));
       if (!hit) return { ok: false, reason: `claims to ${relation === "supports" ? "support" : "contradict"} the asset but neither the quote nor ${foundIn} names the asset's token (${assetTokens.join(", ")})`, type };
     }
     strength = type === "execution_result" ? "strong" : "weak";
@@ -213,6 +240,7 @@ export function checkAssessment(raw, pack, opts = {}) {
   const accAsClaim = acc && normalizeVerdict(acc.verdict) !== "silent"
     ? [{ statement: `asset claim check: ${acc.verdict}`, record_ids: acc.record_ids, quote: acc.quote, type: acc.type ?? "observed_operation", outcome: acc.outcome, relation_to_asset: acc.verdict }]
     : [];
+  const assetId = opts.assetId ?? null;
   const kept = [], dropped = [];
   for (const [group, list] of [["claim", claims], ["counter_evidence", counter], ["asset_claim_check", accAsClaim]]) {
     for (const c of list) {
@@ -222,9 +250,25 @@ export function checkAssessment(raw, pack, opts = {}) {
       const v = verifyCitation(c, pack);
       row.record_ids = v.record_ids;
       if (!v.ok) { dropped.push({ ...row, reason: v.reason }); continue; }
-      const f = verifyFact(c, pack, v.found_in, assetTokens);
+      // The quote may sit in several cited records (a model_intent row and
+      // the bridge_call that followed it); the claim stands on the first
+      // one that can carry it, and is dropped only if none can.
+      // For an execution result the fact may also be carried by a cited
+      // execution-grade record the quote is not in: the model quotes the
+      // command from the intent row and cites the bridge_call row that
+      // answered it — both are verified to exist, and the status is read
+      // from the row that has one.
+      const candidates = normalizeType(c?.type) === "execution_result"
+        ? [...new Set([...v.found_in_all, ...v.record_ids.filter((id) => EXECUTION_CLASSES.has(recordOf(pack, id).evidence_class))])]
+        : v.found_in_all;
+      let f = null; let foundIn = null;
+      for (const id of candidates) {
+        const t = verifyFact(c, pack, id, assetTokens, assetId);
+        if (t.ok) { f = t; foundIn = id; break; }
+        if (!f) f = t;
+      }
       if (!f.ok) { dropped.push({ ...row, type: f.type, reason: f.reason }); continue; }
-      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class });
+      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, by_identity: f.by_identity ?? false, found_in: foundIn, evidence_class: recordOf(pack, foundIn).evidence_class });
     }
   }
   const execClaims = kept.filter((k) => k.type === "execution_result");
@@ -237,8 +281,9 @@ export function checkAssessment(raw, pack, opts = {}) {
   const supports = about.filter((k) => k.relation === "supports");
   const pick = (list) => list.find((k) => k.strength === "strong") ?? list[0];
   let assetClaim;
-  if (contradicts.length) { const c = pick(contradicts); assetClaim = { verdict: "contradicts", record_ids: c.record_ids, quote: c.quote, strength: c.strength, basis: contradicts.map((k) => k.found_in) }; }
-  else if (supports.length) { const s = pick(supports); assetClaim = { verdict: "supports", record_ids: s.record_ids, quote: s.quote, strength: s.strength, basis: supports.map((k) => k.found_in) }; }
+  const basisOf = (list) => [...new Set(list.map((k) => k.found_in))];
+  if (contradicts.length) { const c = pick(contradicts); assetClaim = { verdict: "contradicts", record_ids: c.record_ids, quote: c.quote, strength: c.strength, basis: basisOf(contradicts) }; }
+  else if (supports.length) { const s = pick(supports); assetClaim = { verdict: "supports", record_ids: s.record_ids, quote: s.quote, strength: s.strength, basis: basisOf(supports) }; }
   else assetClaim = { verdict: "silent", record_ids: [], quote: null, strength: null, basis: [], reason: acc ? "nothing accepted supports or contradicts the asset" : "not asserted" };
   const accSaid = acc ? normalizeVerdict(acc.verdict) : null;
 

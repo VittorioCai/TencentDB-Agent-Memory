@@ -144,6 +144,31 @@ next did — the model-path guard (`version_mismatch` → refuse and sync)
 holds either way, so nothing newer than the admitted content is served
 in between.
 
+## Phase 3 (2026-09-08b): the author signal, bound and checked
+
+The context-based author assessment (`../author/`) now reaches the gate
+only through `/v3/meta/asset/gate/assessment`: a team admin or reviewer
+writes it — never the author — and Core checks that it is about this
+asset's author, this version and this content, that it carries the
+`evidence_cutoff` it used, signs it (`written_by`, `written_at`) and
+re-decides. The gate reads a signed assessment whose binding matches and,
+when it evaluates at `as_of`, whose cutoff is not past that time;
+otherwise the decision carries the reason in
+`signals.author.assessment_ignored` and a `context-based assessment: …;
+ignored` line. An assessment merged into `metadata_json` through
+`asset/update` never lands (the audit-field guard keeps the gate object on
+file), and one written before this phase is ignored as unsigned.
+
+What the assessment says is derived by a program from claims it could
+verify against the kind of evidence that carries them — a proxy-observed
+call or a harness-verified outcome for an execution result, never an
+assistant's narration — see `../author/README.md`. Seen live: A's
+assessment on the rejected asset (competence high, asset claim
+contradicted by the corrected outcomes on that very asset) written at the
+frozen `as_of` and accepted there; B's on its candidate (high, supports)
+→ review priority low; A's cold-start candidate → priority high from A's
+other asset judged wrong within 30 days.
+
 | File | Does |
 |---|---|
 | `core-gate.sh` | The runner's side of the in-Core gate: `--seed` (evidence base → Core, decisions checked against the frozen baseline), `--sync <run>` (a run's outcomes → Core as the admin naming the consumer, with `call_id` from `target_ref` and `event_id`; evaluate=false), `--reset` (gate off: every baseline asset approved), `--apply` (gate on: Core evaluates at `as_of` = frozen baseline), `--status`. Every write read back; the record carries status, the full decision per asset and, since v2, each row's `trusted` mark |

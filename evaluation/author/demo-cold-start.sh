@@ -34,6 +34,7 @@ CLAIM="the team skill bridge is reachable from an agent session at http://10.244
 
 die() { echo "[error] $*" >&2; exit 1; }
 ok()  { echo "[ok] $*"; }
+warn(){ echo "[warn] $*" >&2; }
 info(){ echo "[$(date +%H:%M:%S)] $*"; }
 id_of() { python3 -c "import json;print(json.load(open('$IDS'))['identities']['$1']['$2'])"; }
 TEAM="$(id_of a team_id)"; A_USER="$(id_of a user_id)"; A_AGENT="$(id_of a agent_id)"; B_USER="$(id_of b user_id)"
@@ -43,7 +44,7 @@ call() {  # keyfile path body out
   local keyfile="$1" path="$2" body="$3" out="$4" key
   key="$(tr -d '[:space:]' < "$keyfile")"
   printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$key" "$key" \
-    | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -X POST "$CORE_URL$path" -d "$body" -o "$out"
+    | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -H 'x-tdai-read-purpose: manage' -X POST "$CORE_URL$path" -d "$body" -o "$out"
 }
 envelope_ok() { python3 -c "import json,sys;sys.exit(0 if json.load(open(sys.argv[1])).get('code')==0 else 1)" "$1"; }
 
@@ -98,11 +99,14 @@ echo "  B's list-accessible (team): $B_SEES"
 echo "  B's permission on the candidate: $B_PERM"
 
 # 3. the author's own records, read and checked
-info "evidence pack for A …"
-node "$SCRIPT_DIR/build-evidence-pack.mjs" --author=a --domain="$DOMAIN" --keywords="skill bridge address,10.244.7.19,127.0.0.1:47318,timed out,reachability,container,host" --asset="$SKILL_ID" --out="$SCRIPT_DIR/artifacts/evidence-pack-a-$SKILL_ID.json" | tail -1
+info "proxy call export for A (execution-grade evidence) …"
+CALLS="$TMP/calls-a.jsonl"
+USER_ID="$A_USER" SINCE="30 DAY" OUT="$CALLS" bash "$REPO_ROOT/evaluation/gate0/export-tool-call-logs.sh" >/dev/null 2>&1 || { warn "call export failed; the pack will rest on trusted outcomes alone"; : > "$CALLS"; }
+info "evidence pack for A (cutoff: now) …"
+node "$SCRIPT_DIR/build-evidence-pack.mjs" --author=a --domain="$DOMAIN" --keywords="skill bridge address,10.244.7.19,127.0.0.1:47318,timed out,reachability,container,host" --asset="$SKILL_ID" --calls="$CALLS" --out="$SCRIPT_DIR/artifacts/evidence-pack-a-$SKILL_ID.json" | tail -2
 info "assessment …"
 node "$SCRIPT_DIR/assess.mjs" --pack="$SCRIPT_DIR/artifacts/evidence-pack-a-$SKILL_ID.json" --domain="$DOMAIN" --asset-claim="$CLAIM" --asset="$SKILL_ID" --out="$SCRIPT_DIR/artifacts/assessment-a-$SKILL_ID.json" | tail -1
-info "writing it onto the asset …"
+info "writing it onto the asset through asset/gate/assessment (admin signs it) …"
 bash "$SCRIPT_DIR/write-assessment.sh" "$SCRIPT_DIR/artifacts/assessment-a-$SKILL_ID.json" --out "$SCRIPT_DIR/artifacts/assessment-write-a-$SKILL_ID.json" | tail -4
 
 # 4. what the queue sees now
@@ -113,10 +117,11 @@ import json, sys, datetime, os
 g0 = json.load(open(sys.argv[1]))["data"]; g1 = json.load(open(sys.argv[2]))["data"]
 b0 = sorted(a["asset_id"] for a in json.load(open(sys.argv[3]))["data"]["items"]); b1 = sorted(a["asset_id"] for a in json.load(open(sys.argv[4]))["data"]["items"])
 skill = sys.argv[5]; out = sys.argv[6]; a = json.load(open(sys.argv[7]))
-print(f"  after the assessment: status={g1['status']} decision={g1['gate']['decision']} review_priority={g1['gate']['review_priority']}")
+au = g1['gate']['signals']['author']
+print(f"  after the assessment: status={g1['status']} decision={g1['gate']['decision']} review_priority={g1['gate']['review_priority']} assessment={'accepted' if au.get('assessment') else 'ignored: ' + str(au.get('assessment_ignored'))}")
 for r in g1["gate"]["reasons"]: print("    ", r)
 print(f"  B's list-accessible now: {b1}  (candidate {skill} present: {skill in b1})")
-rec = {"schema": "cold-start-demo-v1", "at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+rec = {"schema": "cold-start-demo-v2", "at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
        "skill_id": skill, "name": "eval-bridge-endpoint-c", "author": "a",
        "at_creation": {"status": g0["status"], "gate": g0.get("gate")},
        "consumer_list_accessible_before": b0, "consumer_list_accessible_after": b1, "candidate_visible_to_consumer": skill in b1,
