@@ -1166,15 +1166,20 @@ export class MetadataService {
    * registration) is counted and left alone; approved / failed /
    * deprecated / archived are untouched. A migration never approves.
    */
-  async backfillAssetGateForCaller(teamId: string, ctx: V3AuthContext, opts: { dry_run?: boolean } = {}): Promise<{ moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }>; drafts: number; untouched: number; dry_run: boolean }> {
+  async backfillAssetGateForCaller(teamId: string, ctx: V3AuthContext, opts: { dry_run?: boolean; asset_type?: AssetType } = {}): Promise<{ asset_type: AssetType; moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }>; drafts: number; untouched: number; dry_run: boolean }> {
     await this.assertCallerIsTeamAdmin(ctx, teamId);
+    // The gate governs the shared pool — skills by default. chat_memory rows
+    // are the agents' own conversation memory, registered with the same
+    // stray "active" by an older path; they are not pool assets and are
+    // left alone unless asked for by type.
+    const assetType: AssetType = opts.asset_type ?? "skill";
     const known = new Set<string>(["candidate", "approved", "failed", "deprecated", "archived", "draft"]);
     const moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }> = [];
     let drafts = 0; let untouched = 0;
     let offset = 0;
     const limit = 100;
     while (true) {
-      const page = await this.store.listAssetsByTeam(teamId, { limit, offset });
+      const page = await this.store.listAssetsByTeam(teamId, { limit, offset }, { asset_type: assetType });
       for (const asset of page.items) {
         const status = String(asset.status);
         if (status === "draft") { drafts += 1; continue; }
@@ -1187,7 +1192,7 @@ export class MetadataService {
       if (offset + page.items.length >= page.total) break;
       offset += limit;
     }
-    return { moved, drafts, untouched, dry_run: !!opts.dry_run };
+    return { asset_type: assetType, moved, drafts, untouched, dry_run: !!opts.dry_run };
   }
 
   /** One asset on the management path: the caller must be able to read it. */

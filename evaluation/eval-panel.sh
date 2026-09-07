@@ -110,7 +110,14 @@ case "${1:-status}" in
     key_file="$REPO_ROOT/deploy/global-images/.topic4-user-key"
     if [[ -f "$key_file" ]]; then
       code="$(printf 'header = "X-Tdai-User-Key: %s"\n' "$(tr -d '[:space:]' < "$key_file")" | curl -sS -K - -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/get" -H 'content-type: application/json' -H 'X-Tdai-Service-Id: default' -d '{"asset_id":"x"}' || echo 000)"
-      [[ "$code" != "404" && "$code" != "000" ]] || die "asset/gate/get answered HTTP $code with a key after enable; the server build did not take"
+      # A registered action is forwarded to the kernel, which answers
+      # asset_not_found for "x" (HTTP 404 with that message); an unregistered
+      # one is the panel's own 404 UNKNOWN_META_ACTION. Tell them apart by body.
+      body="$(printf 'header = "X-Tdai-User-Key: %s"\n' "$(tr -d '[:space:]' < "$key_file")" | curl -sS -K - -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/get" -H 'content-type: application/json' -H 'X-Tdai-Service-Id: default' -d '{"asset_id":"x"}' || echo '')"
+      [[ "$code" != "000" ]] || die "asset/gate/get answered HTTP $code with a key after enable; the server build did not take"
+      [[ "$body" != *UNKNOWN_META_ACTION* ]] || die "asset/gate/get is not registered in the mounted server build (UNKNOWN_META_ACTION)"
+      body2="$(printf 'header = "X-Tdai-User-Key: %s"\n' "$(tr -d '[:space:]' < "$key_file")" | curl -sS -K - -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/submit" -H 'content-type: application/json' -H 'X-Tdai-Service-Id: default' -d '{"asset_id":"x"}' || echo '')"
+      [[ "$body2" != *UNKNOWN_META_ACTION* ]] || die "asset/gate/submit is not registered in the mounted server build"
     else
       code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/get" -H 'content-type: application/json' -d '{"asset_id":"x"}' || echo 000)"
       [[ "$code" != "404" && "$code" != "000" ]] || die "asset/gate/get answered HTTP $code after enable; the server build did not take"
