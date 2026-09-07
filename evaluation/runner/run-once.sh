@@ -244,7 +244,10 @@ fi
 # a missing signal, never a guessed one.
 TASK_ID=""
 if [[ -n "$RUN_CONV" ]]; then
-  TASK_ID="$(docker logs tdai-proxy 2>&1 | grep -F "session=codebuddy:$RUN_CONV" | grep -F "→ initialized" | tail -1 | sed -nE 's/.*\btask=([^[:space:]]+).*/\1/p' || true)"
+  # `\b` is not a word boundary in BSD sed, so the earlier pattern matched
+  # nothing on macOS and every event carried task_id null — the "false zero"
+  # this stamping was meant to end. Anchor on the space the log line has.
+  TASK_ID="$(docker logs tdai-proxy 2>&1 | grep -F "session=codebuddy:$RUN_CONV" | grep -F "→ initialized" | tail -1 | grep -oE '(^| )task=[^[:space:]]+' | tail -1 | sed 's/^ *task=//' || true)"
 fi
 [[ -n "$TASK_ID" ]] && info "task id per proxy log: $TASK_ID" || warn "task id not found in the proxy log; events will carry task_id null"
 
