@@ -59,6 +59,7 @@ import type {
   ConfigParamEntity,
   UpsertConfigParamInput,
   ListConfigParamsFilter,
+  UpdateAssetExpect
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
@@ -315,6 +316,10 @@ export class SqliteMetadataStore implements IMetadataStore {
         untrusted_reason TEXT,
         submitted_by_user_id TEXT,
         submitted_role TEXT,
+        content_hash TEXT,
+        retracted_at TEXT,
+        retracted_by TEXT,
+        retract_reason TEXT,
         occurred_at TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
@@ -387,6 +392,7 @@ export class SqliteMetadataStore implements IMetadataStore {
     const add: Array<[string, string]> = [
       ["call_id", "TEXT"], ["event_id", "TEXT"], ["trusted", "INTEGER NOT NULL DEFAULT 0"],
       ["untrusted_reason", "TEXT"], ["submitted_by_user_id", "TEXT"], ["submitted_role", "TEXT"],
+      ["content_hash", "TEXT"], ["retracted_at", "TEXT"], ["retracted_by", "TEXT"], ["retract_reason", "TEXT"],
     ];
     for (const [col, type] of add) {
       if (have.has(col)) continue;
@@ -1325,6 +1331,8 @@ export class SqliteMetadataStore implements IMetadataStore {
       untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
       submitted_by_user_id: input.submitted_by_user_id ?? null,
       submitted_role: input.submitted_role ?? null,
+      content_hash: input.content_hash ?? null,
+      retracted_at: null, retracted_by: null, retract_reason: null,
       occurred_at: input.occurred_at ?? now,
       created_at: now,
     };
@@ -1332,12 +1340,12 @@ export class SqliteMetadataStore implements IMetadataStore {
       `INSERT INTO meta_asset_outcomes
         (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
          consumer_agent_id, task_id, run_id, source, evidence_json, call_id, event_id, trusted,
-         untrusted_reason, submitted_by_user_id, submitted_role, occurred_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         untrusted_reason, submitted_by_user_id, submitted_role, content_hash, occurred_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
       entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
       entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
-      entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.occurred_at, entity.created_at,
+      entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.content_hash, entity.occurred_at, entity.created_at,
     );
     return entity;
   }
@@ -1346,8 +1354,12 @@ export class SqliteMetadataStore implements IMetadataStore {
     return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE team_id = ? AND event_id = ?", teamId, eventId));
   }
 
+  getAssetOutcomeById(id: string): AssetOutcomeEntity | null {
+    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+  }
+
   updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): AssetOutcomeEntity | null {
-    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation"] as const;
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation", "content_hash", "retracted_at", "retracted_by", "retract_reason"] as const;
     const p: Record<string, unknown> = {};
     for (const k of allowed) if (patch[k] !== undefined) p[k] = k === "trusted" ? (patch[k] ? 1 : 0) : patch[k];
     if (Object.keys(p).length === 0) return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
@@ -1412,6 +1424,10 @@ export class SqliteMetadataStore implements IMetadataStore {
       untrusted_reason: r.untrusted_reason === null || r.untrusted_reason === undefined ? null : String(r.untrusted_reason),
       submitted_by_user_id: r.submitted_by_user_id === null || r.submitted_by_user_id === undefined ? null : String(r.submitted_by_user_id),
       submitted_role: r.submitted_role === null || r.submitted_role === undefined ? null : String(r.submitted_role),
+      content_hash: r.content_hash == null ? null : String(r.content_hash),
+      retracted_at: r.retracted_at == null ? null : String(r.retracted_at),
+      retracted_by: r.retracted_by == null ? null : String(r.retracted_by),
+      retract_reason: r.retract_reason == null ? null : String(r.retract_reason),
       occurred_at: String(r.occurred_at),
       created_at: String(r.created_at),
     };
@@ -1497,6 +1513,28 @@ export class SqliteMetadataStore implements IMetadataStore {
 
   getAssetById(assetId: string): AssetEntity | null {
     return this.mapAsset(this.get("SELECT * FROM meta_assets WHERE asset_id = ?", assetId));
+  }
+
+  /**
+   * One statement: the new fields land together with `updated_at`, and only
+   * if the row still matches what the caller read (version, hash, updated_at).
+   * A row that moved on is left alone and null is returned.
+   */
+  updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): AssetEntity | null {
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"] as const;
+    const fields: Record<string, SQLInputValue> = {};
+    for (const k of allowed) { const v = (patch as Record<string, unknown>)[k]; if (k in patch && v !== undefined) fields[k] = v as SQLInputValue; }
+    fields.updated_at = nowIso();
+    const where: string[] = ["asset_id = ?"]; const params: SQLInputValue[] = [];
+    const sets = Object.keys(fields).map((k) => `${k} = ?`);
+    params.push(...Object.keys(fields).map((k) => fields[k]));
+    params.push(assetId);
+    if (expect.version !== undefined) { where.push("version = ?"); params.push(expect.version); }
+    if (expect.content_hash !== undefined) { if (expect.content_hash === null) where.push("content_hash IS NULL"); else { where.push("content_hash = ?"); params.push(expect.content_hash); } }
+    if (expect.updated_at !== undefined) { where.push("updated_at = ?"); params.push(expect.updated_at); }
+    const res = this.db.prepare(`UPDATE meta_assets SET ${sets.join(", ")} WHERE ${where.join(" AND ")}`).run(...params) as { changes: number | bigint };
+    if (Number(res.changes) === 0) return null;
+    return this.getAssetById(assetId);
   }
 
   updateAsset(assetId: string, patch: Partial<AssetEntity>): AssetEntity | null {

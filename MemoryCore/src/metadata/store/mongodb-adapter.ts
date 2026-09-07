@@ -63,6 +63,7 @@ import type {
   ConfigParamEntity,
   UpsertConfigParamInput,
   ListConfigParamsFilter,
+  UpdateAssetExpect
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
@@ -1032,6 +1033,8 @@ export class MongoMetadataStore implements IMetadataStore {
       untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
       submitted_by_user_id: input.submitted_by_user_id ?? null,
       submitted_role: input.submitted_role ?? null,
+      content_hash: input.content_hash ?? null,
+      retracted_at: null, retracted_by: null, retract_reason: null,
       occurred_at: input.occurred_at ?? now,
       created_at: now,
     };
@@ -1044,8 +1047,13 @@ export class MongoMetadataStore implements IMetadataStore {
     return d ? this.mapAssetOutcomeDoc(d) : null;
   }
 
+  async getAssetOutcomeById(id: string): Promise<AssetOutcomeEntity | null> {
+    const d = await this.col("meta_asset_outcomes").findOne({ id });
+    return d ? this.mapAssetOutcomeDoc(d) : null;
+  }
+
   async updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): Promise<AssetOutcomeEntity | null> {
-    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation"] as const;
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation", "content_hash", "retracted_at", "retracted_by", "retract_reason"] as const;
     const $set: Document = {};
     for (const k of allowed) if (patch[k] !== undefined) $set[k] = patch[k];
     if (Object.keys($set).length) await this.col("meta_asset_outcomes").updateOne({ id }, { $set });
@@ -1064,7 +1072,25 @@ export class MongoMetadataStore implements IMetadataStore {
       untrusted_reason: r.untrusted_reason ?? null,
       submitted_by_user_id: r.submitted_by_user_id ?? null,
       submitted_role: r.submitted_role ?? null,
+      content_hash: r.content_hash ?? null,
+      retracted_at: r.retracted_at ?? null,
+      retracted_by: r.retracted_by ?? null,
+      retract_reason: r.retract_reason ?? null,
     };
+  }
+
+  async updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): Promise<AssetEntity | null> {
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"];
+    const $set: Document = {};
+    for (const k of allowed) if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) $set[k] = (patch as Record<string, unknown>)[k];
+    $set.updated_at = nowIso();
+    const filter: Document = { asset_id: assetId };
+    if (expect.version !== undefined) filter.version = expect.version;
+    if (expect.content_hash !== undefined) filter.content_hash = expect.content_hash;
+    if (expect.updated_at !== undefined) filter.updated_at = expect.updated_at;
+    const res = await this.col("meta_assets").updateOne(filter, { $set });
+    if (!res.matchedCount) return null;
+    return this.getAssetById(assetId);
   }
 
   async listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): Promise<ListPage<AssetOutcomeEntity>> {

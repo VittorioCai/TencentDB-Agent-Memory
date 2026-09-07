@@ -1559,6 +1559,7 @@ export const enUS = {
   'review.source.review': 'human',
   'review.otherVersion': '{{n}} record(s) are about other versions and do not decide v{{v}}',
   'review.submittedByOwner': 'submitted by the owner',
+  'review.staleReview': 'The asset changed after you read it (new version or content); the decision was not written. The list has been refreshed — read it again before deciding.',
   'review.outcomes': 'Outcomes: validated {{v}} / corrected {{c}}',
   'review.reviewedBy': 'Human review: {{d}} ({{by}})',
   'review.noAssessment': 'No author assessment',

@@ -263,7 +263,10 @@ const routeTable: Record<string, Handler> = {
   ),
   [`${V3_PREFIX}/asset/gate/get`]: bind(S.assetGateGetSchema, (d, c, s) => s.getAssetGateForCaller(d.asset_id, c)),
   [`${V3_PREFIX}/asset/gate/review`]: bind(S.assetGateReviewSchema, (d, c, s) =>
-    s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null }),
+    s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null, expected_version: d.expected_version, expected_content_hash: d.expected_content_hash ?? null }),
+  ),
+  [`${V3_PREFIX}/asset/outcome/retract`]: bind(S.assetOutcomeRetractSchema, (d, c, s) =>
+    s.retractAssetOutcomeForCaller(d.outcome_id, c, { reason: d.reason }),
   ),
   [`${V3_PREFIX}/asset/gate/assessment`]: bind(S.assetGateAssessmentSchema, (d, c, s) =>
     s.writeAuthorAssessmentForCaller(d.asset_id, c, d.assessment),

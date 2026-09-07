@@ -94,10 +94,16 @@ export default function ReviewQueuePanel() {
     if (!reviewing) return;
     setBusy(reviewing.row.asset.asset_id);
     try {
-      await gateApi.review(reviewing.row.asset.asset_id, reviewing.decision, note.trim() || undefined);
+      // The version and content this row was rendered from: the decision applies to them only.
+      const seen = { version: reviewing.row.gate?.version ?? reviewing.row.asset.version, content_hash: reviewing.row.gate?.content_hash ?? null };
+      await gateApi.review(reviewing.row.asset.asset_id, reviewing.decision, note.trim() || undefined, seen);
       setReviewing(null); setNote('');
       await refresh();
-    } catch (e) { tea.notify.error(e); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/stale_review|stale_write/.test(msg)) { tea.notify.warning(t('review.staleReview')); setReviewing(null); await refresh(); }
+      else tea.notify.error(e);
+    }
     finally { setBusy(null); }
   }
 

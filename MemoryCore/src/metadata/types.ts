@@ -420,6 +420,14 @@ export interface CreateAssetInput {
   metadata_json?: string;
 }
 
+/** Precondition for a write that must not overwrite a newer row (2026-09-08c). */
+export interface UpdateAssetExpect {
+  version?: number;
+  content_hash?: string | null;
+  /** The row's updated_at as read; any later write changes it. */
+  updated_at?: string;
+}
+
 export interface FixedAssetBindingInput {
   asset_id: string;
   asset_type: AssetType;
@@ -536,6 +544,16 @@ export interface AssetOutcomeEntity {
   untrusted_reason: string | null;
   submitted_by_user_id: string | null;
   submitted_role: string | null;
+  /**
+   * Hash of the content the outcome is about (2026-09-08c). The gate counts
+   * a row for the asset's current version only when version and hash both
+   * match; a row without them is history that cannot claim the current text.
+   */
+  content_hash: string | null;
+  /** A retracted row stays on file and is not read by the gate; who, when, why. */
+  retracted_at: string | null;
+  retracted_by: string | null;
+  retract_reason: string | null;
   occurred_at: string;
   created_at: string;
 }
@@ -556,6 +574,7 @@ export interface AppendAssetOutcomeInput {
   occurred_at?: string;
   call_id?: string | null;
   event_id?: string | null;
+  content_hash?: string | null;
   /** Set by the service, never by the caller (the router drops them). */
   trusted?: boolean;
   untrusted_reason?: string | null;
@@ -629,6 +648,10 @@ export interface GateDecision {
       untrusted_ignored: number;
       /** Trusted calls about other versions of this asset: reported, never deciding this version. */
       other_version: number;
+      /** Trusted rows with no version, or no hash while the asset has one: history that cannot claim the current text. */
+      unbound_ignored: number;
+      /** Rows retracted by a reviewer: kept on file, not read. */
+      retracted_ignored: number;
     };
     author: {
       user_id: string;
@@ -644,6 +667,8 @@ export interface GateDecision {
     };
   };
   review_priority: ReviewPriority | null;
+  /** The latest corrected(wrong/stale) outcome the reject rests on; a human admit made after it is the reviewer's call. */
+  reject_evidence_latest_at?: string | null;
   /**
    * When set, only outcomes with occurred_at <= evidence_as_of were read. An
    * evaluation batch passes its frozen baseline time here so the gate acts on

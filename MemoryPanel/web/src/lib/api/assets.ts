@@ -109,8 +109,12 @@ export const gateApi = {
   get: (assetId: string) => metaPost<AssetGateView>('asset/gate/get', { asset_id: assetId }),
   evaluate: (assetId: string, apply = true) =>
     metaPost<{ decision: AssetGateView['gate']; applied: boolean; asset: Asset }>('asset/gate/evaluate', { asset_id: assetId, apply }),
-  review: (assetId: string, decision: 'admit' | 'reject', note?: string) =>
-    metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', { asset_id: assetId, decision, note: note ?? null }),
+  /** The decision names the version and content the reviewer read; Core refuses it if the asset moved on (stale_review). */
+  review: (assetId: string, decision: 'admit' | 'reject', note: string | undefined, seen: { version: number; content_hash?: string | null }) =>
+    metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', { asset_id: assetId, decision, note: note ?? null, expected_version: seen.version, expected_content_hash: seen.content_hash ?? null }),
+  /** A reviewer retracts a mistaken outcome; it stays on file and the gate stops reading it. */
+  retractOutcome: (outcomeId: string, reason: string) =>
+    metaPost<{ outcome: AssetOutcome; decision: AssetGateView['gate'] }>('asset/outcome/retract', { outcome_id: outcomeId, reason }),
   outcomes: (teamId: string, params?: { asset_id?: string; owner_user_id?: string }) =>
     metaListAll<AssetOutcome>('asset/outcome/list', { team_id: teamId, asset_id: params?.asset_id, owner_user_id: params?.owner_user_id }),
   /** The owner asks the team to review a candidate, or takes the request back (2026-09-08). */

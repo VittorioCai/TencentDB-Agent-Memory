@@ -295,13 +295,19 @@ async function admissionFilter<T extends SkillLike>(
   return { allowed, denied };
 }
 
-/** The skill head as the registry needs it (version, content hash); the id alone when the head cannot be read. */
-async function headOf(core: SkillCore, ids: { skill_id: string; user_id?: string; team_id?: string; agent_id?: string; task_id?: string }): Promise<SkillLike> {
+/**
+ * The skill row that is about to be served — the requested version, or the
+ * head when none was asked for — as the registry needs it (version, content
+ * hash). The caller then pins that version on the read it performs, so the
+ * row checked and the row returned are the same one (2026-09-08c). The id
+ * alone when the row cannot be read.
+ */
+async function headOf(core: SkillCore, ids: { skill_id: string; version?: number; user_id?: string; team_id?: string; agent_id?: string; task_id?: string }): Promise<SkillLike> {
   try {
-    const row = await core.get({ user_id: ids.user_id, team_id: ids.team_id, agent_id: ids.agent_id, task_id: ids.task_id, skill_id: ids.skill_id, include_content: false, include_manifest: false });
+    const row = await core.get({ user_id: ids.user_id, team_id: ids.team_id, agent_id: ids.agent_id, task_id: ids.task_id, skill_id: ids.skill_id, version: ids.version, include_content: false, include_manifest: false });
     return { skill_id: row.skill_id, team_id: row.team_id, owner_agent_id: row.owner_agent_id, name: row.name, version: row.version, content_hash: row.content_hash };
   } catch {
-    return { skill_id: ids.skill_id };
+    return { skill_id: ids.skill_id, version: ids.version };
   }
 }
 
@@ -675,9 +681,15 @@ export async function handleVersions(body: unknown, _auth: V2AuthContext, reques
   if (!pre.ok) { obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
     // Version history names and describes the skill; a candidate's is not for the model.
-    const admV = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const targetV = await headOf(pre.core, pre.data);
+    const admV = await admissionFilter([targetV], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admV.allowed.length === 0) return notAdmitted(pre.data.skill_id, admV.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.listVersions(pre.data);
+    // On the model's path only the admitted version's summary is history the model may see.
+    if (_auth.readPurpose !== "manage" || !_auth.userKey) {
+      r.items = r.items.filter((s) => s.version === targetV.version && (!targetV.content_hash || s.content_hash === targetV.content_hash));
+      r.total = r.items.length;
+    }
     if (r.total === 0) {
       obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: 40401, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id, reason: "not_found" });
       return errorEnvelope(40401, "skill not found", requestId);
@@ -742,9 +754,11 @@ export async function handleFilesRead(body: unknown, _auth: V2AuthContext, reque
   const pre = await precheck(filesReadRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleFilesRead.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
-    const admF = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const targetF = await headOf(pre.core, pre.data);
+    const admF = await admissionFilter([targetF], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admF.allowed.length === 0) return notAdmitted(pre.data.skill_id, admF.denied[0]?.reason ?? "unknown", requestId);
-    const r = await pre.core.readFile(pre.data);
+    // Read the version that was checked, not whatever is head by now.
+    const r = await pre.core.readFile({ ...pre.data, version: targetF.version ?? pre.data.version });
     obsLogger.info("skill.handleFilesRead.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id,
       version: r.version,
       size_bytes: r.size_bytes,
@@ -764,9 +778,11 @@ export async function handleExport(body: unknown, _auth: V2AuthContext, requestI
   }
   try {
     // Export carries the content; same gate as get.
-    const admE = await admissionFilter([await headOf(pre.core, pre.data)], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const targetE = await headOf(pre.core, pre.data);
+    const admE = await admissionFilter([targetE], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
     if (admE.allowed.length === 0) return notAdmitted(pre.data.skill_id, admE.denied[0]?.reason ?? "unknown", requestId);
-    const r = await pre.core.exportSkill(pre.data);
+    // Export the version that was checked, not whatever is head by now.
+    const r = await pre.core.exportSkill({ ...pre.data, version: targetE.version ?? pre.data.version });
     obsLogger.info("skill.handleExport.done", {
       req_id: requestId, code: 0, dur_ms: Date.now() - t0,
       skill_id: pre.data.skill_id, version: r.version,
@@ -795,7 +811,7 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
     const topK = routing?.searchTopK ?? 20;
 
     // search 模式：按 routing.mode 选检索算法；fallback 到 list head（query 为空）。
-    type Item = { skill_id: string; name: string; description: string; version: number; team_id?: string; owner_agent_id?: string };
+    type Item = { skill_id: string; name: string; description: string; version: number; team_id?: string; owner_agent_id?: string; content_hash?: string };
     let items: Item[];
     let mode: "full" | "search";
     if (useSearch) {
@@ -814,6 +830,7 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         version: h.skill.version,
         team_id: h.skill.team_id,
         owner_agent_id: h.skill.owner_agent_id,
+        content_hash: h.skill.content_hash,
       }));
       mode = "search";
     } else {
@@ -830,6 +847,7 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         version: s.version,
         team_id: s.team_id,
         owner_agent_id: s.owner_agent_id,
+        content_hash: s.content_hash,
       }));
       mode = items.length < topK ? "full" : "search";
     }

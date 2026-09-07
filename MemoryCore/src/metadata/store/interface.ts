@@ -51,6 +51,7 @@ import type {
   ConfigParamEntity,
   UpsertConfigParamInput,
   ListConfigParamsFilter,
+  UpdateAssetExpect
 } from "../types.js";
 
 export type MaybePromise<T> = T | Promise<T>;
@@ -156,6 +157,7 @@ export interface IMetadataStore {
   appendAssetOutcome(input: AppendAssetOutcomeInput): MaybePromise<AssetOutcomeEntity>;
   /** The row already on file for a recorder's event_id, for idempotent delivery. */
   getAssetOutcomeByEvent(teamId: string, eventId: string): MaybePromise<AssetOutcomeEntity | null>;
+  getAssetOutcomeById(id: string): MaybePromise<AssetOutcomeEntity | null>;
   /** A reviewer confirming a member's row: trust, submitter, call, version, evidence, relation. */
   updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): MaybePromise<AssetOutcomeEntity | null>;
   listAssetOutcomes(
@@ -167,6 +169,8 @@ export interface IMetadataStore {
   createAsset(input: CreateAssetInput): MaybePromise<AssetEntity>;
   getAssetById(assetId: string): MaybePromise<AssetEntity | null>;
   updateAsset(assetId: string, patch: Partial<AssetEntity>): MaybePromise<AssetEntity | null>;
+  /** Conditional update: applied only when the row still matches `expect`; null when it does not (or is missing). One statement, so version, hash, status and metadata land together. */
+  updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): MaybePromise<AssetEntity | null>;
   deleteAssets(assetIds: string[]): MaybePromise<BatchDeleteResult>;
   listAssetsByTeam(teamId: string, pagination?: PaginationParams | null, filter?: AssetFilter): MaybePromise<ListPage<AssetEntity>>;
   touchAssetUsage(assetId: string): MaybePromise<void>;

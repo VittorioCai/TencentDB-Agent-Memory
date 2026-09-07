@@ -172,12 +172,21 @@ export function checkPermission(ctx: PermCheckContext): PermCheckResult {
   return { allowed: false, reason: "no_permission" };
 }
 
-/** Whether the owner has submitted this asset for team review (metadata_json.gate.review_request). */
-export function reviewRequested(asset: Pick<AssetEntity, "metadata_json">): boolean {
+/**
+ * Whether the owner's request for team review is in force for the asset's
+ * CURRENT text (metadata_json.gate.review_request): requested, not
+ * withdrawn, not expired, and made on this version and content. A request
+ * granted reviewers access to one text; a newer version or edited content
+ * needs a new request (2026-09-08c).
+ */
+export function reviewRequested(asset: Pick<AssetEntity, "metadata_json"> & { version?: number; content_hash?: string | null }): boolean {
   try {
-    const m = JSON.parse(asset.metadata_json || "{}") as { gate?: { review_request?: { requested_at?: unknown; withdrawn_at?: unknown } } };
+    const m = JSON.parse(asset.metadata_json || "{}") as { gate?: { review_request?: { requested_at?: unknown; withdrawn_at?: unknown; expired_at?: unknown; asset_version?: unknown; content_hash?: unknown } } };
     const r = m?.gate?.review_request;
-    return !!r && typeof r === "object" && typeof r.requested_at === "string" && !r.withdrawn_at;
+    if (!r || typeof r !== "object" || typeof r.requested_at !== "string" || r.withdrawn_at || r.expired_at) return false;
+    if (asset.version !== undefined && typeof r.asset_version === "number" && r.asset_version !== asset.version) return false;
+    if (asset.content_hash && typeof r.content_hash === "string" && r.content_hash !== asset.content_hash) return false;
+    return true;
   } catch {
     return false;
   }

@@ -73,6 +73,8 @@ export const META_ACTIONS = [
   // file, re-evaluation, and the reviewer's own verdict.
   'asset/outcome/append',
   'asset/outcome/list',
+  // A reviewer retracts a mistaken outcome; it stays on file, unread by the gate (2026-09-08c).
+  'asset/outcome/retract',
   'asset/gate/get',
   'asset/gate/evaluate',
   'asset/gate/review',

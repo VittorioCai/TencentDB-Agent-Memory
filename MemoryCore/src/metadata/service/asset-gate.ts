@@ -78,10 +78,27 @@ function daysBetween(a: string, b: Date): number {
   return Math.abs(new Date(a).getTime() - b.getTime()) / 86_400_000;
 }
 
-/** Rows the gate may read: trusted ones. Everything else is reported as ignored. */
-export function trustedOnly(rows: AssetOutcomeEntity[]): { kept: AssetOutcomeEntity[]; ignored: number } {
-  const kept = rows.filter((o) => o.trusted === true);
-  return { kept, ignored: rows.length - kept.length };
+/** Rows the gate may read: trusted and not retracted. Everything else is reported as ignored. */
+export function trustedOnly(rows: AssetOutcomeEntity[]): { kept: AssetOutcomeEntity[]; ignored: number; retracted: number } {
+  const retracted = rows.filter((o) => o.retracted_at).length;
+  const kept = rows.filter((o) => o.trusted === true && !o.retracted_at);
+  return { kept, ignored: rows.length - kept.length - retracted, retracted };
+}
+
+/**
+ * Does a row speak for the asset's current text? Only with the same version
+ * and — when the asset carries a hash — the same hash. A row with no version,
+ * or no hash against a hashed asset, is history that cannot claim the current
+ * text (2026-09-08c: "缺版本或哈希的历史证据不能自动认领当前正文").
+ */
+export function boundToCurrent(o: AssetOutcomeEntity, asset: { version: number; content_hash?: string | null }): "current" | "other_version" | "unbound" {
+  if (o.asset_version == null) return "unbound";
+  if (o.asset_version !== asset.version) return "other_version";
+  if (asset.content_hash) {
+    if (!o.content_hash) return "unbound";
+    if (o.content_hash !== asset.content_hash) return "other_version";
+  }
+  return "current";
 }
 
 /**
@@ -171,11 +188,14 @@ export function decideAsset(input: DecideInput): GateDecision {
   const version = input.asset.version ?? 1;
   const ownTrust = trustedOnly(input.outcomes);
   const ownAll = collapseByCall(ownTrust.kept);
-  // Version binding: a row with no version is read as being about the
-  // current one (recorded before versions were tracked); a row about
-  // another version is reported and never decides this one.
-  const own = ownAll.filter((o) => o.asset_version === null || o.asset_version === version);
-  const otherVersion = ownAll.length - own.length;
+  // Version and content binding: only a row about this version and this
+  // content decides it; rows about other versions/contents are reported;
+  // rows with no version, or no hash while the asset has one, are history
+  // that cannot claim the current text.
+  const bind = { version, content_hash: input.asset.content_hash ?? null };
+  const own = ownAll.filter((o) => boundToCurrent(o, bind) === "current");
+  const otherVersion = ownAll.filter((o) => boundToCurrent(o, bind) === "other_version").length;
+  const unbound = ownAll.filter((o) => boundToCurrent(o, bind) === "unbound").length;
   const authorId = input.asset.owner_user_id;
   const others = collapseByCall(trustedOnly(input.authorOutcomes).kept).filter((o) => o.asset_id !== input.asset.asset_id);
 
@@ -194,6 +214,8 @@ export function decideAsset(input: DecideInput): GateDecision {
     calls: own.length,
     untrusted_ignored: ownTrust.ignored,
     other_version: otherVersion,
+    unbound_ignored: unbound,
+    retracted_ignored: ownTrust.retracted,
   };
 
   // Author: the outcomes of this author's other assets, cross-person only.
@@ -254,7 +276,13 @@ export function decideAsset(input: DecideInput): GateDecision {
     reasons.push(`${ownTrust.ignored} row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read`);
   }
   if (otherVersion > 0) {
-    reasons.push(`${otherVersion} trusted call(s) are about other versions of this asset and do not decide version ${version}`);
+    reasons.push(`${otherVersion} trusted call(s) are about other versions or contents of this asset and do not decide version ${version}${bind.content_hash ? ` (${bind.content_hash.slice(0, 10)})` : ""}`);
+  }
+  if (unbound > 0) {
+    reasons.push(`${unbound} trusted call(s) carry no version${bind.content_hash ? " or no content hash" : ""} and cannot claim the current text`);
+  }
+  if (ownTrust.retracted > 0) {
+    reasons.push(`${ownTrust.retracted} row(s) were retracted by a reviewer and were not read`);
   }
 
   if (read.ignored) reasons.push(`context-based assessment: ${read.ignored}`);
@@ -309,6 +337,7 @@ export function decideAsset(input: DecideInput): GateDecision {
     evidence_refs,
     signals: { online, author },
     review_priority,
+    reject_evidence_latest_at: downweighting.length ? downweighting.map((o) => o.occurred_at).sort().slice(-1)[0] : null,
     evidence_as_of: input.asOf ?? null,
   };
 }
@@ -350,30 +379,50 @@ export function activeReview(gate: Record<string, unknown>, asset: { version: nu
 }
 
 /**
- * What the asset's status resolves to. A reject from either side wins: a
- * human reject is the team saying no, and a trusted correction after a human
- * admit is evidence the admit was wrong — the review stays on file, marked
- * outranked in the reason. Then a human admit, which lifts a pending; then
- * the rule's admit; else candidate.
+ * What the asset's status resolves to. A human reject wins. A rule reject
+ * (a trusted correction on this very version and content) wins over a
+ * human admit only when the correction arrived AFTER the admit — new
+ * evidence the reviewer never saw; a correction already on file when the
+ * reviewer admitted is one they saw and overruled, and the admit stands.
+ * A mistaken correction is retracted through asset/outcome/retract, which
+ * keeps it on file and stops the gate reading it. Then a human admit lifts
+ * a pending; then the rule's admit; else candidate.
  */
 export function effectiveStatus(decision: GateDecision, review: HumanReviewRecord | null, now: Date = new Date()): GateEffective {
   const at = now.toISOString();
   if (review?.decision === "reject") return { status: "failed", source: "review", review_id: review.id, reason: `human reject by ${review.by} on version ${review.asset_version}`, at };
   if (decision.decision === "reject") {
+    // Strictly earlier: a correction dated the same instant as the admit was not one the reviewer read.
+    if (review?.decision === "admit" && decision.reject_evidence_latest_at && decision.reject_evidence_latest_at < review.at) {
+      return { status: "approved", source: "review", review_id: review.id, at,
+        reason: `human admit by ${review.by} on version ${review.asset_version} with the corrected outcome(s) already on file (latest ${decision.reject_evidence_latest_at}); the reviewer overruled them` };
+    }
     return { status: "failed", source: "rule", review_id: review?.id ?? null, at,
-      reason: review ? `rule reject (corrected outcome) outranks the human admit by ${review.by}; the review stays on file` : "rule reject (corrected outcome)" };
+      reason: review ? `rule reject: a corrected outcome at ${decision.reject_evidence_latest_at ?? "?"} arrived after the human admit by ${review.by} (${review.at}); the review stays on file` : "rule reject (corrected outcome)" };
   }
   if (review?.decision === "admit") return { status: "approved", source: "review", review_id: review.id, reason: `human admit by ${review.by} on version ${review.asset_version}`, at };
   if (decision.decision === "admit") return { status: "approved", source: "rule", review_id: null, reason: "rule admit (cross-person validated, no corrected)", at };
   return { status: "candidate", source: "rule", review_id: null, reason: "rule pending; no human decision in force for this version", at };
 }
 
-/** Mark every review in force as expired, with the reason; returns the new gate object. */
+/**
+ * Mark every review in force as expired, with the reason, and the owner's
+ * pending review request too (2026-09-08c): the request granted reviewers
+ * access to one text; a new text needs a new request. History is kept in
+ * `review_requests`. Returns the new gate object.
+ */
 export function expireReviews(gate: Record<string, unknown>, reason: string, now: Date = new Date()): Record<string, unknown> {
   const rows = reviewsOf(gate).map((r) => (r.expired_at ? r : { ...r, expired_at: now.toISOString(), expired_reason: reason }));
   const { review: _legacy, ...rest } = gate;
   void _legacy;
-  return { ...rest, reviews: rows, review: null };
+  const out: Record<string, unknown> = { ...rest, reviews: rows, review: null };
+  const req = gate.review_request && typeof gate.review_request === "object" ? (gate.review_request as Record<string, unknown>) : null;
+  if (req && req.requested_at && !req.withdrawn_at && !req.expired_at) {
+    const expired = { ...req, expired_at: now.toISOString(), expired_reason: reason };
+    out.review_request = expired;
+    out.review_requests = [...(Array.isArray(gate.review_requests) ? (gate.review_requests as unknown[]) : []), expired];
+  }
+  return out;
 }
 
 /**

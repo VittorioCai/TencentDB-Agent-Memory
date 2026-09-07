@@ -164,22 +164,50 @@ evaluate() {  # asset_id → appends decision to $TMP/decisions.jsonl
 }
 baseline_visibility() { python3 -c "import json;print(json.load(open('$BASELINE'))['assets']['$1'].get('baseline_visibility') or 'team')"; }
 
+# Hash of an asset's content at a version (2026-09-08c): a trusted row must
+# name the content it is about. Read on the manage path as the submitter
+# (whose key resolves to their own user id); cached per asset@version.
+SUBMITTER_USER_ID=""
+submitter_user_id() {
+  if [[ -z "$SUBMITTER_USER_ID" ]]; then
+    call "$SUBMITTER_KEY_FILE" "/v3/meta/auth/verify" "{\"user_key\":\"$(tr -d '[:space:]' < "$SUBMITTER_KEY_FILE")\"}" "$TMP/verify.json"
+    SUBMITTER_USER_ID="$(python3 -c "
+import json; d=json.load(open('$TMP/verify.json')).get('data') or {}
+u=d.get('user') if isinstance(d.get('user'), dict) else d
+print(u.get('user_id') or '')")"
+  fi
+  echo "$SUBMITTER_USER_ID"
+}
+content_hash_of() {  # asset_id version → hash or empty
+  local id="$1" ver="$2" f="$TMP/hash-$1-$2"
+  [[ -f "$f" ]] && { cat "$f"; return 0; }
+  local agent uid; agent="$(python3 -c "import json;print(json.load(open('$BASELINE'))['assets'].get('$id',{}).get('producer_agent_id',''))")"; uid="$(submitter_user_id)"
+  local key; key="$(tr -d '[:space:]' < "$SUBMITTER_KEY_FILE")"
+  printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$key" "$key" \
+    | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -H 'x-tdai-read-purpose: manage' \
+        -X POST "$CORE_URL/v3/skill/get" -d "{\"team_id\":\"$TEAM_ID\",\"agent_id\":\"$agent\",\"user_id\":\"$uid\",\"skill_id\":\"$id\",\"version\":$ver,\"include_content\":false,\"include_manifest\":false}" -o "$TMP/skill-$id-$ver.json"
+  python3 -c "import json; d=json.load(open('$TMP/skill-$id-$ver.json')); print((d.get('data') or {}).get('content_hash') or '')" > "$f"
+  cat "$f"
+}
+
 # ── sync: a run's outcome events → Core ──────────────────────────
 sync_run() {  # run_dir → writes run_dir/core-outcomes.json, prints a line
   local dir="$1" events="$1/outcome-events.jsonl" rec="$1/core-outcomes.json"
   [[ -f "$events" ]] || { warn "no outcome-events.jsonl in $dir"; return 0; }
-  if [[ -f "$rec" ]] && python3 -c "import json,sys; sys.exit(0 if json.load(open('$rec')).get('schema')=='core-outcomes-v2' else 1)"; then
-    info "$(basename "$dir"): already synced ($(python3 -c "import json;print(len(json.load(open('$rec'))['posted']))" ) outcome(s), v2); skipping"; return 0
+  if [[ -f "$rec" ]] && python3 -c "import json,sys; sys.exit(0 if json.load(open('$rec')).get('schema')=='core-outcomes-v3' else 1)"; then
+    info "$(basename "$dir"): already synced ($(python3 -c "import json;print(len(json.load(open('$rec'))['posted']))" ) outcome(s), v3); skipping"; return 0
   fi
-  [[ -f "$rec" ]] && info "$(basename "$dir"): synced before 2026-09-08 as the consumer (untrusted now); re-recording as the submitter"
+  [[ -f "$rec" ]] && info "$(basename "$dir"): synced before content hashes (v2 or earlier); re-recording with the hash — trusted rows are confirmed in place"
   [[ -f "$SUBMITTER_KEY_FILE" ]] || die "submitter (admin/reviewer) key not found: $SUBMITTER_KEY_FILE"
   local run_id; run_id="$(basename "$dir")"
   : > "$TMP/posted.jsonl"; : > "$TMP/skipped.jsonl"
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
-    python3 - "$line" "$TEAM_ID" "$run_id" > "$TMP/body.json" <<'PY'
+    aid="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('asset_id',''))" "$line")"; aver="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('asset_version') or '')" "$line")"
+    ahash=""; [[ -n "$aid" && -n "$aver" ]] && ahash="$(content_hash_of "$aid" "$aver")"
+    python3 - "$line" "$TEAM_ID" "$run_id" "$ahash" > "$TMP/body.json" <<'PY'
 import json, sys
-e = json.loads(sys.argv[1]); team = sys.argv[2]; run_id = sys.argv[3]
+e = json.loads(sys.argv[1]); team = sys.argv[2]; run_id = sys.argv[3]; ahash = sys.argv[4] or None
 state = e.get("state")
 if state not in ("validated", "corrected", "used"):
     print(json.dumps({"skip": f"state {state} is not an outcome"})); sys.exit(0)
@@ -198,7 +226,10 @@ body = {
     "task_id": e.get("task_id"), "run_id": e.get("run_id") or run_id,
     "source": "evaluation-runner",
     "call_id": call_id,
-    # Idempotent delivery: the recorder's event id. A re-sync returns the row on file.
+    # The content the outcome is about (2026-09-08c); without it the row cannot claim the current text.
+    "content_hash": ahash,
+    # Idempotent delivery: the recorder's event id. A re-sync returns the row on file; a trusted
+    # resubmission that adds the hash to a hashless row confirms it in place.
     "event_id": e.get("event_id"),
     "evidence_json": json.dumps({"event_id": e.get("event_id"), "target_ref": e.get("target_ref"),
                                  "proof_refs": e.get("proof_refs"), "executed_endpoint": e.get("executed_endpoint"),
@@ -218,7 +249,7 @@ PY
       python3 -c "
 import json; b=json.load(open('$TMP/body.json')); d=json.load(open('$TMP/append-res.json'))['data']; r=d['outcome']
 print(json.dumps({'event_id': b['event_id'], 'outcome_id': r['id'], 'state': r['state'], 'asset_id': r['asset_id'], 'relation': r['relation'],
-                  'call_id': r.get('call_id'), 'trusted': r.get('trusted'), 'untrusted_reason': r.get('untrusted_reason'), 'duplicate': d.get('duplicate', False)}))" >> "$TMP/posted.jsonl"
+                  'call_id': r.get('call_id'), 'content_hash': r.get('content_hash'), 'trusted': r.get('trusted'), 'untrusted_reason': r.get('untrusted_reason'), 'duplicate': d.get('duplicate', False), 'confirmed': d.get('confirmed', False)}))" >> "$TMP/posted.jsonl"
     else
       python3 -c "
 import json; b=json.load(open('$TMP/body.json'))
@@ -231,7 +262,7 @@ import json, sys, datetime
 posted = [json.loads(l) for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
 skipped = [json.loads(l) for l in open(sys.argv[2], encoding="utf-8") if l.strip()]
 untrusted = [p for p in posted if not p.get("trusted")]
-json.dump({"schema": "core-outcomes-v2", "run_id": sys.argv[4],
+json.dump({"schema": "core-outcomes-v3", "run_id": sys.argv[4],
            "synced_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "submitter_key_file": sys.argv[5], "evaluate": False,
            "trusted": len(posted) - len(untrusted), "untrusted": len(untrusted), "duplicates": sum(1 for p in posted if p.get("duplicate")),

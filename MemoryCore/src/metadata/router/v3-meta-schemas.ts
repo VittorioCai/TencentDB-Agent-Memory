@@ -473,6 +473,8 @@ export const assetOutcomeAppendSchema = z.object({
   call_id: nonEmpty.nullable().optional(),
   /** Recorder's idempotency key; a redelivery returns the row on file. */
   event_id: nonEmpty.nullable().optional(),
+  /** Hash of the content the outcome is about; required for trust when the asset carries one. */
+  content_hash: nonEmpty.nullable().optional(),
   consumer_agent_id: nonEmpty.nullable().optional(),
   task_id: nonEmpty.nullable().optional(),
   run_id: nonEmpty.nullable().optional(),
@@ -511,8 +513,12 @@ export const assetGateEvaluateSchema = z.object({
   as_of: z.string().datetime().optional(),
 });
 export const assetGateGetSchema = z.object({ asset_id: nonEmpty });
+export const assetOutcomeRetractSchema = z.object({ outcome_id: nonEmpty, reason: z.string().min(1).max(2000) });
 export const assetGateReviewSchema = z.object({
   asset_id: nonEmpty,
   decision: z.enum(["admit", "reject"]),
   note: z.string().max(2000).nullable().optional(),
+  /** The version and content the reviewer read; the decision is refused if the asset moved on. */
+  expected_version: z.number().int().min(1),
+  expected_content_hash: nonEmpty.nullable().optional(),
 });

@@ -1197,6 +1197,20 @@ export class MetadataService {
     return { asset_type: assetType, moved, drafts, untouched, dry_run: !!opts.dry_run };
   }
 
+  /**
+   * A write that must not overwrite a row that moved on since it was read
+   * (2026-09-08c): version, content hash and updated_at as read are the
+   * precondition; a mismatch is a stale_write, and the caller re-reads.
+   */
+  private async writeAssetAsRead(asset: AssetEntity, patch: Partial<AssetEntity>, what: string): Promise<AssetEntity> {
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    if (!updated) {
+      const now = await this.getAssetById(asset.asset_id);
+      throw new MetadataError("stale_write", `${what}: asset ${asset.asset_id} changed since it was read (read v${asset.version}${asset.content_hash ? ` ${asset.content_hash.slice(0, 10)}` : ""} @ ${asset.updated_at}; now ${now ? `v${now.version}${now.content_hash ? ` ${now.content_hash.slice(0, 10)}` : ""} @ ${now.updated_at}` : "gone"}); read it again`);
+    }
+    return updated;
+  }
+
   /** One asset on the management path: the caller must be able to read it. */
   async getAssetForCaller(assetId: string, ctx: V3AuthContext): Promise<AssetEntity> {
     const asset = await this.getAssetById(assetId);
@@ -1234,7 +1248,8 @@ export class MetadataService {
         const hashDiffers = !!s.content_hash && !!asset.content_hash && s.content_hash !== asset.content_hash;
         if (newer || hashDiffers) {
           out.set(id, { allowed: false, reason: newer ? `version_mismatch:registry=${asset.version},served=${s.version}` : "content_hash_mismatch" });
-          this.syncSkillAssetVersion({ skill_id: id, version: s.version ?? asset.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
+          // Awaited: the registry has caught up before this read answers.
+          await this.syncSkillAssetVersion({ skill_id: id, version: s.version ?? asset.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
             .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
           continue;
         }
@@ -2068,6 +2083,7 @@ export class MetadataService {
     if (!reviewerRole) why.push(`submitted by a ${member.role}, not an admin or reviewer`);
     if (!input.call_id) why.push("no call_id");
     if (input.asset_version === null || input.asset_version === undefined) why.push("no asset_version");
+    if (asset.content_hash && !input.content_hash) why.push("no content_hash (the asset carries one)");
     if (!hasEvidence(input.evidence_json)) why.push("no evidence");
     const trusted = why.length === 0;
 
@@ -2082,10 +2098,11 @@ export class MetadataService {
         // A trusted submission confirms an untrusted row on file (a member
         // reported first, a reviewer confirmed with the call, the version and
         // evidence): the row becomes trusted in place, with who confirmed it.
-        if (!existing.trusted && trusted) {
+        if ((!existing.trusted && trusted) || (existing.trusted && trusted && !existing.content_hash && input.content_hash)) {
           const confirmed = await this.store.updateAssetOutcome(existing.id, {
             trusted: true, untrusted_reason: null, submitted_by_user_id: callerId, submitted_role: member.role,
             call_id: input.call_id ?? existing.call_id, asset_version: input.asset_version ?? existing.asset_version,
+            content_hash: input.content_hash ?? existing.content_hash,
             evidence_json: input.evidence_json ?? existing.evidence_json, relation,
           });
           const gate = opts.evaluate !== false ? (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision : null;
@@ -2176,7 +2193,7 @@ export class MetadataService {
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
     m.gate = { ...gateOf(asset.metadata_json), author_assessment: assessment };
-    await this.updateAsset(asset.asset_id, { metadata_json: JSON.stringify(m) });
+    await this.writeAssetAsRead(asset, { metadata_json: JSON.stringify(m) }, "write assessment");
     const { decision, asset: decided } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
     return { asset: decided, assessment, decision };
   }
@@ -2196,11 +2213,12 @@ export class MetadataService {
     const prev = (gate.review_request && typeof gate.review_request === "object" ? gate.review_request : {}) as Record<string, unknown>;
     const review_request: Record<string, unknown> = input.withdraw
       ? { ...prev, withdrawn_at: now, withdrawn_by: callerId }
-      : { requested_at: now, requested_by: callerId, note: input.note ?? null, asset_version: asset.version };
+      : { requested_at: now, requested_by: callerId, note: input.note ?? null, asset_version: asset.version, content_hash: asset.content_hash ?? null };
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
-    m.gate = { ...gate, review_request };
-    const updated = await this.updateAsset(asset.asset_id, { metadata_json: JSON.stringify(m) });
+    const history = Array.isArray(gate.review_requests) ? (gate.review_requests as unknown[]) : [];
+    m.gate = { ...gate, review_request, review_requests: input.withdraw ? history : [...history.filter((h) => (h as { requested_at?: unknown }).requested_at !== prev.requested_at), review_request] };
+    const updated = await this.writeAssetAsRead(asset, { metadata_json: JSON.stringify(m) }, input.withdraw ? "withdraw review request" : "submit for review");
     return { asset: updated, review_request };
   }
 
@@ -2232,7 +2250,14 @@ export class MetadataService {
       confidence: decision.confidence,
       metadata_json: mergeGateIntoMetadata(asset.metadata_json, decision, { effective, review }),
     };
-    const updated = await this.updateAsset(asset.asset_id, patch);
+    // Written only if the asset is still the one the decision was made on;
+    // a row that moved on (a new version, a review) is decided afresh.
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    if (!updated) {
+      const attempt = (opts as { _attempt?: number })._attempt ?? 0;
+      if (attempt >= 3) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
+      return this.evaluateAssetGate(assetId, { ...opts, _attempt: attempt + 1 } as typeof opts);
+    }
     return { decision, effective, review, applied: true, asset: updated };
   }
 
@@ -2266,10 +2291,42 @@ export class MetadataService {
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
     m.gate = gate;
-    await this.updateAsset(asset.asset_id, { version: params.version, content_hash: params.content_hash ?? null, metadata_json: JSON.stringify(m) });
+    // One write: version, hash, the expired decisions AND status=candidate
+    // land together, so no read sees the new text with the old approval.
+    // Conditional on the row as read: a concurrent sync or review that got
+    // in first is not overwritten — the row is re-read instead.
+    const moved = await this.store.updateAssetIf(asset.asset_id, { version: params.version, content_hash: params.content_hash ?? null, status: "candidate", confidence: null, metadata_json: JSON.stringify(m) }, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    if (!moved) {
+      const now = await this.getAssetById(asset.asset_id);
+      if (!now) throw new MetadataError("asset_not_found", `asset not found: ${params.skill_id}`);
+      if (now.version >= params.version) return { asset: now, changed: false };
+      return this.syncSkillAssetVersion(params);
+    }
     const { asset: decided } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
     return { asset: decided, changed: true };
   }
+
+  /**
+   * A reviewer retracts an outcome row (2026-09-08c): a correction that was
+   * mistaken, a validation that was not. The row stays on file with who,
+   * when and why; the gate stops reading it and the asset is re-decided.
+   */
+  async retractAssetOutcomeForCaller(outcomeId: string, ctx: V3AuthContext, input: { reason: string }): Promise<{ outcome: AssetOutcomeEntity; decision: GateDecision }> {
+    const callerId = this.requireCallerId(ctx);
+    const row = await this.store.getAssetOutcomeById(outcomeId);
+    if (!row) throw new MetadataError("outcome_not_found", `outcome not found: ${outcomeId}`);
+    const member = await this.requireActiveTeamMember(ctx, row.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") throw new MetadataError("permission_denied", "only a team admin or a reviewer may retract an outcome");
+    const asset = await this.getAssetById(row.asset_id);
+    if (asset) await this.assertManageRead(ctx, asset);
+    if (row.retracted_at) throw new MetadataError("invalid_state", `outcome ${outcomeId} was already retracted at ${row.retracted_at} by ${row.retracted_by}`);
+    if (!input.reason || !input.reason.trim()) throw new MetadataError("invalid_request", "a reason is required to retract an outcome");
+    const updated = await this.store.updateAssetOutcome(row.id, { retracted_at: new Date().toISOString(), retracted_by: callerId, retract_reason: input.reason.trim() });
+    const { decision } = await this.evaluateAssetGate(row.asset_id, { apply: true });
+    return { outcome: updated ?? row, decision };
+  }
+
+
 
   /** Owner, team admin or reviewer may run the gate by hand — on an asset they may read. */
   async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean; asOf?: string | null } = {}) {
@@ -2290,7 +2347,7 @@ export class MetadataService {
   async reviewAssetGateForCaller(
     assetId: string,
     ctx: V3AuthContext,
-    input: { decision: "admit" | "reject"; note?: string | null },
+    input: { decision: "admit" | "reject"; note?: string | null; expected_version?: number | null; expected_content_hash?: string | null },
   ): Promise<{ asset: AssetEntity; review: HumanReviewRecord; effective: GateEffective }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
@@ -2301,6 +2358,17 @@ export class MetadataService {
     }
     if (asset.owner_user_id === callerId) {
       throw new MetadataError("permission_denied", "an author may not review their own asset");
+    }
+    // The decision applies to the text the reviewer read (2026-09-08c): the
+    // request names that version and content, and they must be the asset's
+    // now — otherwise the reviewer is asked to read again. Checked before
+    // the read permission: a reviewer who read v1 learns nothing new from
+    // "the asset moved on", and gets the answer that explains it.
+    if (input.expected_version === undefined || input.expected_version === null) throw new MetadataError("invalid_request", "expected_version is required: the version the reviewer read");
+    if (input.expected_version !== asset.version) throw new MetadataError("stale_review", `the reviewer read version ${input.expected_version}, the asset is at ${asset.version}; read it again`);
+    if (asset.content_hash) {
+      if (!input.expected_content_hash) throw new MetadataError("invalid_request", `expected_content_hash is required: the asset carries content hash ${asset.content_hash}`);
+      if (input.expected_content_hash !== asset.content_hash) throw new MetadataError("stale_review", "the content the reviewer read is not the asset's content now; read it again");
     }
     await this.assertManageRead(ctx, asset);
     const now = new Date();
@@ -2323,7 +2391,13 @@ export class MetadataService {
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
     m.gate = { ...gate, reviews, review, effective };
-    const updated = await this.updateAsset(asset.asset_id, { status: effective.status, metadata_json: JSON.stringify(m) });
+    let updated: AssetEntity;
+    try {
+      updated = await this.writeAssetAsRead(asset, { status: effective.status, metadata_json: JSON.stringify(m) }, "review");
+    } catch (err) {
+      if (err instanceof MetadataError && err.code === "stale_write") throw new MetadataError("stale_review", err.message);
+      throw err;
+    }
     return { asset: updated, review, effective };
   }
 

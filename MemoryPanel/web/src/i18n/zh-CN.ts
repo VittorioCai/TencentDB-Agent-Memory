@@ -1520,6 +1520,7 @@ export const zhCN = {
   'review.source.review': '人工',
   'review.otherVersion': '{{n}} 条记录属于其他版本，不判定 v{{v}}',
   'review.submittedByOwner': '作者已提交审核',
+  'review.staleReview': '资产在你阅读后已更新（新版本或内容变化），决定未写入；列表已刷新，请重新阅读后再决定',
   'review.outcomes': '结果：通过 {{v}} / 纠错 {{c}}',
   'review.reviewedBy': '人工复核：{{d}}（{{by}}）',
   'review.noAssessment': '无作者评估',

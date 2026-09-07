@@ -39,6 +39,7 @@ function outcome(over: Partial<AssetOutcomeEntity>): AssetOutcomeEntity {
     consumer_user_id: "usr-b", consumer_agent_id: null, task_id: "task-1", run_id: null,
     source: "test", evidence_json: "{\"proof\":1}", call_id: null, event_id: null,
     trusted: true, untrusted_reason: null, submitted_by_user_id: "usr-admin", submitted_role: "admin",
+    content_hash: "h2", retracted_at: null, retracted_by: null, retract_reason: null,
     occurred_at: "2026-09-06T10:00:00Z", created_at: "2026-09-06T10:00:00Z",
     ...over,
   };
@@ -212,9 +213,26 @@ describe("decideAsset: the decision is about one version", () => {
     expect(d.signals.online.other_version).toBe(1);
   });
 
-  it("a row with no version is read as being about the current one", () => {
-    const d = decideAsset({ asset, outcomes: [outcome({ asset_version: null })], authorOutcomes: [], now: T0 });
+  it("a row with no version, or no hash while the asset has one, is history that cannot claim the current text", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ asset_version: null }), outcome({ content_hash: null })], authorOutcomes: [], now: T0 });
+    expect(d.decision).toBe("pending");
+    expect(d.signals.online.unbound_ignored).toBe(2);
+    expect(d.reasons.join("\n")).toMatch(/cannot claim the current text/);
+  });
+
+  it("the same version with different content is another content: it does not decide this one", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ content_hash: "h2-old" })], authorOutcomes: [], now: T0 });
+    expect(d.decision).toBe("pending");
+    expect(d.signals.online.other_version).toBe(1);
+    const same = decideAsset({ asset, outcomes: [outcome({ content_hash: "h2" })], authorOutcomes: [], now: T0 });
+    expect(same.decision).toBe("admit");
+  });
+
+  it("a retracted row is kept on file and not read", () => {
+    const d = decideAsset({ asset, outcomes: [outcome({ state: "corrected", corrected_reason: "wrong", retracted_at: "2026-09-08T00:00:00Z", retracted_by: "usr-r", retract_reason: "the probe used the wrong port" }), outcome({})], authorOutcomes: [], now: T0 });
     expect(d.decision).toBe("admit");
+    expect(d.signals.online.retracted_ignored).toBe(1);
+    expect(d.reasons.join("\n")).toMatch(/retracted by a reviewer/);
   });
 });
 
@@ -222,11 +240,16 @@ describe("effectiveStatus and the review in force", () => {
   const rev = (over: Partial<HumanReviewRecord>): HumanReviewRecord => ({ id: "rev-1", decision: "admit", status: "approved", by: "usr-r", at: "2026-09-08T00:00:00Z", note: null, asset_version: 2, content_hash: "h2", ...over });
   const rule = (kind: "admit" | "reject" | "pending") => decideAsset({ asset, outcomes: kind === "admit" ? [outcome({})] : kind === "reject" ? [outcome({ state: "corrected", corrected_reason: "wrong" })] : [], authorOutcomes: [], now: T0 });
 
-  it("precedence: a reject from either side, then a human admit, then the rule's admit, else candidate", () => {
+  it("precedence: a human reject; a correction that ARRIVED AFTER a human admit; a human admit over corrections it saw; the rule's admit; else candidate", () => {
     expect(effectiveStatus(rule("admit"), rev({ decision: "reject", status: "failed" }), T0)).toMatchObject({ status: "failed", source: "review", review_id: "rev-1" });
-    const outranked = effectiveStatus(rule("reject"), rev({}), T0);
+    // The correction is dated 2026-09-06T10:00Z (the fixture); the admit at 2026-09-08 came after it: the reviewer saw it and overruled it.
+    const overruled = effectiveStatus(rule("reject"), rev({}), T0);
+    expect(overruled).toMatchObject({ status: "approved", source: "review", review_id: "rev-1" });
+    expect(overruled.reason).toMatch(/already on file .* the reviewer overruled them/);
+    // An admit made before the correction arrived is outranked by it.
+    const outranked = effectiveStatus(rule("reject"), rev({ at: "2026-09-05T00:00:00Z" }), T0);
     expect(outranked).toMatchObject({ status: "failed", source: "rule", review_id: "rev-1" });
-    expect(outranked.reason).toMatch(/outranks the human admit/);
+    expect(outranked.reason).toMatch(/arrived after the human admit/);
     expect(effectiveStatus(rule("pending"), rev({}), T0)).toMatchObject({ status: "approved", source: "review" });
     expect(effectiveStatus(rule("admit"), null, T0)).toMatchObject({ status: "approved", source: "rule", review_id: null });
     expect(effectiveStatus(rule("pending"), null, T0)).toMatchObject({ status: "candidate", source: "rule" });
@@ -270,6 +293,8 @@ const trustedBody = (assetId: string, consumer: string, over: Record<string, unk
   team_id: "", asset_id: assetId, state: "validated" as const, consumer_user_id: consumer, asset_version: 1,
   call_id: `call-${++seq}`, evidence_json: JSON.stringify({ proof_refs: ["capture:1"] }), source: "test", ...over,
 });
+/** A review request body naming what the reviewer read. */
+const seen = (a: { version: number; content_hash?: string | null }) => ({ expected_version: a.version, expected_content_hash: a.content_hash ?? null });
 
 describe("the gate on the asset record", () => {
   let store: SqliteMetadataStore;
@@ -301,8 +326,11 @@ describe("the gate on the asset record", () => {
     const page = await svc.listAccessibleAssets({ user_id: userId, team_id: team, action: "read", purpose });
     return page.items.map((x) => x.asset_id).sort();
   }
-  const trusted = (assetId: string, consumer: string, over: Record<string, unknown> = {}) =>
-    svc.appendAssetOutcomeForCaller({ ...trustedBody(assetId, consumer, over), team_id: team }, ctx(admin));
+  const trusted = async (assetId: string, consumer: string, over: Record<string, unknown> = {}) => {
+    const cur = await store.getAssetById(assetId);
+    // A trusted row names the content it is about when the asset carries a hash, and the version on file unless told otherwise.
+    return svc.appendAssetOutcomeForCaller({ ...trustedBody(assetId, consumer, { asset_version: cur?.version ?? 1, content_hash: cur?.content_hash ?? null, ...over }), team_id: team }, ctx(admin));
+  };
 
   it("outcomes are appended and listed, including by the author's ownership and by trust", async () => {
     await candidateSkill("skl-1", a);
@@ -523,7 +551,7 @@ describe("the gate on the asset record", () => {
     await expect(svc.getAssetGateForCaller("skl-priv", ctx(r))).rejects.toMatchObject({ code: "permission_denied" });
     await svc.submitAssetForReviewForCaller("skl-priv", ctx(a));
     // The reviewer may now admit it; the human decision stays in force through a re-evaluation (2026-09-08b).
-    const rev = await svc.reviewAssetGateForCaller("skl-priv", ctx(r), { decision: "admit", note: "ok" });
+    const rev = await svc.reviewAssetGateForCaller("skl-priv", ctx(r), { decision: "admit", note: "ok", ...seen((await store.getAssetById("skl-priv"))!) });
     expect(rev.asset.status).toBe("approved");
     expect(rev.effective).toMatchObject({ status: "approved", source: "review", review_id: rev.review.id });
     const re = await svc.evaluateAssetGate("skl-priv", { apply: true });
@@ -542,7 +570,7 @@ describe("the gate on the asset record", () => {
     await svc.updateAssetForCaller("skl-v", { visibility: "team" }, ctx(a));
     await trusted("skl-v", b, { asset_version: 1 });
     expect((await store.getAssetById("skl-v"))?.status).toBe("approved");
-    const rev = await svc.reviewAssetGateForCaller("skl-v", ctx(r), { decision: "admit", note: "looks right" });
+    const rev = await svc.reviewAssetGateForCaller("skl-v", ctx(r), { decision: "admit", note: "looks right", ...seen((await store.getAssetById("skl-v"))!) });
     expect(rev.review.asset_version).toBe(1);
     // v2 arrives (the versioning hook or a patch handler).
     const s1 = await svc.syncSkillAssetVersion({ skill_id: "skl-v", version: 2, content_hash: "h2" });
@@ -592,9 +620,9 @@ describe("the gate on the asset record", () => {
 
   it("a later review supersedes the earlier one for the same version; the history keeps both", async () => {
     await candidateSkill("skl-h", a, "team");
-    const first = await svc.reviewAssetGateForCaller("skl-h", ctx(r), { decision: "reject", note: "wrong port" });
+    const first = await svc.reviewAssetGateForCaller("skl-h", ctx(r), { decision: "reject", note: "wrong port", ...seen((await store.getAssetById("skl-h"))!) });
     expect(first.asset.status).toBe("failed");
-    const second = await svc.reviewAssetGateForCaller("skl-h", ctx(admin), { decision: "admit", note: "port fixed by hand" });
+    const second = await svc.reviewAssetGateForCaller("skl-h", ctx(admin), { decision: "admit", note: "port fixed by hand", ...seen((await store.getAssetById("skl-h"))!) });
     expect(second.asset.status).toBe("approved");
     const g = await svc.getAssetGateForCaller("skl-h", ctx(a));
     expect(g.reviews.map((x) => [x.decision, !!x.expired_at])).toEqual([["reject", true], ["admit", false]]);
@@ -605,7 +633,7 @@ describe("the gate on the asset record", () => {
     const g2 = await svc.getAssetGateForCaller("skl-h", ctx(a));
     expect(g2.status).toBe("failed");
     expect(g2.effective?.source).toBe("rule");
-    expect(g2.effective?.reason).toMatch(/outranks the human admit/);
+    expect(g2.effective?.reason).toMatch(/arrived after the human admit/);
     expect(g2.review?.id).toBe(second.review.id);
   });
 
@@ -662,6 +690,87 @@ describe("the gate on the asset record", () => {
     // The owner's update cannot replace it: the gate object on file wins.
     await svc.updateAssetForCaller("skl-as", { metadata_json: JSON.stringify({ gate: { author_assessment: { competence: "high" } } }) }, ctx(a));
     expect((await svc.getAssetGateForCaller("skl-as", ctx(a))).gate?.signals.author.assessment?.competence).toBe("low");
+  });
+
+  it("a new version lands as a candidate in the same write as its version and hash; a review of the old text is refused; the owner's request expires with the text", async () => {
+    const agent = await store.createAgent({ team_id: team, owner_user_id: a, name: "A" });
+    await svc.ensureSkillAsset({ skill_id: "skl-atomic", team_id: team, agent_id: agent.agent_id, name: "atomic", version: 1, content_hash: "h1" });
+    await svc.updateAssetForCaller("skl-atomic", { visibility: "private" }, ctx(a));
+    await svc.submitAssetForReviewForCaller("skl-atomic", ctx(a), { note: "please" });
+    expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-atomic", action: "read" })).allowed).toBe(true); // submitted private candidate
+    await trusted("skl-atomic", b);
+    const v1 = (await store.getAssetById("skl-atomic"))!;
+    expect(v1.status).toBe("approved");
+    // The reviewer read v1; the author writes v2 before the decision lands.
+    const moved = await svc.syncSkillAssetVersion({ skill_id: "skl-atomic", version: 2, content_hash: "h2" });
+    expect(moved.asset.status).toBe("candidate");
+    expect(moved.asset.version).toBe(2);
+    await expect(svc.reviewAssetGateForCaller("skl-atomic", ctx(r), { decision: "admit", ...seen(v1) })).rejects.toMatchObject({ code: "stale_review" });
+    expect((await store.getAssetById("skl-atomic"))?.status).toBe("candidate"); // the stale admit did not land
+    // The request granted access to v1's text; v2 needs a new request.
+    const g = await svc.getAssetGateForCaller("skl-atomic", ctx(a));
+    expect(g.review_requested).toBe(false);
+    expect((g.review_request as { expired_reason?: string }).expired_reason).toMatch(/version changed from 1 to 2/);
+    expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-atomic", action: "read" })).allowed).toBe(false);
+    await svc.submitAssetForReviewForCaller("skl-atomic", ctx(a));
+    expect((await svc.checkAssetPermission({ user_id: r, asset_id: "skl-atomic", action: "read" })).allowed).toBe(true);
+    // v1's validated row does not decide v2 (other content).
+    const g2 = await svc.evaluateAssetGate("skl-atomic", { apply: false });
+    expect(g2.decision.signals.online.other_version).toBe(1);
+  });
+
+  it("two reviewers on the same row: the second decision is refused as stale and must be re-read; history keeps the first", async () => {
+    await candidateSkill("skl-race", a, "team");
+    const asRead = (await store.getAssetById("skl-race"))!;
+    const first = await svc.reviewAssetGateForCaller("skl-race", ctx(r), { decision: "admit", note: "first", ...seen(asRead) });
+    expect(first.asset.status).toBe("approved");
+    // The admin decided from the same read, but the row moved (updated_at changed): refused, history intact.
+    await expect(svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", note: "second", ...seen(asRead) })).resolves.toBeDefined();
+    // (same version and hash, so expected_version/hash pass; the conditional write on updated_at is exercised below)
+    const fresh = (await store.getAssetById("skl-race"))!;
+    await store.updateAsset("skl-race", { description: "moved" });
+    await expect(svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", ...seen(fresh) })).resolves.toBeDefined();
+    expect((await svc.getAssetGateForCaller("skl-race", ctx(a))).reviews.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("a reviewer retracts a mistaken correction: it stays on file, the gate stops reading it, the asset is re-decided", async () => {
+    await candidateSkill("skl-ret", a, "team");
+    await trusted("skl-ret", b);
+    const bad = await trusted("skl-ret", b, { state: "corrected", corrected_reason: "wrong" });
+    expect((await store.getAssetById("skl-ret"))?.status).toBe("failed");
+    await expect(svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(b), { reason: "x" })).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(r), { reason: "" })).rejects.toMatchObject({ code: "invalid_request" });
+    const res = await svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(r), { reason: "the probe used the wrong port" });
+    expect(res.outcome.retracted_by).toBe(r);
+    expect(res.decision.decision).toBe("admit");
+    expect(res.decision.signals.online.retracted_ignored).toBe(1);
+    expect((await store.getAssetById("skl-ret"))?.status).toBe("approved");
+    await expect(svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(r), { reason: "again" })).rejects.toMatchObject({ code: "invalid_state" });
+  });
+
+  it("a correction the reviewer already saw does not outrank their admit; one that arrives later does", async () => {
+    await candidateSkill("skl-seen", a, "team");
+    await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-05T00:00:00.000Z" });
+    expect((await store.getAssetById("skl-seen"))?.status).toBe("failed");
+    const rev = await svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", note: "the correction was a bad probe; verified by hand", ...seen((await store.getAssetById("skl-seen"))!) });
+    expect(rev.asset.status).toBe("approved");
+    expect(rev.effective.reason).toMatch(/overruled/);
+    await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong" }); // new evidence, after the admit
+    const g = await svc.getAssetGateForCaller("skl-seen", ctx(a));
+    expect(g.status).toBe("failed");
+    expect(g.effective?.reason).toMatch(/arrived after the human admit/);
+  });
+
+  it("a trusted row must name the content when the asset carries a hash; a later resubmission adds the hash in place", async () => {
+    await candidateSkill("skl-hash", a, "team");
+    await store.updateAsset("skl-hash", { content_hash: "hX" });
+    const noHash = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-hash", b, { content_hash: undefined }), team_id: team, event_id: "evt-h1" }, ctx(admin));
+    expect(noHash.outcome.trusted).toBe(false);
+    expect(noHash.outcome.untrusted_reason).toMatch(/no content_hash/);
+    const withHash = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-hash", b, { content_hash: "hX" }), team_id: team, event_id: "evt-h1" }, ctx(admin));
+    expect(withHash.confirmed).toBe(true);
+    expect(withHash.outcome.content_hash).toBe("hX");
+    expect((await store.getAssetById("skl-hash"))?.status).toBe("approved");
   });
 
   it("backfill: a legacy status becomes a candidate decided once; draft is counted and left; nothing is approved by migration", async () => {
@@ -754,9 +863,12 @@ describe("human review", () => {
     const team = (await store.createTeam({ name: "t", owner_user_id: admin })).team_id;
     for (const [u, role] of [[a, "member"], [b, "member"], [r, "reviewer"]] as const) await store.addTeamMember({ team_id: team, user_id: u, role });
     await store.createAsset({ asset_id: "skl-r", team_id: team, asset_type: "skill", name: "r", owner_user_id: a, source_type: "test", visibility: "team", status: "candidate" });
-    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(a), { decision: "admit" })).rejects.toMatchObject({ code: "permission_denied" });
-    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(b), { decision: "admit" })).rejects.toMatchObject({ code: "permission_denied" });
-    const res = await svc.reviewAssetGateForCaller("skl-r", ctx(r), { decision: "admit", note: "checked the address by hand" });
+    const a0 = (await store.getAssetById("skl-r"))!;
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(a), { decision: "admit", ...seen(a0) })).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(b), { decision: "admit", ...seen(a0) })).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(r), { decision: "admit" })).rejects.toMatchObject({ code: "invalid_request" }); // what did the reviewer read?
+    await expect(svc.reviewAssetGateForCaller("skl-r", ctx(r), { decision: "admit", expected_version: 2 })).rejects.toMatchObject({ code: "stale_review" });
+    const res = await svc.reviewAssetGateForCaller("skl-r", ctx(r), { decision: "admit", note: "checked the address by hand", ...seen(a0) });
     expect(res.asset.status).toBe("approved");
     expect(res.review.by).toBe(r);
     const g = await svc.getAssetGateForCaller("skl-r", ctx(b)); // approved + team: a member may read
@@ -765,7 +877,7 @@ describe("human review", () => {
     await svc.evaluateAssetGate("skl-r", { apply: true });
     expect(JSON.parse((await store.getAssetById("skl-r"))!.metadata_json).gate.review.note).toBe("checked the address by hand");
     expect((await store.getAssetById("skl-r"))?.status).toBe("approved");
-    const rej = await svc.reviewAssetGateForCaller("skl-r", ctx(admin), { decision: "reject" });
+    const rej = await svc.reviewAssetGateForCaller("skl-r", ctx(admin), { decision: "reject", ...seen((await store.getAssetById("skl-r"))!) });
     expect(rej.asset.status).toBe("failed");
   });
 });
