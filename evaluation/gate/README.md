@@ -83,6 +83,67 @@ longer names its own auto-extracted skill — the gate itself removes the
 confounder `COMPARISON-2026-09-06.md` records. That is a change in what
 the model sees, so batch 3 is run after phases 1–4, not before.
 
+## Phase 2 (2026-09-08b): one version, one decision
+
+Two counter-examples from review are now impossible by construction:
+*v2 approved, v3 written → v3 inherits the approval* and *a late
+correction of v2 fails the v3 that fixed it*.
+
+**Binding.** An asset carries `version` and `content_hash` (the skill
+store's hash of the head). Outcome rows carry `asset_version`; the
+decision records the version and hash it is about; a human review records
+the version and hash it was made on. Only trusted outcomes about the
+asset's current version decide it — rows about other versions are counted
+in `signals.online.other_version` and named in the reasons, never used.
+A brand-new version therefore starts where every asset starts: pending,
+a candidate, until its own cross-person validation arrives.
+
+**Following a new version.** `SkillVersioning.appendNextVersion` fires
+`onSkillVersioned`; the standalone core and the service-mode core hand it
+to `MetadataService.syncSkillAssetVersion`, and the update/patch handlers
+call the same idempotent sync for a core without the hook. The sync
+records version and hash, expires every human decision in force with the
+reason (`asset version changed from 1 to 2`), and re-decides. Because the
+hook is fire-and-forget, the read path is the guard: every model read
+hands the registry the version and hash it is about to serve
+(`decideAssetReads({ served })`), and a newer or edited content of an
+approved asset is refused (`version_mismatch`, `content_hash_mismatch`)
+and synced on that read. A failed hook or two writes racing can delay the
+registry; they cannot make it serve new content as admitted.
+
+**Human decisions.** `gate.reviews` is an append-only history; `gate.review`
+is the one in force for the current version (null when none);
+`gate.effective` is what the rule's suggestion and the human decision
+resolve to, with the source and the reason. Precedence: a reject from
+either side, then a human admit, then the rule's admit, else candidate —
+so a re-evaluation no longer reverts a human admit, a later review
+supersedes the earlier one (expired: `superseded by a later review`), and
+a trusted correction after a human admit outranks it and says so while
+the review stays on file. `evaluate` writes `status = effective.status`.
+
+**Seen live (2026-09-08, commits 2ed7e93…33967f8).** A throwaway skill,
+end to end: A creates it (candidate v1, hash on file) → A shares it → the
+admin admits it by hand (`approved`, effective source `review`, review on
+v1) → B reads it on the model path (code 0) → A writes v2 through
+`skill/update` → the registry follows within the second: `version 2`,
+`status candidate`, the review expired with `asset version changed from 1
+to 2`, no review in force, `other_version 0` → B's next read is `40301
+SKILL_NOT_ADMITTED (not_admitted:candidate)` while A still reads it on the
+manage path → A deletes it and the registry row goes with it.
+
+The pool itself: every asset had been registered at version 1 while the
+skill heads were at 2 (the registry never tracked versions), so the first
+`--apply` under version binding read the evidence base as "other version"
+and gave pending. The read-time self-heal now hands the registry the
+served head's version and hash; after one read per skill the two baseline
+assets stand at v2 with their hashes, and `--apply` with `as_of` gives
+admit / reject from 2 trusted calls each, `other_version 0`
+(`artifacts/core-apply-asof-2026-09-08.json`). Observed and not yet
+explained: the first read after a container recreate did not sync, the
+next did — the model-path guard (`version_mismatch` → refuse and sync)
+holds either way, so nothing newer than the admitted content is served
+in between.
+
 | File | Does |
 |---|---|
 | `core-gate.sh` | The runner's side of the in-Core gate: `--seed` (evidence base → Core, decisions checked against the frozen baseline), `--sync <run>` (a run's outcomes → Core as the admin naming the consumer, with `call_id` from `target_ref` and `event_id`; evaluate=false), `--reset` (gate off: every baseline asset approved), `--apply` (gate on: Core evaluates at `as_of` = frozen baseline), `--status`. Every write read back; the record carries status, the full decision per asset and, since v2, each row's `trusted` mark |
