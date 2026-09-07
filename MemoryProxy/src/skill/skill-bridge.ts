@@ -486,14 +486,22 @@ export function decideReadVisibility(input: {
 }
 
 /**
- * The visibility whitelist for read ops: A ∪ B, exactly as `search` computes it,
- * with names attached so `get-by-name` can resolve across it.
+ * The read whitelist for read ops, with names attached so `get-by-name` can
+ * resolve across it.
  *
- *   A = meta list-accessible(visibility='team')   team-shared, from the control
- *       plane — and it carries each asset's name, which is where names for
- *       other agents' skills come from
+ *   A = meta list-accessible(purpose='use')   every asset this user may read
+ *       on the model's path: admitted (approved) ones only, the caller's own
+ *       included — and it carries each asset's name, which is where names
+ *       for other agents' skills come from
  *   B = coreClient.listSkills(team, caller agent)   the caller's own skills,
- *       including private ones — the very call search makes, proven to work
+ *       used for names and agent ids only
+ *
+ * Until 2026-09-08 the whitelist was A(visibility='team') ∪ B, and B let the
+ * caller's own candidates and rejected skills back in: admission is a
+ * property of the asset, not of who is asking, so B no longer widens the
+ * whitelist. Core applies the same rule on its side (skill-handlers
+ * admissionFilter); this list is the proxy's own copy of it, so a stale
+ * proxy fails closed rather than open.
  *
  * There is deliberately no team-wide `listSkills` here. An earlier version
  * called it with team_id alone, and CoreSkillClient.normalizeTeamAgent fills
@@ -529,7 +537,10 @@ export async function computeReadWhitelist(input: {
   const [aResult, own] = await Promise.all([promiseA, promiseB]);
   if (!aResult.ok) return { ok: false, err: aResult.err };
 
-  const ownIds = new Set(own.map((s) => s.skill_id));
+  const whitelist = new Set<string>(aResult.ids);
+  // Own skills contribute names and agent ids, never ids the whitelist lacks.
+  const ownAdmitted = own.filter((s) => whitelist.has(s.skill_id));
+  const ownIds = new Set(ownAdmitted.map((s) => s.skill_id));
   // A's entries that are not the caller's own carry no agent id from meta, so
   // they are recorded as "someone else's" — which is all the clash rule needs.
   const fromA: TeamSkillRef[] = aResult.assets
@@ -538,8 +549,8 @@ export async function computeReadWhitelist(input: {
 
   return {
     ok: true,
-    whitelist: new Set<string>([...aResult.ids, ...ownIds]),
-    teamSkills: [...own, ...fromA],
+    whitelist,
+    teamSkills: [...ownAdmitted, ...fromA],
     namesFromA: aResult.assets.length > 0,
   };
 }
@@ -589,11 +600,13 @@ function defaultVisibleSkillIdsResolver(
       team_id,
       asset_type: "skill",
       action: "read",
-      // Aligns with the frontend "team assets" tab (SkillsPanel.tsx:132-136):
-      // strictly visibility='team'. Private/ACL-restricted skills are hidden
-      // from LLM-driven search, same as they're hidden from other members
-      // in the panel.
-      visibility: "team",
+      // The model's path (2026-09-08): admitted assets this user may read —
+      // team-shared ones and the caller's own, private included. Other
+      // people's private and ACL-restricted skills stay out because the
+      // kernel's permission check keeps them out, not because of a
+      // visibility filter here; candidates and rejected skills stay out
+      // whoever owns them.
+      purpose: "use",
     });
     // For skill assets, asset_id === skill_id by kernel convention.
     return {

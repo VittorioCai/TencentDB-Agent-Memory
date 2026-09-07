@@ -348,6 +348,8 @@ export const assetListAccessibleSchema = userIdOrKeyFields
     action: permission.optional(),
     asset_type: assetType.optional(),
     agent_id: z.string().optional(),
+    /** `use` = admitted assets only (the model's path); `manage` (default) = what the caller may see. */
+    purpose: z.enum(["use", "manage"]).optional(),
     // 可选的服务端 visibility 过滤：
     //   - 单值：`visibility: "team"` → 只返回 team 可见的（管控页"团队资产"tab 用）
     //   - 数组：`visibility: ["team", "restricted"]` → 白名单方式
@@ -462,10 +464,15 @@ export const assetOutcomeAppendSchema = z.object({
   asset_id: nonEmpty,
   asset_version: z.number().int().nullable().optional(),
   state: assetOutcomeState,
+  /** Accepted for compatibility and ignored: the service derives it from consumer vs. owner. */
   relation: assetOutcomeRelation.optional(),
   corrected_reason: assetCorrectedReason.nullable().optional(),
-  /** Defaults to the caller; another user's id needs team admin. */
+  /** Defaults to the caller; another user's id needs a team admin or reviewer. */
   consumer_user_id: nonEmpty.optional(),
+  /** The tool-call id this outcome is about. Required for the row to be trusted. */
+  call_id: nonEmpty.nullable().optional(),
+  /** Recorder's idempotency key; a redelivery returns the row on file. */
+  event_id: nonEmpty.nullable().optional(),
   consumer_agent_id: nonEmpty.nullable().optional(),
   task_id: nonEmpty.nullable().optional(),
   run_id: nonEmpty.nullable().optional(),
@@ -482,10 +489,17 @@ export const assetOutcomeListSchema = z
     states: z.array(assetOutcomeState).optional(),
     consumer_user_id: nonEmpty.optional(),
     owner_user_id: nonEmpty.optional(),
+    trusted: z.boolean().optional(),
     occurred_after: z.string().datetime().optional(),
     occurred_before: z.string().datetime().optional(),
   })
   .merge(paginationInputSchema);
+export const assetGateSubmitSchema = z.object({
+  asset_id: nonEmpty,
+  /** Take a pending request back; admins and reviewers stop seeing a private candidate. */
+  withdraw: z.boolean().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
 export const assetGateEvaluateSchema = z.object({
   asset_id: nonEmpty,
   /** Write status / confidence / metadata_json.gate (default true); false = decide only. */

@@ -17,6 +17,7 @@ import {
   checkPermission,
   canBindAsset,
   roleDefaultCovers,
+  reviewRequested,
   type PermCheckResult,
   type PermCheckLogger,
 } from "./permission-checker.js";
@@ -30,7 +31,7 @@ import {
   type MemorySystemUserConfig,
 } from "../system-user.js";
 import { resolveUserId } from "./resolve-user-id.js";
-import { decideAsset, mergeGateIntoMetadata } from "./asset-gate.js";
+import { decideAsset, mergeGateIntoMetadata, gateOf } from "./asset-gate.js";
 import type { V3AuthContext } from "../router/auth.js";
 import { DEFAULT_INSTANCE_ID, DEFAULT_AUTH_PROVIDER } from "../constants.js";
 import {
@@ -56,6 +57,7 @@ import type {
   AppendParticipationLogInput,
   ParticipationLogFilter,
   AssetEntity,
+  AssetReadPurpose,
   FixedAssetBindingEntity,
   AgentFixedAssetSummary,
   AgentFixedAssetSummaryResult,
@@ -204,6 +206,8 @@ export interface CheckPermissionParams {
   asset_id: string;
   action: Permission;
   agent_id?: string;
+  /** `use` = the model's path (admitted assets only); `manage` (default) = the human's. */
+  purpose?: AssetReadPurpose;
 }
 
 export interface ListAccessibleAssetsParams {
@@ -220,11 +224,25 @@ export interface ListAccessibleAssetsParams {
    * 目的：让前端从 HTTP 响应上就拿不到不需要的数据（安全 + 减小载荷）。
    */
   visibility?: AssetEntity["visibility"] | AssetEntity["visibility"][];
+  /** `use` = only admitted assets, whoever owns them; `manage` (default) = what the caller may see as a person. */
+  purpose?: AssetReadPurpose;
   limit?: number;
   offset?: number;
 }
 
 const FILTERED_STATUSES: AssetStatus[] = ["archived", "deprecated", "failed"];
+
+/** An outcome carries evidence when its evidence_json is a non-empty object or array. */
+function hasEvidence(evidenceJson: string | undefined | null): boolean {
+  if (!evidenceJson) return false;
+  try {
+    const v = JSON.parse(evidenceJson) as unknown;
+    if (Array.isArray(v)) return v.length > 0;
+    return !!v && typeof v === "object" && Object.keys(v as object).length > 0;
+  } catch {
+    return false;
+  }
+}
 
 export interface MetadataQuotaLimits {
   maxUsersPerInstance: number;
@@ -1107,6 +1125,68 @@ export class MetadataService {
     return formatListResult({ items, total: page.total }, pagination);
   }
 
+  /**
+   * The management list (2026-09-08): what the caller may see as a person.
+   * Every asset goes through the permission check with purpose=manage — the
+   * owner sees their own, admins and reviewers see the candidates and
+   * rejections of the team, nobody sees another person's private asset
+   * unless its owner submitted it for review. `asset/list` used to return
+   * the whole team pool to any member, candidates and all.
+   */
+  async listAssetsForCaller(
+    teamId: string,
+    ctx: V3AuthContext,
+    pagination: PaginationParams = DEFAULT_PAGINATION,
+    filter?: AssetFilter,
+  ): Promise<PaginatedResult<AssetEntity>> {
+    const callerId = this.requireCallerId(ctx);
+    await this.requireActiveTeamMember(ctx, teamId);
+    const visible: AssetEntity[] = [];
+    let offset = 0;
+    const limit = 100;
+    while (true) {
+      const page = await this.store.listAssetsByTeam(teamId, { limit, offset }, filter);
+      for (const asset of page.items) {
+        const perm = await this.checkAssetPermission({ user_id: callerId, asset_id: asset.asset_id, action: "read", purpose: "manage" });
+        if (perm.allowed) visible.push(asset);
+      }
+      if (offset + page.items.length >= page.total) break;
+      offset += limit;
+    }
+    return paginateArray(visible, pagination);
+  }
+
+  /** One asset on the management path: the caller must be able to read it. */
+  async getAssetForCaller(assetId: string, ctx: V3AuthContext): Promise<AssetEntity> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.assertManageRead(ctx, asset);
+    return asset;
+  }
+
+  /** Throws unless the caller may read the asset on the management path. */
+  private async assertManageRead(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {
+    const callerId = this.requireCallerId(ctx);
+    const perm = await this.checkAssetPermission({ user_id: callerId, asset_id: asset.asset_id, action: "read", purpose: "manage" });
+    if (!perm.allowed) throw new MetadataError("permission_denied", `asset ${asset.asset_id} is not readable by the caller (${perm.reason})`);
+  }
+
+  /**
+   * For the skill data plane (2026-09-08): may this user read these skills
+   * for this purpose? Skill id = asset id by convention. A skill with no
+   * asset row is unregistered — it never passed the gate — and is denied on
+   * the model path with that reason.
+   */
+  async decideAssetReads(params: { user_id: string; asset_ids: string[]; purpose: AssetReadPurpose; agent_id?: string }): Promise<Map<string, { allowed: boolean; reason: string }>> {
+    const out = new Map<string, { allowed: boolean; reason: string }>();
+    for (const id of new Set(params.asset_ids)) {
+      const asset = await this.getAssetById(id);
+      if (!asset) { out.set(id, { allowed: params.purpose !== "use", reason: "unregistered" }); continue; }
+      out.set(id, await this.checkAssetPermission({ user_id: params.user_id, asset_id: id, action: "read", purpose: params.purpose, agent_id: params.agent_id }));
+    }
+    return out;
+  }
+
   async touchAssetUsage(assetId: string): Promise<void> {
     if (!(await this.getAssetById(assetId))) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.store.touchAssetUsage(assetId);
@@ -1525,8 +1605,9 @@ export class MetadataService {
       return { allowed: false, reason: "asset_not_available" };
     }
 
-    // owner 短路，无需查成员/ACL
-    if (asset.owner_user_id === userId) {
+    // owner 短路，无需查成员/ACL。模型路径（purpose=use）不短路：准入看资产不看人，
+    // owner 自己的候选/被拒资产也不能进上下文，由 checkPermission 第 1b 步判。
+    if (params.purpose !== "use" && asset.owner_user_id === userId) {
       return { allowed: true, reason: "owner" };
     }
 
@@ -1541,6 +1622,7 @@ export class MetadataService {
       action,
       aclRecords: [],
       agentId: params.agent_id,
+      purpose: params.purpose,
       logger: this.logger,
     });
     if (fast.allowed) return fast;
@@ -1557,6 +1639,7 @@ export class MetadataService {
       action,
       aclRecords,
       agentId: params.agent_id,
+      purpose: params.purpose,
       logger: this.logger,
     });
   }
@@ -1607,6 +1690,8 @@ export class MetadataService {
         for (const asset of page.items) {
           if (seen.has(asset.asset_id)) continue;
           if (FILTERED_STATUSES.includes(asset.status)) continue;
+          // 模型路径只列已准入的；候选、草稿在这里就剔掉（checkPermission 1b 会再判一次）
+          if (params.purpose === "use" && asset.status !== "approved") continue;
           // visibility 白名单过滤（在权限判定前先剔除，节省 checkAssetPermission 开销）
           if (visFilter && !visFilter.has(asset.visibility)) continue;
           const perm = await this.checkAssetPermission({
@@ -1614,6 +1699,7 @@ export class MetadataService {
             asset_id: asset.asset_id,
             action,
             agent_id: params.agent_id,
+            purpose: params.purpose,
           });
           if (perm.allowed) {
             seen.add(asset.asset_id);
@@ -1872,32 +1958,115 @@ export class MetadataService {
   // asset, rather than in a script beside the product.
 
   /** Record an outcome. The consumer defaults to the caller; naming another user needs team admin. */
+  /**
+   * Record what happened after an asset was used (2026-09-08 rules):
+   *
+   *   - the consumer defaults to the caller; naming someone else takes a
+   *     team admin or reviewer;
+   *   - `relation` is derived here from consumer vs. owner — the caller's
+   *     value, if any, is discarded;
+   *   - `trusted` is derived here, never taken from the caller: the
+   *     submitter is an admin or reviewer, and the row carries a call id,
+   *     the asset version and evidence. Anything else is recorded and
+   *     marked untrusted with the reasons, and the gate does not read it;
+   *   - `event_id` makes delivery idempotent: the row already on file for
+   *     it comes back, nothing is added;
+   *   - the gate re-runs only when a trusted row was added.
+   */
   async appendAssetOutcomeForCaller(
-    input: Omit<AppendAssetOutcomeInput, "consumer_user_id"> & { consumer_user_id?: string },
+    input: Omit<AppendAssetOutcomeInput, "consumer_user_id" | "trusted" | "untrusted_reason" | "submitted_by_user_id" | "submitted_role"> & { consumer_user_id?: string },
     ctx: V3AuthContext,
     opts: { evaluate?: boolean } = {},
-  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null }> {
-    await this.requireActiveTeamMember(ctx, input.team_id);
+  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null; duplicate: boolean }> {
+    const member = await this.requireActiveTeamMember(ctx, input.team_id);
     const callerId = this.requireCallerId(ctx);
+    const reviewerRole = member.role === "admin" || member.role === "reviewer";
     const consumer = input.consumer_user_id ?? callerId;
-    if (consumer !== callerId) await this.assertCallerIsTeamAdmin(ctx, input.team_id);
+    if (consumer !== callerId && !reviewerRole) {
+      throw new MetadataError("permission_denied", "naming another consumer takes a team admin or reviewer");
+    }
     const asset = await this.getAssetById(input.asset_id);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${input.asset_id}`);
     if (asset.team_id !== input.team_id) throw new MetadataError("team_mismatch", `asset ${input.asset_id} belongs to team ${asset.team_id}, not ${input.team_id}`);
-    const relation = input.relation ?? (asset.owner_user_id === consumer ? "self" : "cross_user");
-    const outcome = await this.store.appendAssetOutcome({ ...input, consumer_user_id: consumer, relation });
-    const gate = opts.evaluate === false ? null : (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision;
-    return { outcome, gate };
+
+    if (input.event_id) {
+      const existing = await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id);
+      if (existing) return { outcome: existing, gate: null, duplicate: true };
+    }
+
+    const relation: AssetOutcomeEntity["relation"] = asset.owner_user_id === consumer ? "self" : "cross_user";
+    const why: string[] = [];
+    if (!reviewerRole) why.push(`submitted by a ${member.role}, not an admin or reviewer`);
+    if (!input.call_id) why.push("no call_id");
+    if (input.asset_version === null || input.asset_version === undefined) why.push("no asset_version");
+    if (!hasEvidence(input.evidence_json)) why.push("no evidence");
+    const trusted = why.length === 0;
+
+    let outcome: AssetOutcomeEntity;
+    try {
+      outcome = await this.store.appendAssetOutcome({
+        ...input, consumer_user_id: consumer, relation, trusted,
+        untrusted_reason: trusted ? null : why.join("; "),
+        submitted_by_user_id: callerId, submitted_role: member.role,
+      });
+    } catch (err) {
+      // Two deliveries of one event racing: the first won, return its row.
+      const raced = input.event_id ? await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id) : null;
+      if (raced) return { outcome: raced, gate: null, duplicate: true };
+      throw err;
+    }
+    const gate = trusted && opts.evaluate !== false ? (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision : null;
+    return { outcome, gate, duplicate: false };
   }
 
+  /**
+   * Reading outcomes follows the asset (2026-09-08): by asset, the caller
+   * must be able to read that asset on the management path; by author, the
+   * caller is that author or an admin/reviewer; team-wide or by another
+   * consumer, an admin/reviewer; by oneself as consumer, anyone.
+   */
   async listAssetOutcomesForCaller(
     filter: AssetOutcomeFilter,
     ctx: V3AuthContext,
     pagination: PaginationParams = DEFAULT_PAGINATION,
   ): Promise<PaginatedResult<AssetOutcomeEntity>> {
-    await this.requireActiveTeamMember(ctx, filter.team_id);
+    const member = await this.requireActiveTeamMember(ctx, filter.team_id);
+    const callerId = this.requireCallerId(ctx);
+    const reviewerRole = member.role === "admin" || member.role === "reviewer";
+    if (filter.asset_id) {
+      const asset = await this.getAssetById(filter.asset_id);
+      if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${filter.asset_id}`);
+      await this.assertManageRead(ctx, asset);
+    } else if (filter.owner_user_id) {
+      if (filter.owner_user_id !== callerId && !reviewerRole) throw new MetadataError("permission_denied", "another author's outcomes take a team admin or reviewer");
+    } else if (filter.consumer_user_id !== callerId && !reviewerRole) {
+      throw new MetadataError("permission_denied", "listing outcomes across the team takes a team admin or reviewer");
+    }
     const page = await this.store.listAssetOutcomes(filter, pagination);
     return wrapPaginated(page.items, page.total, pagination);
+  }
+
+  /**
+   * The owner asks the team to review a candidate (2026-09-08). Until this
+   * is on file a private candidate is the owner's alone: admins and
+   * reviewers do not see it in the queue or through gate/get. Withdrawing
+   * takes it back out of their sight.
+   */
+  async submitAssetForReviewForCaller(assetId: string, ctx: V3AuthContext, input: { withdraw?: boolean; note?: string | null } = {}): Promise<{ asset: AssetEntity; review_request: Record<string, unknown> }> {
+    const asset = await this.assertCallerIsAssetOwner(ctx, assetId);
+    if (asset.status !== "candidate") throw new MetadataError("invalid_state", `only a candidate can be submitted for review; ${assetId} is ${asset.status}`);
+    const callerId = this.requireCallerId(ctx);
+    const now = new Date().toISOString();
+    const gate = gateOf(asset.metadata_json);
+    const prev = (gate.review_request && typeof gate.review_request === "object" ? gate.review_request : {}) as Record<string, unknown>;
+    const review_request: Record<string, unknown> = input.withdraw
+      ? { ...prev, withdrawn_at: now, withdrawn_by: callerId }
+      : { requested_at: now, requested_by: callerId, note: input.note ?? null, asset_version: asset.version };
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    m.gate = { ...gate, review_request };
+    const updated = await this.updateAsset(asset.asset_id, { metadata_json: JSON.stringify(m) });
+    return { asset: updated, review_request };
   }
 
   /**
@@ -1927,11 +2096,12 @@ export class MetadataService {
     return { decision, applied: true, asset: updated };
   }
 
-  /** Owner, team admin or reviewer may run the gate by hand. */
+  /** Owner, team admin or reviewer may run the gate by hand — on an asset they may read. */
   async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean; asOf?: string | null } = {}) {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.assertCallerMayReview(ctx, asset);
+    await this.assertManageRead(ctx, asset);
     return this.evaluateAssetGate(assetId, opts);
   }
 
@@ -1957,6 +2127,7 @@ export class MetadataService {
     if (asset.owner_user_id === callerId) {
       throw new MetadataError("permission_denied", "an author may not review their own asset");
     }
+    await this.assertManageRead(ctx, asset);
     const status: AssetStatus = input.decision === "admit" ? "approved" : "failed";
     const review = { decision: input.decision, status, by: callerId, at: new Date().toISOString(), note: input.note ?? null };
     let m: Record<string, unknown> = {};
@@ -1968,21 +2139,17 @@ export class MetadataService {
   }
 
   /** The decision on file (metadata_json.gate), or null when the gate has not run. */
-  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: unknown }> {
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: unknown; review_request: unknown; review_requested: boolean }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.requireActiveTeamMember(ctx, asset.team_id);
-    let gate: GateDecision | null = null;
-    let review: unknown = null;
-    try {
-      const m = JSON.parse(asset.metadata_json || "{}") as { gate?: GateDecision & { review?: unknown } };
-      gate = m.gate && typeof m.gate === "object" && "decision" in m.gate ? m.gate : null;
-      review = m.gate && typeof m.gate === "object" && "review" in m.gate ? m.gate.review : null;
-    } catch {
-      gate = null;
-    }
-    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, created_at: asset.created_at, updated_at: asset.updated_at,
-      status: asset.status, confidence: asset.confidence ?? null, gate, review };
+    // The decision, its reasons and the evidence ids follow the asset's own
+    // permission (2026-09-08): hidden in a list means hidden here too.
+    await this.assertManageRead(ctx, asset);
+    const g = gateOf(asset.metadata_json);
+    const gate = "decision" in g ? (g as unknown as GateDecision) : null;
+    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, version: asset.version, created_at: asset.created_at, updated_at: asset.updated_at,
+      status: asset.status, confidence: asset.confidence ?? null, gate, review: g.review ?? null, review_request: g.review_request ?? null, review_requested: reviewRequested(asset) };
   }
 
   private async assertCallerMayReview(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {
@@ -2028,11 +2195,40 @@ export class MetadataService {
     return this.listParticipationLogs(filter, pagination);
   }
 
+  /**
+   * The audit fields — `status`, `confidence`, `metadata_json.gate` — are
+   * written by the gate and the review routes only (2026-09-08). Through
+   * create and update a plain member cannot set them at all; a team admin
+   * may set status / confidence (a management act) but never the gate
+   * object, whose on-file value is carried over untouched. A member's
+   * manually registered asset enters as a candidate, like an extracted one.
+   */
+  private async guardAuditFields<T extends { status?: AssetEntity["status"]; confidence?: number | null; metadata_json?: string | null }>(
+    input: T,
+    role: TeamMemberEntity["role"],
+    existing: AssetEntity | null,
+  ): Promise<T> {
+    const out = { ...input };
+    if (role !== "admin") {
+      if (out.status !== undefined) throw new MetadataError("permission_denied", "audit_fields_protected: status is written by the admission gate or a review, not through asset create/update");
+      if (out.confidence !== undefined) throw new MetadataError("permission_denied", "audit_fields_protected: confidence is written by the admission gate, not through asset create/update");
+      if (!existing) out.status = "candidate";
+    }
+    if (out.metadata_json !== undefined && out.metadata_json !== null) {
+      let m: Record<string, unknown> = {};
+      try { m = JSON.parse(out.metadata_json) as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+      const onFile = existing ? gateOf(existing.metadata_json) : {};
+      if (Object.keys(onFile).length > 0) m.gate = onFile; else delete m.gate;
+      out.metadata_json = JSON.stringify(m);
+    }
+    return out;
+  }
+
   async createAssetForCaller(input: CreateAssetInput, ctx: V3AuthContext): Promise<AssetEntity> {
     await this.assertTeamExists(input.team_id);
-    await this.requireActiveTeamMember(ctx, input.team_id);
+    const member = await this.requireActiveTeamMember(ctx, input.team_id);
     this.assertCallerIsResourceOwner(ctx, input.owner_user_id);
-    return this.createAsset(input);
+    return this.createAsset(await this.guardAuditFields(input, member.role, null));
   }
 
   async updateAssetForCaller(
@@ -2040,8 +2236,9 @@ export class MetadataService {
     patch: Partial<AssetEntity>,
     ctx: V3AuthContext,
   ): Promise<AssetEntity> {
-    await this.assertCallerIsAssetOwner(ctx, assetId);
-    return this.updateAsset(assetId, patch);
+    const asset = await this.assertCallerIsAssetOwner(ctx, assetId);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    return this.updateAsset(assetId, await this.guardAuditFields(patch, member.role, asset));
   }
 
   async deleteAssetsForCaller(assetIds: string[], ctx: V3AuthContext): Promise<BatchDeleteResult> {

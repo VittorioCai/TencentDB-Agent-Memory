@@ -76,6 +76,8 @@ export const META_ACTIONS = [
   'asset/gate/get',
   'asset/gate/evaluate',
   'asset/gate/review',
+  // The owner's request for team review of a private candidate (2026-09-08).
+  'asset/gate/submit',
   'agent-fixed-asset/set',
   'agent-fixed-asset/list',
   'agent-fixed-asset/list-with-detail',

@@ -242,7 +242,9 @@ const routeTable: Record<string, Handler> = {
 
   // AssetOutcome / admission gate
   [`${V3_PREFIX}/asset/outcome/append`]: bind(S.assetOutcomeAppendSchema, (d, c, s) => {
-    const { evaluate, ...input } = d;
+    // relation is derived by the service; the caller's value is dropped here.
+    const { evaluate, relation: _relation, ...input } = d;
+    void _relation;
     return s.appendAssetOutcomeForCaller(input, c, { evaluate: evaluate ?? true });
   }),
   [`${V3_PREFIX}/asset/outcome/list`]: bind(S.assetOutcomeListSchema, (d, c, s) => {
@@ -251,6 +253,7 @@ const routeTable: Record<string, Handler> = {
     if (d.states) filter.states = d.states;
     if (d.consumer_user_id) filter.consumer_user_id = d.consumer_user_id;
     if (d.owner_user_id) filter.owner_user_id = d.owner_user_id;
+    if (d.trusted !== undefined) filter.trusted = d.trusted;
     if (d.occurred_after) filter.occurred_after = d.occurred_after;
     if (d.occurred_before) filter.occurred_before = d.occurred_before;
     return s.listAssetOutcomesForCaller(filter, c, resolvePagination(d));
@@ -262,18 +265,21 @@ const routeTable: Record<string, Handler> = {
   [`${V3_PREFIX}/asset/gate/review`]: bind(S.assetGateReviewSchema, (d, c, s) =>
     s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null }),
   ),
+  [`${V3_PREFIX}/asset/gate/submit`]: bind(S.assetGateSubmitSchema, (d, c, s) =>
+    s.submitAssetForReviewForCaller(d.asset_id, c, { withdraw: d.withdraw, note: d.note ?? null }),
+  ),
 
   // Asset
   [`${V3_PREFIX}/asset/create`]: bind(S.assetCreateSchema, (d, c, s) => s.createAssetForCaller(d, c)),
-  [`${V3_PREFIX}/asset/get`]: bind(S.assetGetSchema, async (d, _c, s) => orNotFound(await s.getAssetById(d.asset_id), "asset_not_found", d.asset_id)),
+  [`${V3_PREFIX}/asset/get`]: bind(S.assetGetSchema, (d, c, s) => s.getAssetForCaller(d.asset_id, c)),
   [`${V3_PREFIX}/asset/update`]: bind(S.assetUpdateSchema, (d, c, s) => {
     const { asset_id, ...patch } = d;
     return s.updateAssetForCaller(asset_id, patch, c);
   }),
   [`${V3_PREFIX}/asset/delete`]: bind(S.assetDeleteSchema, (d, c, s) => s.deleteAssetsForCaller(d.asset_ids, c)),
-  [`${V3_PREFIX}/asset/list`]: bind(S.assetListSchema, (d, _c, s) => {
+  [`${V3_PREFIX}/asset/list`]: bind(S.assetListSchema, (d, c, s) => {
     const { team_id, limit, offset, ...filter } = d;
-    return s.listAssetsByTeam(team_id, resolvePagination({ limit, offset }), filter);
+    return s.listAssetsForCaller(team_id, c, resolvePagination({ limit, offset }), filter);
   }),
   [`${V3_PREFIX}/asset/list-accessible`]: bind(S.assetListAccessibleSchema, (d, _c, s) =>
     s.listAccessibleAssets(d)),

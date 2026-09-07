@@ -387,17 +387,15 @@ REACH_ARG=""
   ${REACH_ARG:+"$REACH_ARG"} \
   --out="$RUN_DIR/outcome-events.jsonl" > "$RUN_DIR/outcome.md" 2>&1) \
   || { warn "judge-outcome failed; see $RUN_DIR/outcome.md"; : > "$RUN_DIR/outcome-events.jsonl"; }
-# The outcomes go into the product (Core's meta_asset_outcomes) as the
-# consumer who produced them, with evaluate=false: recorded now, acted on only
-# when a batch ends and --apply runs. Replays (CAPTURE_FROM) record nothing —
-# their outcomes are already on file under the original run.
+# The outcomes go into the product (Core's meta_asset_outcomes), recorded by
+# the harness's admin key and naming the consumer who produced them
+# (2026-09-08: Core trusts a row only when an admin or reviewer submits it
+# with the call id, the asset version and evidence; a consumer's own report
+# is kept and ignored). evaluate=false: recorded now, acted on only when a
+# batch ends and --apply runs. Replays (CAPTURE_FROM) record nothing — their
+# outcomes are already on file under the original run.
 if [[ -z "${CAPTURE_FROM:-}" && -s "$RUN_DIR/outcome-events.jsonl" && "${GATE_MECHANISM:-core}" != "visibility" ]]; then
-  case "$IDENTITY" in
-    a) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key" ;;
-    c) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key-c" ;;
-    *) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key-b" ;;
-  esac
-  GATE_CONSUMER_KEY_FILE="$CONSUMER_KEY" bash "$EVAL/gate/core-gate.sh" --sync "$RUN_DIR" --baseline "$GATE_BASELINE" \
+  GATE_SUBMITTER_KEY_FILE="${GATE_SUBMITTER_KEY_FILE:-$REPO_ROOT/deploy/global-images/.admin-key}" bash "$EVAL/gate/core-gate.sh" --sync "$RUN_DIR" --baseline "$GATE_BASELINE" \
     > "$RUN_DIR/core-sync.log" 2>&1 || warn "outcomes could not be recorded in Core; see $RUN_DIR/core-sync.log"
 fi
 (cd "$REPO_ROOT" && node "$EVAL/gate/decide.mjs" \

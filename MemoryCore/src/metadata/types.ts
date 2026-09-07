@@ -504,6 +504,30 @@ export interface AssetOutcomeEntity {
   source: string;
   /** Recorder-defined evidence (proof refs, call ids, probe records), JSON text. */
   evidence_json: string;
+  /**
+   * The one call this row is about — the tool-call id the recorder captured
+   * — when known. Two real calls with the same arguments carry different
+   * ids and are two rows; the gate counts calls, and a later row about the
+   * same call supersedes the earlier one (a `used` followed by a `validated`).
+   */
+  call_id: string | null;
+  /**
+   * Recorder-chosen idempotency key, unique per team. Redelivering an event
+   * returns the row already on file instead of adding a second one, so a
+   * retry never adds weight. Null when the recorder chose none.
+   */
+  event_id: string | null;
+  /**
+   * Whether the gate may act on this row. Derived by the service from who
+   * submitted it and what it carries — a team admin or reviewer, naming the
+   * consumer, with the call id, the asset version and evidence — and never
+   * taken from the caller. An untrusted row is kept as a record and is
+   * ignored by the gate, the confidence and the author statistics alike.
+   */
+  trusted: boolean;
+  untrusted_reason: string | null;
+  submitted_by_user_id: string | null;
+  submitted_role: string | null;
   occurred_at: string;
   created_at: string;
 }
@@ -522,6 +546,13 @@ export interface AppendAssetOutcomeInput {
   source?: string;
   evidence_json?: string;
   occurred_at?: string;
+  call_id?: string | null;
+  event_id?: string | null;
+  /** Set by the service, never by the caller (the router drops them). */
+  trusted?: boolean;
+  untrusted_reason?: string | null;
+  submitted_by_user_id?: string | null;
+  submitted_role?: string | null;
 }
 
 export interface AssetOutcomeFilter {
@@ -529,11 +560,22 @@ export interface AssetOutcomeFilter {
   asset_id?: string;
   states?: AssetOutcomeState[];
   consumer_user_id?: string;
+  /** Only rows the gate may act on (true) or only the ignored ones (false). */
+  trusted?: boolean;
+  event_id?: string;
   /** Outcomes for assets owned by this user (join on meta_assets.owner_user_id). */
   owner_user_id?: string;
   occurred_after?: string;
   occurred_before?: string;
 }
+
+/**
+ * Why an asset is being read. `use` is the model's everyday path (bridge,
+ * injection, get): only an admitted asset passes, whoever owns it. `manage`
+ * is the human's path (panel, review queue): the owner, admins and reviewers
+ * also see candidates and rejections, within the visibility rules.
+ */
+export type AssetReadPurpose = "use" | "manage";
 
 export type GateDecisionKind = "admit" | "reject" | "pending";
 export type ReviewPriority = "high" | "normal" | "low";
@@ -555,16 +597,25 @@ export interface GateDecision {
    * no outcomes. A description of the evidence on file, not a prior.
    */
   confidence: number | null;
+  /** The denominator behind `confidence`: cross-person calls that validated or were corrected(wrong/stale). */
+  confidence_n: number;
+  /** Which rows were allowed to decide: only rows the service marked trusted. */
+  evidence_policy: "trusted-only";
   reasons: string[];
-  evidence_refs: Array<{ outcome_id: string; state: AssetOutcomeState; relation: AssetOutcomeRelation }>;
+  evidence_refs: Array<{ outcome_id: string; state: AssetOutcomeState; relation: AssetOutcomeRelation; call_id?: string | null }>;
   signals: {
     online: {
+      /** Counts are per call (rows about the same call collapsed to the latest), trusted rows only. */
       validated: number;
       corrected: number;
       used: number;
       cross_user_validated: number;
       distinct_consumers: number;
       distinct_tasks: number;
+      /** Calls the counts above are drawn from. */
+      calls: number;
+      /** Rows on file the gate did not read because they are not trusted. */
+      untrusted_ignored: number;
     };
     author: {
       user_id: string;

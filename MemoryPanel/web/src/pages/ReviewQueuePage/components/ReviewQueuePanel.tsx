@@ -171,10 +171,14 @@ export default function ReviewQueuePanel() {
                 if (!g) return <Text theme="label">{t('review.noDecision')}</Text>;
                 return (
                   <div>
-                    <Text parent="div">{t(`review.decision.${g.decision}`)}{g.confidence != null ? ` · ${t('review.evidenceConfidence', { c: g.confidence })}` : ''}</Text>
+                    <Text parent="div">{t(`review.decision.${g.decision}`)}{g.confidence != null ? ` · ${t('review.evidenceConfidence', { c: g.confidence, n: g.confidence_n ?? '?' })}` : ''}</Text>
                     <Text parent="div" theme="label" style={{ fontSize: 12 }}>
                       {t('review.outcomes', { v: g.signals.online.validated, c: g.signals.online.corrected })} · {g.rules_version}
                     </Text>
+                    {(g.signals.online.untrusted_ignored ?? 0) > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.untrustedIgnored', { n: g.signals.online.untrusted_ignored })}</Text>
+                    )}
+                    {r.gate?.review_requested && <Tag theme="primary">{t('review.submittedByOwner')}</Tag>}
                     {r.gate?.review && (
                       <Text parent="div" theme="label" style={{ fontSize: 12 }}>
                         {t('review.reviewedBy', { d: t(`review.decision.${r.gate.review.decision}`), by: r.gate.review.by })}

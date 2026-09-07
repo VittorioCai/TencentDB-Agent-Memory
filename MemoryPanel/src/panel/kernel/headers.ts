@@ -5,3 +5,5 @@
 export const META_HEADER_SERVICE_ID = 'x-tdai-service-id';
 export const META_HEADER_USER_KEY = 'x-tdai-user-key';
 export const META_HEADER_REQUEST_ID = 'x-request-id';
+/** Skill data plane (2026-09-08): the panel reads as a person (`manage`); without it the kernel treats a read as the model's (`use`, admitted assets only). */
+export const META_HEADER_READ_PURPOSE = 'x-tdai-read-purpose';

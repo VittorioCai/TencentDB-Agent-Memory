@@ -9,6 +9,7 @@ import {
   META_HEADER_REQUEST_ID,
   META_HEADER_SERVICE_ID,
   META_HEADER_USER_KEY,
+  META_HEADER_READ_PURPOSE,
 } from './headers.js';
 
 export { mapHttpStatusFromEnvelopeCode };
@@ -93,6 +94,8 @@ export interface MetaFetchConfig {
   logger?: Logger;
   /** 透传为 x-request-id；缺省则生成 UUID。 */
   requestId?: string;
+  /** x-tdai-read-purpose；面板的 skill 读取为 'manage'。 */
+  readPurpose?: 'use' | 'manage';
 }
 
 interface RawEnvelope<T> {
@@ -149,6 +152,7 @@ export async function executeMetaFetch<T>(
     };
     if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
     if (cfg.userKey) headers[META_HEADER_USER_KEY] = cfg.userKey;
+    if (cfg.readPurpose) headers[META_HEADER_READ_PURPOSE] = cfg.readPurpose;
     const resp = await fetch(`${base}${path}`, {
       method: 'POST',
       headers,

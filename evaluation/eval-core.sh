@@ -15,9 +15,18 @@
 # before the gate landed. If it is not, the mount would mix two versions,
 # and the script refuses.
 #
+# Since 2026-09-08 three gateway files are mounted beside the directory —
+# `src/gateway/skill-handlers.ts`, `v2-schemas.ts`, `v2-router.ts` — because
+# the gate now sits on the skill data plane too: every model read (get,
+# get-by-name, files/read, list, search, listing) passes the asset registry,
+# and only an admitted skill comes back on the model's path. The same
+# parity rule applies per file: the image's copy must equal a committed
+# version of ours.
+#
 # The SQLite schema gains `meta_asset_outcomes` on the next start
-# (`CREATE TABLE IF NOT EXISTS`); the data volume is kept, so nothing is lost
-# and `disable` leaves the extra table in place, unused.
+# (`CREATE TABLE IF NOT EXISTS`; the 2026-09-08 columns are added by an
+# ALTER migration); the data volume is kept, so nothing is lost and
+# `disable` leaves the extra table in place, unused.
 #
 # Usage:
 #   bash evaluation/eval-core.sh enable
@@ -30,6 +39,9 @@ CONTAINER="${CONTAINER:-tdai-memory-core}"
 PATCHED_DIR="$REPO_ROOT/MemoryCore/src/metadata"
 IN_IMAGE_DIR="/app/src/metadata"
 MARKER_FILE="service/asset-gate.ts"
+# Gateway files mounted one by one (relative to MemoryCore/src and /app/src).
+GATEWAY_FILES=(gateway/skill-handlers.ts gateway/v2-schemas.ts gateway/v2-router.ts)
+GATEWAY_MARKER="admissionFilter"
 
 die() { echo "[error] $*" >&2; exit 1; }
 ok()  { echo "[ok] $*"; }
@@ -102,6 +114,27 @@ mounted_now() {
   read_config '{{range .Mounts}}{{if eq .Destination "'"$IN_IMAGE_DIR"'"}}{{.Source}}{{end}}{{end}}'
 }
 
+# One gateway file: the image's copy must equal a committed version of ours
+# (any commit in this branch's history of the file), unless it is already
+# our mounted copy.
+image_file_matches_committed() {  # rel path under src
+  local rel="$1" tmp
+  tmp="$(mktemp)"
+  if ! docker cp "$CONTAINER:/app/src/$rel" "$tmp" 2>/dev/null; then rm -f "$tmp"; return 0; fi
+  if grep -q "$GATEWAY_MARKER" "$tmp" 2>/dev/null && [[ "$rel" == "gateway/skill-handlers.ts" ]]; then rm -f "$tmp"; return 0; fi
+  local c
+  for c in $(git -C "$REPO_ROOT" log --format=%H -- "MemoryCore/src/$rel"); do
+    if git -C "$REPO_ROOT" show "$c:MemoryCore/src/$rel" 2>/dev/null | diff -q - "$tmp" >/dev/null 2>&1; then rm -f "$tmp"; return 0; fi
+  done
+  echo "[warn] the image's src/$rel matches no committed version of this branch's file."
+  echo "[warn] inspect: docker cp $CONTAINER:/app/src/$rel /tmp/img.ts && diff /tmp/img.ts $REPO_ROOT/MemoryCore/src/$rel"
+  rm -f "$tmp"; return 1
+}
+
+gateway_mounted_now() {
+  read_config '{{range .Mounts}}{{if eq .Destination "/app/src/gateway/skill-handlers.ts"}}{{.Source}}{{end}}{{end}}'
+}
+
 case "${1:-status}" in
   enable)
     [[ -f "$PATCHED_DIR/$MARKER_FILE" ]] || die "gate source not found: $PATCHED_DIR/$MARKER_FILE"
@@ -111,14 +144,29 @@ case "${1:-status}" in
       git -C "$REPO_ROOT" status --short -- MemoryCore/src/metadata
       die "commit or stash them first — a run must be traceable to a commit"
     fi
-    recreate -v "$PATCHED_DIR:$IN_IMAGE_DIR:ro"
+    # The gateway files: same guards, per file.
+    MOUNT_ARGS=(-v "$PATCHED_DIR:$IN_IMAGE_DIR:ro")
+    for rel in "${GATEWAY_FILES[@]}"; do
+      [[ -f "$REPO_ROOT/MemoryCore/src/$rel" ]] || die "gateway source not found: MemoryCore/src/$rel"
+      image_file_matches_committed "$rel" || die "refusing to enable"
+      if [[ -n "$(git -C "$REPO_ROOT" status --porcelain -- "MemoryCore/src/$rel")" ]]; then
+        die "MemoryCore/src/$rel has uncommitted changes; commit or stash them first — a run must be traceable to a commit"
+      fi
+      MOUNT_ARGS+=(-v "$REPO_ROOT/MemoryCore/src/$rel:/app/src/$rel:ro")
+    done
+    grep -q "$GATEWAY_MARKER" "$REPO_ROOT/MemoryCore/src/gateway/skill-handlers.ts" || die "skill-handlers.ts does not carry the admission filter"
+    recreate "${MOUNT_ARGS[@]}"
     # Prove the routes are there: an unauthenticated call to a gate route must
     # be refused for auth, not 404'd as an unknown path.
     code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${PORT}/v3/meta/asset/gate/get" \
       -H 'content-type: application/json' -H 'x-tdai-service-id: default' -d '{"asset_id":"x"}' || true)"
     [[ "$code" != "404" ]] || die "gate route answered 404 after enable; the mount did not take"
-    ok "gate mounted → /v3/meta/asset/outcome/{append,list}, /v3/meta/asset/gate/{evaluate,get} live (HTTP $code without a key)"
-    ok "source commit: $(git -C "$REPO_ROOT" log -1 --format=%h -- MemoryCore/src/metadata)"
+    code2="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${PORT}/v3/meta/asset/gate/submit" \
+      -H 'content-type: application/json' -H 'x-tdai-service-id: default' -d '{"asset_id":"x"}' || true)"
+    [[ "$code2" != "404" ]] || die "asset/gate/submit answered 404 after enable; the metadata mount did not take"
+    ok "gate mounted → /v3/meta/asset/outcome/{append,list}, /v3/meta/asset/gate/{evaluate,get,review,submit} live (HTTP $code without a key)"
+    ok "skill data plane mounted → ${GATEWAY_FILES[*]} (admission filter on get/get-by-name/files-read/list/search/listing)"
+    ok "source commit: $(git -C "$REPO_ROOT" log -1 --format=%h -- MemoryCore/src/metadata MemoryCore/src/gateway)"
     ;;
   disable)
     recreate
@@ -128,8 +176,10 @@ case "${1:-status}" in
     src="$(mounted_now)"
     if [[ -n "$src" ]]; then
       echo "gate:   mounted from ${src#/host_mnt}"
-      echo "commit: $(git -C "$REPO_ROOT" log -1 --format='%h %s' -- MemoryCore/src/metadata)"
-      [[ -z "$(git -C "$REPO_ROOT" status --porcelain -- MemoryCore/src/metadata)" ]] && echo "tree:   clean" || echo "tree:   UNCOMMITTED CHANGES in MemoryCore/src/metadata"
+      gw="$(gateway_mounted_now)"
+      [[ -n "$gw" ]] && echo "plane:  gateway files mounted (${GATEWAY_FILES[*]})" || echo "plane:  gateway files NOT mounted (image copies; skill reads are not admission-filtered)"
+      echo "commit: $(git -C "$REPO_ROOT" log -1 --format='%h %s' -- MemoryCore/src/metadata MemoryCore/src/gateway)"
+      [[ -z "$(git -C "$REPO_ROOT" status --porcelain -- MemoryCore/src/metadata MemoryCore/src/gateway)" ]] && echo "tree:   clean" || echo "tree:   UNCOMMITTED CHANGES in MemoryCore/src/metadata or src/gateway"
     else
       echo "gate:   not mounted (stock image source)"
     fi

@@ -154,6 +154,8 @@ export interface IMetadataStore {
 
   // ── AssetOutcome ──（资产使用结果；准入闸门只读它，不写）
   appendAssetOutcome(input: AppendAssetOutcomeInput): MaybePromise<AssetOutcomeEntity>;
+  /** The row already on file for a recorder's event_id, for idempotent delivery. */
+  getAssetOutcomeByEvent(teamId: string, eventId: string): MaybePromise<AssetOutcomeEntity | null>;
   listAssetOutcomes(
     filter: AssetOutcomeFilter,
     pagination?: PaginationParams | null,

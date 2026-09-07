@@ -208,6 +208,11 @@ export interface ListAccessibleAssetsInput {
    */
   visibility?: string;
   agent_id?: string;
+  /**
+   * `use` (2026-09-08): only admitted assets, whoever owns them — what the
+   * model may read. `manage` / omitted: what the person may see.
+   */
+  purpose?: "use" | "manage";
 }
 
 // ── NotFoundError ────────────────────────────────────────────────────────────
@@ -362,6 +367,7 @@ export class MetadataClient {
         action: input.action ?? "read",
         visibility: input.visibility,
         agent_id: input.agent_id,
+        purpose: input.purpose,
       },
       LIST_PAGE_SIZE,
     );

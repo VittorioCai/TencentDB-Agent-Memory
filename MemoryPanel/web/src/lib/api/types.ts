@@ -140,16 +140,21 @@ export interface GateDecision {
   decision: GateDecisionKind;
   status_target: 'approved' | 'failed' | 'candidate';
   confidence: number | null;
+  /** Denominator behind confidence: cross-person calls that validated or were corrected (2026-09-08). */
+  confidence_n?: number;
+  evidence_policy?: 'trusted-only';
   reasons: string[];
-  evidence_refs: Array<{ outcome_id: string; state: string; relation: string }>;
+  evidence_refs: Array<{ outcome_id: string; state: string; relation: string; call_id?: string | null }>;
   signals: {
-    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number };
+    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number };
     author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null };
   };
   review_priority: ReviewPriority | null;
   evidence_as_of?: string | null;
 }
 export interface HumanReview { decision: 'admit' | 'reject'; status: AssetStatus; by: string; at: string; note: string | null }
+/** The owner's request that the team review a candidate (2026-09-08). */
+export interface ReviewRequest { requested_at?: string; requested_by?: string; note?: string | null; asset_version?: number; withdrawn_at?: string; withdrawn_by?: string }
 export interface AssetGateView {
   asset_id: string;
   name: string;
@@ -160,8 +165,11 @@ export interface AssetGateView {
   updated_at: string;
   status: AssetStatus;
   confidence: number | null;
+  version?: number;
   gate: GateDecision | null;
   review: HumanReview | null;
+  review_request?: ReviewRequest | null;
+  review_requested?: boolean;
 }
 export interface AssetOutcome {
   id: string;

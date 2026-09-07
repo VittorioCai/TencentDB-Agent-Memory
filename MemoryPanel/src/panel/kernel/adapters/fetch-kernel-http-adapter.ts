@@ -24,6 +24,7 @@ export class FetchKernelHttpAdapter implements KernelHttpPort {
           userKey: cred.userKey,
           timeoutMs: cred.timeoutMs,
           requestId: cred.requestId,
+          readPurpose: cred.readPurpose,
           logger: this.logger,
         },
         path,

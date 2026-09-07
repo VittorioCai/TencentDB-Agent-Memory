@@ -423,5 +423,13 @@ export function formatZodError(error: z.ZodError): string {
 export const v2AuthContextSchema = z.object({
   apiKey: z.string().min(1),
   serviceId: z.string().min(1),
+  /**
+   * Why the skill data plane is being read (x-tdai-read-purpose, 2026-09-08).
+   * `manage` is sent by the control panel, whose user may see candidates
+   * and rejections; anything else — and no header at all, which is what
+   * the proxy's bridge and injector send — is the model's everyday `use`,
+   * where only an admitted asset passes.
+   */
+  readPurpose: z.enum(["use", "manage"]).optional(),
 });
 export type V2AuthContext = z.infer<typeof v2AuthContextSchema>;

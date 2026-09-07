@@ -41,6 +41,11 @@ CORE_URL="${CORE_URL:-http://localhost:8420}"
 SERVICE_ID="${SERVICE_ID:-default}"
 OWNER_KEY_FILE="${GATE_KEY_FILE:-$ENV_DIR/.topic4-user-key}"
 CONSUMER_KEY_FILE="${GATE_CONSUMER_KEY_FILE:-$ENV_DIR/.topic4-user-key-b}"
+# Who records outcomes (2026-09-08): a team admin or reviewer, naming the
+# consumer. Core marks a row trusted only then — and only with the call id,
+# the asset version and evidence attached — and the gate reads trusted rows
+# alone. A consumer's own report is kept on file and ignored.
+SUBMITTER_KEY_FILE="${GATE_SUBMITTER_KEY_FILE:-$ENV_DIR/.admin-key}"
 BASELINE="$SCRIPT_DIR/artifacts/gate_baseline.json"
 OUT=""; MODE=""; SYNC_DIR=""
 while [[ $# -gt 0 ]]; do
@@ -156,8 +161,11 @@ baseline_visibility() { python3 -c "import json;print(json.load(open('$BASELINE'
 sync_run() {  # run_dir → writes run_dir/core-outcomes.json, prints a line
   local dir="$1" events="$1/outcome-events.jsonl" rec="$1/core-outcomes.json"
   [[ -f "$events" ]] || { warn "no outcome-events.jsonl in $dir"; return 0; }
-  if [[ -f "$rec" ]]; then info "$(basename "$dir"): already synced ($(python3 -c "import json;print(len(json.load(open('$rec'))['posted']))" ) outcome(s)); skipping"; return 0; fi
-  [[ -f "$CONSUMER_KEY_FILE" ]] || die "consumer key not found: $CONSUMER_KEY_FILE"
+  if [[ -f "$rec" ]] && python3 -c "import json,sys; sys.exit(0 if json.load(open('$rec')).get('schema')=='core-outcomes-v2' else 1)"; then
+    info "$(basename "$dir"): already synced ($(python3 -c "import json;print(len(json.load(open('$rec'))['posted']))" ) outcome(s), v2); skipping"; return 0
+  fi
+  [[ -f "$rec" ]] && info "$(basename "$dir"): synced before 2026-09-08 as the consumer (untrusted now); re-recording as the submitter"
+  [[ -f "$SUBMITTER_KEY_FILE" ]] || die "submitter (admin/reviewer) key not found: $SUBMITTER_KEY_FILE"
   local run_id; run_id="$(basename "$dir")"
   : > "$TMP/posted.jsonl"; : > "$TMP/skipped.jsonl"
   while IFS= read -r line; do
@@ -169,15 +177,25 @@ state = e.get("state")
 if state not in ("validated", "corrected", "used"):
     print(json.dumps({"skip": f"state {state} is not an outcome"})); sys.exit(0)
 reason = e.get("corrected_reason")
+# The call this outcome is about: the tool-call id inside target_ref
+# ("request(...):msg[7]:call_xxx:arguments"). Two real calls with the same
+# arguments carry two ids; Core counts calls, not rows.
+import re
+m = re.search(r":(call_[A-Za-z0-9_-]+):", e.get("target_ref") or "")
+call_id = m.group(1) if m else None
 body = {
     "team_id": team, "asset_id": e["asset_id"], "asset_version": e.get("asset_version"),
-    "state": state, "relation": e.get("relation") or "unknown",
+    "state": state,
     "corrected_reason": (reason if reason in ("wrong", "stale") else "other") if state == "corrected" else None,
     "consumer_user_id": e.get("actor_user_id"), "consumer_agent_id": e.get("actor_agent_id"),
     "task_id": e.get("task_id"), "run_id": e.get("run_id") or run_id,
     "source": "evaluation-runner",
+    "call_id": call_id,
+    # Idempotent delivery: the recorder's event id. A re-sync returns the row on file.
+    "event_id": e.get("event_id"),
     "evidence_json": json.dumps({"event_id": e.get("event_id"), "target_ref": e.get("target_ref"),
-                                 "proof_refs": e.get("proof_refs"), "executed_endpoint": e.get("executed_endpoint")}, ensure_ascii=False),
+                                 "proof_refs": e.get("proof_refs"), "executed_endpoint": e.get("executed_endpoint"),
+                                 "run_id": e.get("run_id") or run_id}, ensure_ascii=False),
     "occurred_at": e.get("occurred_at"),
     "evaluate": False,
 }
@@ -188,11 +206,12 @@ PY
       python3 -c "import json;d=json.load(open('$TMP/body.json'));print(json.dumps({'reason':d['skip']}))" >> "$TMP/skipped.jsonl"; continue
     fi
     python3 -c "import json;print(json.dumps(json.load(open('$TMP/body.json'))['body']))" > "$TMP/append.json"
-    call "$CONSUMER_KEY_FILE" "/v3/meta/asset/outcome/append" "@$TMP/append.json" "$TMP/append-res.json"
+    call "$SUBMITTER_KEY_FILE" "/v3/meta/asset/outcome/append" "@$TMP/append.json" "$TMP/append-res.json"
     if envelope_ok "$TMP/append-res.json"; then
       python3 -c "
-import json; b=json.load(open('$TMP/body.json')); r=json.load(open('$TMP/append-res.json'))['data']['outcome']
-print(json.dumps({'event_id': b['event_id'], 'outcome_id': r['id'], 'state': r['state'], 'asset_id': r['asset_id'], 'relation': r['relation']}))" >> "$TMP/posted.jsonl"
+import json; b=json.load(open('$TMP/body.json')); d=json.load(open('$TMP/append-res.json'))['data']; r=d['outcome']
+print(json.dumps({'event_id': b['event_id'], 'outcome_id': r['id'], 'state': r['state'], 'asset_id': r['asset_id'], 'relation': r['relation'],
+                  'call_id': r.get('call_id'), 'trusted': r.get('trusted'), 'untrusted_reason': r.get('untrusted_reason'), 'duplicate': d.get('duplicate', False)}))" >> "$TMP/posted.jsonl"
     else
       python3 -c "
 import json; b=json.load(open('$TMP/body.json'))
@@ -200,15 +219,19 @@ print(json.dumps({'event_id': b['event_id'], 'error': '$(envelope_msg "$TMP/appe
       warn "outcome/append for $(python3 -c "import json;print(json.load(open('$TMP/body.json'))['event_id'])") failed: $(envelope_msg "$TMP/append-res.json")"
     fi
   done < "$events"
-  python3 - "$TMP/posted.jsonl" "$TMP/skipped.jsonl" "$rec" "$run_id" "$CONSUMER_KEY_FILE" <<'PY'
+  python3 - "$TMP/posted.jsonl" "$TMP/skipped.jsonl" "$rec" "$run_id" "$SUBMITTER_KEY_FILE" <<'PY'
 import json, sys, datetime
 posted = [json.loads(l) for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
 skipped = [json.loads(l) for l in open(sys.argv[2], encoding="utf-8") if l.strip()]
-json.dump({"schema": "core-outcomes-v1", "run_id": sys.argv[4],
+untrusted = [p for p in posted if not p.get("trusted")]
+json.dump({"schema": "core-outcomes-v2", "run_id": sys.argv[4],
            "synced_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-           "consumer_key_file": sys.argv[5], "evaluate": False,
+           "submitter_key_file": sys.argv[5], "evaluate": False,
+           "trusted": len(posted) - len(untrusted), "untrusted": len(untrusted), "duplicates": sum(1 for p in posted if p.get("duplicate")),
            "posted": posted, "skipped": skipped}, open(sys.argv[3], "w", encoding="utf-8"), indent=2)
-print(f"posted={len(posted)} skipped={len(skipped)}")
+print(f"posted={len(posted)} trusted={len(posted) - len(untrusted)} skipped={len(skipped)}")
+if untrusted:
+    print("WARNING: untrusted rows: " + "; ".join(f"{p['event_id']}: {p.get('untrusted_reason')}" for p in untrusted))
 PY
   ok "$run_id: outcomes recorded in Core → $rec"
 }

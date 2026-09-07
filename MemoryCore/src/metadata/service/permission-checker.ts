@@ -11,7 +11,7 @@
  *   - 一期 allow-only 模型。
  */
 
-import type { AssetEntity, TeamMemberEntity, AclEntity, Permission } from "../types.js";
+import type { AssetEntity, AssetReadPurpose, TeamMemberEntity, AclEntity, Permission } from "../types.js";
 
 export interface PermCheckLogger {
   debug: (msg: string) => void;
@@ -27,6 +27,14 @@ export interface PermCheckContext {
   aclRecords: AclEntity[];
   /** 可选，当 action='use' 且调用方是 agent 时传入。 */
   agentId?: string;
+  /**
+   * Why the asset is read (2026-09-08). `use` — the model's everyday path —
+   * passes only an admitted (approved) asset, the owner included: admission
+   * is a property of the asset, not of who is asking. `manage` (default,
+   * the human's path) lets the owner, admins and reviewers also see
+   * candidates and rejections. Applies to action='read' and 'use'.
+   */
+  purpose?: AssetReadPurpose;
   logger?: PermCheckLogger;
 }
 
@@ -50,6 +58,13 @@ export function checkPermission(ctx: PermCheckContext): PermCheckResult {
     return { allowed: false, reason: "asset_not_available" };
   }
 
+  // 1b. 日常使用（模型路径）：只有 approved 才放行，owner 也不例外。准入是
+  //     资产的属性，不看谁在问；draft / candidate / failed / deprecated 一律拒。
+  if (ctx.purpose === "use" && (action === "read" || action === "use") && asset.status !== "approved") {
+    logger.debug(`[META] perm_check DENY: purpose=use, status=${asset.status}`);
+    return { allowed: false, reason: `not_admitted:${asset.status}` };
+  }
+
   // 2. Owner 全允许
   if (asset.owner_user_id === user.user_id) {
     logger.debug(`[META] perm_check ALLOW: owner`);
@@ -62,12 +77,23 @@ export function checkPermission(ctx: PermCheckContext): PermCheckResult {
     return { allowed: false, reason: "not_team_member" };
   }
 
+  const reviewerRole = membership.role === "admin" || membership.role === "reviewer";
+
   // 3b. 候选池：status=candidate 的资产还没过准入闸门，只有 owner（第 2 步已放行）、
   //     team admin 和 reviewer 能读——这就是"候选资产不进正式池"的落点。
-  //     failed / deprecated / archived 由 list-accessible 过滤；这里不重复。
-  if (asset.status === "candidate" && membership.role !== "admin" && membership.role !== "reviewer") {
-    logger.debug(`[META] perm_check DENY: status=candidate, role=${membership.role}`);
-    return { allowed: false, reason: "status_candidate" };
+  //     failed / deprecated 同理（2026-09-08）：拒绝原因是给作者和复核员看的，
+  //     普通成员在管理路径上也看不到；archived 在第 1 步已拒。draft（手工登记、
+  //     未经闸门的旧资产）在管理路径上保持原样可读——它对模型路径已在 1b 拒绝。
+  if ((asset.status === "candidate" || asset.status === "failed" || asset.status === "deprecated") && !reviewerRole) {
+    logger.debug(`[META] perm_check DENY: status=${asset.status}, role=${membership.role}`);
+    return { allowed: false, reason: `status_${asset.status}` };
+  }
+
+  // 3c. 私有候选只有作者提交了团队审核，复核员才能看（2026-09-08）。进入候选池
+  //     不扩大 private 的边界：未提交的私有候选对 admin / reviewer 同样不可见。
+  if (asset.status === "candidate" && asset.visibility === "private" && reviewerRole && action === "read" && reviewRequested(asset)) {
+    logger.debug(`[META] perm_check ALLOW: private candidate submitted for review, role=${membership.role}`);
+    return { allowed: true, reason: "review_requested" };
   }
 
   // 4. visibility 限制
@@ -144,6 +170,17 @@ export function checkPermission(ctx: PermCheckContext): PermCheckResult {
 
   logger.debug(`[META] perm_check DENY: no matching rule`);
   return { allowed: false, reason: "no_permission" };
+}
+
+/** Whether the owner has submitted this asset for team review (metadata_json.gate.review_request). */
+export function reviewRequested(asset: Pick<AssetEntity, "metadata_json">): boolean {
+  try {
+    const m = JSON.parse(asset.metadata_json || "{}") as { gate?: { review_request?: { requested_at?: unknown; withdrawn_at?: unknown } } };
+    const r = m?.gate?.review_request;
+    return !!r && typeof r === "object" && typeof r.requested_at === "string" && !r.withdrawn_at;
+  } catch {
+    return false;
+  }
 }
 
 /**

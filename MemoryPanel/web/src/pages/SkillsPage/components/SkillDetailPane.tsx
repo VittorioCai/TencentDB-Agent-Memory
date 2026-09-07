@@ -28,6 +28,8 @@ import {
   type SkillSummary,
   type ReadFileResult,
 } from '@/lib/api/skill-api';
+import { gateApi } from '@/lib/api/assets';
+import type { AssetGateView } from '@/lib/api/types';
 import '../styles/skill-detail.css';
 
 interface FileTreeNode {
@@ -122,6 +124,28 @@ export default function SkillDetailPane(props: {
   const [error, setError] = useState<string | null>(null);
   const [filePreview, setFilePreview] = useState<ReadFileResult | null>(null);
   const [filePreviewLoading, setFilePreviewLoading] = useState(false);
+
+  // 准入状态（2026-09-08）：owner 看到自己 skill 的闸门状态，候选可提交团队审核。
+  // 只对 owner 拉取；其他人的候选本来就读不到 gate/get。
+  const [gate, setGate] = useState<AssetGateView | null>(null);
+  const [gateBusy, setGateBusy] = useState(false);
+  useEffect(() => {
+    setGate(null);
+    if (!props.skillId || !props.canEdit) return;
+    let alive = true;
+    gateApi.get(props.skillId).then((g) => { if (alive) setGate(g); }).catch(() => { if (alive) setGate(null); });
+    return () => { alive = false; };
+  }, [props.skillId, props.canEdit]);
+  const toggleReviewRequest = async () => {
+    if (!props.skillId || !gate) return;
+    setGateBusy(true);
+    try {
+      await gateApi.submit(props.skillId, { withdraw: !!gate.review_requested });
+      setGate(await gateApi.get(props.skillId));
+    } finally {
+      setGateBusy(false);
+    }
+  };
 
   // 正文编辑态
   const [editingBody, setEditingBody] = useState(false);
@@ -471,6 +495,18 @@ export default function SkillDetailPane(props: {
                 >
                   {t('skills.detail.versions')}
                 </Button>
+                {editable && gate && (
+                  <>
+                    <Text theme="weak" style={{ alignSelf: 'center', fontSize: 12 }} title={gate.review_requested ? t('skills.detail.reviewRequested') : undefined}>
+                      {t('skills.detail.gateStatus', { s: gate.status })}
+                    </Text>
+                    {gate.status === 'candidate' && (
+                      <Button disabled={gateBusy} onClick={() => void toggleReviewRequest()}>
+                        {gate.review_requested ? t('skills.detail.withdrawReview') : t('skills.detail.submitReview')}
+                      </Button>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

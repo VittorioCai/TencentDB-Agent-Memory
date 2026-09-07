@@ -308,11 +308,19 @@ export class SqliteMetadataStore implements IMetadataStore {
         run_id TEXT,
         source TEXT NOT NULL DEFAULT 'unknown',
         evidence_json TEXT NOT NULL DEFAULT '{}',
+        call_id TEXT,
+        event_id TEXT,
+        trusted INTEGER NOT NULL DEFAULT 0,
+        untrusted_reason TEXT,
+        submitted_by_user_id TEXT,
+        submitted_role TEXT,
         occurred_at TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_meta_ao_team_asset_occurred ON meta_asset_outcomes(team_id, asset_id, occurred_at DESC);
       CREATE INDEX IF NOT EXISTS idx_meta_ao_team_consumer_occurred ON meta_asset_outcomes(team_id, consumer_user_id, occurred_at DESC);
+      -- One row per recorder event: a redelivery finds this and adds nothing.
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_meta_ao_team_event ON meta_asset_outcomes(team_id, event_id) WHERE event_id IS NOT NULL;
 
       CREATE TABLE IF NOT EXISTS meta_config_params (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -338,6 +346,7 @@ export class SqliteMetadataStore implements IMetadataStore {
     `);
     this.migrateUserTypeColumn();
     this.migrateLegacyUserKeys();
+    this.migrateAssetOutcomeTrustColumns();
   }
 
   private migrateUserTypeColumn(): void {
@@ -352,6 +361,26 @@ export class SqliteMetadataStore implements IMetadataStore {
       }
     }
     this.db.exec(`DROP INDEX IF EXISTS ux_meta_users_single_system_admin`);
+  }
+
+  /**
+   * Existing databases (2026-09-08): outcome rows gain call identity, an
+   * idempotency key and the trust mark. Rows written before this carry
+   * trusted=0 — they were submitted before the service derived trust, so
+   * the gate no longer reads them; the evidence base is re-recorded by a
+   * trusted submitter rather than promoted by a migration.
+   */
+  private migrateAssetOutcomeTrustColumns(): void {
+    const have = new Set(this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_asset_outcomes')").map((r) => r.name));
+    const add: Array<[string, string]> = [
+      ["call_id", "TEXT"], ["event_id", "TEXT"], ["trusted", "INTEGER NOT NULL DEFAULT 0"],
+      ["untrusted_reason", "TEXT"], ["submitted_by_user_id", "TEXT"], ["submitted_role", "TEXT"],
+    ];
+    for (const [col, type] of add) {
+      if (have.has(col)) continue;
+      try { this.db.exec(`ALTER TABLE meta_asset_outcomes ADD COLUMN ${col} ${type}`); } catch { /* concurrent init */ }
+    }
+    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_meta_ao_team_event ON meta_asset_outcomes(team_id, event_id) WHERE event_id IS NOT NULL`);
   }
 
   /** 存量库：若 meta_users 仍有 user_key 列，回填 meta_user_keys 后不再写入该列。 */
@@ -1278,19 +1307,31 @@ export class SqliteMetadataStore implements IMetadataStore {
       run_id: input.run_id ?? null,
       source: input.source ?? "unknown",
       evidence_json: input.evidence_json ?? "{}",
+      call_id: input.call_id ?? null,
+      event_id: input.event_id ?? null,
+      trusted: input.trusted === true,
+      untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
+      submitted_by_user_id: input.submitted_by_user_id ?? null,
+      submitted_role: input.submitted_role ?? null,
       occurred_at: input.occurred_at ?? now,
       created_at: now,
     };
     this.run(
       `INSERT INTO meta_asset_outcomes
         (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
-         consumer_agent_id, task_id, run_id, source, evidence_json, occurred_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         consumer_agent_id, task_id, run_id, source, evidence_json, call_id, event_id, trusted,
+         untrusted_reason, submitted_by_user_id, submitted_role, occurred_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
       entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
-      entity.run_id, entity.source, entity.evidence_json, entity.occurred_at, entity.created_at,
+      entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
+      entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.occurred_at, entity.created_at,
     );
     return entity;
+  }
+
+  getAssetOutcomeByEvent(teamId: string, eventId: string): AssetOutcomeEntity | null {
+    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE team_id = ? AND event_id = ?", teamId, eventId));
   }
 
   listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {
@@ -1302,6 +1343,8 @@ export class SqliteMetadataStore implements IMetadataStore {
       params.push(...filter.states);
     }
     if (filter.consumer_user_id) { conditions.push("o.consumer_user_id = ?"); params.push(filter.consumer_user_id); }
+    if (filter.trusted !== undefined) { conditions.push("o.trusted = ?"); params.push(filter.trusted ? 1 : 0); }
+    if (filter.event_id) { conditions.push("o.event_id = ?"); params.push(filter.event_id); }
     if (filter.occurred_after) { conditions.push("o.occurred_at >= ?"); params.push(filter.occurred_after); }
     if (filter.occurred_before) { conditions.push("o.occurred_at <= ?"); params.push(filter.occurred_before); }
     // Outcomes of one author's assets: join through meta_assets. Used by the
@@ -1341,6 +1384,12 @@ export class SqliteMetadataStore implements IMetadataStore {
       run_id: r.run_id === null || r.run_id === undefined ? null : String(r.run_id),
       source: String(r.source),
       evidence_json: String(r.evidence_json),
+      call_id: r.call_id === null || r.call_id === undefined ? null : String(r.call_id),
+      event_id: r.event_id === null || r.event_id === undefined ? null : String(r.event_id),
+      trusted: Number(r.trusted ?? 0) === 1,
+      untrusted_reason: r.untrusted_reason === null || r.untrusted_reason === undefined ? null : String(r.untrusted_reason),
+      submitted_by_user_id: r.submitted_by_user_id === null || r.submitted_by_user_id === undefined ? null : String(r.submitted_by_user_id),
+      submitted_role: r.submitted_role === null || r.submitted_role === undefined ? null : String(r.submitted_role),
       occurred_at: String(r.occurred_at),
       created_at: String(r.created_at),
     };

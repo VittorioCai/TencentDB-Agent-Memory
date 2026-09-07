@@ -236,6 +236,8 @@ export class MongoMetadataStore implements IMetadataStore {
     // ── meta_asset_outcomes ──
     await this.ensureIndex("meta_asset_outcomes", { team_id: 1, asset_id: 1, occurred_at: -1 }, { name: "ix_ao_team_asset_occurred" });
     await this.ensureIndex("meta_asset_outcomes", { team_id: 1, consumer_user_id: 1, occurred_at: -1 }, { name: "ix_ao_team_consumer_occurred" });
+    // One row per recorder event (idempotent delivery); rows without an event id are not constrained.
+    await this.ensureIndex("meta_asset_outcomes", { team_id: 1, event_id: 1 }, { name: "ux_ao_team_event", unique: true, partialFilterExpression: { event_id: { $type: "string" } } });
 
     // ── meta_assets ──
     await this.ensureIndex("meta_assets", { asset_id: 1 }, { unique: true });
@@ -1024,6 +1026,12 @@ export class MongoMetadataStore implements IMetadataStore {
       run_id: input.run_id ?? null,
       source: input.source ?? "unknown",
       evidence_json: input.evidence_json ?? "{}",
+      call_id: input.call_id ?? null,
+      event_id: input.event_id ?? null,
+      trusted: input.trusted === true,
+      untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
+      submitted_by_user_id: input.submitted_by_user_id ?? null,
+      submitted_role: input.submitted_role ?? null,
       occurred_at: input.occurred_at ?? now,
       created_at: now,
     };
@@ -1031,11 +1039,32 @@ export class MongoMetadataStore implements IMetadataStore {
     return entity;
   }
 
+  async getAssetOutcomeByEvent(teamId: string, eventId: string): Promise<AssetOutcomeEntity | null> {
+    const d = await this.col("meta_asset_outcomes").findOne({ team_id: teamId, event_id: eventId });
+    return d ? this.mapAssetOutcomeDoc(d) : null;
+  }
+
+  /** Rows written before 2026-09-08 lack the trust fields; read them as untrusted. */
+  private mapAssetOutcomeDoc(d: Document): AssetOutcomeEntity {
+    const r = d as unknown as Partial<AssetOutcomeEntity>;
+    return {
+      ...(r as AssetOutcomeEntity),
+      call_id: r.call_id ?? null,
+      event_id: r.event_id ?? null,
+      trusted: r.trusted === true,
+      untrusted_reason: r.untrusted_reason ?? null,
+      submitted_by_user_id: r.submitted_by_user_id ?? null,
+      submitted_role: r.submitted_role ?? null,
+    };
+  }
+
   async listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): Promise<ListPage<AssetOutcomeEntity>> {
     const q: Document = { team_id: filter.team_id };
     if (filter.asset_id) q.asset_id = filter.asset_id;
     if (filter.states && filter.states.length) q.state = { $in: filter.states };
     if (filter.consumer_user_id) q.consumer_user_id = filter.consumer_user_id;
+    if (filter.trusted !== undefined) q.trusted = filter.trusted ? true : { $ne: true };
+    if (filter.event_id) q.event_id = filter.event_id;
     if (filter.occurred_after) q.occurred_at = { ...(q.occurred_at as Document), $gte: filter.occurred_after };
     if (filter.occurred_before) q.occurred_at = { ...(q.occurred_at as Document), $lte: filter.occurred_before };
     if (filter.owner_user_id) {
@@ -1048,7 +1077,7 @@ export class MongoMetadataStore implements IMetadataStore {
       if (ids.length === 0) return { items: [], total: 0 };
       q.asset_id = filter.asset_id ? filter.asset_id : { $in: ids };
     }
-    return this.paginatedFind("meta_asset_outcomes", q, pagination, { occurred_at: -1, id: -1 }, (d) => d as AssetOutcomeEntity);
+    return this.paginatedFind("meta_asset_outcomes", q, pagination, { occurred_at: -1, id: -1 }, (d) => this.mapAssetOutcomeDoc(d));
   }
 
   private buildParticipationLogMatch(filter: ParticipationLogFilter): Document {

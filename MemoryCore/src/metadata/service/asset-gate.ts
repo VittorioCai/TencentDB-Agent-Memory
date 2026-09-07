@@ -25,7 +25,18 @@
  *
  * `confidence` on the asset is the share of this asset's cross-person
  * outcomes that validated — a description of the evidence on file, null
- * when there is none. It is not an estimate of anything.
+ * when there is none. It is not an estimate of anything. The decision
+ * carries the denominator (`confidence_n`) beside it.
+ *
+ * What counts as evidence (2026-09-08): only rows the service marked
+ * trusted — submitted by a team admin or reviewer naming the consumer, with
+ * the call id, the asset version and evidence attached. A plain member's
+ * own report is kept on file and ignored here, in the confidence and in the
+ * author statistics alike. Rows are then collapsed per call: several rows
+ * about the same call (a `used`, then the `validated` that followed) are one
+ * call in its latest state, so a supplement never adds weight and a retry
+ * never counts twice; two real calls with the same arguments carry two call
+ * ids and stay two.
  */
 
 import type {
@@ -37,7 +48,7 @@ import type {
   ReviewPriority,
 } from "../types.js";
 
-export const GATE_RULES_VERSION = "gate-rules-2026-09-07";
+export const GATE_RULES_VERSION = "gate-rules-2026-09-08";
 export const RECENT_WRONG_WINDOW_DAYS = 30;
 /** `corrected` reasons that count against an asset (and its author). */
 export const DOWNWEIGHT_REASONS = new Set(["wrong", "stale"]);
@@ -56,6 +67,29 @@ export interface DecideInput {
 
 function daysBetween(a: string, b: Date): number {
   return Math.abs(new Date(a).getTime() - b.getTime()) / 86_400_000;
+}
+
+/** Rows the gate may read: trusted ones. Everything else is reported as ignored. */
+export function trustedOnly(rows: AssetOutcomeEntity[]): { kept: AssetOutcomeEntity[]; ignored: number } {
+  const kept = rows.filter((o) => o.trusted === true);
+  return { kept, ignored: rows.length - kept.length };
+}
+
+/**
+ * One row per call. Rows that name the same call collapse to the latest by
+ * occurred_at (then created_at); a row without a call id is its own call.
+ * The result is what the gate counts.
+ */
+export function collapseByCall(rows: AssetOutcomeEntity[]): AssetOutcomeEntity[] {
+  const byCall = new Map<string, AssetOutcomeEntity>();
+  const later = (a: AssetOutcomeEntity, b: AssetOutcomeEntity) =>
+    a.occurred_at > b.occurred_at || (a.occurred_at === b.occurred_at && a.created_at > b.created_at);
+  for (const o of rows) {
+    const key = o.call_id ? `${o.asset_id}|call:${o.call_id}` : `${o.asset_id}|row:${o.id}`;
+    const cur = byCall.get(key);
+    if (!cur || later(o, cur)) byCall.set(key, o);
+  }
+  return [...byCall.values()].sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
 }
 
 /** The context-based author assessment, if one has been written onto the asset. */
@@ -82,14 +116,15 @@ export function authorAssessmentOf(metadataJson: string | null | undefined): Aut
 
 export function decideAsset(input: DecideInput): GateDecision {
   const now = input.now ?? new Date();
-  const own = input.outcomes;
+  const ownTrust = trustedOnly(input.outcomes);
+  const own = collapseByCall(ownTrust.kept);
   const authorId = input.asset.owner_user_id;
-  const others = input.authorOutcomes.filter((o) => o.asset_id !== input.asset.asset_id);
+  const others = collapseByCall(trustedOnly(input.authorOutcomes).kept).filter((o) => o.asset_id !== input.asset.asset_id);
 
   const isCross = (o: AssetOutcomeEntity) => CROSS_PERSON.has(o.relation);
   const downweighting = own.filter((o) => o.state === "corrected" && o.corrected_reason != null && DOWNWEIGHT_REASONS.has(o.corrected_reason));
   const crossValidated = own.filter((o) => o.state === "validated" && isCross(o));
-  const ref = (o: AssetOutcomeEntity) => ({ outcome_id: o.id, state: o.state, relation: o.relation });
+  const ref = (o: AssetOutcomeEntity) => ({ outcome_id: o.id, state: o.state, relation: o.relation, call_id: o.call_id ?? null });
 
   const online = {
     validated: own.filter((o) => o.state === "validated").length,
@@ -98,6 +133,8 @@ export function decideAsset(input: DecideInput): GateDecision {
     cross_user_validated: crossValidated.length,
     distinct_consumers: new Set(own.map((o) => o.consumer_user_id)).size,
     distinct_tasks: new Set(own.filter((o) => o.state === "validated").map((o) => o.task_id).filter(Boolean)).size,
+    calls: own.length,
+    untrusted_ignored: ownTrust.ignored,
   };
 
   // Author: the outcomes of this author's other assets, cross-person only.
@@ -150,7 +187,10 @@ export function decideAsset(input: DecideInput): GateDecision {
   }
 
   if (own.length > 0) {
-    reasons.push(`reported signals: ${online.distinct_tasks} distinct task(s), ${online.distinct_consumers} distinct consumer(s); neither is a threshold`);
+    reasons.push(`reported signals: ${online.calls} call(s) from ${ownTrust.kept.length} trusted row(s), ${online.distinct_tasks} distinct task(s), ${online.distinct_consumers} distinct consumer(s); none is a threshold`);
+  }
+  if (ownTrust.ignored > 0) {
+    reasons.push(`${ownTrust.ignored} row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read`);
   }
 
   // Review priority: only meaningful for a pending asset; never touches admit/reject.
@@ -195,6 +235,8 @@ export function decideAsset(input: DecideInput): GateDecision {
     decision,
     status_target: decision === "admit" ? "approved" : decision === "reject" ? "failed" : "candidate",
     confidence,
+    confidence_n: crossTotal,
+    evidence_policy: "trusted-only",
     reasons,
     evidence_refs,
     signals: { online, author },
@@ -204,9 +246,17 @@ export function decideAsset(input: DecideInput): GateDecision {
 }
 
 /**
+ * Keys under `metadata_json.gate` that are not the decision and must survive
+ * a re-evaluation: the context-based author assessment, the human review
+ * (2026-09-08: a re-evaluation used to drop it — that was a bug), and the
+ * owner's request for review.
+ */
+export const GATE_KEPT_KEYS = ["author_assessment", "review", "review_request"] as const;
+
+/**
  * Merge the decision into the asset's metadata_json without disturbing other
- * keys (the context-based author assessment lives under the same `gate` key
- * and must survive a re-evaluation).
+ * keys. Everything in GATE_KEPT_KEYS is carried over; the rest of the
+ * previous decision is replaced.
  */
 export function mergeGateIntoMetadata(metadataJson: string | null | undefined, decision: GateDecision): string {
   let m: Record<string, unknown> = {};
@@ -217,8 +267,19 @@ export function mergeGateIntoMetadata(metadataJson: string | null | undefined, d
     m = {};
   }
   const gate = (m.gate && typeof m.gate === "object" && !Array.isArray(m.gate) ? (m.gate as Record<string, unknown>) : {});
-  const { author_assessment, ...rest } = gate;
-  void rest;
-  m.gate = { ...decision, ...(author_assessment !== undefined ? { author_assessment } : {}) };
+  const kept: Record<string, unknown> = {};
+  for (const k of GATE_KEPT_KEYS) if (gate[k] !== undefined) kept[k] = gate[k];
+  m.gate = { ...decision, ...kept };
   return JSON.stringify(m);
+}
+
+/** The `gate` object on an asset, or an empty one. */
+export function gateOf(metadataJson: string | null | undefined): Record<string, unknown> {
+  try {
+    const m = metadataJson ? (JSON.parse(metadataJson) as Record<string, unknown>) : {};
+    const g = m && typeof m === "object" && !Array.isArray(m) ? m.gate : undefined;
+    return g && typeof g === "object" && !Array.isArray(g) ? (g as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }

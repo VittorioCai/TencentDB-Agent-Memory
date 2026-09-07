@@ -237,6 +237,55 @@ async function precheckWrite<T>(
   return { ok: true, core, data: parsed.data };
 }
 
+/**
+ * The admission gate on the skill data plane (2026-09-08).
+ *
+ * Every read a model can make — get, get-by-name, files/read, list, search,
+ * listing — passes through the asset registry: skill id = asset id, and the
+ * asset's status says whether it was admitted. On the model's path
+ * (`readPurpose` "use", which is what the proxy's bridge and injector send)
+ * only an approved asset passes, the caller's own included; a skill with no
+ * asset row is unregistered, is denied, and is registered as a candidate so
+ * it reaches the review queue. On the panel's path ("manage") the asset's
+ * own permission rules apply — owner, admins and reviewers see candidates.
+ *
+ * Fail closed: with no metadata service to ask, the model's path returns
+ * nothing rather than everything.
+ */
+type SkillLike = { skill_id: string; team_id?: string; owner_agent_id?: string; name?: string };
+async function admissionFilter<T extends SkillLike>(
+  items: T[],
+  ctx: { deps: SkillRouterDeps; auth: V2AuthContext; user_id?: string; team_id?: string; agent_id?: string },
+): Promise<{ allowed: T[]; denied: Array<{ skill_id: string; reason: string }> }> {
+  if (items.length === 0) return { allowed: [], denied: [] };
+  const purpose = ctx.auth.readPurpose === "manage" ? "manage" : "use";
+  if (!ctx.deps.getMetadataService || !ctx.user_id) {
+    if (purpose === "manage") return { allowed: items, denied: [] };
+    const why = !ctx.user_id ? "no user_id on the request" : "no metadata service";
+    ctx.deps.logger.warn(`[skill-admission] ${why}; denying ${items.length} skill(s) on the model path`);
+    return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })) };
+  }
+  const meta = await ctx.deps.getMetadataService(ctx.auth.serviceId);
+  const decisions = await meta.decideAssetReads({ user_id: ctx.user_id, asset_ids: items.map((s) => s.skill_id), purpose, agent_id: ctx.agent_id });
+  const allowed: T[] = [];
+  const denied: Array<{ skill_id: string; reason: string }> = [];
+  for (const s of items) {
+    const d = decisions.get(s.skill_id);
+    if (d?.allowed) { allowed.push(s); continue; }
+    denied.push({ skill_id: s.skill_id, reason: d?.reason ?? "unknown" });
+    if (d?.reason === "unregistered" && s.team_id && s.owner_agent_id && s.name) {
+      // Register it as a candidate so a human sees it; never on the request's critical path.
+      meta.ensureSkillAsset({ skill_id: s.skill_id, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name })
+        .catch((err: unknown) => ctx.deps.logger.warn(`[skill-admission] ensureSkillAsset ${s.skill_id} failed: ${(err as Error).message}`));
+    }
+  }
+  return { allowed, denied };
+}
+
+function notAdmitted(skillId: string, reason: string, requestId: string): ApiResponseEnvelope {
+  return errorEnvelope(40301, `SKILL_NOT_ADMITTED: ${skillId} is not in the admitted pool (${reason})`, requestId);
+}
+
 // 把 Skill 行形成 SkillSummary 形态（不带 content；带 manifest 当 detail 时再加）
 // 字段对齐设计文档 §3.4 SkillSummary。
 /** 反序列化 skill.metadata_json 到 metadata 对象；无效 JSON 返回 undefined。 */
@@ -476,6 +525,11 @@ export async function handleGetByName(body: unknown, _auth: V2AuthContext, reque
       include_content: pre.data.include_content,
       include_manifest: pre.data.include_manifest,
     });
+    const adm = await admissionFilter([row], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (adm.allowed.length === 0) {
+      obsLogger.info("skill.handleGetByName.done", { req_id: requestId, code: 40301, dur_ms: Date.now() - t0, skill_id: row.skill_id, reason: adm.denied[0]?.reason });
+      return notAdmitted(row.skill_id, adm.denied[0]?.reason ?? "unknown", requestId);
+    }
     const includeContent = pre.data.include_content ?? true;
     const includeManifest = pre.data.include_manifest ?? true;
     const data = {
@@ -507,6 +561,11 @@ export async function handleGet(body: unknown, _auth: V2AuthContext, requestId: 
   if (!pre.ok) { obsLogger.warn("skill.handleGet.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
     const row = await pre.core.get(pre.data);
+    const adm = await admissionFilter([row], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (adm.allowed.length === 0) {
+      obsLogger.info("skill.handleGet.done", { req_id: requestId, code: 40301, dur_ms: Date.now() - t0, skill_id: row.skill_id, reason: adm.denied[0]?.reason });
+      return notAdmitted(row.skill_id, adm.denied[0]?.reason ?? "unknown", requestId);
+    }
     const includeContent = pre.data.include_content ?? true;
     const includeManifest = pre.data.include_manifest ?? true;
     // Detail view 额外附上 content_hash / storage_dir（summary 没输出这些）。
@@ -536,8 +595,10 @@ export async function handleList(body: unknown, _auth: V2AuthContext, requestId:
     // SqliteSkillStore.listSkills / TcvdbSkillStore.listSkills 中的默认值）。
     // 普通业务调用方 **不应** 显式请求 archived——它对读/写 API 已经不可见。
     const r = await pre.core.list(pre.data);
-    obsLogger.info("skill.handleList.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, items: r.items.length, total: r.total });
-    return successEnvelope({ items: r.items.map(toSummary), total: r.total }, requestId);
+    const adm = await admissionFilter(r.items, { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    obsLogger.info("skill.handleList.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, items: adm.allowed.length, total: r.total, not_admitted: adm.denied.length });
+    // total counts what the store holds; the page carries only what the caller may read.
+    return successEnvelope({ items: adm.allowed.map(toSummary), total: r.total - adm.denied.length }, requestId);
   } catch (e) { obsLogger.error("skill.handleList.done", { req_id: requestId, dur_ms: Date.now() - t0 }, e instanceof Error ? e : undefined); return mapCoreError(e, requestId); }
 }
 
@@ -552,7 +613,9 @@ export async function handleSearch(body: unknown, _auth: V2AuthContext, requestI
     const searchInput = scope === "team"
       ? { ...data, agent_id: undefined }
       : data;
-    const hits = await pre.core.search(searchInput);
+    const hitsAll = await pre.core.search(searchInput);
+    const admS = await admissionFilter(hitsAll.map((h) => ({ ...h.skill, _hit: h })), { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const hits = admS.allowed.map((s) => s._hit);
     const items = hits.map((h) => ({
       ...toSummary(h.skill),
       score: h.score,
@@ -634,6 +697,8 @@ export async function handleFilesRead(body: unknown, _auth: V2AuthContext, reque
   const pre = await precheck(filesReadRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleFilesRead.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
+    const admF = await admissionFilter([{ skill_id: pre.data.skill_id }], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admF.allowed.length === 0) return notAdmitted(pre.data.skill_id, admF.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.readFile(pre.data);
     obsLogger.info("skill.handleFilesRead.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id,
       version: r.version,
@@ -682,7 +747,7 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
     const topK = routing?.searchTopK ?? 20;
 
     // search 模式：按 routing.mode 选检索算法；fallback 到 list head（query 为空）。
-    type Item = { skill_id: string; name: string; description: string; version: number };
+    type Item = { skill_id: string; name: string; description: string; version: number; team_id?: string; owner_agent_id?: string };
     let items: Item[];
     let mode: "full" | "search";
     if (useSearch) {
@@ -699,6 +764,8 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         name: h.skill.name,
         description: h.skill.description,
         version: h.skill.version,
+        team_id: h.skill.team_id,
+        owner_agent_id: h.skill.owner_agent_id,
       }));
       mode = "search";
     } else {
@@ -713,9 +780,15 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         name: s.name,
         description: s.description,
         version: s.version,
+        team_id: s.team_id,
+        owner_agent_id: s.owner_agent_id,
       }));
       mode = items.length < topK ? "full" : "search";
     }
+    // What the model is told exists is what it may read: the injected
+    // <available_skills> block never names a candidate or a rejected skill.
+    const admL = await admissionFilter(items, { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    items = admL.allowed;
 
     // 渲染 listing；按 char_budget 截断（保留头部 + 显式截断标记）。
     const lines = items.map((s) => `- ${s.name}: ${s.description}`);

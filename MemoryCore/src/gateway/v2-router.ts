@@ -359,9 +359,12 @@ export function parseV2Auth(
     return null;
   }
 
+  const purposeHeader = String(req.headers["x-tdai-read-purpose"] ?? "").trim().toLowerCase();
   return Object.fromEntries([
     ["apiKey", authHeader.slice(7).trim()],
     ["serviceId", serviceId.trim()],
+    // Only an explicit "manage" is honoured; everything else is the model's path.
+    ["readPurpose", purposeHeader === "manage" ? "manage" : "use"],
   ]) as V2AuthContext;
 }
 

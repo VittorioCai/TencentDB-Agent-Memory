@@ -113,4 +113,7 @@ export const gateApi = {
     metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', { asset_id: assetId, decision, note: note ?? null }),
   outcomes: (teamId: string, params?: { asset_id?: string; owner_user_id?: string }) =>
     metaListAll<AssetOutcome>('asset/outcome/list', { team_id: teamId, asset_id: params?.asset_id, owner_user_id: params?.owner_user_id }),
+  /** The owner asks the team to review a candidate, or takes the request back (2026-09-08). */
+  submit: (assetId: string, opts?: { withdraw?: boolean; note?: string }) =>
+    metaPost<{ asset: Asset; review_request: AssetGateView['review_request'] }>('asset/gate/submit', { asset_id: assetId, withdraw: opts?.withdraw ?? false, note: opts?.note ?? null }),
 };

@@ -7,6 +7,8 @@ export interface KernelCredentials {
   userKey?: string;
   timeoutMs: number;
   requestId?: string;
+  /** Skill data plane: the panel reads as a person. */
+  readPurpose?: 'use' | 'manage';
 }
 
 /** 单次内核元数据调用的运行时凭证（middleware 从 Header + 注册表组装）。 */

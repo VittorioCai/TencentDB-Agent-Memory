@@ -16,7 +16,10 @@ export class FetchSkillKernelAdapter implements SkillKernelPort {
   ) {}
 
   invoke(action: string, body: Record<string, unknown>, ctx: MetaCallContext) {
-    const cred = toKernelCredentials(ctx, { timeoutMs: this.timeoutMs });
+    // The panel reads skills as a person: candidates and rejections are
+    // visible to their owner, admins and reviewers (kernel permission rules).
+    // The model's path never sends this header and sees admitted skills only.
+    const cred = { ...toKernelCredentials(ctx, { timeoutMs: this.timeoutMs }), readPurpose: 'manage' as const };
     return this.http.postEnvelope(`/v3/skill/${action}`, body, cred);
   }
 }
