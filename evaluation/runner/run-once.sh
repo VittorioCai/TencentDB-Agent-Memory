@@ -118,10 +118,22 @@ if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
     bash "$EVAL/gate/apply.sh" --hide "$ABLATE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
       || die "ablation could not be applied and read back; the run is not started"
   else
+    # Since 2026-09-07 the gate is the product's: Core holds the outcomes,
+    # decides, and writes the asset's status; the bridge's whitelist does the
+    # hiding. "off" = every baseline asset approved; "on" = Core evaluates
+    # from the outcomes --seed put on file. The visibility-flipping apply.sh
+    # is kept for ablation only (GATE_MECHANISM=visibility restores it for
+    # a like-for-like rerun of the earlier batch).
     GATE_MODE="reset"; [[ "$GATE" == "on" ]] && GATE_MODE="apply"
-    info "gate $GATE: $GATE_MODE visibility from the baseline frozen $FROZEN"
-    bash "$EVAL/gate/apply.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
-      || die "gate $GATE could not be applied and read back; the run is not started"
+    if [[ "${GATE_MECHANISM:-core}" == "visibility" ]]; then
+      info "gate $GATE: $GATE_MODE visibility from the baseline frozen $FROZEN (old mechanism)"
+      bash "$EVAL/gate/apply.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
+        || die "gate $GATE could not be applied and read back; the run is not started"
+    else
+      info "gate $GATE: $GATE_MODE status through Core, baseline frozen $FROZEN"
+      bash "$EVAL/gate/core-gate.sh" "--$GATE_MODE" --baseline "$GATE_BASELINE" --out "$RUN_DIR/gate-apply.json" \
+        || die "gate $GATE could not be applied and read back through Core; the run is not started"
+    fi
   fi
   cp "$GATE_BASELINE" "$RUN_DIR/gate_baseline.json"
 fi
@@ -356,6 +368,19 @@ REACH_ARG=""
   ${REACH_ARG:+"$REACH_ARG"} \
   --out="$RUN_DIR/outcome-events.jsonl" > "$RUN_DIR/outcome.md" 2>&1) \
   || { warn "judge-outcome failed; see $RUN_DIR/outcome.md"; : > "$RUN_DIR/outcome-events.jsonl"; }
+# The outcomes go into the product (Core's meta_asset_outcomes) as the
+# consumer who produced them, with evaluate=false: recorded now, acted on only
+# when a batch ends and --apply runs. Replays (CAPTURE_FROM) record nothing —
+# their outcomes are already on file under the original run.
+if [[ -z "${CAPTURE_FROM:-}" && -s "$RUN_DIR/outcome-events.jsonl" && "${GATE_MECHANISM:-core}" != "visibility" ]]; then
+  case "$IDENTITY" in
+    a) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key" ;;
+    c) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key-c" ;;
+    *) CONSUMER_KEY="$REPO_ROOT/deploy/global-images/.topic4-user-key-b" ;;
+  esac
+  GATE_CONSUMER_KEY_FILE="$CONSUMER_KEY" bash "$EVAL/gate/core-gate.sh" --sync "$RUN_DIR" --baseline "$GATE_BASELINE" \
+    > "$RUN_DIR/core-sync.log" 2>&1 || warn "outcomes could not be recorded in Core; see $RUN_DIR/core-sync.log"
+fi
 (cd "$REPO_ROOT" && node "$EVAL/gate/decide.mjs" \
   --events="$RUN_DIR/events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \
   --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$RUN_DIR/tokens.json" \
@@ -438,12 +463,25 @@ run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extr
 # product after apply.sh wrote it — not the mode that was requested. An
 # ablation run records the same block with mode "ablate" and the hidden ids.
 mode = gate or ("ablate" if ablate else None)
-gate_block = {"mode": mode, "hidden": ablate.split(",") if ablate else [], "baseline_frozen_at": None, "visibility_at_start": None, "all_verified": None}
+gate_block = {"mode": mode, "hidden": ablate.split(",") if ablate else [], "baseline_frozen_at": None,
+              # mechanism: "core-status" (Core decides and writes status; since 2026-09-07)
+              # or "visibility" (apply.sh flipped visibility from outside; earlier batches, ablation)
+              "mechanism": None, "visibility_at_start": None, "status_at_start": None, "all_verified": None}
 apply_p = os.path.join(run_dir, "gate-apply.json")
 if mode and os.path.exists(apply_p):
     rec = json.load(open(apply_p, encoding="utf-8"))
-    gate_block["visibility_at_start"] = rec.get("visibility_after")
+    gate_block["mechanism"] = rec.get("mechanism") or "visibility"
+    gate_block["visibility_at_start"] = rec.get("visibility_at_start") or rec.get("visibility_after")
+    gate_block["status_at_start"] = rec.get("status_at_start")
     gate_block["all_verified"] = rec.get("all_verified")
+    if rec.get("decisions"):
+        gate_block["core_decisions"] = {aid: (d or {}).get("decision") for aid, d in rec["decisions"].items()}
+core_outcomes = None
+co_p = os.path.join(run_dir, "core-outcomes.json")
+if os.path.exists(co_p):
+    co = json.load(open(co_p, encoding="utf-8"))
+    core_outcomes = {"posted": len(co.get("posted") or []), "skipped": len(co.get("skipped") or []),
+                     "synced_at": co.get("synced_at"), "evaluate": co.get("evaluate")}
     base_p = os.path.join(run_dir, "gate_baseline.json")
     if os.path.exists(base_p):
         gate_block["baseline_frozen_at"] = json.load(open(base_p, encoding="utf-8")).get("frozen_at")
@@ -479,6 +517,9 @@ manifest = {
     "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
     "gate": gate_block,
+    # This run's outcomes as recorded in Core (evaluate=false); null when
+    # nothing was recorded (replay, old mechanism, or a failed sync — see core-sync.log).
+    "core_outcomes": core_outcomes,
     "verdict": verdict,
     # What else the model had in context: the consumer's injected L3 memory
     # (present? which lines the task watches for?) and skills outside the

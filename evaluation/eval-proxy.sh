@@ -61,6 +61,15 @@ IN_IMAGE_SRC="/app/src/injection/injectors/skill-injector.ts"
 # get 40401 reading it by name — which is what blocked the cross-user mainline.
 BRIDGE_SRC="$REPO_ROOT/MemoryProxy/src/skill/skill-bridge.ts"
 IN_IMAGE_BRIDGE="/app/src/skill/skill-bridge.ts"
+# Third and fourth patched files (commit cd2f9b0): one write switch for the
+# skill prompt, the tool catalogue and the bridge gate. Under
+# allowLlmWrite=false the <available_skills> header no longer orders the model
+# to patch/create, the catalogue no longer offers skill_extract, and the
+# bridge refuses extract. The injector factory passes the switch through.
+TOOLS_SRC="$REPO_ROOT/MemoryProxy/src/injection/injectors/skill-tools-injector.ts"
+IN_IMAGE_TOOLS="/app/src/injection/injectors/skill-tools-injector.ts"
+FACTORY_SRC="$REPO_ROOT/MemoryProxy/src/injection/index.ts"
+IN_IMAGE_FACTORY="/app/src/injection/index.ts"
 LOG_DIR="$REPO_ROOT/evaluation/provenance/artifacts"
 LOG_NAME="candidate-log.jsonl"
 # Kept in step with the address in evaluation/tasks/bridge-addr/assets/right.md;
@@ -180,15 +189,27 @@ case "${1:-status}" in
       die "right.md does not document port $SCENARIO_PORT — publishing it would make the scenario unreachable"
     fi
 
+    # The write-switch pair: same parity guard, same reason.
+    [[ -f "$TOOLS_SRC" && -f "$FACTORY_SRC" ]] || die "write-switch sources not found: $TOOLS_SRC / $FACTORY_SRC"
+    grep -q "extractTool" "$TOOLS_SRC" || die "$TOOLS_SRC carries no write-switch patch — nothing to enable"
+    grep -q "allowLlmWrite })" "$FACTORY_SRC" || die "$FACTORY_SRC does not pass allowLlmWrite to SkillInjector — nothing to enable"
+    image_matches_prepatch "$IN_IMAGE_TOOLS" "MemoryProxy/src/injection/injectors/skill-tools-injector.ts" "extractTool" \
+      || die "refusing to enable (skill-tools-injector.ts)"
+    image_matches_prepatch "$IN_IMAGE_FACTORY" "MemoryProxy/src/injection/index.ts" "allowLlmWrite })" \
+      || die "refusing to enable (injection/index.ts)"
+
     mkdir -p "$LOG_DIR"
     recreate \
       -p "${SCENARIO_PORT}:8096" \
       -v "$PATCHED_SRC:$IN_IMAGE_SRC:ro" \
       -v "$BRIDGE_SRC:$IN_IMAGE_BRIDGE:ro" \
+      -v "$TOOLS_SRC:$IN_IMAGE_TOOLS:ro" \
+      -v "$FACTORY_SRC:$IN_IMAGE_FACTORY:ro" \
       -v "$LOG_DIR:/data/eval" \
       -e "TDAI_CANDIDATE_LOG=/data/eval/$LOG_NAME"
     ok "candidate log on → $LOG_DIR/$LOG_NAME"
     ok "read-visibility bridge mounted → get-by-name resolves across visible team skills"
+    ok "write switch mounted → read-only sessions: no patch/create directive, no skill_extract, extract refused by the bridge"
     ok "scenario port $SCENARIO_PORT published → the right-address asset is reachable"
     echo "     Start a fresh session: the listing runs once at session init, and its"
     echo "     block is cached for the rest of the session, so an in-flight session"
@@ -242,6 +263,19 @@ PY
       on_i="$(shasum -a 256 "$PATCHED_SRC" 2>/dev/null | cut -c1-16)"
       [[ -n "$in_i" && "$in_i" == "$on_i" ]] \
         || echo "  candidate-log injector:  MOUNTED but STALE ($in_i vs $on_i) — run 'enable' to re-bind"
+      # The write-switch pair: mounted and current, mounted but stale, or absent.
+      for pair in "$IN_IMAGE_TOOLS|$TOOLS_SRC|skill-tools-injector" "$IN_IMAGE_FACTORY|$FACTORY_SRC|injection factory"; do
+        in_p="${pair%%|*}"; rest="${pair#*|}"; on_p="${rest%%|*}"; label="${rest#*|}"
+        if docker inspect "$CONTAINER" --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx "$in_p"; then
+          in_h="$(docker exec "$CONTAINER" sha256sum "$in_p" 2>/dev/null | cut -c1-16)"
+          on_h="$(shasum -a 256 "$on_p" 2>/dev/null | cut -c1-16)"
+          [[ -n "$in_h" && "$in_h" == "$on_h" ]] \
+            && echo "  write switch ($label): MOUNTED and current ($in_h)" \
+            || echo "  write switch ($label): MOUNTED but STALE ($in_h vs $on_h) — run 'enable' to re-bind"
+        else
+          echo "  write switch ($label): not mounted — the prompt still orders patch/create and offers skill_extract under read-only"
+        fi
+      done
     else
       echo "  read-visibility bridge: not mounted — a consumer reading another agent's skill by name gets 40401"
     fi

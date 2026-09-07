@@ -50,6 +50,11 @@ export function loadRun(dir, tokensByAsset) {
   const run = readJson(join(dir, "run.json"));
   if (!run) return null;
   const vis = run.gate?.visibility_at_start ?? null;
+  // Under the in-Core gate (2026-09-07) an asset can also be hidden by its
+  // status: `failed` leaves list-accessible, `candidate` is readable only by
+  // the owner, admins and reviewers — the consumer is a plain member. A run
+  // that recorded statuses carries them here; older runs carry only visibility.
+  const status = run.gate?.status_at_start ?? null;
   const artifacts = readJson(join(dir, "run-artifacts.json"), []);
   const operations = (Array.isArray(artifacts) ? artifacts : [artifacts]).flatMap((a) => a?.operations ?? []);
   const attempts = readJson(join(dir, "verdict.json"), {})?.attempts ?? [];
@@ -61,7 +66,9 @@ export function loadRun(dir, tokensByAsset) {
     label: run.label ?? null,
     verdict: run.verdict ?? null,
     // null = the run recorded no gate state; visibility is not known, not assumed
-    visible: vis ? Object.fromEntries(Object.entries(vis).map(([k, v]) => [k, v === "team"])) : null,
+    visible: vis
+      ? Object.fromEntries(Object.entries(vis).map(([k, v]) => [k, v === "team" && !(status && (status[k] === "failed" || status[k] === "candidate"))]))
+      : null,
     judged_used: new Set(used.filter((e) => e.state === "used").map((e) => e.asset_id)),
     judged_review: new Set(used.filter((e) => e.state === "needs_review").map((e) => e.asset_id)),
     acted,

@@ -196,6 +196,7 @@ PY
       *)     echo "  core auto-extraction: ${C_Y}unknown (could not read $core_cfg)${C_0}" ;;
     esac
     bash "$EVAL/eval-proxy.sh" status
+    bash "$EVAL/eval-core.sh" status
     ;;
 
   --teardown)
