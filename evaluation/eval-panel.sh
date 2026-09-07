@@ -101,14 +101,25 @@ case "${1:-status}" in
     grep -rq "review_queue" "$WEB_DIST/assets" || die "web build does not carry the review queue"
     recreate -v "$SERVER_DIST:$IN_SERVER:ro" -v "$WEB_DIST:$IN_WEB:ro"
     port="$(panel_port)"
-    # The meta proxy must know the new action: an unauthenticated call answers
-    # 401 (no session), never 404 UNKNOWN_META_ACTION.
-    code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${port}/api/meta/asset/gate/get" -H 'content-type: application/json' -d '{"asset_id":"x"}' || echo 000)"
-    [[ "$code" != "404" && "$code" != "000" ]] || die "asset/gate/get answered HTTP $code after enable; the server build did not take"
+    # The meta proxy must know the new action. Without the session headers
+    # every action answers 400 (headers are checked first), so the probe
+    # sends identity A's key when its file is present: a registered action
+    # is forwarded to the kernel (200 envelope), an unknown one is 404
+    # UNKNOWN_META_ACTION. Without a key file only the 400/404 distinction
+    # is available and the check is weaker; it says so.
+    key_file="$REPO_ROOT/deploy/global-images/.topic4-user-key"
+    if [[ -f "$key_file" ]]; then
+      code="$(printf 'header = "X-Tdai-User-Key: %s"\n' "$(tr -d '[:space:]' < "$key_file")" | curl -sS -K - -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/get" -H 'content-type: application/json' -H 'X-Tdai-Service-Id: default' -d '{"asset_id":"x"}' || echo 000)"
+      [[ "$code" != "404" && "$code" != "000" ]] || die "asset/gate/get answered HTTP $code with a key after enable; the server build did not take"
+    else
+      code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${port}/api/v1/meta/asset/gate/get" -H 'content-type: application/json' -d '{"asset_id":"x"}' || echo 000)"
+      [[ "$code" != "404" && "$code" != "000" ]] || die "asset/gate/get answered HTTP $code after enable; the server build did not take"
+      echo "[warn] no key file at $key_file — only checked that the action is not 404 before the header check"
+    fi
     grep -q "review_queue" <(curl -sS "http://127.0.0.1:${port}/" -L 2>/dev/null; for f in $(curl -sS "http://127.0.0.1:${port}/" -L 2>/dev/null | grep -oE 'assets/main-[A-Za-z0-9_-]+\.js' | head -1); do curl -sS "http://127.0.0.1:${port}/$f"; done) \
       || die "the served web bundle does not carry the review queue"
     ok "panel build mounted: server $(git -C "$REPO_ROOT" log -1 --format=%h -- MemoryPanel) → $IN_SERVER, web → $IN_WEB"
-    ok "meta proxy answers asset/gate/get with HTTP $code without a session (registered); review queue at http://127.0.0.1:${port}/#/review"
+    ok "meta proxy forwards asset/gate/get (HTTP $code); review queue at http://127.0.0.1:${port}/#/review"
     ;;
   disable)
     recreate

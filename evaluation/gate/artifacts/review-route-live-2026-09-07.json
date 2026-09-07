@@ -1,0 +1,120 @@
+{
+  "schema": "review-route-live-v1",
+  "at": "2026-09-07T10:51:21Z",
+  "asset_id": "skl-ImeA29HL3Djj",
+  "reviewer": "system admin, added to the evaluation team as reviewer for this check",
+  "review_response": {
+    "code": 0,
+    "message": "ok",
+    "request_id": "req-a379a65514524e89",
+    "data": {
+      "asset": {
+        "asset_id": "skl-ImeA29HL3Djj",
+        "team_id": "team-5ezfoladb5",
+        "asset_type": "skill",
+        "name": "eval-bridge-endpoint-c",
+        "description": null,
+        "owner_user_id": "usr-n68ea5ythq",
+        "source_type": "extracted",
+        "source_ref": null,
+        "version": 1,
+        "visibility": "team",
+        "status": "approved",
+        "confidence": null,
+        "expires_at": null,
+        "last_used_at": null,
+        "usage_count": 0,
+        "content_ref": null,
+        "created_at": "2026-09-07T10:31:09.080Z",
+        "updated_at": "2026-09-07T10:51:21.248Z",
+        "metadata_json": "{\"gate\":{\"schema_version\":\"gate-decision-v2\",\"rules_version\":\"gate-rules-2026-09-07\",\"asset_id\":\"skl-ImeA29HL3Djj\",\"decided_at\":\"2026-09-07T10:33:19.674Z\",\"decision\":\"pending\",\"status_target\":\"candidate\",\"confidence\":null,\"reasons\":[\"cold start: no outcome recorded for this asset yet; pending by default\",\"no corrected(wrong/stale) record, so reject did not trigger\",\"context-based assessment: the author's own records contradict this asset's claim (l0:msg-76898e301d59, l1:m_1788639285772_6a04e573); review priority: high\"],\"evidence_refs\":[],\"signals\":{\"online\":{\"validated\":0,\"corrected\":0,\"used\":0,\"cross_user_validated\":0,\"distinct_consumers\":0,\"distinct_tasks\":0},\"author\":{\"user_id\":\"usr-n68ea5ythq\",\"validated\":12,\"corrected\":7,\"distinct_consumers\":1,\"recent_wrong_asset_ids\":[\"skl-sZFb3KatWY6m\"],\"assessment\":{\"competence\":\"medium\",\"domain\":\"reaching the team skill bridge over HTTP from an agent session: which address answers\",\"assessed_at\":\"2026-09-07T10:33:19.304Z\",\"citations\":4,\"asset_claim_check\":{\"verdict\":\"contradicts\",\"record_ids\":[\"l0:msg-76898e301d59\",\"l1:m_1788639285772_6a04e573\"]}}}},\"review_priority\":\"high\",\"evidence_as_of\":null,\"author_assessment\":{\"competence\":\"medium\",\"domain\":\"reaching the team skill bridge over HTTP from an agent session: which address answers\",\"assessed_at\":\"2026-09-07T10:33:19.304Z\",\"citations\":4,\"asset_claim_check\":{\"verdict\":\"contradicts\",\"record_ids\":[\"l0:msg-76898e301d59\",\"l1:m_1788639285772_6a04e573\"]},\"pack_sha256\":\"004085df35583afcbbcf705fbbe456121c20a5dd9f2978e2aee6d5081ae0a895\",\"assessment_file\":\"/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json\"},\"review\":{\"decision\":\"admit\",\"status\":\"approved\",\"by\":\"usr-n3h5ewx4ja\",\"at\":\"2026-09-07T10:51:21.248Z\",\"note\":\"live check of the review route; reverted by re-evaluation right after\"}}}"
+      },
+      "review": {
+        "decision": "admit",
+        "status": "approved",
+        "by": "usr-n3h5ewx4ja",
+        "at": "2026-09-07T10:51:21.248Z",
+        "note": "live check of the review route; reverted by re-evaluation right after"
+      }
+    }
+  },
+  "re_evaluate_response": {
+    "code": 0,
+    "message": "ok",
+    "request_id": "req-a43aa76846e34c9e",
+    "data": {
+      "decision": {
+        "schema_version": "gate-decision-v2",
+        "rules_version": "gate-rules-2026-09-07",
+        "asset_id": "skl-ImeA29HL3Djj",
+        "decided_at": "2026-09-07T10:51:21.284Z",
+        "decision": "pending",
+        "status_target": "candidate",
+        "confidence": null,
+        "reasons": [
+          "cold start: no outcome recorded for this asset yet; pending by default",
+          "no corrected(wrong/stale) record, so reject did not trigger",
+          "context-based assessment: the author's own records contradict this asset's claim (l0:msg-76898e301d59, l1:m_1788639285772_6a04e573); review priority: high"
+        ],
+        "evidence_refs": [],
+        "signals": {
+          "online": {
+            "validated": 0,
+            "corrected": 0,
+            "used": 0,
+            "cross_user_validated": 0,
+            "distinct_consumers": 0,
+            "distinct_tasks": 0
+          },
+          "author": {
+            "user_id": "usr-n68ea5ythq",
+            "validated": 12,
+            "corrected": 7,
+            "distinct_consumers": 1,
+            "recent_wrong_asset_ids": [
+              "skl-sZFb3KatWY6m"
+            ],
+            "assessment": {
+              "competence": "medium",
+              "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+              "assessed_at": "2026-09-07T10:33:19.304Z",
+              "citations": 4,
+              "asset_claim_check": {
+                "verdict": "contradicts",
+                "record_ids": [
+                  "l0:msg-76898e301d59",
+                  "l1:m_1788639285772_6a04e573"
+                ]
+              }
+            }
+          }
+        },
+        "review_priority": "high",
+        "evidence_as_of": null
+      },
+      "applied": true,
+      "asset": {
+        "asset_id": "skl-ImeA29HL3Djj",
+        "team_id": "team-5ezfoladb5",
+        "asset_type": "skill",
+        "name": "eval-bridge-endpoint-c",
+        "description": null,
+        "owner_user_id": "usr-n68ea5ythq",
+        "source_type": "extracted",
+        "source_ref": null,
+        "version": 1,
+        "visibility": "team",
+        "status": "candidate",
+        "confidence": null,
+        "expires_at": null,
+        "last_used_at": null,
+        "usage_count": 0,
+        "content_ref": null,
+        "created_at": "2026-09-07T10:31:09.080Z",
+        "updated_at": "2026-09-07T10:51:21.285Z",
+        "metadata_json": "{\"gate\":{\"schema_version\":\"gate-decision-v2\",\"rules_version\":\"gate-rules-2026-09-07\",\"asset_id\":\"skl-ImeA29HL3Djj\",\"decided_at\":\"2026-09-07T10:51:21.284Z\",\"decision\":\"pending\",\"status_target\":\"candidate\",\"confidence\":null,\"reasons\":[\"cold start: no outcome recorded for this asset yet; pending by default\",\"no corrected(wrong/stale) record, so reject did not trigger\",\"context-based assessment: the author's own records contradict this asset's claim (l0:msg-76898e301d59, l1:m_1788639285772_6a04e573); review priority: high\"],\"evidence_refs\":[],\"signals\":{\"online\":{\"validated\":0,\"corrected\":0,\"used\":0,\"cross_user_validated\":0,\"distinct_consumers\":0,\"distinct_tasks\":0},\"author\":{\"user_id\":\"usr-n68ea5ythq\",\"validated\":12,\"corrected\":7,\"distinct_consumers\":1,\"recent_wrong_asset_ids\":[\"skl-sZFb3KatWY6m\"],\"assessment\":{\"competence\":\"medium\",\"domain\":\"reaching the team skill bridge over HTTP from an agent session: which address answers\",\"assessed_at\":\"2026-09-07T10:33:19.304Z\",\"citations\":4,\"asset_claim_check\":{\"verdict\":\"contradicts\",\"record_ids\":[\"l0:msg-76898e301d59\",\"l1:m_1788639285772_6a04e573\"]}}}},\"review_priority\":\"high\",\"evidence_as_of\":null,\"author_assessment\":{\"competence\":\"medium\",\"domain\":\"reaching the team skill bridge over HTTP from an agent session: which address answers\",\"assessed_at\":\"2026-09-07T10:33:19.304Z\",\"citations\":4,\"asset_claim_check\":{\"verdict\":\"contradicts\",\"record_ids\":[\"l0:msg-76898e301d59\",\"l1:m_1788639285772_6a04e573\"]},\"pack_sha256\":\"004085df35583afcbbcf705fbbe456121c20a5dd9f2978e2aee6d5081ae0a895\",\"assessment_file\":\"/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json\"}}}"
+      }
+    }
+  },
+  "note": "admit by hand → status approved with gate.review recorded; gate/evaluate (no outcomes on file) → candidate again; the review record stays on the asset"
+}
