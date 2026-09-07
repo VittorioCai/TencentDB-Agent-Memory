@@ -1,0 +1,73 @@
+{
+  "schema": "consumer-skill-revision-v1",
+  "revised_at": "2026-09-07T09:03:49Z",
+  "skill_id": "skl-lUWmwEYqsZDZ",
+  "name": "skill-bridge-http-access",
+  "author": {
+    "user_id": "usr-4u07qc2kuj",
+    "agent_id": "agt-5e0y4l8a7a",
+    "written_as": "B (the asset's owner), key over stdin"
+  },
+  "from_version": 2,
+  "to_version": 3,
+  "old_body_sha256": "86f2a149a877216778bb9cb22a06af62b8b61a0d547439c58c7525c984e01338",
+  "new_body_sha256": "7f812a1f9323796f4a1b9b130c987de633c2a9de074a89df274cec36b6994730",
+  "old_body_file": "assets/consumer-skill-v2.md",
+  "new_body_file": "assets/consumer-skill-v3.md",
+  "why": [
+    "get-by-name is no longer owner-only since proxy commit 87bb79a (2026-09-05); v2 said it was",
+    "probe-every-candidate is scoped to diagnostic tasks; v2 made it the default, which prescribed the off arm's second dial (COMPARISON 2026-09-06, confounders)",
+    "the acceptance marker query team-bridge-reachability is harness knowledge and is removed from the team asset"
+  ],
+  "old_version_kept": "yes — /v3/skill/update appends; v2 remains readable through /v3/skill/versions and its applicability is stated at the top of v3",
+  "versions_after": {
+    "items": [
+      {
+        "skill_id": "skl-lUWmwEYqsZDZ",
+        "name": "skill-bridge-http-access",
+        "description": "Reach and query the team's skill bridge over HTTP (POST skill search) and report the response, or a blocked/timeout outcome, accurately.",
+        "version": 3,
+        "is_head": true,
+        "status": "active",
+        "owner_user_id": "usr-4u07qc2kuj",
+        "owner_agent_id": "agt-5e0y4l8a7a",
+        "team_id": "team-5ezfoladb5",
+        "task_id": "default",
+        "created_at_ms": 1788771828989,
+        "updated_at_ms": 1788771828989,
+        "is_expired": false
+      },
+      {
+        "skill_id": "skl-lUWmwEYqsZDZ",
+        "name": "skill-bridge-http-access",
+        "description": "Reach and query the team's skill bridge over HTTP (POST skill search) and report the response, or a blocked/timeout outcome, accurately.",
+        "version": 2,
+        "is_head": false,
+        "status": "active",
+        "owner_user_id": "usr-4u07qc2kuj",
+        "owner_agent_id": "agt-5e0y4l8a7a",
+        "team_id": "team-5ezfoladb5",
+        "task_id": "skill-extract-task-8af63de5",
+        "created_at_ms": 1788645760804,
+        "updated_at_ms": 1788645760804,
+        "is_expired": false
+      },
+      {
+        "skill_id": "skl-lUWmwEYqsZDZ",
+        "name": "skill-bridge-http-access",
+        "description": "Reach and query the team's skill bridge over HTTP (POST skill search) and report the response, or a blocked/timeout outcome, accurately.",
+        "version": 1,
+        "is_head": false,
+        "status": "active",
+        "owner_user_id": "usr-4u07qc2kuj",
+        "owner_agent_id": "agt-5e0y4l8a7a",
+        "team_id": "team-5ezfoladb5",
+        "task_id": "skill-extract-task-1cbea11c",
+        "created_at_ms": 1788645017859,
+        "updated_at_ms": 1788645017859,
+        "is_expired": false
+      }
+    ],
+    "total": 3
+  }
+}

@@ -1,5 +1,23 @@
 {
   "identities": {
+    "a": {
+      "username": "topic4-eval-author-a",
+      "user_id": "usr-n68ea5ythq",
+      "agent_id": "agt-5e4hna56j9",
+      "team_id": "team-5ezfoladb5",
+      "key_file": "deploy/global-images/.topic4-user-key",
+      "role": "author of the mainline pair",
+      "recorded_at": "2026-09-07"
+    },
+    "b": {
+      "username": "topic4-eval-consumer-b",
+      "user_id": "usr-4u07qc2kuj",
+      "agent_id": "agt-5e0y4l8a7a",
+      "team_id": "team-5ezfoladb5",
+      "key_file": "deploy/global-images/.topic4-user-key-b",
+      "role": "consumer; owner of the auto-extracted skill-bridge-http-access",
+      "recorded_at": "2026-09-07"
+    },
     "c": {
       "username": "topic4-eval-author-c",
       "user_id": "usr-8ypylzex49",
@@ -10,5 +28,6 @@
       "created_at": "2026-09-06T21:16:36Z",
       "operator": "same person as every other evaluation identity; the id is what makes the author dimension computable, not an independent human"
     }
-  }
+  },
+  "team_id": "team-5ezfoladb5"
 }
