@@ -26,12 +26,26 @@
  *      asset's own token (its address, its id) so it is about that asset.
  *
  * Conclusions are then rebuilt from the surviving claims, never taken from
- * the model: competence from execution_result claims only (none → unknown;
- * failures only → low; one success → medium; two or more successes → high;
- * failures beside successes are reported, not subtracted — a probe that
- * timed out is an operation, not a lack of skill), the asset-claim verdict
- * from the accepted supports/contradicts claims, and the summary from the
- * counts. The model's own competence and verdict are kept as "as said".
+ * the model. Execution results are counted per CALL, not per claim: a call
+ * can carry many sentences and contributes one result. They are also kept
+ * in three ledgers, because they say different things about the author:
+ *
+ *   own_business      the author's own operation with a business-level
+ *                     result (a harness-verified outcome where the author
+ *                     is the consumer)
+ *   others_on_assets  someone else's use of the author's asset, verified
+ *                     by the harness
+ *   own_transport     the author's own call answered by upstream (an HTTP
+ *                     status the proxy saw); a 2xx says the endpoint
+ *                     answered, nothing about the business envelope
+ *
+ * Competence rests on the business ledgers only: none → unknown; failures
+ * only → low; any success → medium. `high` is never derived — nothing here
+ * is calibrated to say it — so a derived assessment cannot lower a
+ * candidate's review priority. Failures beside successes are reported, not
+ * subtracted. The asset-claim verdict comes from accepted supports /
+ * contradicts claims; the summary from the counts. The model's own
+ * competence and verdict are kept as "as said".
  *
  * Pure: no I/O. Used by assess.mjs; tested on its own.
  */
@@ -163,7 +177,7 @@ export function recordedOutcome(rec) {
  * The fact check for one claim: can the cited record carry a claim of this
  * type, and does the claim agree with what the record says?
  */
-export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = null) {
+export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = null, assetVersion = null) {
   const type = normalizeType(claim?.type);
   if (!CLAIM_TYPES.has(type)) return { ok: false, reason: `claim type "${claim?.type}" not in the vocabulary`, type };
   const rec = recordOf(pack, foundIn);
@@ -189,25 +203,27 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   if (assetId && cls === "harness_verified" && rec.meta?.asset_id === assetId && type === "execution_result") {
     const st = rec.meta?.state; const why = rec.meta?.corrected_reason;
     const byRecord = st === "validated" ? "supports" : st === "corrected" && (why === "wrong" || why === "stale") ? "contradicts" : null;
-    if (byRecord) {
+    const sameVersion = assetVersion == null || rec.meta?.asset_version == null || rec.meta.asset_version === assetVersion;
+    if (byRecord && sameVersion) {
       if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
       return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };
+    }
+    if (byRecord && !sameVersion) {
+      // An outcome on an earlier version of this asset is about that text,
+      // not the one under assessment: the result stands, the relation does not.
+      return { ok: true, type, outcome, relation: "silent", strength: null, note: `${foundIn} is about version ${rec.meta.asset_version} of this asset, not version ${assetVersion}; it neither supports nor contradicts the current text` };
     }
   }
   let strength = null;
   if (relation !== "silent") {
     if (type === "model_inference" || type === "coverage_unknown") return { ok: false, reason: `a ${type} claim cannot support or contradict the asset`, type };
+    if (assetId && rec.kind === "skill" && rec.meta?.skill_id === assetId) return { ok: false, reason: `${foundIn} is the asset's own text; it cannot support or contradict its own claim`, type };
     if (assetTokens.length > 0) {
       const hay = fold(rec.text);
       const q = fold(claim?.quote);
-      // A host token and a host:port token name the same thing: a text that
-      // carries the host followed by a non-digit (or the end) names the
-      // host:port token too (10.244.7.19 ~ 10.244.7.19:8096).
-      const names = (text, t) => {
-        if (text.includes(t)) return true;
-        const host = t.includes(":") ? t.split(":")[0] : null;
-        return !!host && new RegExp(host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\d.])").test(text);
-      };
+      // Exact: 10.244.7.19:9999 failing says nothing about 10.244.7.19:8096,
+      // and a host alone does not name a host:port.
+      const names = (text, t) => text.includes(t);
       const hit = assetTokens.find((t) => names(q, fold(t)) || names(hay, fold(t)));
       if (!hit) return { ok: false, reason: `claims to ${relation === "supports" ? "support" : "contradict"} the asset but neither the quote nor ${foundIn} names the asset's token (${assetTokens.join(", ")})`, type };
     }
@@ -216,14 +232,29 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   return { ok: true, type, outcome, relation, strength };
 }
 
-/** Competence from execution-grade claims only. */
-export function deriveCompetence(execClaims) {
-  const success = execClaims.filter((c) => c.outcome === "success").length;
-  const failure = execClaims.filter((c) => c.outcome === "failure").length;
-  if (success + failure === 0) return { competence: "unknown", success, failure, basis: "no execution-grade claim survived" };
-  if (success === 0) return { competence: "low", success, failure, basis: `${failure} recorded failure(s), no success` };
-  if (success >= 2) return { competence: "high", success, failure, basis: `${success} recorded success(es)${failure ? `, ${failure} failure(s) beside them` : ""}` };
-  return { competence: "medium", success, failure, basis: `1 recorded success${failure ? `, ${failure} failure(s) beside it` : ""}` };
+/** Which ledger a status record belongs to, for the author being assessed. */
+export function ledgerOf(rec, authorId) {
+  if (!rec) return "own_transport";
+  if (rec.evidence_class === "harness_verified") return authorId && rec.meta?.consumer_user_id === authorId ? "own_business" : "others_on_assets";
+  return "own_transport";
+}
+
+/**
+ * Competence from distinct calls with a result, by ledger. Only business
+ * results (the author's own, or others' on the author's assets) decide;
+ * transport results are reported. `high` is never derived.
+ */
+export function deriveCompetence(execCalls) {
+  const ledgers = { own_business: { success: 0, failure: 0 }, others_on_assets: { success: 0, failure: 0 }, own_transport: { success: 0, failure: 0 } };
+  for (const c of execCalls) { const l = ledgers[c.ledger ?? "own_transport"]; if (c.outcome === "success") l.success += 1; else if (c.outcome === "failure") l.failure += 1; }
+  const bSuccess = ledgers.own_business.success + ledgers.others_on_assets.success;
+  const bFailure = ledgers.own_business.failure + ledgers.others_on_assets.failure;
+  const success = bSuccess + ledgers.own_transport.success;
+  const failure = bFailure + ledgers.own_transport.failure;
+  const transportNote = ledgers.own_transport.success + ledgers.own_transport.failure ? `; transport: ${ledgers.own_transport.success} answered 2xx, ${ledgers.own_transport.failure} not (reported, not decisive)` : "";
+  if (bSuccess + bFailure === 0) return { competence: "unknown", success, failure, ledgers, basis: `no business-level result${transportNote || "; no execution-grade claim survived"}` };
+  if (bSuccess === 0) return { competence: "low", success, failure, ledgers, basis: `${bFailure} business-level failure(s), no success (own ${ledgers.own_business.failure}, others on the author's assets ${ledgers.others_on_assets.failure})${transportNote}` };
+  return { competence: "medium", success, failure, ledgers, basis: `${bSuccess} business-level success(es) (own ${ledgers.own_business.success}, others on the author's assets ${ledgers.others_on_assets.success})${bFailure ? `, ${bFailure} failure(s) beside them` : ""}${transportNote}; high is not derived without calibration` };
 }
 
 /**
@@ -241,6 +272,8 @@ export function checkAssessment(raw, pack, opts = {}) {
     ? [{ statement: `asset claim check: ${acc.verdict}`, record_ids: acc.record_ids, quote: acc.quote, type: acc.type ?? "observed_operation", outcome: acc.outcome, relation_to_asset: acc.verdict }]
     : [];
   const assetId = opts.assetId ?? null;
+  const assetVersion = opts.assetVersion ?? null;
+  const authorId = opts.authorId ?? null;
   const kept = [], dropped = [];
   for (const [group, list] of [["claim", claims], ["counter_evidence", counter], ["asset_claim_check", accAsClaim]]) {
     for (const c of list) {
@@ -253,26 +286,55 @@ export function checkAssessment(raw, pack, opts = {}) {
       // The quote may sit in several cited records (a model_intent row and
       // the bridge_call that followed it); the claim stands on the first
       // one that can carry it, and is dropped only if none can.
-      // For an execution result the fact may also be carried by a cited
-      // execution-grade record the quote is not in: the model quotes the
-      // command from the intent row and cites the bridge_call row that
-      // answered it — both are verified to exist, and the status is read
-      // from the row that has one.
-      const candidates = normalizeType(c?.type) === "execution_result"
-        ? [...new Set([...v.found_in_all, ...v.record_ids.filter((id) => EXECUTION_CLASSES.has(recordOf(pack, id).evidence_class))])]
+      // For an execution result the status must come from a record that
+      // answered the quoted command: the quoted record itself when it carries
+      // a status, or the bridge_call the pack paired with the quoted intent.
+      // A cited call that answered some other command cannot be borrowed —
+      // two calls are not one success. With no such record the sentence is
+      // kept as an observed operation (intent), never as a result.
+      const isExec = normalizeType(c?.type) === "execution_result";
+      const candidates = isExec
+        ? [...new Set(v.found_in_all.flatMap((id) => { const r = recordOf(pack, id); const paired = r.meta?.paired_call; return paired && v.record_ids.includes(paired) ? [id, paired] : [id]; }))]
         : v.found_in_all;
       let f = null; let foundIn = null;
       for (const id of candidates) {
-        const t = verifyFact(c, pack, id, assetTokens, assetId);
+        const t = verifyFact(c, pack, id, assetTokens, assetId, assetVersion);
         if (t.ok) { f = t; foundIn = id; break; }
         if (!f) f = t;
       }
+      if (!f.ok && isExec && /intent only|needs a proxy-observed call/.test(f.reason)) {
+        const asOp = verifyFact({ ...c, type: "observed_operation", relation_to_asset: "silent" }, pack, v.found_in, assetTokens, assetId, assetVersion);
+        if (asOp.ok) { kept.push({ ...row, type: "observed_operation", outcome: null, relation: "silent", strength: null, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class, downgraded_from: "execution_result", note: `kept as intent: ${f.reason}` }); continue; }
+      }
       if (!f.ok) { dropped.push({ ...row, type: f.type, reason: f.reason }); continue; }
-      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, by_identity: f.by_identity ?? false, found_in: foundIn, evidence_class: recordOf(pack, foundIn).evidence_class });
+      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, by_identity: f.by_identity ?? false, note: f.note ?? null, found_in: foundIn, evidence_class: recordOf(pack, foundIn).evidence_class });
     }
   }
+  // One call, one result: several sentences on the same status record count once.
   const execClaims = kept.filter((k) => k.type === "execution_result");
-  const derived = deriveCompetence(execClaims);
+  const byCall = new Map();
+  for (const k of execClaims) if (!byCall.has(k.found_in)) byCall.set(k.found_in, k);
+  // The business ledgers are read from the pack's harness records
+  // themselves — they are structured (state, consumer, asset, call) and do
+  // not depend on which of them the model happened to cite. Cited claims
+  // still carry the transport ledger and the relation to the asset.
+  // Only when the author is known: a harness row is "the author's own" or
+  // "others' on the author's asset" relative to that author.
+  const harness = authorId ? [...pack.keys()].map((id) => ({ id, rec: recordOf(pack, id) })).filter(({ rec }) => rec.evidence_class === "harness_verified" && recordedOutcome(rec)) : [];
+  const seenCall = new Set();
+  const ledgerRows = [];
+  for (const { id, rec } of harness) {
+    const key = rec.meta?.call_id ? `call:${rec.meta.call_id}` : id;
+    if (seenCall.has(key)) continue;
+    seenCall.add(key);
+    ledgerRows.push({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" });
+  }
+  // Cited calls carry the transport ledger; with no author known, cited
+  // harness rows are read as others' results (the pack ledger did not run).
+  const transport = [...byCall.values()].filter((k) => recordOf(pack, k.found_in).evidence_class !== "harness_verified").map((k) => ({ ...k, ledger: "own_transport", from: "cited" }));
+  const citedHarness = authorId ? [] : [...byCall.values()].filter((k) => recordOf(pack, k.found_in).evidence_class === "harness_verified").map((k) => ({ ...k, ledger: "others_on_assets", from: "cited" }));
+  const execCalls = [...ledgerRows, ...citedHarness, ...transport];
+  const derived = deriveCompetence(execCalls);
   const saidRaw = normalizeCompetence(raw?.competence);
   const said = COMPETENCE.has(saidRaw) ? saidRaw : "unknown";
 
@@ -298,7 +360,7 @@ export function checkAssessment(raw, pack, opts = {}) {
     competence_basis: derived.basis,
     competence_as_said: said,
     competence_downgraded: derived.competence !== said,
-    execution_claims: { success: derived.success, failure: derived.failure },
+    execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, harness_records: ledgerRows.length, cited_transport_calls: transport.length },
     asset_claim_check: assetClaim,
     asset_claim_as_said: accSaid,
     claims_kept: kept,

@@ -83,7 +83,8 @@ export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
     "  team_principles     a persona line: the team's working principles stored per team+agent, not the person's own record",
     "  authored_text       a skill the person's agent owns (the writer of each version is unknown)",
     "Write claims of these types:",
-    "  execution_result           the person's operation succeeded or failed — cite ONLY proxy_observed or harness_verified records, and set `outcome` to success or failure exactly as the record shows",
+    "  execution_result           the person's operation succeeded or failed — cite ONLY proxy_observed or harness_verified records, and set `outcome` to success or failure exactly as the record shows. Cite the bridge_call row that answered the command (the pack pairs it with the model_intent row: `paired_call`); a call that answered a different command is not this command's result",
+    "  (the program counts results per call, not per sentence, and keeps the author's own business results, others' results on the author's assets, and transport-only 2xx apart; it never derives `high` competence)",
     "  observed_operation         the person did or asked for something — cite a message, a call, an outcome, or a derived memory with a traceable source",
     "  environment_applicability  where/when something applies (which network, which environment) — any record",
     "  model_inference            your own reading; cite what you infer from",
@@ -101,13 +102,14 @@ export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
     '    "asset_claim_check": {"verdict": "supports" | "contradicts" | "silent", "type": "...", "outcome": ..., "record_ids": ["<id>"], "quote": "<verbatim substring that shows it>"},',
     '    "summary": "<2-4 sentences>"}',
   ].join("\n");
-  const records = chosen.map((r) => `### ${r.record_id}  [${r.kind} · ${r.evidence_class}${r.meta?.type ? ` · ${r.meta.type}` : ""}${r.meta?.role ? ` · ${r.meta.role}` : ""}${r.meta?.provenance ? ` · ${r.meta.provenance}` : ""}${r.meta?.upstream_status != null ? ` · status ${r.meta.upstream_status}` : ""}${r.at ? ` · ${r.at}` : ""}]\n${r.text}`).join("\n\n");
+  const records = chosen.map((r) => `### ${r.record_id}  [${r.kind} · ${r.evidence_class}${r.meta?.type ? ` · ${r.meta.type}` : ""}${r.meta?.role ? ` · ${r.meta.role}` : ""}${r.meta?.provenance ? ` · ${r.meta.provenance}` : ""}${r.meta?.kind ? ` · ${r.meta.kind}` : ""}${r.meta?.upstream_status != null ? ` · status ${r.meta.upstream_status}` : ""}${r.meta?.paired_call ? ` · paired_call ${r.meta.paired_call}` : ""}${r.meta?.paired_intent ? ` · answers ${r.meta.paired_intent}` : ""}${r.meta?.pairing && r.meta.pairing !== "paired" ? ` · ${r.meta.pairing}` : ""}${r.meta?.asset_version != null && r.kind === "outcome" ? ` · v${r.meta.asset_version}` : ""}${r.at ? ` · ${r.at}` : ""}]\n${r.text}`).join("\n\n");
   const user = [
     `Author: ${pack.author.user_id} (agent ${pack.author.agent_id}), team ${pack.author.team_id}.`,
     `Domain to assess: ${domain}`,
     `Asset claim to check${assetId ? ` (asset ${assetId}${pack.asset?.version ? ` v${pack.asset.version}` : ""})` : ""}: ${assetClaim}`,
     `Evidence cutoff: ${pack.evidence_cutoff} — every record below is dated at or before it.`,
     pack.chain ? `Chain the pack could establish for the asset: sessions ${pack.chain.source_sessions.length}, observed operations ${pack.chain.operations.length}, results ${pack.chain.results.length}; breaks: ${pack.chain.breaks.join(" | ")}` : "",
+    pack.pairing ? `Call pairing: ${pack.pairing.paired} result(s) tied to their command, ${pack.pairing.ambiguous} ambiguous, ${pack.pairing.unpaired} unpaired, ${pack.pairing.intents_without_result} command(s) with no observed result.` : "",
     "",
     `Records (${chosen.length} of ${pack.record_count} in the pack; ids are the citation keys):`,
     "",
@@ -141,7 +143,7 @@ export function summaryForGate({ pack, verified, domain, assessedAt, outFile }) 
     assessed_at: assessedAt,
     evidence_cutoff: pack.evidence_cutoff,
     citations: verified.counts.citations,
-    execution_claims: verified.execution_claims,
+    execution_claims: { success: verified.execution_claims.success, failure: verified.execution_claims.failure, calls: verified.execution_claims.calls, ledgers: verified.execution_claims.ledgers },
     asset_claim_check: { verdict: verified.asset_claim_check.verdict, record_ids: verified.asset_claim_check.record_ids, strength: verified.asset_claim_check.strength ?? null },
     asset_claim_as_said: verified.asset_claim_as_said,
     author_user_id: pack.author.user_id,
@@ -177,7 +179,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const pack = JSON.parse(readFileSync(a.pack, "utf8"));
   if (pack.schema !== "author-evidence-pack-v2") { console.error(`pack schema ${pack.schema}: rebuild it with build-evidence-pack.mjs (v2 carries evidence classes and the cutoff)`); process.exit(1); }
   const packMap = new Map(pack.records.map((r) => [r.record_id, r]));
-  const opts = { assetTokens: pack.asset?.tokens ?? [], assetId: pack.asset_id ?? null };
+  const opts = { assetTokens: pack.asset?.tokens ?? [], assetId: pack.asset_id ?? null, assetVersion: pack.asset?.version ?? null, authorId: pack.author?.user_id ?? null };
   // --recheck=F: re-run the check on a saved assessment's raw model output
   // (after a checker change) without another model call; the pack must be
   // the one the assessment was made from.

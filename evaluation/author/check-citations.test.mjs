@@ -12,7 +12,13 @@ const pack = new Map([
   ["call:c1", rec("call", "2026-09-06 bridge_call search status=200 http://127.0.0.1:8096/skill-bridge/v3/skill/search", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")],
   ["call:c2", rec("call", "2026-09-06 bridge_call get-by-name status=404 http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name", { kind: "bridge_call", upstream_status: 404 }, "proxy_observed")],
   ["call:c3", rec("call", "2026-09-06 model_intent Bash curl http://10.244.7.19:8096/skill-bridge/v3/skill/search", { kind: "model_intent", upstream_status: 0 }, "proxy_observed")],
-  ["outcome:o1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05; address 10.244.7.19:8096 timed out for the consumer", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a" }, "harness_verified")],
+  ["outcome:o1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05; address 10.244.7.19:8096 timed out for the consumer", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b" }, "harness_verified")],
+  ["outcome:o0", rec("outcome", "validated on asset skl-a v1 by usr-b (cross_user) at 2026-09-01", { state: "validated", asset_id: "skl-a", asset_version: 1, consumer_user_id: "usr-b" }, "harness_verified")],
+  ["outcome:own", rec("outcome", "validated on asset skl-a v2 by usr-a (self) at 2026-09-04", { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-a" }, "harness_verified")],
+  ["call:i1", rec("call", "2026-09-06 model_intent Bash curl -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -d {\"query\":\"deploy\"} status=0", { kind: "model_intent", upstream_status: 0, session_key: "s1", paired_call: "call:r1", pairing: "paired" }, "proxy_observed")],
+  ["call:r1", rec("call", "2026-09-06 bridge_call search status=200 {\"query\":\"deploy\"}", { kind: "bridge_call", upstream_status: 200, session_key: "s1", paired_intent: "call:i1", pairing: "paired" }, "proxy_observed")],
+  ["call:i2", rec("call", "2026-09-06 model_intent Bash curl -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search status=0", { kind: "model_intent", upstream_status: 0, session_key: "s1", pairing: "no_result" }, "proxy_observed")],
+  ["call:h", rec("call", "2026-09-06 bridge_call health status=200 {}", { kind: "bridge_call", upstream_status: 200, session_key: "s2", pairing: "unpaired" }, "proxy_observed")],
 ]);
 const tokens = ["10.244.7.19:8096"];
 
@@ -41,8 +47,12 @@ test("the reviewer's counter-example: 'deployed successfully' citing a report of
   assert.equal(r.competence, "unknown");
   assert.equal(r.competence_as_said, "high");
   assert.equal(r.asset_claim_check.verdict, "silent");
-  assert.equal(r.claims_kept.length, 0);
-  assert.match(r.claims_dropped[0].reason, /needs a proxy-observed call or a harness-verified outcome; the quote is from assistant_report/);
+  assert.equal(r.execution_claims.calls, 0);
+  // The sentence survives only as what the report can carry: an operation the assistant described.
+  assert.equal(r.claims_kept.length, 1);
+  assert.equal(r.claims_kept[0].type, "observed_operation");
+  assert.equal(r.claims_kept[0].relation, "silent");
+  assert.match(r.claims_kept[0].note, /needs a proxy-observed call or a harness-verified outcome; the quote is from assistant_report/);
 });
 
 test("an execution result must come from a call or an outcome, and agree with what it records", () => {
@@ -63,11 +73,15 @@ test("an observed operation needs a message, a call, an outcome, or a traceable 
   assert.equal(verifyFact({ type: "environment_applicability", quote: "Probe-all, trust-reachability" }, pack, "persona:1:3").ok, true);
 });
 
-test("a host:port token is named by its host alone, as an outcome record on another asset carries it", () => {
-  const p2 = new Map([...pack, ["outcome:o2", rec("outcome", "corrected(wrong) on asset skl-a v2 (asset tokens: 10.244.7.19) by usr-b", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a" }, "harness_verified")]]);
-  const r = verifyFact({ type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-a", relation_to_asset: "contradicts" }, p2, "outcome:o2", ["10.244.7.19:8096"], "skl-new");
-  assert.deepEqual([r.ok, r.relation, r.strength], [true, "contradicts", "strong"]);
-  assert.equal(verifyFact({ type: "observed_operation", quote: "Both documented addresses probed", relation_to_asset: "contradicts" }, p2, "l0:msg1", ["10.244.7.190:8096"], "skl-new").ok, false); // 10.244.7.19 does not name 10.244.7.190
+test("tokens match exactly: a failure at 10.244.7.19:9999 says nothing about 10.244.7.19:8096, and a host alone names no port", () => {
+  const p2 = new Map([...pack,
+    ["outcome:o9", rec("outcome", "corrected(wrong) on asset skl-x v1 (tokens of v1: 10.244.7.19:9999) by usr-b", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-x", asset_version: 1 }, "harness_verified")],
+    ["outcome:o8", rec("outcome", "corrected(wrong) on asset skl-x v1 (tokens of v1: 10.244.7.19:8096) by usr-b", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-x", asset_version: 1 }, "harness_verified")],
+    ["outcome:o7", rec("outcome", "corrected(wrong) on asset skl-x v1 (asset tokens: 10.244.7.19) by usr-b", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-x", asset_version: 1 }, "harness_verified")]]);
+  const claim = { type: "execution_result", outcome: "failure", quote: "corrected(wrong) on asset skl-x", relation_to_asset: "contradicts" };
+  assert.match(verifyFact(claim, p2, "outcome:o9", ["10.244.7.19:8096"], "skl-new").reason, /names the asset's token/);
+  assert.deepEqual([verifyFact(claim, p2, "outcome:o8", ["10.244.7.19:8096"], "skl-new").ok, verifyFact(claim, p2, "outcome:o8", ["10.244.7.19:8096"], "skl-new").strength], [true, "strong"]);
+  assert.match(verifyFact(claim, p2, "outcome:o7", ["10.244.7.19:8096"], "skl-new").reason, /names the asset's token/);
 });
 
 test("supporting or contradicting the asset takes the asset's own token; inferences never do", () => {
@@ -92,26 +106,38 @@ test("a harness outcome on the assessed asset is about it by identity: its state
 
 test("a claim citing the intent row and the call row stands on the row that can carry it", () => {
   const p2 = new Map([...pack, ["call:c4", rec("call", "2026-09-06 model_intent Bash curl -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search status=0", { kind: "model_intent", upstream_status: 0 }, "proxy_observed")],
-    ["call:c5", rec("call", "2026-09-06 bridge_call search status=200 http://127.0.0.1:8096/skill-bridge/v3/skill/search", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]);
+    ["call:c5", rec("call", "2026-09-06 bridge_call search status=200 {\"query\":\"deploy\"}", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]);
+  // Unpaired: the bridge_call cannot be borrowed for the intent's quote; the sentence is kept as intent.
   const r = checkAssessment({ competence: "medium", claims: [{ statement: "searched", type: "execution_result", outcome: "success", record_ids: ["call:c4", "call:c5"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p2);
   assert.equal(r.claims_kept.length, 1);
-  assert.equal(r.claims_kept[0].found_in, "call:c5");
-  assert.equal(r.competence, "medium");
+  assert.equal(r.claims_kept[0].type, "observed_operation");
+  assert.equal(r.execution_claims.calls, 0);
   const only = checkAssessment({ competence: "medium", claims: [{ statement: "searched", type: "execution_result", outcome: "success", record_ids: ["call:c4"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p2);
-  assert.match(only.claims_dropped[0].reason, /intent only/);
-  // The quote sits only in the intent row; the cited bridge_call row carries the status.
-  const p3 = new Map([...p2, ["call:c6", rec("call", "2026-09-06 bridge_call search status=200 {\"query\":\"deploy\"}", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]);
+  assert.equal(only.claims_kept[0].downgraded_from, "execution_result");
+  assert.match(only.claims_kept[0].note, /intent only/);
+  // Paired by the pack: the quote may sit in the intent row; the paired bridge_call carries the status.
+  const p3 = new Map([...p2]);
+  p3.set("call:c4", rec("call", p2.get("call:c4").text, { ...p2.get("call:c4").meta, paired_call: "call:c6", pairing: "paired" }, "proxy_observed"));
+  p3.set("call:c6", rec("call", "2026-09-06 bridge_call search status=200 {\"query\":\"deploy\"}", { kind: "bridge_call", upstream_status: 200, paired_intent: "call:c4", pairing: "paired" }, "proxy_observed"));
   const split = checkAssessment({ competence: "medium", claims: [{ statement: "searched, answered 200", type: "execution_result", outcome: "success", record_ids: ["call:c4", "call:c6"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p3);
   assert.equal(split.claims_kept[0]?.found_in, "call:c6");
+  assert.equal(split.claims_kept[0]?.type, "execution_result");
+  // A paired call cited alone, without the intent among the cited ids, is not borrowed either.
+  const notCited = checkAssessment({ competence: "medium", claims: [{ statement: "searched, answered 200", type: "execution_result", outcome: "success", record_ids: ["call:c4"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p3);
+  assert.equal(notCited.claims_kept[0]?.type, "observed_operation");
   const wrong = checkAssessment({ competence: "medium", claims: [{ statement: "searched, answered 200", type: "execution_result", outcome: "failure", record_ids: ["call:c4", "call:c6"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" }] }, p3);
-  assert.equal(wrong.claims_kept.length, 0);
+  assert.equal(wrong.execution_claims.calls, 0); // claimed failure disagrees with the paired 200; kept as intent at most
 });
 
-test("competence is derived from execution-grade claims only; failures beside successes are reported, not subtracted", () => {
+test("competence rests on business-level results, by ledger; transport is reported; high is never derived", () => {
   assert.equal(deriveCompetence([]).competence, "unknown");
-  assert.equal(deriveCompetence([{ outcome: "failure" }]).competence, "low");
-  assert.equal(deriveCompetence([{ outcome: "success" }, { outcome: "failure" }]).competence, "medium");
-  assert.equal(deriveCompetence([{ outcome: "success" }, { outcome: "success" }, { outcome: "failure" }]).competence, "high");
+  assert.equal(deriveCompetence([{ outcome: "success", ledger: "own_transport" }, { outcome: "success", ledger: "own_transport" }]).competence, "unknown");
+  assert.equal(deriveCompetence([{ outcome: "failure", ledger: "others_on_assets" }]).competence, "low");
+  assert.equal(deriveCompetence([{ outcome: "success", ledger: "own_business" }, { outcome: "failure", ledger: "others_on_assets" }]).competence, "medium");
+  const many = deriveCompetence([{ outcome: "success", ledger: "own_business" }, { outcome: "success", ledger: "others_on_assets" }, { outcome: "success", ledger: "others_on_assets" }]);
+  assert.equal(many.competence, "medium");
+  assert.match(many.basis, /high is not derived/);
+  assert.deepEqual(many.ledgers.others_on_assets, { success: 2, failure: 0 });
   const raw = {
     competence: "low",
     claims: [
@@ -124,12 +150,14 @@ test("competence is derived from execution-grade claims only; failures beside su
     summary: "model prose",
   };
   const r = checkAssessment(raw, pack, { assetTokens: tokens });
-  assert.equal(r.competence, "medium");
-  assert.deepEqual(r.execution_claims, { success: 1, failure: 1 });
+  assert.equal(r.competence, "unknown"); // both results are transport-only
+  assert.equal(r.execution_claims.success, 1);
+  assert.equal(r.execution_claims.failure, 1);
+  assert.deepEqual(r.execution_claims.ledgers.own_transport, { success: 1, failure: 1 });
   assert.equal(r.competence_as_said, "low");
   assert.equal(r.counts.kept, 5);
   assert.equal(r.counts.citations, 4); // the coverage statement is not a citation
-  assert.match(r.summary, /competence medium: 1 recorded success, 1 failure/);
+  assert.match(r.summary, /competence unknown: no business-level result; transport: 1 answered 2xx, 1 not/);
   assert.equal(r.summary_as_said, "model prose");
 });
 
@@ -149,6 +177,65 @@ test("the asset-claim verdict is rebuilt from accepted claims; the model's verdi
   assert.equal(silent.competence, "unknown");
 });
 
+test("two calls are not one success: an intent in one session and an unrelated 200 in another cannot be stitched", () => {
+  const raw = { competence: "high", claims: [{ statement: "connected to the target address", type: "execution_result", outcome: "success", record_ids: ["call:i2", "call:h"], quote: "http://10.244.7.19:8096/skill-bridge/v3/skill/search", relation_to_asset: "supports" }] };
+  const r = checkAssessment(raw, pack, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2 });
+  assert.equal(r.competence, "unknown");
+  assert.equal(r.asset_claim_check.verdict, "silent");
+  assert.equal(r.claims_kept.length, 1);
+  assert.equal(r.claims_kept[0].type, "observed_operation");
+  assert.equal(r.claims_kept[0].downgraded_from, "execution_result");
+  assert.match(r.claims_kept[0].note, /kept as intent/);
+});
+
+test("a paired bridge_call answers its intent; the quote may be the command", () => {
+  const raw = { competence: "medium", claims: [
+    { statement: "searched the bridge", type: "execution_result", outcome: "success", record_ids: ["call:i1", "call:r1"], quote: "http://127.0.0.1:8096/skill-bridge/v3/skill/search" },
+    { statement: "the same search, said again", type: "execution_result", outcome: "success", record_ids: ["call:r1"], quote: "bridge_call search status=200" },
+  ] };
+  const r = checkAssessment(raw, pack, { assetTokens: tokens });
+  assert.equal(r.claims_kept.length, 2);
+  assert.equal(r.claims_kept[0].found_in, "call:r1");
+  assert.equal(r.execution_claims.calls, 1); // one call, one result, two sentences
+  assert.deepEqual(r.execution_claims.ledgers.own_transport, { success: 1, failure: 0 });
+  assert.equal(r.competence, "unknown"); // transport only
+});
+
+test("the business ledgers are read from the pack's harness records, cited or not; the asset's own text cannot vouch for itself", () => {
+  // Nothing cited: the pack still carries usr-a's own validated (own_business) and usr-b's on skl-a (others).
+  const none = checkAssessment({ competence: "unknown", claims: [] }, pack, { assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.deepEqual(none.execution_claims.ledgers.own_business, { success: 1, failure: 0 });
+  assert.deepEqual(none.execution_claims.ledgers.others_on_assets, { success: 1, failure: 1 }); // o0 validated v1, o1 corrected v2
+  assert.equal(none.competence, "medium");
+  assert.equal(none.asset_claim_check.verdict, "silent"); // relations still need a cited claim
+  const self = new Map([...pack, ["skill:skl-a@2", rec("skill", "name: a\nSend searches to http://10.244.7.19:8096/skill-bridge/v3/skill/search", { skill_id: "skl-a", version: 2 }, "authored_text")]]);
+  const r = checkAssessment({ competence: "medium", claims: [{ statement: "the asset says so itself", type: "environment_applicability", record_ids: ["skill:skl-a@2"], quote: "10.244.7.19:8096/skill-bridge", relation_to_asset: "supports" }] }, self, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2 });
+  assert.match(r.claims_dropped[0].reason, /own text; it cannot support or contradict its own claim/);
+});
+
+test("one call contributes one result: repeating a success in other words does not raise competence", () => {
+  const raw = { competence: "high", claims: [
+    { statement: "others validated the asset", type: "execution_result", outcome: "success", record_ids: ["outcome:own"], quote: "validated on asset skl-a v2 by usr-a" },
+    { statement: "the asset was validated (again, in other words)", type: "execution_result", outcome: "success", record_ids: ["outcome:own"], quote: "validated on asset skl-a v2" },
+  ], asset_claim_check: { verdict: "supports", type: "execution_result", outcome: "success", record_ids: ["outcome:own"], quote: "validated on asset skl-a v2 by usr-a" } };
+  const r = checkAssessment(raw, pack, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(r.execution_claims.harness_records, 3); // own, o0, o1 — each once, however often cited
+  assert.equal(r.execution_claims.cited_transport_calls, 0);
+  assert.deepEqual(r.execution_claims.ledgers.own_business, { success: 1, failure: 0 });
+  assert.equal(r.competence, "medium");
+});
+
+test("an outcome on an earlier version of the asset is a result, not a relation to the current text", () => {
+  const raw = { competence: "medium", claims: [{ statement: "v1 was validated", type: "execution_result", outcome: "success", record_ids: ["outcome:o0"], quote: "validated on asset skl-a v1", relation_to_asset: "supports" }] };
+  const r = checkAssessment(raw, pack, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2 });
+  assert.equal(r.claims_kept.length, 1);
+  assert.equal(r.claims_kept[0].relation, "silent");
+  assert.match(r.claims_kept[0].note, /about version 1 of this asset, not version 2/);
+  assert.equal(r.asset_claim_check.verdict, "silent");
+  const same = checkAssessment({ competence: "medium", claims: [{ statement: "v2 corrected", type: "execution_result", outcome: "failure", record_ids: ["outcome:o1"], quote: "corrected(wrong) on asset skl-a v2" }] }, pack, { assetId: "skl-a", assetVersion: 2 });
+  assert.equal(same.asset_claim_check.verdict, "contradicts");
+});
+
 test("garbage in, unknown out", () => {
   const r = checkAssessment({ competence: "excellent", claims: "no" }, pack);
   assert.equal(r.competence, "unknown");
@@ -159,9 +246,11 @@ test("garbage in, unknown out", () => {
 test("labels are folded onto the vocabulary; evidence is not", () => {
   const raw = { competence: "Moderate", claims: [{ statement: "searched", type: "Execution-Result", outcome: "OK", record_ids: ["call:c1"], quote: "search status=200" }] };
   const r = checkAssessment(raw, pack);
-  assert.equal(r.competence, "medium");
+  assert.equal(r.competence, "unknown"); // a transport 2xx alone decides nothing
   assert.equal(r.competence_as_said, "medium");
   assert.equal(r.claims_kept[0].type, "execution_result");
+  assert.equal(r.claims_kept[0].outcome, "success");
+  assert.deepEqual(r.execution_claims.ledgers.own_transport, { success: 1, failure: 0 });
   const bad = checkAssessment({ competence: "excellent", claims: [{ statement: "x", type: "hunch", record_ids: ["call:c1"], quote: "search status=200" }] }, pack);
   assert.match(bad.claims_dropped[0].reason, /not in the vocabulary/);
 });

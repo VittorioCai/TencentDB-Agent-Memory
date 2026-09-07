@@ -160,14 +160,21 @@ ignored` line. An assessment merged into `metadata_json` through
 file), and one written before this phase is ignored as unsigned.
 
 What the assessment says is derived by a program from claims it could
-verify against the kind of evidence that carries them — a proxy-observed
-call or a harness-verified outcome for an execution result, never an
-assistant's narration — see `../author/README.md`. Seen live: A's
-assessment on the rejected asset (competence high, asset claim
-contradicted by the corrected outcomes on that very asset) written at the
-frozen `as_of` and accepted there; B's on its candidate (high, supports)
-→ review priority low; A's cold-start candidate → priority high from A's
-other asset judged wrong within 30 days.
+verify against the kind of evidence that carries them — a status from the
+record that answered the quoted command, never an assistant's narration,
+never a call that answered some other command — and from the pack's own
+harness records, counted per call in three ledgers (the author's own
+business results, others' results on the author's assets, transport-only
+2xx); `high` is never derived, so a derived assessment cannot lower a
+candidate's priority — see `../author/README.md`. Seen live (after the
+phase-3 review): A's assessment on the rejected asset (medium; asset claim
+contradicted by the corrected outcomes on that very asset at that version)
+written at the frozen `as_of` and accepted there; B's on its candidate
+(unknown; silent — its own text cannot vouch for it) → review priority
+high; A's cold-start candidate (medium; contradicts through the exact
+token of the corrected asset's v2 body) → priority high with the outcome
+ids in the reason. Core requires the assessment to name the content hash
+the asset carries and never fills it in.
 
 | File | Does |
 |---|---|

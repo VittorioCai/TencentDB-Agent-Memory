@@ -107,9 +107,16 @@ export function personaRecords(persona) {
 }
 export function l1Record(m) {
   const src = m.source_message_ids ?? m.sourceMessageIds ?? null;
-  return { record_id: `l1:${m.id}`, kind: "l1", evidence_class: "derived_memory", text: m.content ?? "", at: isoOf(m.created_at ?? m.createdAt) ?? null,
+  const created = isoOf(m.created_at ?? m.createdAt) ?? null;
+  const updated = isoOf(m.updated_at ?? m.updatedAt) ?? null;
+  // A memory is a mutable row: the text on file is the text as of its last
+  // modification, so that is the date the cutoff must see. The store keeps
+  // no earlier version, so a memory changed after the cutoff cannot be
+  // recovered as it was and is excluded.
+  const at = updated && created && updated > created ? updated : created;
+  return { record_id: `l1:${m.id}`, kind: "l1", evidence_class: "derived_memory", text: m.content ?? "", at,
     meta: { type: m.type ?? null, scene: m.scene_name ?? null, session_id: m.session_id ?? m.sessionId ?? null, task_id: m.task_id ?? m.taskId ?? null, source_message_ids: src, priority: m.priority ?? null,
-      provenance: Array.isArray(src) && src.length ? "traceable" : "source_unavailable" } };
+      created_at: created, updated_at: updated, provenance: Array.isArray(src) && src.length ? "traceable" : "source_unavailable" } };
 }
 export function l0Record(m) {
   const role = m.role ?? null;
@@ -121,33 +128,75 @@ export function skillRecord(s, content) {
   const head = (content ?? "").slice(0, 1500);
   return { record_id: `skill:${s.skill_id}@${s.version}`, kind: "skill", evidence_class: "authored_text", text: `name: ${s.name}\ndescription: ${s.description ?? ""}\n${head}`, at: s.created_at_ms ? new Date(s.created_at_ms).toISOString() : null,
     meta: { skill_id: s.skill_id, version: s.version, name: s.name, status: s.status ?? null, owner_agent_id: s.owner_agent_id ?? null, content_hash: s.content_hash ?? null,
+      tokens: bodyTokens(content), head_version: s.head_version ?? null, version_at_cutoff: s.version_at_cutoff ?? null,
       operator: "unknown: the skill store records the owning agent, not who wrote each version" } };
 }
-export function outcomeRecord(o, tokensOf = () => []) {
-  const toks = tokensOf(o.asset_id);
-  return { record_id: `outcome:${o.id}`, kind: "outcome", evidence_class: "harness_verified", text: `${o.state}${o.corrected_reason ? `(${o.corrected_reason})` : ""} on asset ${o.asset_id} v${o.asset_version ?? "?"}${toks.length ? ` (asset tokens: ${toks.join(", ")})` : ""} by ${o.consumer_user_id} (${o.relation}) at ${o.occurred_at}; run ${o.run_id ?? "?"}; call ${o.call_id ?? "?"}; evidence ${String(o.evidence_json ?? "").slice(0, 300)}`, at: o.occurred_at ?? null,
-    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true } };
+
+/** host:port and skill-id tokens carried by a body — exact values, no host-only forms. */
+export function bodyTokens(content) {
+  const found = new Set();
+  for (const m of String(content ?? "").matchAll(/\b(?:\d{1,3}\.){3}\d{1,3}:\d{2,5}\b|\blocalhost:\d{2,5}\b|\bskl-[A-Za-z0-9]{8,}\b/g)) found.add(m[0]);
+  return [...found];
+}
+export function outcomeRecord(o, tokensOf = () => ({ tokens: [], from: null })) {
+  const tk = tokensOf(o.asset_id, o.asset_version);
+  return { record_id: `outcome:${o.id}`, kind: "outcome", evidence_class: "harness_verified", text: `${o.state}${o.corrected_reason ? `(${o.corrected_reason})` : ""} on asset ${o.asset_id} v${o.asset_version ?? "?"}${tk.tokens.length ? ` (tokens of v${o.asset_version}: ${tk.tokens.join(", ")})` : ""} by ${o.consumer_user_id} (${o.relation}) at ${o.occurred_at}; run ${o.run_id ?? "?"}; call ${o.call_id ?? "?"}; evidence ${String(o.evidence_json ?? "").slice(0, 300)}`, at: o.occurred_at ?? null,
+    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true, asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
 }
 export function callRecord(r) {
-  const h = r.request_body_hash || createHash("sha1").update(`${r.timestamp}${r.request_body ?? ""}`).digest("hex").slice(0, 12);
+  // One row, one id: the same request body from two sessions (or twice in
+  // one) is two calls. The body hash alone collided across them.
+  const h = createHash("sha1").update(`${r.session_key ?? ""}|${r.timestamp ?? ""}|${r.kind ?? ""}|${r.request_body_hash ?? r.request_body ?? ""}`).digest("hex").slice(0, 16);
   // The export carries the request body JSON-escaped (\/ for /, \" for ");
   // the record shows it as the model wrote it, so a quote of the URL matches.
   const raw = typeof r.request_body === "string" ? r.request_body : JSON.stringify(r.request_body ?? {});
   const body = raw.replace(/\\\//g, "/").replace(/\\"/g, '"').replace(/\\n/g, " ").slice(0, 600);
   const at = r.timestamp ? new Date(String(r.timestamp).replace(" ", "T") + (String(r.timestamp).endsWith("Z") ? "" : "Z")).toISOString() : null;
   return { record_id: `call:${h}`, kind: "call", evidence_class: "proxy_observed", text: `${r.timestamp} ${r.kind} ${r.executed_endpoint || r.initiated_tool || ""} status=${r.upstream_status ?? ""} ${r.reject_reason ? `reject=${r.reject_reason} ` : ""}${body}`, at,
-    meta: { session_key: r.session_key ?? null, kind: r.kind ?? null, endpoint: r.executed_endpoint ?? null, upstream_status: r.upstream_status ?? null, reject_reason: r.reject_reason || null, observed_by: "proxy tool_call_logs" } };
+    meta: { session_key: r.session_key ?? null, kind: r.kind ?? null, endpoint: r.executed_endpoint ?? null, upstream_status: r.upstream_status ?? null, reject_reason: r.reject_reason || null, observed_by: "proxy tool_call_logs", body_hash: r.request_body_hash ?? null, request_body: raw.slice(0, 2000) } };
+}
+
+/**
+ * Tie each bridge_call (a result) to the model_intent (a command) it
+ * answered: same session, the call within 30 s after the intent, the
+ * intent's command naming the call's endpoint, and a value from the call's
+ * body (skill_name, skill_id, query) present in the command. Exactly one
+ * candidate → paired; several → ambiguous (the result is real, but which
+ * command it answered is not known); none → unpaired. Only a paired call
+ * lets an execution result stand on the command's quote; an intent with no
+ * paired call carries intent only.
+ */
+export function pairCalls(records) {
+  const calls = records.filter((r) => r.kind === "call");
+  const intents = calls.filter((r) => r.meta.kind === "model_intent");
+  const results = calls.filter((r) => r.meta.kind === "bridge_call");
+  const valuesOf = (body) => { try { const b = JSON.parse(body || "{}"); return ["skill_name", "skill_id", "query"].map((k) => b?.[k]).filter((v) => typeof v === "string" && v.length >= 3); } catch { return []; } };
+  for (const res of results) {
+    const t = Date.parse(res.at);
+    const cands = intents.filter((it) => it.meta.session_key === res.meta.session_key && it.meta.session_key
+      && Date.parse(it.at) <= t && t - Date.parse(it.at) <= 30_000
+      && (!res.meta.endpoint || (it.meta.request_body || "").includes(`/skill/${res.meta.endpoint}`))
+      && valuesOf(res.meta.request_body).some((v) => (it.meta.request_body || "").includes(v)));
+    if (cands.length === 1) { res.meta.paired_intent = cands[0].record_id; res.meta.pairing = "paired"; cands[0].meta.paired_call = res.record_id; cands[0].meta.pairing = "paired"; }
+    else if (cands.length > 1) { res.meta.pairing = "ambiguous"; res.meta.candidate_intents = cands.map((c) => c.record_id); for (const c of cands) { c.meta.pairing = c.meta.pairing ?? "ambiguous"; (c.meta.candidate_calls ??= []).push(res.record_id); } }
+    else res.meta.pairing = "unpaired";
+  }
+  for (const it of intents) if (!it.meta.pairing) it.meta.pairing = "no_result";
+  return { paired: results.filter((r) => r.meta.pairing === "paired").length, ambiguous: results.filter((r) => r.meta.pairing === "ambiguous").length, unpaired: results.filter((r) => r.meta.pairing === "unpaired").length, intents_without_result: intents.filter((r) => r.meta.pairing === "no_result").length };
 }
 
 /** Discriminative tokens of an asset: from a tokens file when it names the asset, else what its body carries. */
 export function assetTokens(assetId, content, tokensFiles = []) {
+  // The body's own exact values first (host:port, ids); a tokens file only
+  // when the body carries none — its entries may be host-only, and a host
+  // alone does not name a host:port.
+  const fromBody = bodyTokens(content);
+  if (fromBody.length) return { tokens: fromBody, from: "asset body" };
   for (const f of tokensFiles) {
     if (!existsSync(f)) continue;
     try { const t = JSON.parse(readFileSync(f, "utf8")); const e = t?.[assetId]; if (e?.tokens?.length) return { tokens: e.tokens.map(String), from: f }; } catch { /* next */ }
   }
-  const found = new Set();
-  for (const m of String(content ?? "").matchAll(/\b(?:\d{1,3}\.){3}\d{1,3}:\d{2,5}\b|\blocalhost:\d{2,5}\b|\bskl-[A-Za-z0-9]{8,}\b/g)) found.add(m[0]);
-  return { tokens: [...found], from: found.size ? "asset body" : null };
+  return { tokens: [], from: null };
 }
 
 async function pages(path, base, key, itemsKey, limit, max) {
@@ -166,11 +215,16 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   const cut = cutoff ? new Date(cutoff).toISOString() : new Date().toISOString();
   const ids = { team_id: author.team_id, user_id: author.user_id, agent_id: author.agent_id };
   const records = new Map();
-  const excluded = { after_cutoff: 0, no_timestamp: 0, untrusted_outcomes: 0, persona_after_cutoff: false, other_users_calls: 0 };
+  const excluded = { after_cutoff: 0, modified_after_cutoff: 0, no_timestamp: 0, untrusted_outcomes: 0, persona_after_cutoff: false, other_users_calls: 0, skills_created_after_cutoff: 0 };
   const add = (r) => {
     if (!r.text || !r.text.trim()) return;
     if (!r.at) { excluded.no_timestamp += 1; return; }
-    if (r.at > cut) { excluded.after_cutoff += 1; return; }
+    if (r.at > cut) {
+      // A row created before the cutoff but modified after it is the
+      // modified text; the earlier text is not kept anywhere.
+      if (r.meta?.created_at && r.meta.created_at <= cut) excluded.modified_after_cutoff += 1; else excluded.after_cutoff += 1;
+      return;
+    }
     records.set(r.record_id, r);
   };
   const sources = {};
@@ -200,25 +254,49 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       try { const d = await post("/v3/conversation/search", { ...ids, query: q, limit: 20 }, author.key); (d.messages ?? d.items ?? []).forEach((m) => add(l0Record(m))); } catch { /* optional */ }
     }
   } catch (e) { sources.l0 = { error: String(e.message) }; }
-  // Skills the author's agent owns, with the head of each body (management read: candidates included)
-  const skillBodies = new Map();
+  // Skills the author's agent owns — the version that existed at the cutoff,
+  // not the head (management read: candidates included). Bodies are kept
+  // per version so an outcome on an earlier version gets that version's
+  // tokens, not the current text's.
+  const skillBodies = new Map(); // `${id}@${version}` → content
+  const bodyAt = async (skillId, version) => {
+    const key = `${skillId}@${version}`;
+    if (skillBodies.has(key)) return skillBodies.get(key);
+    let content = null;
+    try { const g = await post("/v3/skill/get", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, skill_id: skillId, version, include_content: true }, author.key); content = g.content ?? ""; } catch { content = null; }
+    skillBodies.set(key, content);
+    return content;
+  };
   try {
     const d = await post("/v3/skill/list", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, filters: { owner_agent_id: author.agent_id }, pagination: { limit: 100, offset: 0 } }, author.key);
     const items = d.items ?? [];
     for (const s of items) {
-      let content = ""; let hash = s.content_hash ?? null;
-      try { const g = await post("/v3/skill/get", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, skill_id: s.skill_id, include_content: true }, author.key); content = g.content ?? ""; hash = g.content_hash ?? hash; } catch { /* head only */ }
-      skillBodies.set(s.skill_id, content);
-      add(skillRecord({ ...s, content_hash: hash }, content));
+      let versions = [];
+      try { const v = await post("/v3/skill/versions", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, skill_id: s.skill_id, pagination: { limit: 100 } }, author.key); versions = v.items ?? []; } catch { versions = [s]; }
+      const atCut = versions.filter((v) => v.created_at_ms && new Date(v.created_at_ms).toISOString() <= cut).sort((a, b) => b.version - a.version)[0];
+      if (!atCut) { excluded.skills_created_after_cutoff += 1; continue; }
+      const content = (await bodyAt(s.skill_id, atCut.version)) ?? "";
+      add(skillRecord({ ...atCut, name: atCut.name ?? s.name, description: atCut.description ?? s.description, head_version: s.version, version_at_cutoff: atCut.version }, content));
     }
-    sources.skills = { total: items.length };
+    sources.skills = { total: items.length, note: "each skill as the version that existed at the cutoff" };
   } catch (e) { sources.skills = { error: String(e.message) }; }
   // Outcomes on the author's assets — trusted rows only
   try {
     const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id }, author.key, "items", 100, 2000);
     const trusted = rows.filter((o) => o.trusted === true);
     excluded.untrusted_outcomes = rows.length - trusted.length;
-    const tokensOf = (id) => assetTokens(id, "", tokensFiles).tokens;
+    // Tokens of the outcome's own asset AT THAT VERSION (the author owns the
+    // asset, so the body is readable); no version → no tokens.
+    const bodies = new Map();
+    for (const o of trusted) {
+      const key = `${o.asset_id}@${o.asset_version}`;
+      if (o.asset_version != null && !bodies.has(key)) bodies.set(key, await bodyAt(o.asset_id, o.asset_version));
+    }
+    const tokensOf = (id, version) => {
+      const body = version != null ? bodies.get(`${id}@${version}`) : null;
+      if (body == null) return { tokens: [], from: version == null ? "no version on the outcome" : "body of that version not readable" };
+      return { tokens: bodyTokens(body), from: `body of ${id} v${version}` };
+    };
     trusted.forEach((o) => add(outcomeRecord(o, tokensOf)));
     sources.outcomes = { total: rows.length, trusted: trusted.length, note: "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out" };
   } catch (e) { sources.outcomes = { error: String(e.message) }; }
@@ -233,12 +311,15 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     sources.calls = { total: 0, note: "no proxy call export supplied (--calls); execution-grade evidence then rests on trusted outcomes alone" };
   }
 
+  // Tie results to the commands they answered.
+  const pairing = pairCalls([...records.values()]);
+
   // The asset under assessment, its tokens, and the chain.
   let asset = null; let chain = null;
   if (assetId) {
     try {
       const a = await post("/v3/meta/asset/get", { asset_id: assetId }, author.key);
-      const body = skillBodies.get(assetId) ?? "";
+      const body = (await bodyAt(assetId, a.version)) ?? "";
       const tk = assetTokens(assetId, body, tokensFiles);
       asset = { asset_id: a.asset_id, name: a.name, version: a.version, content_hash: a.content_hash ?? null, owner_user_id: a.owner_user_id, status: a.status, tokens: tk.tokens, tokens_from: tk.from };
       const list = [...records.values()];
@@ -272,7 +353,7 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     built_at: new Date().toISOString(),
     evidence_cutoff: cut,
     author: { letter: author.letter, user_id: author.user_id, agent_id: author.agent_id, team_id: author.team_id },
-    domain, keywords, asset_id: assetId, asset, chain,
+    domain, keywords, asset_id: assetId, asset, chain, pairing,
     sources, excluded,
     record_count: list.length,
     by_kind: list.reduce((m, r) => { m[r.kind] = (m[r.kind] ?? 0) + 1; return m; }, {}),

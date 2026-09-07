@@ -1,36 +1,48 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-07T16:12:15Z",
+  "at": "2026-09-07T20:03:02Z",
   "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json",
   "asset_id": "skl-lUWmwEYqsZDZ",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
   "as_of": null,
   "written": {
     "schema": "author-assessment-summary-v2",
-    "competence": "high",
-    "competence_as_said": "medium",
+    "competence": "unknown",
+    "competence_as_said": "unknown",
     "domain": "reading team skills through the skill bridge by name across agents",
-    "assessed_at": "2026-09-07T16:09:38.314Z",
+    "assessed_at": "2026-09-07T20:01:59.703Z",
     "evidence_cutoff": "2026-09-06T08:47:33.000Z",
-    "citations": 4,
+    "citations": 3,
     "execution_claims": {
-      "success": 3,
-      "failure": 0
+      "success": 1,
+      "failure": 0,
+      "calls": 1,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 0,
+          "failure": 0
+        },
+        "own_transport": {
+          "success": 1,
+          "failure": 0
+        }
+      }
     },
     "asset_claim_check": {
-      "verdict": "supports",
-      "record_ids": [
-        "call:2f8a03aaf89c51af",
-        "call:d146f6c92f5b0680"
-      ],
-      "strength": "strong"
+      "verdict": "silent",
+      "record_ids": [],
+      "strength": null
     },
-    "asset_claim_as_said": "silent",
+    "asset_claim_as_said": "supports",
     "author_user_id": "usr-4u07qc2kuj",
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
     "chain_complete": false,
-    "pack_sha256": "d27a89e8ffe5945e4d837c5681db886f06510b3c95e2e407622fc789f6d9e554",
+    "pack_sha256": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
     "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
   "decision_after": {
@@ -39,7 +51,7 @@
     "asset_id": "skl-lUWmwEYqsZDZ",
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
-    "decided_at": "2026-09-07T16:12:15.963Z",
+    "decided_at": "2026-09-07T20:03:02.744Z",
     "decision": "pending",
     "status_target": "candidate",
     "confidence": null,
@@ -48,7 +60,7 @@
     "reasons": [
       "cold start: no outcome recorded for this asset yet; pending by default",
       "no corrected(wrong/stale) record, so reject did not trigger",
-      "context-based assessment: author competence high for \"reading team skills through the skill bridge by name across agents\" (4 cited record(s), 2026-09-07T16:09:38.314Z); review priority: low"
+      "context-based assessment: author competence unknown for \"reading team skills through the skill bridge by name across agents\" (3 cited record(s), 2026-09-07T20:01:59.703Z); review priority: high"
     ],
     "evidence_refs": [],
     "signals": {
@@ -71,35 +83,47 @@
         "recent_wrong_asset_ids": [],
         "assessment": {
           "schema": "author-assessment-summary-v2",
-          "competence": "high",
+          "competence": "unknown",
           "domain": "reading team skills through the skill bridge by name across agents",
-          "assessed_at": "2026-09-07T16:09:38.314Z",
+          "assessed_at": "2026-09-07T20:01:59.703Z",
           "evidence_cutoff": "2026-09-06T08:47:33.000Z",
-          "citations": 4,
+          "citations": 3,
           "execution_claims": {
-            "success": 3,
-            "failure": 0
+            "success": 1,
+            "failure": 0,
+            "calls": 1,
+            "ledgers": {
+              "own_business": {
+                "success": 0,
+                "failure": 0
+              },
+              "others_on_assets": {
+                "success": 0,
+                "failure": 0
+              },
+              "own_transport": {
+                "success": 1,
+                "failure": 0
+              }
+            }
           },
           "asset_claim_check": {
-            "verdict": "supports",
-            "record_ids": [
-              "call:2f8a03aaf89c51af",
-              "call:d146f6c92f5b0680"
-            ],
-            "strength": "strong"
+            "verdict": "silent",
+            "record_ids": [],
+            "strength": null
           },
           "author_user_id": "usr-4u07qc2kuj",
           "asset_version": 3,
           "content_hash": "50636f458d57384d9035dd04a27fadba",
-          "pack_sha256": "d27a89e8ffe5945e4d837c5681db886f06510b3c95e2e407622fc789f6d9e554",
+          "pack_sha256": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
           "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-07T16:12:15.908Z"
+          "written_at": "2026-09-07T20:03:02.700Z"
         },
         "assessment_ignored": null
       }
     },
-    "review_priority": "low",
+    "review_priority": "high",
     "evidence_as_of": null
   },
   "status_after": "candidate"

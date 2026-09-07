@@ -1,21 +1,36 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-07T16:11:49Z",
+  "at": "2026-09-07T20:03:02Z",
   "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
   "asset_id": "skl-sZFb3KatWY6m",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
   "as_of": "2026-09-06T08:47:33Z",
   "written": {
     "schema": "author-assessment-summary-v2",
-    "competence": "high",
-    "competence_as_said": "high",
+    "competence": "medium",
+    "competence_as_said": "medium",
     "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-    "assessed_at": "2026-09-07T16:06:56.235Z",
+    "assessed_at": "2026-09-07T19:59:34.950Z",
     "evidence_cutoff": "2026-09-06T08:47:33.000Z",
-    "citations": 5,
+    "citations": 7,
     "execution_claims": {
-      "success": 2,
-      "failure": 2
+      "success": 5,
+      "failure": 2,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 2,
+          "failure": 2
+        },
+        "own_transport": {
+          "success": 3,
+          "failure": 0
+        }
+      }
     },
     "asset_claim_check": {
       "verdict": "contradicts",
@@ -30,7 +45,7 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "chain_complete": false,
-    "pack_sha256": "64c84213c5e76a3bdfbf33ca81bf2ffdb6ca460445947f482c4a87282602b347",
+    "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
   "decision_after": {
@@ -39,7 +54,7 @@
     "asset_id": "skl-sZFb3KatWY6m",
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
-    "decided_at": "2026-09-07T16:11:49.915Z",
+    "decided_at": "2026-09-07T20:03:02.610Z",
     "decision": "reject",
     "status_target": "failed",
     "confidence": 0,
@@ -50,7 +65,7 @@
       "reported signals: 2 call(s) from 2 trusted row(s), 0 distinct task(s), 1 distinct consumer(s); none is a threshold",
       "2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read",
       "author usr-n68ea5ythq: 2 validated / 0 corrected on other assets (reported, not used)",
-      "context-based assessment on file: competence high for \"reaching the team skill bridge over HTTP from an agent session: which address answers\"; the author's own records contradict this asset's claim (reported, not used: the decision rests on outcomes)"
+      "context-based assessment on file: competence medium for \"reaching the team skill bridge over HTTP from an agent session: which address answers\"; the author's own records contradict this asset's claim (reported, not used: the decision rests on outcomes)"
     ],
     "evidence_refs": [
       {
@@ -86,14 +101,29 @@
         "recent_wrong_asset_ids": [],
         "assessment": {
           "schema": "author-assessment-summary-v2",
-          "competence": "high",
+          "competence": "medium",
           "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-          "assessed_at": "2026-09-07T16:06:56.235Z",
+          "assessed_at": "2026-09-07T19:59:34.950Z",
           "evidence_cutoff": "2026-09-06T08:47:33.000Z",
-          "citations": 5,
+          "citations": 7,
           "execution_claims": {
-            "success": 2,
-            "failure": 2
+            "success": 5,
+            "failure": 2,
+            "calls": 7,
+            "ledgers": {
+              "own_business": {
+                "success": 0,
+                "failure": 0
+              },
+              "others_on_assets": {
+                "success": 2,
+                "failure": 2
+              },
+              "own_transport": {
+                "success": 3,
+                "failure": 0
+              }
+            }
           },
           "asset_claim_check": {
             "verdict": "contradicts",
@@ -106,10 +136,10 @@
           "author_user_id": "usr-n68ea5ythq",
           "asset_version": 2,
           "content_hash": "163c539025f09af8205023ec6d312a38",
-          "pack_sha256": "64c84213c5e76a3bdfbf33ca81bf2ffdb6ca460445947f482c4a87282602b347",
+          "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
           "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-07T16:11:49.861Z"
+          "written_at": "2026-09-07T20:03:02.551Z"
         },
         "assessment_ignored": null
       }

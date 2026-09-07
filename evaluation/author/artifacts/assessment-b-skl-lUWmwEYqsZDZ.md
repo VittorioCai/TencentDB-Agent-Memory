@@ -1,28 +1,25 @@
 # Author assessment — usr-4u07qc2kuj — reading team skills through the skill bridge by name across agents
 
-assessed 2026-09-07T16:09:38.314Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack d27a89e8ffe5 (157/271 records shown; classes {"user_instruction":45,"assistant_report":44,"derived_memory":31,"proxy_observed":151})
+assessed 2026-09-07T20:01:59.703Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack fc1188c0f9c3 (179/299 records shown; classes {"user_instruction":45,"assistant_report":44,"derived_memory":31,"proxy_observed":178,"authored_text":1})
 
-**Competence: high** — 3 recorded success(es) (model said medium)
-**Asset claim check: supports** (strong) — call:2f8a03aaf89c51af, call:d146f6c92f5b0680 — "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search" (model said silent)
+**Competence: unknown** — no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive) (model said unknown)
+**Asset claim check: silent** (model said supports)
 
-Derived summary: competence high: 3 recorded success(es). asset claim supports on call:d146f6c92f5b0680, call:5e983b9cd7a13f24 (strong). 5 claim(s) kept, 1 dropped (a model_inference claim cannot support or contradict the asset).
+Derived summary: competence unknown: no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive). asset claim silent. 3 claim(s) kept, 2 dropped (skill).
 
-Model summary (as said): The agent repeatedly used the team-scope search and skill_id-based /skill/get routes on the 127.0.0.1:8096 bridge with HTTP 200 responses, aligning with the asset's recommended workflow. The specific 40401 SKILL_NOT_FOUND behavior for get-by-name is only present in assistant reports and source-unavailable derived memories, not in any harness-verified or body-level proxy result, and some get-by-name calls logged HTTP 200 at the transport level. Overall the agent shows a strong operational method for reading team skills by search and skill_id, but the asset's error-code assertion remains unverified by trusted outcomes.
+Model summary (as said): The agent consistently exercised the HTTP skill bridge, including get-by-name on its own skill and /skill/get by skill_id after team searches, and the skill text it owns explicitly documents that get-by-name is own-agent scoped and returns 40401 for another agent's skill, recommending search + get-by-skill_id. However, at the cutoff there is no harness-verified application-level outcome confirming the 40401 behavior in an actual response body; all recorded bridge responses are transport-level 200s (or unpaired 403s). Competence is therefore not determinable from verified results, though the operational pattern and authored instructions support the asset's stated approach.
 
 Chain: producer usr-4u07qc2kuj / agt-5e0y4l8a7a (operator unknown); sessions 7; operations 40; results 0. Breaks: producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown | results: no trusted outcome is recorded on this asset at or before the cutoff
 
-## Surviving claims (6)
-- [claim · execution_result · success · supports (strong)] The agent ran a team-scope search against the skill bridge at 127.0.0.1:8096 and the bridge logged HTTP 200 for the search.
-  - call:2f8a03aaf89c51af, call:d146f6c92f5b0680 (proxy_observed) — "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search"
-- [claim · execution_result · success · supports (strong)] The agent fetched another agent's skill by skill_id through POST /skill/get on the 127.0.0.1:8096 bridge, and the bridge logged HTTP 200 for that get.
-  - call:df53daa33e1103db, call:5e983b9cd7a13f24 (proxy_observed) — "http://127.0.0.1:8096/skill-bridge/v3/skill/get"
-- [claim · observed_operation] The assistant reported that get-by-name 404s for another agent's convention skills and that GET /skill/get by skill_id works; this is a narration, not a proxy-observed or harness-verified outcome.
-  - l0:msg-cd345421e56e (assistant_report) — "`get-by-name` 404s on them, but `GET /skill/get` by skill_id works"
-- [claim · execution_result · success] The agent's get-by-name requests to 127.0.0.1:8096 for skills owned by another agent logged HTTP 200 at the transport level, not an HTTP-level 404 or 403.
-  - call:734c110224715931, call:3f18169a67726d8d, call:2768d3d969d1bf4e, call:635e25262515af3a (proxy_observed) — "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name"
-- [claim · coverage_unknown] The records contain no harness-verified outcome on asset skl-lUWmwEYqsZDZ and no proxy log body showing the string SKILL_NOT_FOUND; the claimed 40401 is attested only by assistant reports and derived memories with unavailable source.
-- [counter_evidence · model_inference] Proxy-observed HTTP status for get-by-name calls to the 127.0.0.1:8096 bridge on another agent's skills was 200 on multiple occasions; because an application-level 40401 could appear inside a 200 body, these HTTP 200s do not establish or refute the asset's 40401 claim.
-  - call:734c110224715931, call:3f18169a67726d8d, call:2768d3d969d1bf4e, call:635e25262515af3a (proxy_observed) — "http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name"
+## Surviving claims (4)
+- [claim · execution_result · success] The person's search command for 'convention address reach skill bridge' was answered by the bridge endpoint with HTTP status 200 (transport-level success; application body is not shown).
+  - call:c082942675850287 (proxy_observed) — "2026-09-06 06:00:29.184 bridge_call search status=200 {"query":"convention address reach skill bridge""
+- [claim · observed_operation] The person's session issued a get-by-name request for skill-bridge-http-access using URL http://127.0.0.1:8096; the bridge answered with HTTP status 200.
+  - call:38d8b59d76dd06fb, call:48d6a3fa800e4126 (proxy_observed) — "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{"skill_name": "skill-bridge-http-access", "include_content": true, "include_manifest": true}'"
+- [claim · observed_operation] The person's session issued a POST to the /skill/get endpoint (the cross-agent read method recommended in the authored skill) targeting skill skl-sZFb3KatWY6m, and the paired bridge call returned HTTP 200.
+  - call:90f7cd79b2034e2b, call:0059f14f9dc6d9fa (proxy_observed) — "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get"
+- [claim · coverage_unknown] These records contain only transport-level proxy statuses and no harness-verified application-body outcome, so no record independently verifies that a get-by-name call actually returned the 40401 SKILL_NOT_FOUND code at or before the cutoff.
 
-## Dropped by the check (1)
-- [claim · model_inference] A derived-memory record (source unavailable) matches the asset's rule: on the 127.0.0.1:8096 bridge, POST /skill/get-by-name is agent-scoped and reading another agent's skill by name returns 404, while resolution by skill_id is possible. — a model_inference claim cannot support or contradict the asset (l1:m_1788645820841_4fbf556c)
+## Dropped by the check (2)
+- [claim · environment_applicability] The agent-owned skill text at skl-lUWmwEYqsZDZ@2 records 127.0.0.1:8096 as the bridge endpoint and states get-by-name is scoped to the caller's own agent, returning 40401 SKILL_NOT_FOUND for another agent's skill, so search-then-get-by-skill_id is the documented behavior. — skill:skl-lUWmwEYqsZDZ@2 is the asset's own text; it cannot support or contradict its own claim (skill:skl-lUWmwEYqsZDZ@2)
+- [asset_claim_check · environment_applicability] asset claim check: supports — skill:skl-lUWmwEYqsZDZ@2 is the asset's own text; it cannot support or contradict its own claim (skill:skl-lUWmwEYqsZDZ@2)

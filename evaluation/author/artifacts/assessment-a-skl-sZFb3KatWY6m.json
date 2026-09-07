@@ -1,6 +1,6 @@
 {
   "schema": "author-assessment-v2",
-  "assessed_at": "2026-09-07T16:06:56.235Z",
+  "assessed_at": "2026-09-07T19:59:34.950Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "a",
@@ -17,9 +17,9 @@
     "owner_user_id": "usr-n68ea5ythq",
     "status": "failed",
     "tokens": [
-      "10.244.7.19"
+      "10.244.7.19:8096"
     ],
-    "tokens_from": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/attribution/artifacts/tokens.json"
+    "tokens_from": "asset body"
   },
   "chain": {
     "asset_version": 2,
@@ -38,19 +38,19 @@
     ],
     "operations": [
       {
-        "record_id": "call:047ec0aae56afde0",
+        "record_id": "call:8bfc28964692642e",
         "at": "2026-09-06T04:02:04.357Z",
         "status": 0,
         "kind": "model_intent"
       },
       {
-        "record_id": "call:5435ca87cf74c3b2",
+        "record_id": "call:a2c86ceddac82bc1",
         "at": "2026-09-06T04:02:04.441Z",
         "status": 200,
         "kind": "bridge_call"
       },
       {
-        "record_id": "call:9be4cc28592e0c51",
+        "record_id": "call:b5903fc59d61214c",
         "at": "2026-09-06T04:02:28.595Z",
         "status": 0,
         "kind": "model_intent"
@@ -80,7 +80,7 @@
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
     "file": "evaluation/author/artifacts/evidence-pack-a.json",
-    "sha256": "64c84213c5e76a3bdfbf33ca81bf2ffdb6ca460445947f482c4a87282602b347",
+    "sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
     "record_count": 49,
     "by_class": {
       "authored_text": 2,
@@ -92,15 +92,17 @@
       "proxy_observed": 9
     },
     "excluded": {
-      "after_cutoff": 1,
+      "after_cutoff": 0,
+      "modified_after_cutoff": 0,
       "no_timestamp": 0,
       "untrusted_outcomes": 19,
       "persona_after_cutoff": false,
-      "other_users_calls": 0
+      "other_users_calls": 0,
+      "skills_created_after_cutoff": 1
     },
     "shown": 49,
     "left_out": [],
-    "chars": 22873,
+    "chars": 22871,
     "terms": [
       "skill bridge address",
       "10.244.7.19",
@@ -127,29 +129,46 @@
     "url": "https://api.deepseek.com",
     "model": "deepseek-v4-flash",
     "usage": {
-      "prompt_tokens": 8944,
-      "completion_tokens": 15146,
-      "total_tokens": 24090,
+      "prompt_tokens": 9280,
+      "completion_tokens": 16277,
+      "total_tokens": 25557,
       "prompt_tokens_details": {
         "cached_tokens": 0
       },
       "completion_tokens_details": {
-        "reasoning_tokens": 13856
+        "reasoning_tokens": 14913
       },
       "prompt_cache_hit_tokens": 0,
-      "prompt_cache_miss_tokens": 8944
+      "prompt_cache_miss_tokens": 9280
     },
     "temperature": 0
   },
-  "raw_model_output": "{\n  \"competence\": \"high\",\n  \"domain\": \"reaching the team skill bridge over HTTP from an agent session: which address answers\",\n  \"claims\": [\n    {\n      \"statement\": \"The harness verified the bridge address documented by skill B, 127.0.0.1:47318, as valid on asset skl-oBaDO5CceKnr v2.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"outcome:6880f384-846b-419c-b97f-26615da03912\"],\n      \"quote\": \"validated on asset skl-oBaDO5CceKnr v2 (asset tokens: 47318)\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The harness corrected/wronged skill A's claimed bridge address, 10.244.7.19, on asset skl-sZFb3KatWY6m v2, meaning that address is not the correct convention.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"failure\",\n      \"record_ids\": [\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\", \"outcome:c91cdca6-40f5-4e84-b03b-f65713584044\"],\n      \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)\",\n      \"relation_to_asset\": \"contradicts\"\n    },\n    {\n      \"statement\": \"The agent issued curl search requests to both documented candidate addresses, 10.244.7.19:8096 and 127.0.0.1:47318, using the team-bridge-reachability query.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:9be4cc28592e0c51\", \"call:1c47bc3050dbb2d8\"],\n      \"quote\": \"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"A proxy-observed search against the skill bridge with the team-bridge-reachability query returned HTTP 200 in the same session.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:6753dfd86ed4a007\"],\n      \"quote\": \"bridge_call search status=200\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The assistant's report in the session described 10.244.7.19:8096 as producing no response after 75 seconds, while the skill B address returned HTTP 200.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"l0:msg-76898e301d59\"],\n      \"quote\": \"Connection to `10.244.7.19:8096` failed after **75.0s**\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"Considering the conflicting skill assets and the harness outcomes, the live bridge address for this environment is the one in skill B, 127.0.0.1:47318, not the asset's 10.244.7.19:8096.\",\n      \"type\": \"model_inference\",\n      \"outcome\": null,\n      \"record_ids\": [\"skill:skl-sZFb3KatWY6m@2\", \"skill:skl-oBaDO5CceKnr@2\", \"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\", \"outcome:6880f384-846b-419c-b97f-26615da03912\"],\n      \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)\",\n      \"relation_to_asset\": \"contradicts\"\n    },\n    {\n      \"statement\": \"The records do not show an explicit proxy-observed HTTP 2xx response from the raw curl to 10.244.7.19:8096, so the direct transport-level success of that specific address is not separately confirmed beyond the harness correction.\",\n      \"type\": \"coverage_unknown\",\n      \"outcome\": null,\n      \"record_ids\": [],\n      \"quote\": \"\",\n      \"relation_to_asset\": \"silent\"\n    }\n  ],\n  \"counter_evidence\": [],\n  \"asset_claim_check\": {\n    \"verdict\": \"contradicts\",\n    \"type\": \"execution_result\",\n    \"outcome\": \"failure\",\n    \"record_ids\": [\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\"],\n    \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)\"\n  },\n  \"summary\": \"The session shows the agent locating conflicting skill conventions, probing both documented bridge addresses, and reporting that the address documented by skill B (127.0.0.1:47318) answered while skill A's address (10.244.7.19:8096) did not. Harness results independently validated skill B's address and corrected/wronged skill A's address. Therefore the asset claim that the bridge is reachable at http://10.244.7.19:8096/skill-bridge/v3/skill/search is contradicted, and the agent demonstrated competent handling of the reachability question.\"\n}",
+  "raw_model_output": "{\n  \"competence\": \"medium\",\n  \"domain\": \"reaching the team skill bridge over HTTP from an agent session: which address answers\",\n  \"claims\": [\n    {\n      \"statement\": \"The agent successfully fetched the skill content for eval-bridge-endpoint-a via the bridge API, with an HTTP 200 response.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:a2c86ceddac82bc1\"],\n      \"quote\": \"bridge_call get-by-name status=200\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent successfully fetched the skill content for eval-bridge-endpoint-b via the bridge API, with an HTTP 200 response.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:5a37718ff0350f02\"],\n      \"quote\": \"bridge_call get-by-name status=200\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent successfully issued a skill-bridge search request and received an HTTP 200 response.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:5e96941cad71facd\"],\n      \"quote\": \"bridge_call search status=200\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent fetched the content of skill eval-bridge-endpoint-a using curl against http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:8bfc28964692642e\"],\n      \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent issued a reachability probe to the address documented in skill skl-sZFb3KatWY6m v2 (10.244.7.19:8096).\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:b5903fc59d61214c\"],\n      \"quote\": \"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"Skill skl-sZFb3KatWY6m states that the port is fixed by the deployment and does not vary per team.\",\n      \"type\": \"environment_applicability\",\n      \"outcome\": null,\n      \"record_ids\": [\"skill:skl-sZFb3KatWY6m@2\"],\n      \"quote\": \"The port is fixed by the deployment and does not vary per team.\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The assistant's narration that the address 10.244.7.19:8096 did not answer is consistent with the later harness verdict that the skill documenting that address is wrong.\",\n      \"type\": \"model_inference\",\n      \"outcome\": null,\n      \"record_ids\": [\"l0:msg-76898e301d59\"],\n      \"quote\": \"Connection to `10.244.7.19:8096` failed after **75.0s**\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The proxy logs contain a bridge_call with status 200 that is ambiguous between the probe to 10.244.7.19:8096 and the probe to 127.0.0.1:47318, so the transport result for the asset's address is not definitively observed in this session.\",\n      \"type\": \"coverage_unknown\",\n      \"outcome\": null,\n      \"record_ids\": [],\n      \"quote\": \"\",\n      \"relation_to_asset\": \"silent\"\n    }\n  ],\n  \"counter_evidence\": [\n    {\n      \"statement\": \"The harness verified that skill skl-sZFb3KatWY6m v2, which documents 10.244.7.19:8096, is wrong; therefore the skill bridge is not reachable at that address.\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"failure\",\n      \"record_ids\": [\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\", \"outcome:c91cdca6-40f5-4e84-b03b-f65713584044\"],\n      \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)\",\n      \"relation_to_asset\": \"contradicts\"\n    }\n  ],\n  \"asset_claim_check\": {\n    \"verdict\": \"contradicts\",\n    \"type\": \"execution_result\",\n    \"outcome\": \"failure\",\n    \"record_ids\": [\"outcome:c91cdca6-40f5-4e84-b03b-f65713584044\"],\n    \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)\"\n  },\n  \"summary\": \"The asset claim that the skill bridge is reachable at http://10.244.7.19:8096/skill-bridge/v3/skill/search is contradicted by two harness-verified outcomes marking the skill documenting that address as wrong. The agent's own session shows it successfully used the bridge API to fetch and search skills, and it issued probes to both documented addresses, but the transport response to the asset's address is not uniquely observed in the proxy logs. The alternative address in skill skl-oBaDO5CceKnr was harness-validated, matching the agent's reported conclusion, so the agent's process appears sound but lacks a directly paired probe result for the disputed address.\"\n}",
   "verified": {
-    "competence": "high",
-    "competence_basis": "2 recorded success(es), 2 failure(s) beside them",
-    "competence_as_said": "high",
+    "competence": "medium",
+    "competence_basis": "2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration",
+    "competence_as_said": "medium",
     "competence_downgraded": false,
     "execution_claims": {
-      "success": 2,
-      "failure": 2
+      "success": 5,
+      "failure": 2,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 2,
+          "failure": 2
+        },
+        "own_transport": {
+          "success": 3,
+          "failure": 0
+        }
+      },
+      "harness_records": 4,
+      "cited_transport_calls": 3
     },
     "asset_claim_check": {
       "verdict": "contradicts",
@@ -157,66 +176,52 @@
         "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
         "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
       ],
-      "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)",
+      "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
       "strength": "strong",
       "basis": [
-        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
       ]
     },
     "asset_claim_as_said": "contradicts",
     "claims_kept": [
       {
         "group": "claim",
-        "statement": "The harness verified the bridge address documented by skill B, 127.0.0.1:47318, as valid on asset skl-oBaDO5CceKnr v2.",
+        "statement": "The agent successfully fetched the skill content for eval-bridge-endpoint-a via the bridge API, with an HTTP 200 response.",
         "record_ids": [
-          "outcome:6880f384-846b-419c-b97f-26615da03912"
+          "call:a2c86ceddac82bc1"
         ],
-        "quote": "validated on asset skl-oBaDO5CceKnr v2 (asset tokens: 47318)",
+        "quote": "bridge_call get-by-name status=200",
         "type": "execution_result",
         "outcome": "success",
         "relation": "silent",
         "strength": null,
         "by_identity": false,
-        "found_in": "outcome:6880f384-846b-419c-b97f-26615da03912",
-        "evidence_class": "harness_verified"
-      },
-      {
-        "group": "claim",
-        "statement": "The harness corrected/wronged skill A's claimed bridge address, 10.244.7.19, on asset skl-sZFb3KatWY6m v2, meaning that address is not the correct convention.",
-        "record_ids": [
-          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
-          "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
-        ],
-        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)",
-        "type": "execution_result",
-        "outcome": "failure",
-        "relation": "contradicts",
-        "strength": "strong",
-        "by_identity": true,
-        "found_in": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
-        "evidence_class": "harness_verified"
-      },
-      {
-        "group": "claim",
-        "statement": "The agent issued curl search requests to both documented candidate addresses, 10.244.7.19:8096 and 127.0.0.1:47318, using the team-bridge-reachability query.",
-        "record_ids": [
-          "call:9be4cc28592e0c51",
-          "call:1c47bc3050dbb2d8"
-        ],
-        "quote": "curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search",
-        "type": "observed_operation",
-        "outcome": null,
-        "relation": "silent",
-        "strength": null,
-        "by_identity": false,
-        "found_in": "call:9be4cc28592e0c51",
+        "note": null,
+        "found_in": "call:a2c86ceddac82bc1",
         "evidence_class": "proxy_observed"
       },
       {
         "group": "claim",
-        "statement": "A proxy-observed search against the skill bridge with the team-bridge-reachability query returned HTTP 200 in the same session.",
+        "statement": "The agent successfully fetched the skill content for eval-bridge-endpoint-b via the bridge API, with an HTTP 200 response.",
         "record_ids": [
-          "call:6753dfd86ed4a007"
+          "call:5a37718ff0350f02"
+        ],
+        "quote": "bridge_call get-by-name status=200",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:5a37718ff0350f02",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The agent successfully issued a skill-bridge search request and received an HTTP 200 response.",
+        "record_ids": [
+          "call:5e96941cad71facd"
         ],
         "quote": "bridge_call search status=200",
         "type": "execution_result",
@@ -224,27 +229,77 @@
         "relation": "silent",
         "strength": null,
         "by_identity": false,
-        "found_in": "call:6753dfd86ed4a007",
+        "note": null,
+        "found_in": "call:5e96941cad71facd",
         "evidence_class": "proxy_observed"
       },
       {
         "group": "claim",
-        "statement": "The assistant's report in the session described 10.244.7.19:8096 as producing no response after 75 seconds, while the skill B address returned HTTP 200.",
+        "statement": "The agent fetched the content of skill eval-bridge-endpoint-a using curl against http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name.",
         "record_ids": [
-          "l0:msg-76898e301d59"
+          "call:8bfc28964692642e"
         ],
-        "quote": "Connection to `10.244.7.19:8096` failed after **75.0s**",
+        "quote": "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name",
         "type": "observed_operation",
         "outcome": null,
         "relation": "silent",
         "strength": null,
         "by_identity": false,
+        "note": null,
+        "found_in": "call:8bfc28964692642e",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The agent issued a reachability probe to the address documented in skill skl-sZFb3KatWY6m v2 (10.244.7.19:8096).",
+        "record_ids": [
+          "call:b5903fc59d61214c"
+        ],
+        "quote": "curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:b5903fc59d61214c",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "Skill skl-sZFb3KatWY6m states that the port is fixed by the deployment and does not vary per team.",
+        "record_ids": [
+          "skill:skl-sZFb3KatWY6m@2"
+        ],
+        "quote": "The port is fixed by the deployment and does not vary per team.",
+        "type": "environment_applicability",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "skill:skl-sZFb3KatWY6m@2",
+        "evidence_class": "authored_text"
+      },
+      {
+        "group": "claim",
+        "statement": "The assistant's narration that the address 10.244.7.19:8096 did not answer is consistent with the later harness verdict that the skill documenting that address is wrong.",
+        "record_ids": [
+          "l0:msg-76898e301d59"
+        ],
+        "quote": "Connection to `10.244.7.19:8096` failed after **75.0s**",
+        "type": "model_inference",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
         "found_in": "l0:msg-76898e301d59",
         "evidence_class": "assistant_report"
       },
       {
         "group": "claim",
-        "statement": "The records do not show an explicit proxy-observed HTTP 2xx response from the raw curl to 10.244.7.19:8096, so the direct transport-level success of that specific address is not separately confirmed beyond the harness correction.",
+        "statement": "The proxy logs contain a bridge_call with status 200 that is ambiguous between the probe to 10.244.7.19:8096 and the probe to 127.0.0.1:47318, so the transport result for the asset's address is not definitively observed in this session.",
         "record_ids": [],
         "quote": "",
         "type": "coverage_unknown",
@@ -255,61 +310,77 @@
         "note": "statement of absence; not evidence"
       },
       {
-        "group": "asset_claim_check",
-        "statement": "asset claim check: contradicts",
+        "group": "counter_evidence",
+        "statement": "The harness verified that skill skl-sZFb3KatWY6m v2, which documents 10.244.7.19:8096, is wrong; therefore the skill bridge is not reachable at that address.",
         "record_ids": [
-          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+          "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
         ],
-        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)",
+        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
         "type": "execution_result",
         "outcome": "failure",
         "relation": "contradicts",
         "strength": "strong",
         "by_identity": true,
+        "note": null,
         "found_in": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "asset_claim_check",
+        "statement": "asset claim check: contradicts",
+        "record_ids": [
+          "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+        ],
+        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
+        "type": "execution_result",
+        "outcome": "failure",
+        "relation": "contradicts",
+        "strength": "strong",
+        "by_identity": true,
+        "note": null,
+        "found_in": "outcome:c91cdca6-40f5-4e84-b03b-f65713584044",
         "evidence_class": "harness_verified"
       }
     ],
-    "claims_dropped": [
-      {
-        "group": "claim",
-        "statement": "Considering the conflicting skill assets and the harness outcomes, the live bridge address for this environment is the one in skill B, 127.0.0.1:47318, not the asset's 10.244.7.19:8096.",
-        "record_ids": [
-          "skill:skl-sZFb3KatWY6m@2",
-          "skill:skl-oBaDO5CceKnr@2",
-          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
-          "outcome:6880f384-846b-419c-b97f-26615da03912"
-        ],
-        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (asset tokens: 10.244.7.19)",
-        "type": "model_inference",
-        "outcome": null,
-        "relation": "silent",
-        "strength": null,
-        "reason": "a model_inference claim cannot support or contradict the asset"
-      }
-    ],
+    "claims_dropped": [],
     "counts": {
-      "claims": 7,
-      "counter_evidence": 0,
-      "kept": 7,
-      "dropped": 1,
-      "citations": 5,
-      "execution": 4
+      "claims": 8,
+      "counter_evidence": 1,
+      "kept": 10,
+      "dropped": 0,
+      "citations": 7,
+      "execution": 5
     },
-    "summary": "competence high: 2 recorded success(es), 2 failure(s) beside them. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47 (strong). 6 claim(s) kept, 1 dropped (a model_inference claim cannot support or contradict the asset).",
-    "summary_as_said": "The session shows the agent locating conflicting skill conventions, probing both documented bridge addresses, and reporting that the address documented by skill B (127.0.0.1:47318) answered while skill A's address (10.244.7.19:8096) did not. Harness results independently validated skill B's address and corrected/wronged skill A's address. Therefore the asset claim that the bridge is reachable at http://10.244.7.19:8096/skill-bridge/v3/skill/search is contradicted, and the agent demonstrated competent handling of the reachability question."
+    "summary": "competence medium: 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 9 claim(s) kept, 0 dropped.",
+    "summary_as_said": "The asset claim that the skill bridge is reachable at http://10.244.7.19:8096/skill-bridge/v3/skill/search is contradicted by two harness-verified outcomes marking the skill documenting that address as wrong. The agent's own session shows it successfully used the bridge API to fetch and search skills, and it issued probes to both documented addresses, but the transport response to the asset's address is not uniquely observed in the proxy logs. The alternative address in skill skl-oBaDO5CceKnr was harness-validated, matching the agent's reported conclusion, so the agent's process appears sound but lacks a directly paired probe result for the disputed address."
   },
   "summary_for_gate": {
     "schema": "author-assessment-summary-v2",
-    "competence": "high",
-    "competence_as_said": "high",
+    "competence": "medium",
+    "competence_as_said": "medium",
     "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-    "assessed_at": "2026-09-07T16:06:56.235Z",
+    "assessed_at": "2026-09-07T19:59:34.950Z",
     "evidence_cutoff": "2026-09-06T08:47:33.000Z",
-    "citations": 5,
+    "citations": 7,
     "execution_claims": {
-      "success": 2,
-      "failure": 2
+      "success": 5,
+      "failure": 2,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 2,
+          "failure": 2
+        },
+        "own_transport": {
+          "success": 3,
+          "failure": 0
+        }
+      }
     },
     "asset_claim_check": {
       "verdict": "contradicts",
@@ -324,8 +395,8 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "chain_complete": false,
-    "pack_sha256": "64c84213c5e76a3bdfbf33ca81bf2ffdb6ca460445947f482c4a87282602b347",
+    "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
-  "rechecked_at": "2026-09-07T16:11:41.341Z"
+  "rechecked_at": "2026-09-07T20:03:02.435Z"
 }

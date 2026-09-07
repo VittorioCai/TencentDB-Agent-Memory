@@ -1,157 +1,10 @@
 {
   "schema": "cold-start-demo-v2",
-  "at": "2026-09-07T16:19:56Z",
+  "at": "2026-09-07T20:07:45Z",
   "skill_id": "skl-ImeA29HL3Djj",
   "name": "eval-bridge-endpoint-c",
   "author": "a",
   "at_creation": {
-    "status": "candidate",
-    "gate": {
-      "schema_version": "gate-decision-v2",
-      "rules_version": "gate-rules-2026-09-08b",
-      "asset_id": "skl-ImeA29HL3Djj",
-      "asset_version": 1,
-      "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-      "decided_at": "2026-09-07T16:16:42.831Z",
-      "decision": "pending",
-      "status_target": "candidate",
-      "confidence": null,
-      "confidence_n": 0,
-      "evidence_policy": "trusted-only",
-      "reasons": [
-        "cold start: no outcome recorded for this asset yet; pending by default",
-        "no corrected(wrong/stale) record, so reject did not trigger",
-        "author usr-n68ea5ythq has 1 other asset(s) judged wrong within 30 days (skl-sZFb3KatWY6m); review priority: high"
-      ],
-      "evidence_refs": [],
-      "signals": {
-        "online": {
-          "validated": 0,
-          "corrected": 0,
-          "used": 0,
-          "cross_user_validated": 0,
-          "distinct_consumers": 0,
-          "distinct_tasks": 0,
-          "calls": 0,
-          "untrusted_ignored": 0,
-          "other_version": 0
-        },
-        "author": {
-          "user_id": "usr-n68ea5ythq",
-          "validated": 2,
-          "corrected": 2,
-          "distinct_consumers": 1,
-          "recent_wrong_asset_ids": [
-            "skl-sZFb3KatWY6m"
-          ],
-          "assessment": {
-            "schema": "author-assessment-summary-v2",
-            "competence": "high",
-            "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-            "assessed_at": "2026-09-07T16:16:42.649Z",
-            "evidence_cutoff": "2026-09-07T16:12:49.735Z",
-            "citations": 7,
-            "execution_claims": {
-              "success": 3,
-              "failure": 1
-            },
-            "asset_claim_check": {
-              "verdict": "silent",
-              "record_ids": [],
-              "strength": null
-            },
-            "author_user_id": "usr-n68ea5ythq",
-            "asset_version": 1,
-            "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-            "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
-            "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
-            "written_by": "usr-n3h5ewx4ja",
-            "written_at": "2026-09-07T16:16:42.774Z"
-          },
-          "assessment_ignored": null
-        }
-      },
-      "review_priority": "high",
-      "evidence_as_of": null,
-      "author_assessment": {
-        "schema": "author-assessment-summary-v2",
-        "competence": "high",
-        "competence_as_said": "low",
-        "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-        "assessed_at": "2026-09-07T16:16:42.649Z",
-        "evidence_cutoff": "2026-09-07T16:12:49.735Z",
-        "citations": 7,
-        "execution_claims": {
-          "success": 3,
-          "failure": 1
-        },
-        "asset_claim_check": {
-          "verdict": "silent",
-          "record_ids": [],
-          "strength": null
-        },
-        "asset_claim_as_said": "contradicts",
-        "author_user_id": "usr-n68ea5ythq",
-        "asset_version": 1,
-        "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-        "chain_complete": false,
-        "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
-        "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
-        "written_by": "usr-n3h5ewx4ja",
-        "written_at": "2026-09-07T16:16:42.774Z"
-      },
-      "review": null,
-      "effective": {
-        "status": "candidate",
-        "source": "rule",
-        "review_id": null,
-        "reason": "rule pending; no human decision in force for this version",
-        "at": "2026-09-07T16:16:42.831Z"
-      }
-    }
-  },
-  "consumer_list_accessible_before": [
-    "skl-KPVMV2uB5rXM",
-    "skl-MyrdnecjeYSb",
-    "skl-eM1xP28pXiYA",
-    "skl-oBaDO5CceKnr"
-  ],
-  "consumer_list_accessible_after": [
-    "skl-KPVMV2uB5rXM",
-    "skl-MyrdnecjeYSb",
-    "skl-eM1xP28pXiYA",
-    "skl-oBaDO5CceKnr"
-  ],
-  "candidate_visible_to_consumer": false,
-  "assessment": {
-    "schema": "author-assessment-summary-v2",
-    "competence": "high",
-    "competence_as_said": "high",
-    "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
-    "assessed_at": "2026-09-07T16:19:56.737Z",
-    "evidence_cutoff": "2026-09-07T16:17:25.248Z",
-    "citations": 12,
-    "execution_claims": {
-      "success": 5,
-      "failure": 2
-    },
-    "asset_claim_check": {
-      "verdict": "contradicts",
-      "record_ids": [
-        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
-        "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
-      ],
-      "strength": "strong"
-    },
-    "asset_claim_as_said": "contradicts",
-    "author_user_id": "usr-n68ea5ythq",
-    "asset_version": 1,
-    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-    "chain_complete": false,
-    "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
-    "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
-  },
-  "after_assessment": {
     "status": "candidate",
     "gate": {
       "schema_version": "gate-decision-v2",
@@ -222,8 +75,240 @@
         }
       },
       "review_priority": "high",
-      "evidence_as_of": null
+      "evidence_as_of": null,
+      "author_assessment": {
+        "schema": "author-assessment-summary-v2",
+        "competence": "high",
+        "competence_as_said": "high",
+        "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+        "assessed_at": "2026-09-07T16:19:56.737Z",
+        "evidence_cutoff": "2026-09-07T16:17:25.248Z",
+        "citations": 12,
+        "execution_claims": {
+          "success": 5,
+          "failure": 2
+        },
+        "asset_claim_check": {
+          "verdict": "contradicts",
+          "record_ids": [
+            "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+            "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+          ],
+          "strength": "strong"
+        },
+        "asset_claim_as_said": "contradicts",
+        "author_user_id": "usr-n68ea5ythq",
+        "asset_version": 1,
+        "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+        "chain_complete": false,
+        "pack_sha256": "6c6ef3bf34e87147cccb47d1ab0bed6eb14311d1c00691ec92994cf435aceb15",
+        "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+        "written_by": "usr-n3h5ewx4ja",
+        "written_at": "2026-09-07T16:22:00.301Z"
+      },
+      "review": null,
+      "effective": {
+        "status": "candidate",
+        "source": "rule",
+        "review_id": null,
+        "reason": "rule pending; no human decision in force for this version",
+        "at": "2026-09-07T16:22:00.358Z"
+      }
     }
   },
-  "note": "assessment rechecked after the host~host:port token rule and rewritten through the route"
+  "consumer_list_accessible_before": [
+    "skl-KPVMV2uB5rXM",
+    "skl-MyrdnecjeYSb",
+    "skl-eM1xP28pXiYA",
+    "skl-oBaDO5CceKnr"
+  ],
+  "consumer_list_accessible_after": [
+    "skl-KPVMV2uB5rXM",
+    "skl-MyrdnecjeYSb",
+    "skl-eM1xP28pXiYA",
+    "skl-oBaDO5CceKnr"
+  ],
+  "candidate_visible_to_consumer": false,
+  "assessment": {
+    "schema": "author-assessment-summary-v2",
+    "competence": "medium",
+    "competence_as_said": "medium",
+    "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+    "assessed_at": "2026-09-07T20:07:44.770Z",
+    "evidence_cutoff": "2026-09-07T20:03:34.813Z",
+    "citations": 9,
+    "execution_claims": {
+      "success": 5,
+      "failure": 2,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 2,
+          "failure": 2
+        },
+        "own_transport": {
+          "success": 3,
+          "failure": 0
+        }
+      }
+    },
+    "asset_claim_check": {
+      "verdict": "contradicts",
+      "record_ids": [
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+      ],
+      "strength": "strong"
+    },
+    "asset_claim_as_said": "contradicts",
+    "author_user_id": "usr-n68ea5ythq",
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "chain_complete": false,
+    "pack_sha256": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
+  },
+  "after_assessment": {
+    "status": "candidate",
+    "gate": {
+      "schema_version": "gate-decision-v2",
+      "rules_version": "gate-rules-2026-09-08b",
+      "asset_id": "skl-ImeA29HL3Djj",
+      "asset_version": 1,
+      "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+      "decided_at": "2026-09-07T20:07:44.970Z",
+      "decision": "pending",
+      "status_target": "candidate",
+      "confidence": null,
+      "confidence_n": 0,
+      "evidence_policy": "trusted-only",
+      "reasons": [
+        "cold start: no outcome recorded for this asset yet; pending by default",
+        "no corrected(wrong/stale) record, so reject did not trigger",
+        "context-based assessment: the author's own records contradict this asset's claim (outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47); review priority: high"
+      ],
+      "evidence_refs": [],
+      "signals": {
+        "online": {
+          "validated": 0,
+          "corrected": 0,
+          "used": 0,
+          "cross_user_validated": 0,
+          "distinct_consumers": 0,
+          "distinct_tasks": 0,
+          "calls": 0,
+          "untrusted_ignored": 0,
+          "other_version": 0
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "validated": 2,
+          "corrected": 2,
+          "distinct_consumers": 1,
+          "recent_wrong_asset_ids": [
+            "skl-sZFb3KatWY6m"
+          ],
+          "assessment": {
+            "schema": "author-assessment-summary-v2",
+            "competence": "medium",
+            "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+            "assessed_at": "2026-09-07T20:07:44.770Z",
+            "evidence_cutoff": "2026-09-07T20:03:34.813Z",
+            "citations": 9,
+            "execution_claims": {
+              "success": 5,
+              "failure": 2,
+              "calls": 7,
+              "ledgers": {
+                "own_business": {
+                  "success": 0,
+                  "failure": 0
+                },
+                "others_on_assets": {
+                  "success": 2,
+                  "failure": 2
+                },
+                "own_transport": {
+                  "success": 3,
+                  "failure": 0
+                }
+              }
+            },
+            "asset_claim_check": {
+              "verdict": "contradicts",
+              "record_ids": [
+                "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+              ],
+              "strength": "strong"
+            },
+            "author_user_id": "usr-n68ea5ythq",
+            "asset_version": 1,
+            "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+            "pack_sha256": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
+            "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+            "written_by": "usr-n3h5ewx4ja",
+            "written_at": "2026-09-07T20:07:44.917Z"
+          },
+          "assessment_ignored": null
+        }
+      },
+      "review_priority": "high",
+      "evidence_as_of": null,
+      "author_assessment": {
+        "schema": "author-assessment-summary-v2",
+        "competence": "medium",
+        "competence_as_said": "medium",
+        "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+        "assessed_at": "2026-09-07T20:07:44.770Z",
+        "evidence_cutoff": "2026-09-07T20:03:34.813Z",
+        "citations": 9,
+        "execution_claims": {
+          "success": 5,
+          "failure": 2,
+          "calls": 7,
+          "ledgers": {
+            "own_business": {
+              "success": 0,
+              "failure": 0
+            },
+            "others_on_assets": {
+              "success": 2,
+              "failure": 2
+            },
+            "own_transport": {
+              "success": 3,
+              "failure": 0
+            }
+          }
+        },
+        "asset_claim_check": {
+          "verdict": "contradicts",
+          "record_ids": [
+            "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+          ],
+          "strength": "strong"
+        },
+        "asset_claim_as_said": "contradicts",
+        "author_user_id": "usr-n68ea5ythq",
+        "asset_version": 1,
+        "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+        "chain_complete": false,
+        "pack_sha256": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
+        "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
+        "written_by": "usr-n3h5ewx4ja",
+        "written_at": "2026-09-07T20:07:44.917Z"
+      },
+      "review": null,
+      "effective": {
+        "status": "candidate",
+        "source": "rule",
+        "review_id": null,
+        "reason": "rule pending; no human decision in force for this version",
+        "at": "2026-09-07T20:07:44.970Z"
+      }
+    }
+  }
 }
