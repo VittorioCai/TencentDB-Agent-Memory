@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { SqliteMetadataStore } from "../store/sqlite-adapter.js";
 import { MetadataService } from "./metadata-service.js";
-import { decideAsset, mergeGateIntoMetadata, collapseByCall, effectiveStatus, activeReview, expireReviews, GATE_RULES_VERSION } from "./asset-gate.js";
+import { decideAsset, mergeGateIntoMetadata, collapseByCall, effectiveStatus, activeReview, expireReviews, authorAssessmentOf, GATE_RULES_VERSION } from "./asset-gate.js";
 import type { HumanReviewRecord } from "../types.js";
 import type { AssetOutcomeEntity, AssetEntity } from "../types.js";
 import type { V3AuthContext } from "../router/auth.js";
@@ -95,7 +95,7 @@ describe("decideAsset: three rules, in order", () => {
   it("a context-based assessment on file sets the priority; it never moves admit/reject", () => {
     const withAssessment = (competence: string) => ({
       ...asset,
-      metadata_json: JSON.stringify({ gate: { author_assessment: { competence, domain: "bridge address", assessed_at: "2026-09-07T00:00:00Z", citations: 3 } } }),
+      metadata_json: JSON.stringify({ gate: { author_assessment: signed({ competence }) } }),
     });
     expect(decideAsset({ asset: withAssessment("low"), outcomes: [], authorOutcomes: [], now: T0 }).review_priority).toBe("high");
     expect(decideAsset({ asset: withAssessment("unknown"), outcomes: [], authorOutcomes: [], now: T0 }).review_priority).toBe("high");
@@ -110,6 +110,37 @@ describe("decideAsset: three rules, in order", () => {
   it("the author's own asset is not counted as another asset", () => {
     const d = decideAsset({ asset, outcomes: [], authorOutcomes: [outcome({ asset_id: "skl-x", state: "corrected", corrected_reason: "wrong" })], now: T0 });
     expect(d.signals.author.recent_wrong_asset_ids).toEqual([]);
+  });
+});
+
+/** A signed assessment bound to the fixture asset (author usr-a, version 2, hash h2). */
+const signed = (over: Record<string, unknown> = {}) => ({
+  schema: "author-assessment-summary-v2", competence: "medium", domain: "bridge address", assessed_at: "2026-09-08T12:00:00Z", evidence_cutoff: "2026-09-06T08:47:33Z",
+  citations: 3, author_user_id: "usr-a", asset_version: 2, content_hash: "h2", written_by: "usr-r", written_at: "2026-09-08T12:00:01Z", ...over,
+});
+
+describe("authorAssessmentOf: only a signed, bound assessment is read", () => {
+  const a = { owner_user_id: "usr-a", version: 2, content_hash: "h2" };
+  it("reads a signed assessment whose binding matches", () => {
+    const r = authorAssessmentOf(JSON.stringify({ gate: { author_assessment: signed({}) } }), a, "2026-09-06T08:47:33Z");
+    expect(r.ignored).toBeNull();
+    expect(r.assessment?.competence).toBe("medium");
+    expect(r.assessment?.evidence_cutoff).toBe("2026-09-06T08:47:33Z");
+  });
+  it("ignores, with the reason, an unsigned one, another author's, another version's, other content, or evidence past as_of", () => {
+    const of = (over: Record<string, unknown>, asOf: string | null = null) => authorAssessmentOf(JSON.stringify({ gate: { author_assessment: signed(over) } }), a, asOf);
+    expect(of({ written_by: undefined, schema: undefined }).ignored).toMatch(/unsigned/);
+    expect(of({ author_user_id: "usr-z" }).ignored).toMatch(/about author usr-z/);
+    expect(of({ asset_version: 1 }).ignored).toMatch(/made on version 1, the asset is at 2/);
+    expect(of({ content_hash: "h1" }).ignored).toMatch(/hash mismatch/);
+    expect(of({ evidence_cutoff: "2026-09-07T10:00:00Z" }, "2026-09-06T08:47:33Z").ignored).toMatch(/after as_of/);
+    expect(of({ evidence_cutoff: null }, "2026-09-06T08:47:33Z").ignored).toMatch(/no evidence_cutoff/);
+    expect(of({ evidence_cutoff: "2026-09-07T10:00:00Z" }, null).ignored).toBeNull(); // no as_of: the cutoff is not restricted
+    const d = decideAsset({ asset: { ...asset, metadata_json: JSON.stringify({ gate: { author_assessment: signed({ asset_version: 1 }) } }) }, outcomes: [], authorOutcomes: [], now: T0 });
+    expect(d.signals.author.assessment).toBeNull();
+    expect(d.signals.author.assessment_ignored).toMatch(/version 1/);
+    expect(d.reasons.join("\n")).toMatch(/context-based assessment: assessment was made on version 1/);
+    expect(d.review_priority).toBe("normal");
   });
 });
 
@@ -587,6 +618,29 @@ describe("the gate on the asset record", () => {
     expect(byAdmin.status).toBe("approved");
   });
 
+  it("asset/gate/assessment: a reviewer writes a bound assessment, the author may not, and the gate reads it", async () => {
+    await candidateSkill("skl-as", a, "team");
+    await store.updateAsset("skl-as", { content_hash: "hA" });
+    const body = { schema: "author-assessment-summary-v2", competence: "low", domain: "bridge address", assessed_at: "2026-09-08T12:00:00Z", evidence_cutoff: "2026-09-06T08:47:33Z", citations: 2, author_user_id: a, asset_version: 1, content_hash: "hA", asset_claim_check: { verdict: "contradicts", record_ids: ["outcome:o1"], strength: "strong" } };
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(a), body)).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(b), body)).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, author_user_id: b })).rejects.toMatchObject({ code: "invalid_request" });
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, asset_version: 2 })).rejects.toMatchObject({ code: "invalid_request" });
+    await expect(svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), { ...body, evidence_cutoff: undefined })).rejects.toMatchObject({ code: "invalid_request" });
+    const res = await svc.writeAuthorAssessmentForCaller("skl-as", ctx(r), body);
+    expect(res.assessment.written_by).toBe(r);
+    expect(res.decision.signals.author.assessment?.competence).toBe("low");
+    expect(res.decision.review_priority).toBe("high");
+    expect(res.decision.reasons.join("\n")).toMatch(/own records contradict this asset's claim/);
+    // At an as_of before the cutoff the gate ignores it and says so.
+    const early = await svc.evaluateAssetGate("skl-as", { apply: false, asOf: "2026-09-05T00:00:00Z" });
+    expect(early.decision.signals.author.assessment).toBeNull();
+    expect(early.decision.signals.author.assessment_ignored).toMatch(/after as_of/);
+    // The owner's update cannot replace it: the gate object on file wins.
+    await svc.updateAssetForCaller("skl-as", { metadata_json: JSON.stringify({ gate: { author_assessment: { competence: "high" } } }) }, ctx(a));
+    expect((await svc.getAssetGateForCaller("skl-as", ctx(a))).gate?.signals.author.assessment?.competence).toBe("low");
+  });
+
   it("backfill: a legacy status becomes a candidate decided once; draft is counted and left; nothing is approved by migration", async () => {
     await store.createAsset({ asset_id: "skl-legacy", team_id: team, asset_type: "skill", name: "legacy", owner_user_id: a, source_type: "test", visibility: "team", status: "active" as unknown as AssetEntity["status"] });
     await candidateSkill("skl-draft", a, "team", "draft");
@@ -654,7 +708,7 @@ describe("as_of: the gate can be asked to act on the evidence base only", () => 
 
 describe("the author's own records contradicting the asset", () => {
   it("makes a pending asset high priority, and is reported on a decided one without moving it", () => {
-    const meta = JSON.stringify({ gate: { author_assessment: { competence: "medium", domain: "bridge address", assessed_at: "2026-09-07T10:00:00Z", citations: 4, asset_claim_check: { verdict: "contradicts", record_ids: ["l0:msg-1"] } } } });
+    const meta = JSON.stringify({ gate: { author_assessment: signed({ citations: 4, asset_claim_check: { verdict: "contradicts", record_ids: ["l0:msg-1"], strength: "strong" } }) } });
     const pending = decideAsset({ asset: { ...asset, metadata_json: meta }, outcomes: [], authorOutcomes: [], now: T0 });
     expect(pending.review_priority).toBe("high");
     expect(pending.reasons.join("\n")).toMatch(/own records contradict this asset's claim \(l0:msg-1\)/);

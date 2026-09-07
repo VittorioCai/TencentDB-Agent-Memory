@@ -1,18 +1,17 @@
 /**
- * Context-based author assessment.
+ * Context-based author assessment (v2, 2026-09-08b).
  *
- * Reads an evidence pack (build-evidence-pack.mjs), asks a model to assess
- * the author for one domain and one asset claim, and keeps only what the
- * citation check (check-citations.mjs) can verify against the pack. The
- * output is what the gate reads: competence for the domain, and whether the
- * author's own records support, contradict, or say nothing about what the
- * asset asserts — each with the record ids and the quote that carry it.
+ * Reads an evidence pack (build-evidence-pack.mjs), asks a model to read it
+ * and write typed, cited claims, and keeps only what check-citations.mjs
+ * can verify — the citation AND the fact. The conclusions the gate reads
+ * (competence, the asset-claim verdict) are derived by the checker from the
+ * surviving claims; the model's own labels are kept beside them as "as
+ * said". The evidence cutoff travels from the pack into the assessment.
  *
- * The model is a reader, not a witness. It may write any claim; a claim is
- * kept only if every record it cites exists and its quote is found in one
- * of them. Competence is read off the surviving claims: none survive, and
- * it is `unknown` whatever the model said. The raw model output is kept in
- * the artifact beside the verified result, so the difference is inspectable.
+ * The model is a reader, not a witness. What it may say about the author
+ * having done something successfully must rest on a record that observed
+ * it — a proxy-logged call, a harness-verified outcome — never on the
+ * author's own narration.
  *
  * The model endpoint is the same upstream the proxy uses (PROXY_UPSTREAM_URL
  * / PROXY_UPSTREAM_MODEL from deploy/global-images/.env); the key is read
@@ -20,12 +19,11 @@
  *
  * Usage:
  *   node evaluation/author/assess.mjs --pack=F --domain="…" --asset-claim="…" [--asset=ID]
- *        [--budget-chars=60000] [--model=…] [--out=F] [--dry-run]
+ *        [--budget-chars=60000] [--model=…] [--out=F] [--dry-run] [--recheck=F]
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { checkAssessment } from "./check-citations.mjs";
 import { parseArgs } from "./build-evidence-pack.mjs";
 
@@ -45,25 +43,27 @@ function upstreamKey() {
   return m[1].trim();
 }
 
+const ALWAYS = new Set(["persona", "skill", "outcome", "call"]);
+
 /**
  * Select records for the prompt within a character budget: every persona,
- * skill and outcome record; L1 and L0 records ranked by keyword hits, then
- * recency. What was left out is listed, so a reader knows the model did not
- * see it.
+ * skill, outcome and call record; L1 and L0 records ranked by keyword hits,
+ * then recency. What was left out is listed, so a reader knows the model
+ * did not see it.
  */
 export function selectRecords(pack, { domain, keywords = [], budgetChars = 60000 }) {
   const terms = [...new Set([...keywords, ...domain.split(/\W+/)].map((t) => t.toLowerCase()).filter((t) => t.length >= 4))];
   const score = (r) => terms.reduce((n, t) => n + (r.text.toLowerCase().includes(t) ? 1 : 0), 0);
-  const always = pack.records.filter((r) => ["persona", "skill", "outcome"].includes(r.kind));
-  const ranked = pack.records.filter((r) => !["persona", "skill", "outcome"].includes(r.kind))
+  const always = pack.records.filter((r) => ALWAYS.has(r.kind));
+  const ranked = pack.records.filter((r) => !ALWAYS.has(r.kind))
     .map((r) => ({ r, s: score(r) }))
     .sort((a, b) => b.s - a.s || String(b.r.at ?? "").localeCompare(String(a.r.at ?? "")))
     .map((x) => x.r);
   const chosen = [];
   let used = 0;
   for (const r of [...always, ...ranked]) {
-    const len = r.text.length + r.record_id.length + 24;
-    if (used + len > budgetChars && chosen.length > 0 && !["persona", "skill", "outcome"].includes(r.kind)) continue;
+    const len = r.text.length + r.record_id.length + 40;
+    if (used + len > budgetChars && chosen.length > 0 && !ALWAYS.has(r.kind)) continue;
     chosen.push(r); used += len;
   }
   const chosenIds = new Set(chosen.map((r) => r.record_id));
@@ -71,33 +71,48 @@ export function selectRecords(pack, { domain, keywords = [], budgetChars = 60000
 }
 
 export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
+  const tokens = pack.asset?.tokens?.length ? pack.asset.tokens.join(", ") : "(none known)";
   const system = [
-    "You assess a software team member's competence for ONE domain, using ONLY the records supplied.",
-    "The records are the person's own history as the team's memory system holds it: persona lines, extracted memories (L1), raw conversation messages (L0), skills they wrote, and recorded outcomes of their assets.",
+    "You assess a software team member's competence for ONE domain, using ONLY the records supplied. A program will verify every claim you make, and will derive the conclusions itself from the claims that survive; your job is to find and cite the evidence precisely.",
+    "Each record has an id and an evidence class in its header:",
+    "  proxy_observed      a call the proxy itself logged from the person's session, with the upstream status — this is an observed result",
+    "  harness_verified    an outcome the evaluation harness recorded and verified on an asset the person authored — an observed result",
+    "  user_instruction    what the person (or their operator) typed to the assistant",
+    "  assistant_report    what the assistant said — a narration, NOT a result; it may describe a command that failed or never ran",
+    "  derived_memory      a summary the memory system extracted; provenance says whether a source message is traceable",
+    "  team_principles     a persona line: the team's working principles stored per team+agent, not the person's own record",
+    "  authored_text       a skill the person's agent owns (the writer of each version is unknown)",
+    "Write claims of these types:",
+    "  execution_result           the person's operation succeeded or failed — cite ONLY proxy_observed or harness_verified records, and set `outcome` to success or failure exactly as the record shows",
+    "  observed_operation         the person did or asked for something — cite a message, a call, an outcome, or a derived memory with a traceable source",
+    "  environment_applicability  where/when something applies (which network, which environment) — any record",
+    "  model_inference            your own reading; cite what you infer from",
+    "  coverage_unknown           what the records do not cover; no citation",
     "Rules:",
-    "1. Every statement you make MUST cite record ids from the supplied records and include a `quote`: an exact, contiguous substring (at least 8 characters) copied verbatim from one of the cited records. Statements without a verifiable quote will be discarded by a program.",
-    "2. Do not infer from absence. If the records say nothing about a point, say so in `summary` and do not claim it.",
-    "3. `competence` for the domain: high = the records show the person doing this correctly and repeatedly; medium = some direct evidence; low = the records show mistakes or confusion in this domain; unknown = no usable evidence. Choose from the surviving evidence only.",
-    "4. `asset_claim_check`: does the person's own record support, contradict, or say nothing (silent) about the asset claim below? Cite the record and quote it.",
-    "5. Output JSON only, with exactly these keys and nothing else:",
+    "1. Every claim except coverage_unknown MUST cite record ids and include `quote`: an exact, contiguous substring (at least 8 characters) copied verbatim from one of the cited records.",
+    `2. If a claim supports or contradicts the asset claim below, set relation_to_asset to supports or contradicts; the quote must then contain one of the asset's own tokens: ${tokens}. Otherwise leave it silent.`,
+    "3. Do not infer from absence. Do not turn a narration into a result: an assistant saying a command failed is a report about that command, not evidence the person cannot do it, and an assistant saying something worked is not evidence it did.",
+    "4. Also give your own overall reading in `competence` and `asset_claim_check`; the program will derive its own and keep yours beside it.",
+    "5. Output JSON only, with exactly these keys:",
     '   {"competence": "high" | "medium" | "low" | "unknown",',
     '    "domain": "<the domain as given>",',
-    '    "claims": [{"statement": "...", "record_ids": ["<id>", ...], "quote": "<verbatim substring of a cited record>"}],',
-    '    "counter_evidence": [{"statement": "...", "record_ids": ["<id>"], "quote": "..."}],',
-    '    "asset_claim_check": {"verdict": "supports" | "contradicts" | "silent", "record_ids": ["<id>"], "quote": "<verbatim substring that shows it>"},',
+    '    "claims": [{"statement": "...", "type": "<one of the five>", "outcome": "success" | "failure" | null, "record_ids": ["<id>", ...], "quote": "<verbatim substring>", "relation_to_asset": "supports" | "contradicts" | "silent"}],',
+    '    "counter_evidence": [{"statement": "...", "type": "...", "outcome": ..., "record_ids": ["<id>"], "quote": "...", "relation_to_asset": "..."}],',
+    '    "asset_claim_check": {"verdict": "supports" | "contradicts" | "silent", "type": "...", "outcome": ..., "record_ids": ["<id>"], "quote": "<verbatim substring that shows it>"},',
     '    "summary": "<2-4 sentences>"}',
-    "   `competence` is mandatory and must be one of the four words exactly. `asset_claim_check.verdict` must be one of the three words exactly.",
   ].join("\n");
-  const records = chosen.map((r) => `### ${r.record_id}  [${r.kind}${r.meta?.type ? ` ${r.meta.type}` : ""}${r.meta?.role ? ` ${r.meta.role}` : ""}${r.at ? ` ${r.at}` : ""}]\n${r.text}`).join("\n\n");
+  const records = chosen.map((r) => `### ${r.record_id}  [${r.kind} · ${r.evidence_class}${r.meta?.type ? ` · ${r.meta.type}` : ""}${r.meta?.role ? ` · ${r.meta.role}` : ""}${r.meta?.provenance ? ` · ${r.meta.provenance}` : ""}${r.meta?.upstream_status != null ? ` · status ${r.meta.upstream_status}` : ""}${r.at ? ` · ${r.at}` : ""}]\n${r.text}`).join("\n\n");
   const user = [
     `Author: ${pack.author.user_id} (agent ${pack.author.agent_id}), team ${pack.author.team_id}.`,
     `Domain to assess: ${domain}`,
-    `Asset claim to check${assetId ? ` (asset ${assetId})` : ""}: ${assetClaim}`,
+    `Asset claim to check${assetId ? ` (asset ${assetId}${pack.asset?.version ? ` v${pack.asset.version}` : ""})` : ""}: ${assetClaim}`,
+    `Evidence cutoff: ${pack.evidence_cutoff} — every record below is dated at or before it.`,
+    pack.chain ? `Chain the pack could establish for the asset: sessions ${pack.chain.source_sessions.length}, observed operations ${pack.chain.operations.length}, results ${pack.chain.results.length}; breaks: ${pack.chain.breaks.join(" | ")}` : "",
     "",
     `Records (${chosen.length} of ${pack.record_count} in the pack; ids are the citation keys):`,
     "",
     records,
-  ].join("\n");
+  ].filter((l) => l !== "").join("\n");
   return { system, user };
 }
 
@@ -116,24 +131,67 @@ export async function callModel({ url, model, key, system, user }) {
   return { content, parsed, usage: j.usage ?? null, model: j.model ?? model };
 }
 
+/** What the gate reads (asset/gate/assessment → metadata_json.gate.author_assessment). */
+export function summaryForGate({ pack, verified, domain, assessedAt, outFile }) {
+  return {
+    schema: "author-assessment-summary-v2",
+    competence: verified.competence,
+    competence_as_said: verified.competence_as_said,
+    domain,
+    assessed_at: assessedAt,
+    evidence_cutoff: pack.evidence_cutoff,
+    citations: verified.counts.citations,
+    execution_claims: verified.execution_claims,
+    asset_claim_check: { verdict: verified.asset_claim_check.verdict, record_ids: verified.asset_claim_check.record_ids, strength: verified.asset_claim_check.strength ?? null },
+    asset_claim_as_said: verified.asset_claim_as_said,
+    author_user_id: pack.author.user_id,
+    asset_version: pack.asset?.version ?? null,
+    content_hash: pack.asset?.content_hash ?? null,
+    chain_complete: pack.chain?.complete ?? null,
+    pack_sha256: pack.sha256,
+    assessment_file: outFile,
+  };
+}
+
+function renderMd({ pack, verified, domain, assessedAt, modelName, sel }) {
+  return [
+    `# Author assessment — ${pack.author.user_id} — ${domain}`, "",
+    `assessed ${assessedAt} · evidence cutoff ${pack.evidence_cutoff} · model ${modelName} · pack ${pack.sha256.slice(0, 12)} (${sel.chosen.length}/${pack.record_count} records shown; classes ${JSON.stringify(pack.by_class)})`, "",
+    `**Competence: ${verified.competence}** — ${verified.competence_basis} (model said ${verified.competence_as_said})`,
+    `**Asset claim check: ${verified.asset_claim_check.verdict}**${verified.asset_claim_check.strength ? ` (${verified.asset_claim_check.strength})` : ""}${verified.asset_claim_check.record_ids.length ? ` — ${verified.asset_claim_check.record_ids.join(", ")}` : ""}${verified.asset_claim_check.quote ? ` — "${verified.asset_claim_check.quote}"` : ""} (model said ${verified.asset_claim_as_said ?? "nothing"})`, "",
+    `Derived summary: ${verified.summary}`, "",
+    `Model summary (as said): ${verified.summary_as_said}`, "",
+    pack.chain ? `Chain: producer ${pack.chain.producer.owner_user_id} / ${pack.chain.producer.owner_agent_id} (operator ${pack.chain.producer.operator}); sessions ${pack.chain.source_sessions.length}; operations ${pack.chain.operations.length}; results ${pack.chain.results.length}. Breaks: ${pack.chain.breaks.join(" | ")}` : "",
+    "",
+    `## Surviving claims (${verified.claims_kept.length})`,
+    ...verified.claims_kept.map((c) => `- [${c.group} · ${c.type}${c.outcome ? ` · ${c.outcome}` : ""}${c.relation !== "silent" ? ` · ${c.relation} (${c.strength})` : ""}] ${c.statement}${c.found_in ? `\n  - ${c.record_ids.join(", ")} (${c.evidence_class}) — "${c.quote}"` : ""}`),
+    "", `## Dropped by the check (${verified.claims_dropped.length})`,
+    ...verified.claims_dropped.map((c) => `- [${c.group} · ${c.type}] ${c.statement} — ${c.reason}${c.record_ids.length ? ` (${c.record_ids.join(", ")})` : ""}`),
+    "",
+  ].join("\n");
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const a = parseArgs(process.argv.slice(2));
-  if (!a.pack || !a.domain || !a["asset-claim"]) { console.error("usage: node assess.mjs --pack=F --domain=… --asset-claim=… [--asset=ID] [--budget-chars=N] [--model=M] [--out=F] [--dry-run]"); process.exit(2); }
+  if (!a.pack || !a.domain || !a["asset-claim"]) { console.error("usage: node assess.mjs --pack=F --domain=… --asset-claim=… [--asset=ID] [--budget-chars=N] [--model=M] [--out=F] [--dry-run] [--recheck=F]"); process.exit(2); }
   const pack = JSON.parse(readFileSync(a.pack, "utf8"));
-  // --recheck=F: re-run the citation check on a saved assessment's raw model
-  // output (after a checker change) without another model call; the pack
-  // must be the one the assessment was made from.
+  if (pack.schema !== "author-evidence-pack-v2") { console.error(`pack schema ${pack.schema}: rebuild it with build-evidence-pack.mjs (v2 carries evidence classes and the cutoff)`); process.exit(1); }
+  const packMap = new Map(pack.records.map((r) => [r.record_id, r]));
+  const opts = { assetTokens: pack.asset?.tokens ?? [] };
+  // --recheck=F: re-run the check on a saved assessment's raw model output
+  // (after a checker change) without another model call; the pack must be
+  // the one the assessment was made from.
   if (a.recheck) {
     const prev = JSON.parse(readFileSync(a.recheck, "utf8"));
     if (prev.pack?.sha256 !== pack.sha256) { console.error(`recheck: pack sha mismatch (${prev.pack?.sha256} vs ${pack.sha256})`); process.exit(1); }
     let raw = {}; try { raw = JSON.parse(prev.raw_model_output); } catch { raw = {}; }
-    const packMap = new Map(pack.records.map((r) => [r.record_id, r.text]));
-    const verified = checkAssessment(raw, packMap);
+    const verified = checkAssessment(raw, packMap, opts);
     prev.verified = verified;
     prev.rechecked_at = new Date().toISOString();
-    prev.summary_for_gate = { ...prev.summary_for_gate, competence: verified.competence, citations: verified.counts.citations, asset_claim_check: { verdict: verified.asset_claim_check.verdict, record_ids: verified.asset_claim_check.record_ids } };
+    prev.summary_for_gate = summaryForGate({ pack, verified, domain: prev.domain, assessedAt: prev.assessed_at, outFile: a.recheck });
     writeFileSync(a.recheck, JSON.stringify(prev, null, 2) + "\n");
-    console.log(`recheck: competence=${verified.competence}${verified.competence_downgraded ? ` (said ${verified.competence_as_said})` : ""} asset_claim=${verified.asset_claim_check.verdict} kept=${verified.counts.kept} dropped=${verified.counts.dropped} → ${a.recheck}`);
+    writeFileSync(a.recheck.replace(/\.json$/, ".md"), renderMd({ pack, verified, domain: prev.domain, assessedAt: prev.assessed_at, modelName: prev.model?.model ?? "?", sel: { chosen: { length: prev.pack?.shown ?? 0 } } }));
+    console.log(`recheck: competence=${verified.competence} (said ${verified.competence_as_said}) asset_claim=${verified.asset_claim_check.verdict} kept=${verified.counts.kept} dropped=${verified.counts.dropped} → ${a.recheck}`);
     process.exit(0);
   }
   const budget = a["budget-chars"] ? Number(a["budget-chars"]) : 60000;
@@ -148,44 +206,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
   const res = await callModel({ url, model, key: upstreamKey(), system: prompt.system, user: prompt.user });
-  const packMap = new Map(pack.records.map((r) => [r.record_id, r.text]));
-  const verified = checkAssessment(res.parsed ?? {}, packMap);
+  const verified = checkAssessment(res.parsed ?? {}, packMap, opts);
   const assessedAt = new Date().toISOString();
   const doc = {
-    schema: "author-assessment-v1",
+    schema: "author-assessment-v2",
     assessed_at: assessedAt,
+    evidence_cutoff: pack.evidence_cutoff,
     author: pack.author,
     asset_id: a.asset ?? pack.asset_id ?? null,
+    asset: pack.asset ?? null,
+    chain: pack.chain ?? null,
     domain: a.domain,
     asset_claim: a["asset-claim"],
-    pack: { file: a.pack, sha256: pack.sha256, record_count: pack.record_count, shown: sel.chosen.length, left_out: sel.left_out, chars: sel.chars, terms: sel.terms },
+    pack: { file: a.pack, sha256: pack.sha256, record_count: pack.record_count, by_class: pack.by_class, excluded: pack.excluded, shown: sel.chosen.length, left_out: sel.left_out, chars: sel.chars, terms: sel.terms },
     model: { url, model: res.model, usage: res.usage, temperature: 0 },
     raw_model_output: res.content,
     verified,
-    // What the gate reads (metadata_json.gate.author_assessment).
-    summary_for_gate: {
-      competence: verified.competence,
-      domain: a.domain,
-      assessed_at: assessedAt,
-      citations: verified.counts.citations,
-      asset_claim_check: { verdict: verified.asset_claim_check.verdict, record_ids: verified.asset_claim_check.record_ids },
-      pack_sha256: pack.sha256,
-      assessment_file: out,
-    },
+    summary_for_gate: summaryForGate({ pack, verified, domain: a.domain, assessedAt, outFile: out }),
   };
   writeFileSync(out, JSON.stringify(doc, null, 2) + "\n");
-  const md = [
-    `# Author assessment — ${pack.author.user_id} — ${a.domain}`, "",
-    `assessed ${assessedAt} · model ${res.model} · pack ${pack.sha256.slice(0, 12)} (${sel.chosen.length}/${pack.record_count} records shown)`, "",
-    `**Competence: ${verified.competence}**${verified.competence_downgraded ? ` (model said ${verified.competence_as_said}; downgraded — no surviving claim)` : ""}`,
-    `**Asset claim check: ${verified.asset_claim_check.verdict}**${verified.asset_claim_check.record_ids.length ? ` — ${verified.asset_claim_check.record_ids.join(", ")}` : ""}${verified.asset_claim_check.quote ? ` — "${verified.asset_claim_check.quote}"` : ""}`, "",
-    `Summary (model): ${verified.summary}`, "",
-    `## Surviving claims (${verified.claims_kept.length})`,
-    ...verified.claims_kept.map((c) => `- [${c.group}] ${c.statement}\n  - ${c.record_ids.join(", ")} — "${c.quote}"`),
-    "", `## Dropped by the citation check (${verified.claims_dropped.length})`,
-    ...verified.claims_dropped.map((c) => `- [${c.group}] ${c.statement} — ${c.reason}${c.record_ids.length ? ` (${c.record_ids.join(", ")})` : ""}`),
-    "",
-  ].join("\n");
-  writeFileSync(out.replace(/\.json$/, ".md"), md);
-  console.log(`competence=${verified.competence}${verified.competence_downgraded ? ` (said ${verified.competence_as_said})` : ""} asset_claim=${verified.asset_claim_check.verdict} kept=${verified.counts.kept} dropped=${verified.counts.dropped} → ${out}`);
+  writeFileSync(out.replace(/\.json$/, ".md"), renderMd({ pack, verified, domain: a.domain, assessedAt, modelName: res.model, sel }));
+  console.log(`competence=${verified.competence} (said ${verified.competence_as_said}; ${verified.competence_basis}) asset_claim=${verified.asset_claim_check.verdict}${verified.asset_claim_check.strength ? `/${verified.asset_claim_check.strength}` : ""} (said ${verified.asset_claim_as_said}) kept=${verified.counts.kept} dropped=${verified.counts.dropped} → ${out}`);
 }

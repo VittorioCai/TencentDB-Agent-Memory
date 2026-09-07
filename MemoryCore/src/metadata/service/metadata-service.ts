@@ -2121,6 +2121,42 @@ export class MetadataService {
   }
 
   /**
+   * Put a context-based author assessment onto the asset (2026-09-08b).
+   * Only a team admin or reviewer may write one, never the author; it must
+   * be about this asset's author, version and content, and carry the
+   * evidence cutoff it used. Core signs it (written_by / written_at); the
+   * gate reads only signed assessments whose binding matches. The asset is
+   * re-decided so the priority reflects it.
+   */
+  async writeAuthorAssessmentForCaller(assetId: string, ctx: V3AuthContext, input: Record<string, unknown>): Promise<{ asset: AssetEntity; assessment: Record<string, unknown>; decision: GateDecision }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const callerId = this.requireCallerId(ctx);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") throw new MetadataError("permission_denied", "only a team admin or a reviewer may write an author assessment");
+    if (asset.owner_user_id === callerId) throw new MetadataError("permission_denied", "an author may not write their own assessment");
+    await this.assertManageRead(ctx, asset);
+    const bad = (why: string) => new MetadataError("invalid_request", `assessment rejected: ${why}`);
+    if (input.schema !== "author-assessment-summary-v2") throw bad("schema must be author-assessment-summary-v2");
+    if (!["high", "medium", "low", "unknown"].includes(String(input.competence))) throw bad("competence must be high | medium | low | unknown");
+    if (typeof input.domain !== "string" || !input.domain) throw bad("domain is required");
+    if (typeof input.assessed_at !== "string" || Number.isNaN(Date.parse(input.assessed_at))) throw bad("assessed_at must be an ISO time");
+    if (typeof input.evidence_cutoff !== "string" || Number.isNaN(Date.parse(input.evidence_cutoff))) throw bad("evidence_cutoff must be an ISO time (the latest record date the assessment used)");
+    if (input.author_user_id !== asset.owner_user_id) throw bad(`author_user_id ${String(input.author_user_id)} is not the asset's author ${asset.owner_user_id}`);
+    if (Number(input.asset_version) !== asset.version) throw bad(`asset_version ${String(input.asset_version)} is not the asset's current version ${asset.version}`);
+    if (input.content_hash && asset.content_hash && input.content_hash !== asset.content_hash) throw bad("content_hash does not match the asset's content");
+    const acc = input.asset_claim_check as { verdict?: unknown } | null | undefined;
+    if (acc && !["supports", "contradicts", "silent"].includes(String(acc.verdict))) throw bad("asset_claim_check.verdict must be supports | contradicts | silent");
+    const assessment = { ...input, author_user_id: asset.owner_user_id, asset_version: asset.version, content_hash: asset.content_hash ?? null, written_by: callerId, written_at: new Date().toISOString() };
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    m.gate = { ...gateOf(asset.metadata_json), author_assessment: assessment };
+    await this.updateAsset(asset.asset_id, { metadata_json: JSON.stringify(m) });
+    const { decision, asset: decided } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
+    return { asset: decided, assessment, decision };
+  }
+
+  /**
    * The owner asks the team to review a candidate (2026-09-08). Until this
    * is on file a private candidate is the owner's alone: admins and
    * reviewers do not see it in the queue or through gate/get. Withdrawing

@@ -101,26 +101,69 @@ export function collapseByCall(rows: AssetOutcomeEntity[]): AssetOutcomeEntity[]
   return [...byCall.values()].sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
 }
 
-/** The context-based author assessment, if one has been written onto the asset. */
-export function authorAssessmentOf(metadataJson: string | null | undefined): AuthorAssessmentSummary | null {
-  if (!metadataJson) return null;
+/**
+ * The context-based author assessment on the asset, if one is on file and
+ * may be read for this asset at this time. An assessment is read only when
+ * it was written through the assessment route (signed by Core), is about
+ * this author, this version and this content, and — when the gate evaluates
+ * at `asOf` — used no evidence past that time. Otherwise it is ignored and
+ * the reason is returned, so the decision can say so.
+ */
+export function authorAssessmentOf(
+  metadataJson: string | null | undefined,
+  asset?: { owner_user_id?: string; version?: number; content_hash?: string | null },
+  asOf?: string | null,
+): { assessment: AuthorAssessmentSummary | null; ignored: string | null } {
+  if (!metadataJson) return { assessment: null, ignored: null };
+  let a: Partial<AuthorAssessmentSummary> | undefined;
   try {
     const m = JSON.parse(metadataJson) as { gate?: { author_assessment?: unknown } };
-    const a = m?.gate?.author_assessment as Partial<AuthorAssessmentSummary> | undefined;
-    if (!a || typeof a.competence !== "string") return null;
-    const acc = a.asset_claim_check && typeof a.asset_claim_check === "object" && typeof a.asset_claim_check.verdict === "string"
-      ? { verdict: a.asset_claim_check.verdict, record_ids: Array.isArray(a.asset_claim_check.record_ids) ? a.asset_claim_check.record_ids.map(String) : [] }
-      : null;
-    return {
+    a = m?.gate?.author_assessment as Partial<AuthorAssessmentSummary> | undefined;
+  } catch {
+    return { assessment: null, ignored: null };
+  }
+  if (!a || typeof a.competence !== "string") return { assessment: null, ignored: null };
+  if (!a.written_by || a.schema !== "author-assessment-summary-v2") {
+    return { assessment: null, ignored: "assessment on file is unsigned (written before 2026-09-08b, not through asset/gate/assessment); ignored" };
+  }
+  if (asset?.owner_user_id && a.author_user_id && a.author_user_id !== asset.owner_user_id) {
+    return { assessment: null, ignored: `assessment is about author ${a.author_user_id}, the asset's author is ${asset.owner_user_id}; ignored` };
+  }
+  if (asset?.version !== undefined && a.asset_version !== undefined && a.asset_version !== asset.version) {
+    return { assessment: null, ignored: `assessment was made on version ${a.asset_version}, the asset is at ${asset.version}; ignored` };
+  }
+  if (asset?.content_hash && a.content_hash && a.content_hash !== asset.content_hash) {
+    return { assessment: null, ignored: "assessment was made on different content (hash mismatch); ignored" };
+  }
+  if (asOf && a.evidence_cutoff && a.evidence_cutoff > asOf) {
+    return { assessment: null, ignored: `assessment used evidence up to ${a.evidence_cutoff}, after as_of ${asOf}; ignored` };
+  }
+  if (asOf && !a.evidence_cutoff) {
+    return { assessment: null, ignored: `assessment carries no evidence_cutoff and the gate evaluates at ${asOf}; ignored` };
+  }
+  const acc = a.asset_claim_check && typeof a.asset_claim_check === "object" && typeof a.asset_claim_check.verdict === "string"
+    ? { verdict: a.asset_claim_check.verdict, record_ids: Array.isArray(a.asset_claim_check.record_ids) ? a.asset_claim_check.record_ids.map(String) : [], strength: a.asset_claim_check.strength ?? null }
+    : null;
+  return {
+    ignored: null,
+    assessment: {
+      schema: "author-assessment-summary-v2",
       competence: a.competence as AuthorAssessmentSummary["competence"],
       domain: String(a.domain ?? ""),
       assessed_at: String(a.assessed_at ?? ""),
+      evidence_cutoff: a.evidence_cutoff ?? null,
       citations: Number(a.citations ?? 0),
+      execution_claims: a.execution_claims ?? null,
       asset_claim_check: acc,
-    };
-  } catch {
-    return null;
-  }
+      author_user_id: a.author_user_id,
+      asset_version: a.asset_version,
+      content_hash: a.content_hash ?? null,
+      pack_sha256: a.pack_sha256,
+      assessment_file: a.assessment_file,
+      written_by: a.written_by,
+      written_at: a.written_at,
+    },
+  };
 }
 
 export function decideAsset(input: DecideInput): GateDecision {
@@ -161,7 +204,8 @@ export function decideAsset(input: DecideInput): GateDecision {
       .filter((o) => daysBetween(o.occurred_at, now) <= RECENT_WRONG_WINDOW_DAYS)
       .map((o) => o.asset_id),
   )].sort();
-  const assessment = authorAssessmentOf(input.asset.metadata_json);
+  const read = authorAssessmentOf(input.asset.metadata_json, { owner_user_id: authorId, version, content_hash: input.asset.content_hash ?? null }, input.asOf ?? null);
+  const assessment = read.assessment;
   const author = {
     user_id: authorId,
     validated: authorCross.filter((o) => o.state === "validated").length,
@@ -169,6 +213,7 @@ export function decideAsset(input: DecideInput): GateDecision {
     distinct_consumers: new Set(authorCross.map((o) => o.consumer_user_id)).size,
     recent_wrong_asset_ids: recentWrong,
     assessment,
+    assessment_ignored: read.ignored,
   };
 
   const reasons: string[] = [];
@@ -211,6 +256,8 @@ export function decideAsset(input: DecideInput): GateDecision {
   if (otherVersion > 0) {
     reasons.push(`${otherVersion} trusted call(s) are about other versions of this asset and do not decide version ${version}`);
   }
+
+  if (read.ignored) reasons.push(`context-based assessment: ${read.ignored}`);
 
   // Review priority: only meaningful for a pending asset; never touches admit/reject.
   let review_priority: ReviewPriority | null = null;

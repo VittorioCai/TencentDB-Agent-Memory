@@ -495,6 +495,8 @@ export const assetOutcomeListSchema = z
   })
   .merge(paginationInputSchema);
 export const assetGateBackfillSchema = z.object({ team_id: nonEmpty, dry_run: z.boolean().optional(), asset_type: assetType.optional() });
+/** The verified summary of a context-based author assessment; the service validates the binding. */
+export const assetGateAssessmentSchema = z.object({ asset_id: nonEmpty, assessment: z.record(z.string(), z.unknown()) });
 export const assetGateSubmitSchema = z.object({
   asset_id: nonEmpty,
   /** Take a pending request back; admins and reviewers stop seeing a private candidate. */

@@ -1,33 +1,50 @@
 /**
- * Citation check for a context-based author assessment.
+ * Verification of a context-based author assessment (v2, 2026-09-08b).
  *
  * The assessment is written by a model that has read the author's own
- * records (L0 conversations, L1 memories, persona, earlier assets and their
- * outcomes). The model may say anything; this file decides what survives.
- * A claim survives only if every record id it cites exists in the evidence
- * pack and its quote is found, verbatim after whitespace/case folding, in at
- * least one of the cited records. Nothing else is accepted: no citation, no
- * claim; a quote the record does not contain, no claim.
+ * records. The model may say anything; this file decides what survives, and
+ * then derives the conclusions itself. Two things are checked, apart:
  *
- * Competence is then read off the surviving claims, not the model's word:
- * with no surviving claim the competence is `unknown`, whatever the model
- * said. The asset-claim check (does the author's own record support,
- * contradict, or say nothing about what the asset asserts?) is verified the
- * same way and falls back to `silent`.
+ *   1. the citation — every record id exists in the pack and the quote is a
+ *      verbatim substring (after whitespace/case folding) of a cited record;
+ *   2. the fact — what the cited record IS can carry the claim's type:
+ *
+ *        execution_result           only a proxy-observed call (call:) or a
+ *                                   harness-verified outcome (outcome:), and
+ *                                   the claimed outcome must agree with the
+ *                                   record's own status; an assistant's
+ *                                   narration is a report, not a result
+ *        observed_operation         a raw message (l0:), a call, an outcome,
+ *                                   or a derived memory (l1:) that has a
+ *                                   traceable source
+ *        environment_applicability  anything, persona (team principles, L3)
+ *                                   included
+ *        model_inference            anything cited; never counts
+ *        coverage_unknown           no citation needed; never counts
+ *
+ *      and a claim that supports or contradicts the asset must quote the
+ *      asset's own token (its address, its id) so it is about that asset.
+ *
+ * Conclusions are then rebuilt from the surviving claims, never taken from
+ * the model: competence from execution_result claims only (none → unknown;
+ * failures only → low; one success → medium; two or more successes → high;
+ * failures beside successes are reported, not subtracted — a probe that
+ * timed out is an operation, not a lack of skill), the asset-claim verdict
+ * from the accepted supports/contradicts claims, and the summary from the
+ * counts. The model's own competence and verdict are kept as "as said".
  *
  * Pure: no I/O. Used by assess.mjs; tested on its own.
  */
 
 export const COMPETENCE = new Set(["high", "medium", "low", "unknown"]);
 export const CLAIM_VERDICTS = new Set(["supports", "contradicts", "silent"]);
+export const CLAIM_TYPES = new Set(["observed_operation", "execution_result", "environment_applicability", "model_inference", "coverage_unknown"]);
+export const EXECUTION_CLASSES = new Set(["proxy_observed", "harness_verified", "tool_result"]);
+export const OPERATION_CLASSES = new Set(["proxy_observed", "harness_verified", "tool_result", "user_instruction", "assistant_report", "derived_memory"]);
 
 const fold = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 
-/**
- * Labels are the model's words, not evidence; spelling variants are folded
- * onto the vocabulary ("contradict" → contradicts). Anything else is left as
- * it is and then fails the vocabulary check.
- */
+/** Labels are the model's words; spelling variants fold onto the vocabulary. Evidence is never folded. */
 export function normalizeVerdict(v) {
   const f = fold(v);
   if (/^contradict/.test(f)) return "contradicts";
@@ -41,6 +58,21 @@ export function normalizeCompetence(c) {
   if (f === "" || f === "none" || f === "n/a" || f === "unknown" || f === "insufficient" || f === "not enough evidence") return "unknown";
   return f;
 }
+export function normalizeType(t) {
+  const f = fold(t).replace(/[\s-]+/g, "_");
+  if (/^exec|^result|^outcome/.test(f)) return "execution_result";
+  if (/^observ|^operation|^action/.test(f)) return "observed_operation";
+  if (/^env|^applic|^context/.test(f)) return "environment_applicability";
+  if (/^infer|^model|^reason|^opinion/.test(f)) return "model_inference";
+  if (/^coverage|^unknown|^absent|^gap|^missing/.test(f)) return "coverage_unknown";
+  return f;
+}
+export function normalizeOutcome(o) {
+  const f = fold(o);
+  if (/^succ|^ok|^pass|^work/.test(f)) return "success";
+  if (/^fail|^error|^timeout|^timed|^refus|^reject/.test(f)) return "failure";
+  return f;
+}
 
 /** Does `quote` occur in `text`, after folding? Empty quotes never match. */
 export function quoteFound(quote, text) {
@@ -50,6 +82,27 @@ export function quoteFound(quote, text) {
 }
 
 const KIND_PREFIXES = ["l0:", "l1:", "persona:", "skill:", "outcome:", "call:"];
+
+/** A pack value may be a record ({text, kind, evidence_class, …}) or, in older callers and tests, the text alone. */
+export function recordOf(pack, id) {
+  const v = pack.get(id);
+  if (v === undefined) return null;
+  if (typeof v === "string") return { text: v, kind: id.split(":")[0], evidence_class: classFromKind(id.split(":")[0], null), meta: {} };
+  return { text: v.text ?? "", kind: v.kind ?? id.split(":")[0], evidence_class: v.evidence_class ?? classFromKind(v.kind ?? id.split(":")[0], v.meta ?? null), meta: v.meta ?? {} };
+}
+
+/** What a record is, for the fact check, when the pack did not say. */
+export function classFromKind(kind, meta) {
+  switch (kind) {
+    case "call": return "proxy_observed";
+    case "outcome": return "harness_verified";
+    case "l0": return meta?.role === "tool" ? "tool_result" : meta?.role === "user" ? "user_instruction" : "assistant_report";
+    case "l1": return "derived_memory";
+    case "persona": return "team_principles";
+    case "skill": return "authored_text";
+    default: return "unknown";
+  }
+}
 
 /**
  * A record id is a key, not evidence. A model that writes `msg-1` for
@@ -67,8 +120,8 @@ export function resolveRecordId(id, pack) {
 }
 
 /**
- * Verify one cited statement against the pack.
- * @returns {{ ok: boolean, reason?: string, record_ids: string[] }}
+ * Verify one citation against the pack: records exist, quote found.
+ * @returns {{ ok: boolean, reason?: string, record_ids: string[], found_in?: string }}
  */
 export function verifyCitation(item, pack) {
   const rawIds = Array.isArray(item?.record_ids) ? item.record_ids.map(String) : [];
@@ -78,56 +131,135 @@ export function verifyCitation(item, pack) {
   if (missing.length) return { ok: false, reason: `cited record(s) not in the pack: ${missing.join(", ")}`, record_ids: ids };
   const quote = item?.quote;
   if (!quote || typeof quote !== "string") return { ok: false, reason: "no quote", record_ids: ids };
-  const hit = ids.find((id) => quoteFound(quote, pack.get(id)));
+  const hit = ids.find((id) => quoteFound(quote, recordOf(pack, id).text));
   if (!hit) return { ok: false, reason: "quote not found in any cited record", record_ids: ids };
   return { ok: true, record_ids: ids, found_in: hit };
 }
 
+/** The status a proxy-observed call or a harness outcome records, as success / failure / null. */
+export function recordedOutcome(rec) {
+  if (!rec) return null;
+  if (rec.evidence_class === "harness_verified") {
+    const st = rec.meta?.state;
+    return st === "validated" ? "success" : st === "corrected" ? "failure" : null;
+  }
+  if (rec.evidence_class === "proxy_observed") {
+    const s = Number(rec.meta?.upstream_status ?? NaN);
+    if (rec.meta?.reject_reason) return "failure";
+    if (Number.isFinite(s) && s > 0) return s >= 200 && s < 300 ? "success" : "failure";
+    return null; // a model_intent row: the model meant to call; nothing was observed
+  }
+  return null;
+}
+
 /**
- * @param raw   the model's parsed JSON output
- * @param pack  Map<record_id, text>
+ * The fact check for one claim: can the cited record carry a claim of this
+ * type, and does the claim agree with what the record says?
  */
-export function checkAssessment(raw, pack) {
+export function verifyFact(claim, pack, foundIn, assetTokens = []) {
+  const type = normalizeType(claim?.type);
+  if (!CLAIM_TYPES.has(type)) return { ok: false, reason: `claim type "${claim?.type}" not in the vocabulary`, type };
+  const rec = recordOf(pack, foundIn);
+  const cls = rec.evidence_class;
+  let outcome = null;
+  if (type === "execution_result") {
+    if (!EXECUTION_CLASSES.has(cls)) return { ok: false, reason: `an execution result needs a proxy-observed call or a harness-verified outcome; the quote is from ${cls} (${foundIn})`, type };
+    outcome = normalizeOutcome(claim?.outcome);
+    if (outcome !== "success" && outcome !== "failure") return { ok: false, reason: "an execution result must say success or failure", type };
+    const recorded = recordedOutcome(rec);
+    if (recorded === null) return { ok: false, reason: `${foundIn} records no result (intent only); it cannot carry an execution result`, type };
+    if (recorded !== outcome) return { ok: false, reason: `claimed ${outcome} but ${foundIn} records ${recorded}`, type };
+  } else if (type === "observed_operation") {
+    if (!OPERATION_CLASSES.has(cls)) return { ok: false, reason: `an observed operation needs a message, a call or an outcome; the quote is from ${cls} (${foundIn})`, type };
+    if (cls === "derived_memory" && rec.meta?.provenance === "source_unavailable") return { ok: false, reason: `${foundIn} is a derived memory with no traceable source; it cannot show an operation`, type };
+  }
+  const relation = claim?.relation_to_asset === undefined || claim?.relation_to_asset === null ? "silent" : normalizeVerdict(claim.relation_to_asset);
+  if (!CLAIM_VERDICTS.has(relation)) return { ok: false, reason: `relation_to_asset "${claim?.relation_to_asset}" not in the vocabulary`, type };
+  let strength = null;
+  if (relation !== "silent") {
+    if (type === "model_inference" || type === "coverage_unknown") return { ok: false, reason: `a ${type} claim cannot support or contradict the asset`, type };
+    if (assetTokens.length > 0) {
+      const hay = fold(rec.text);
+      const q = fold(claim?.quote);
+      const hit = assetTokens.find((t) => q.includes(fold(t)) || hay.includes(fold(t)));
+      if (!hit) return { ok: false, reason: `claims to ${relation === "supports" ? "support" : "contradict"} the asset but neither the quote nor ${foundIn} names the asset's token (${assetTokens.join(", ")})`, type };
+    }
+    strength = type === "execution_result" ? "strong" : "weak";
+  }
+  return { ok: true, type, outcome, relation, strength };
+}
+
+/** Competence from execution-grade claims only. */
+export function deriveCompetence(execClaims) {
+  const success = execClaims.filter((c) => c.outcome === "success").length;
+  const failure = execClaims.filter((c) => c.outcome === "failure").length;
+  if (success + failure === 0) return { competence: "unknown", success, failure, basis: "no execution-grade claim survived" };
+  if (success === 0) return { competence: "low", success, failure, basis: `${failure} recorded failure(s), no success` };
+  if (success >= 2) return { competence: "high", success, failure, basis: `${success} recorded success(es)${failure ? `, ${failure} failure(s) beside them` : ""}` };
+  return { competence: "medium", success, failure, basis: `1 recorded success${failure ? `, ${failure} failure(s) beside it` : ""}` };
+}
+
+/**
+ * @param raw     the model's parsed JSON output
+ * @param pack    Map<record_id, record | text>
+ * @param opts    { assetTokens?: string[] }
+ */
+export function checkAssessment(raw, pack, opts = {}) {
+  const assetTokens = Array.isArray(opts.assetTokens) ? opts.assetTokens.filter(Boolean) : [];
   const claims = Array.isArray(raw?.claims) ? raw.claims : [];
   const counter = Array.isArray(raw?.counter_evidence) ? raw.counter_evidence : [];
+  // The model's asset_claim_check is one more claim about the asset.
+  const acc = raw?.asset_claim_check && typeof raw.asset_claim_check === "object" ? raw.asset_claim_check : null;
+  const accAsClaim = acc && normalizeVerdict(acc.verdict) !== "silent"
+    ? [{ statement: `asset claim check: ${acc.verdict}`, record_ids: acc.record_ids, quote: acc.quote, type: acc.type ?? "observed_operation", outcome: acc.outcome, relation_to_asset: acc.verdict }]
+    : [];
   const kept = [], dropped = [];
-  for (const [group, list] of [["claim", claims], ["counter_evidence", counter]]) {
+  for (const [group, list] of [["claim", claims], ["counter_evidence", counter], ["asset_claim_check", accAsClaim]]) {
     for (const c of list) {
+      const type = normalizeType(c?.type);
+      const row = { group, statement: String(c?.statement ?? ""), record_ids: [], quote: c?.quote ?? null, type, outcome: null, relation: "silent", strength: null };
+      if (type === "coverage_unknown") { kept.push({ ...row, found_in: null, note: "statement of absence; not evidence" }); continue; }
       const v = verifyCitation(c, pack);
-      const row = { group, statement: String(c?.statement ?? ""), record_ids: v.record_ids, quote: c?.quote ?? null };
-      if (v.ok) kept.push({ ...row, found_in: v.found_in });
-      else dropped.push({ ...row, reason: v.reason });
+      row.record_ids = v.record_ids;
+      if (!v.ok) { dropped.push({ ...row, reason: v.reason }); continue; }
+      const f = verifyFact(c, pack, v.found_in, assetTokens);
+      if (!f.ok) { dropped.push({ ...row, type: f.type, reason: f.reason }); continue; }
+      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class });
     }
   }
-  const claimsKept = kept.filter((k) => k.group === "claim");
+  const execClaims = kept.filter((k) => k.type === "execution_result");
+  const derived = deriveCompetence(execClaims);
   const saidRaw = normalizeCompetence(raw?.competence);
   const said = COMPETENCE.has(saidRaw) ? saidRaw : "unknown";
-  // Competence rests on surviving claims. None → unknown, whatever was said.
-  const competence = claimsKept.length > 0 ? said : "unknown";
 
-  let assetClaim = { verdict: "silent", record_ids: [], quote: null, reason: "not asserted" };
-  const acc = raw?.asset_claim_check;
-  const accVerdict = acc ? normalizeVerdict(acc.verdict) : null;
-  if (acc && CLAIM_VERDICTS.has(accVerdict)) {
-    if (accVerdict === "silent") assetClaim = { verdict: "silent", record_ids: [], quote: null, reason: "model said silent" };
-    else {
-      const v = verifyCitation(acc, pack);
-      assetClaim = v.ok
-        ? { verdict: accVerdict, record_ids: v.record_ids, quote: acc.quote, found_in: v.found_in }
-        : { verdict: "silent", record_ids: v.record_ids, quote: acc.quote ?? null, reason: `downgraded to silent: ${v.reason}` };
-    }
-  } else if (acc) {
-    assetClaim = { verdict: "silent", record_ids: [], quote: null, reason: `verdict "${acc.verdict}" not in the vocabulary` };
-  }
+  const about = kept.filter((k) => k.relation !== "silent");
+  const contradicts = about.filter((k) => k.relation === "contradicts");
+  const supports = about.filter((k) => k.relation === "supports");
+  const pick = (list) => list.find((k) => k.strength === "strong") ?? list[0];
+  let assetClaim;
+  if (contradicts.length) { const c = pick(contradicts); assetClaim = { verdict: "contradicts", record_ids: c.record_ids, quote: c.quote, strength: c.strength, basis: contradicts.map((k) => k.found_in) }; }
+  else if (supports.length) { const s = pick(supports); assetClaim = { verdict: "supports", record_ids: s.record_ids, quote: s.quote, strength: s.strength, basis: supports.map((k) => k.found_in) }; }
+  else assetClaim = { verdict: "silent", record_ids: [], quote: null, strength: null, basis: [], reason: acc ? "nothing accepted supports or contradicts the asset" : "not asserted" };
+  const accSaid = acc ? normalizeVerdict(acc.verdict) : null;
+
+  const summary = [
+    `competence ${derived.competence}: ${derived.basis}`,
+    `asset claim ${assetClaim.verdict}${assetClaim.basis.length ? ` on ${assetClaim.basis.join(", ")} (${assetClaim.strength})` : ""}`,
+    `${kept.filter((k) => k.type !== "coverage_unknown").length} claim(s) kept, ${dropped.length} dropped${dropped.length ? ` (${[...new Set(dropped.map((d) => d.reason.split(";")[0].split(":")[0]))].join("; ")})` : ""}`,
+  ].join(". ") + ".";
 
   return {
-    competence,
+    competence: derived.competence,
+    competence_basis: derived.basis,
     competence_as_said: said,
-    competence_downgraded: competence !== said,
+    competence_downgraded: derived.competence !== said,
+    execution_claims: { success: derived.success, failure: derived.failure },
     asset_claim_check: assetClaim,
+    asset_claim_as_said: accSaid,
     claims_kept: kept,
     claims_dropped: dropped,
-    counts: { claims: claims.length, counter_evidence: counter.length, kept: kept.length, dropped: dropped.length, citations: claimsKept.length },
-    summary: typeof raw?.summary === "string" ? raw.summary : "",
+    counts: { claims: claims.length, counter_evidence: counter.length, kept: kept.length, dropped: dropped.length, citations: kept.filter((k) => k.group === "claim" && k.type !== "coverage_unknown").length, execution: execClaims.length },
+    summary,
+    summary_as_said: typeof raw?.summary === "string" ? raw.summary : "",
   };
 }

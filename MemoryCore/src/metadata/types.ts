@@ -637,8 +637,10 @@ export interface GateDecision {
       corrected: number;
       distinct_consumers: number;
       recent_wrong_asset_ids: string[];
-      /** Filled by the context-based assessment when one is on file; null otherwise. */
+      /** Filled by the context-based assessment when one is on file and accepted; null otherwise. */
       assessment: AuthorAssessmentSummary | null;
+      /** Why an assessment on file was not read (unsigned, wrong author/version/content, evidence past as_of). */
+      assessment_ignored: string | null;
     };
   };
   review_priority: ReviewPriority | null;
@@ -684,18 +686,38 @@ export interface GateEffective {
   at: string;
 }
 
-/** The part of a context-based author assessment the gate reads. */
+/**
+ * The part of a context-based author assessment the gate reads (v2,
+ * 2026-09-08b). Written only through asset/gate/assessment by a team admin
+ * or reviewer, and bound to the author, the asset version and content it was
+ * made for, and the evidence cutoff it used. The gate ignores — with the
+ * reason — an assessment whose binding does not match the asset, or whose
+ * evidence runs past the `as_of` it is evaluating at.
+ */
 export interface AuthorAssessmentSummary {
+  schema?: "author-assessment-summary-v2";
   competence: "high" | "medium" | "low" | "unknown";
   domain: string;
   assessed_at: string;
+  /** Only records dated at or before this were used. Independent of assessed_at. */
+  evidence_cutoff?: string | null;
   citations: number;
+  /** Execution-grade claims the competence rests on (proxy-observed calls, harness-verified outcomes). */
+  execution_claims?: { success: number; failure: number } | null;
   /**
    * Whether the author's own records support, contradict, or say nothing
    * about what the asset asserts — verified citations only. A contradiction
    * from the author's own history is the strongest cold-start signal there is.
    */
-  asset_claim_check?: { verdict: "supports" | "contradicts" | "silent"; record_ids?: string[] } | null;
+  asset_claim_check?: { verdict: "supports" | "contradicts" | "silent"; record_ids?: string[]; strength?: "strong" | "weak" | null } | null;
+  author_user_id?: string;
+  asset_version?: number;
+  content_hash?: string | null;
+  pack_sha256?: string;
+  assessment_file?: string;
+  /** Set by Core on write. */
+  written_by?: string;
+  written_at?: string;
 }
 
 // ============================

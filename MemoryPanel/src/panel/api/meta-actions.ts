@@ -80,6 +80,8 @@ export const META_ACTIONS = [
   'asset/gate/submit',
   // Team admin: legacy statuses ("active") become candidates, decided once; never approved by migration.
   'asset/gate/backfill',
+  // A verified author assessment, written by an admin/reviewer and bound to author + version + cutoff.
+  'asset/gate/assessment',
   'agent-fixed-asset/set',
   'agent-fixed-asset/list',
   'agent-fixed-asset/list-with-detail',
