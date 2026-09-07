@@ -62,6 +62,14 @@ export function checkPermission(ctx: PermCheckContext): PermCheckResult {
     return { allowed: false, reason: "not_team_member" };
   }
 
+  // 3b. 候选池：status=candidate 的资产还没过准入闸门，只有 owner（第 2 步已放行）、
+  //     team admin 和 reviewer 能读——这就是"候选资产不进正式池"的落点。
+  //     failed / deprecated / archived 由 list-accessible 过滤；这里不重复。
+  if (asset.status === "candidate" && membership.role !== "admin" && membership.role !== "reviewer") {
+    logger.debug(`[META] perm_check DENY: status=candidate, role=${membership.role}`);
+    return { allowed: false, reason: "status_candidate" };
+  }
+
   // 4. visibility 限制
   switch (asset.visibility) {
     case "private":

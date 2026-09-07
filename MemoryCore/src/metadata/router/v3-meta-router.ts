@@ -29,7 +29,7 @@ import {
 import { extractInstanceId } from "./instance.js";
 import { resolvePagination } from "./pagination.js";
 import { resolveUserId } from "../service/resolve-user-id.js";
-import type { AgentFilter, TaskFilter, ParticipationLogFilter } from "../types.js";
+import type { AgentFilter, TaskFilter, ParticipationLogFilter, AssetOutcomeFilter } from "../types.js";
 import * as S from "./v3-meta-schemas.js";
 import {
   createMetaApiTraceContext,
@@ -239,6 +239,26 @@ const routeTable: Record<string, Handler> = {
     if (d.dedupe !== undefined) filter.dedupe = d.dedupe;
     return s.listParticipationLogsForCaller(filter, c, resolvePagination(d));
   }),
+
+  // AssetOutcome / admission gate
+  [`${V3_PREFIX}/asset/outcome/append`]: bind(S.assetOutcomeAppendSchema, (d, c, s) => {
+    const { evaluate, ...input } = d;
+    return s.appendAssetOutcomeForCaller(input, c, { evaluate: evaluate ?? true });
+  }),
+  [`${V3_PREFIX}/asset/outcome/list`]: bind(S.assetOutcomeListSchema, (d, c, s) => {
+    const filter: AssetOutcomeFilter = { team_id: d.team_id };
+    if (d.asset_id) filter.asset_id = d.asset_id;
+    if (d.states) filter.states = d.states;
+    if (d.consumer_user_id) filter.consumer_user_id = d.consumer_user_id;
+    if (d.owner_user_id) filter.owner_user_id = d.owner_user_id;
+    if (d.occurred_after) filter.occurred_after = d.occurred_after;
+    if (d.occurred_before) filter.occurred_before = d.occurred_before;
+    return s.listAssetOutcomesForCaller(filter, c, resolvePagination(d));
+  }),
+  [`${V3_PREFIX}/asset/gate/evaluate`]: bind(S.assetGateEvaluateSchema, (d, c, s) =>
+    s.evaluateAssetGateForCaller(d.asset_id, c, { apply: d.apply ?? true }),
+  ),
+  [`${V3_PREFIX}/asset/gate/get`]: bind(S.assetGateGetSchema, (d, c, s) => s.getAssetGateForCaller(d.asset_id, c)),
 
   // Asset
   [`${V3_PREFIX}/asset/create`]: bind(S.assetCreateSchema, (d, c, s) => s.createAssetForCaller(d, c)),

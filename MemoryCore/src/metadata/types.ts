@@ -466,6 +466,129 @@ export interface AssetFilter {
 }
 
 // ============================
+// Asset outcomes and the admission gate
+// ============================
+
+/**
+ * What happened after an asset was used, as recorded by whoever can tie the
+ * use to a result: the evaluation harness, a CI hook, a reviewer.
+ *
+ *   validated  the asset's content fed a call or an artifact and the task's
+ *              acceptance passed on it
+ *   corrected  the asset's content fed a call that failed, and the failure is
+ *              explained by the content (reason wrong) or by its age (stale)
+ *   used       the content was acted on; no outcome is known yet
+ *
+ * A row is evidence about one asset version from one consumer. The gate
+ * reads rows; it never writes them.
+ */
+export type AssetOutcomeState = "validated" | "corrected" | "used";
+/** How the consumer relates to the asset's author. */
+export type AssetOutcomeRelation = "cross_user" | "cross_agent" | "self" | "unknown";
+export type AssetCorrectedReason = "wrong" | "stale" | "other";
+
+export interface AssetOutcomeEntity {
+  id: string;
+  team_id: string;
+  asset_id: string;
+  asset_version: number | null;
+  state: AssetOutcomeState;
+  relation: AssetOutcomeRelation;
+  corrected_reason: AssetCorrectedReason | null;
+  consumer_user_id: string;
+  consumer_agent_id: string | null;
+  task_id: string | null;
+  /** The recorder's own run / session identifier, for tracing back to its artifacts. */
+  run_id: string | null;
+  /** Who recorded it: "evaluation-runner", "panel", "ci", … */
+  source: string;
+  /** Recorder-defined evidence (proof refs, call ids, probe records), JSON text. */
+  evidence_json: string;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AppendAssetOutcomeInput {
+  team_id: string;
+  asset_id: string;
+  asset_version?: number | null;
+  state: AssetOutcomeState;
+  relation?: AssetOutcomeRelation;
+  corrected_reason?: AssetCorrectedReason | null;
+  consumer_user_id: string;
+  consumer_agent_id?: string | null;
+  task_id?: string | null;
+  run_id?: string | null;
+  source?: string;
+  evidence_json?: string;
+  occurred_at?: string;
+}
+
+export interface AssetOutcomeFilter {
+  team_id: string;
+  asset_id?: string;
+  states?: AssetOutcomeState[];
+  consumer_user_id?: string;
+  /** Outcomes for assets owned by this user (join on meta_assets.owner_user_id). */
+  owner_user_id?: string;
+  occurred_after?: string;
+  occurred_before?: string;
+}
+
+export type GateDecisionKind = "admit" | "reject" | "pending";
+export type ReviewPriority = "high" | "normal" | "low";
+
+/**
+ * The gate's decision about one asset, stored on the asset as
+ * `metadata_json.gate` and reflected in `status` / `confidence`.
+ */
+export interface GateDecision {
+  schema_version: "gate-decision-v2";
+  rules_version: string;
+  asset_id: string;
+  decided_at: string;
+  decision: GateDecisionKind;
+  /** The status the decision maps to: admit→approved, reject→failed, pending→candidate. */
+  status_target: Extract<AssetStatus, "approved" | "failed" | "candidate">;
+  /**
+   * Share of this asset's cross-person outcomes that validated, or null with
+   * no outcomes. A description of the evidence on file, not a prior.
+   */
+  confidence: number | null;
+  reasons: string[];
+  evidence_refs: Array<{ outcome_id: string; state: AssetOutcomeState; relation: AssetOutcomeRelation }>;
+  signals: {
+    online: {
+      validated: number;
+      corrected: number;
+      used: number;
+      cross_user_validated: number;
+      distinct_consumers: number;
+      distinct_tasks: number;
+    };
+    author: {
+      user_id: string;
+      /** Outcomes of the author's OTHER assets, cross-person only. */
+      validated: number;
+      corrected: number;
+      distinct_consumers: number;
+      recent_wrong_asset_ids: string[];
+      /** Filled by the context-based assessment when one is on file; null otherwise. */
+      assessment: AuthorAssessmentSummary | null;
+    };
+  };
+  review_priority: ReviewPriority | null;
+}
+
+/** The part of a context-based author assessment the gate reads. */
+export interface AuthorAssessmentSummary {
+  competence: "high" | "medium" | "low" | "unknown";
+  domain: string;
+  assessed_at: string;
+  citations: number;
+}
+
+// ============================
 // 通用结果类型
 // ============================
 

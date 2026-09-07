@@ -32,6 +32,9 @@ import type {
   ParticipationLogEntity,
   AppendParticipationLogInput,
   ParticipationLogFilter,
+  AssetOutcomeEntity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
   AssetEntity,
   FixedAssetBindingEntity,
   AclEntity,
@@ -287,6 +290,29 @@ export class SqliteMetadataStore implements IMetadataStore {
       CREATE INDEX IF NOT EXISTS idx_meta_fixed_agent_prio_created ON meta_agent_fixed_assets(agent_id, priority DESC, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_meta_acl_asset_created ON meta_asset_acl(asset_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_meta_acl_subject_created ON meta_asset_acl(subject_type, subject_id, created_at DESC);
+
+      -- Asset outcomes: what happened after an asset was used. Written by
+      -- whoever can tie a use to a result (evaluation harness, CI, reviewer);
+      -- read by the admission gate, which turns them into status/confidence.
+      CREATE TABLE IF NOT EXISTS meta_asset_outcomes (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        asset_version INTEGER,
+        state TEXT NOT NULL,
+        relation TEXT NOT NULL DEFAULT 'unknown',
+        corrected_reason TEXT,
+        consumer_user_id TEXT NOT NULL,
+        consumer_agent_id TEXT,
+        task_id TEXT,
+        run_id TEXT,
+        source TEXT NOT NULL DEFAULT 'unknown',
+        evidence_json TEXT NOT NULL DEFAULT '{}',
+        occurred_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_meta_ao_team_asset_occurred ON meta_asset_outcomes(team_id, asset_id, occurred_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_meta_ao_team_consumer_occurred ON meta_asset_outcomes(team_id, consumer_user_id, occurred_at DESC);
 
       CREATE TABLE IF NOT EXISTS meta_config_params (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1231,6 +1257,93 @@ export class SqliteMetadataStore implements IMetadataStore {
       pagination,
       (r) => this.mapParticipationLog(r),
     );
+  }
+
+  // ============================================================
+  // AssetOutcome
+  // ============================================================
+  appendAssetOutcome(input: AppendAssetOutcomeInput): AssetOutcomeEntity {
+    const now = nowIso();
+    const entity: AssetOutcomeEntity = {
+      id: generateRelationId(),
+      team_id: input.team_id,
+      asset_id: input.asset_id,
+      asset_version: input.asset_version ?? null,
+      state: input.state,
+      relation: input.relation ?? "unknown",
+      corrected_reason: input.state === "corrected" ? (input.corrected_reason ?? "other") : null,
+      consumer_user_id: input.consumer_user_id,
+      consumer_agent_id: input.consumer_agent_id ?? null,
+      task_id: input.task_id ?? null,
+      run_id: input.run_id ?? null,
+      source: input.source ?? "unknown",
+      evidence_json: input.evidence_json ?? "{}",
+      occurred_at: input.occurred_at ?? now,
+      created_at: now,
+    };
+    this.run(
+      `INSERT INTO meta_asset_outcomes
+        (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
+         consumer_agent_id, task_id, run_id, source, evidence_json, occurred_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
+      entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
+      entity.run_id, entity.source, entity.evidence_json, entity.occurred_at, entity.created_at,
+    );
+    return entity;
+  }
+
+  listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {
+    const conditions = ["o.team_id = ?"];
+    const params: SQLInputValue[] = [filter.team_id];
+    if (filter.asset_id) { conditions.push("o.asset_id = ?"); params.push(filter.asset_id); }
+    if (filter.states && filter.states.length) {
+      conditions.push(`o.state IN (${filter.states.map(() => "?").join(", ")})`);
+      params.push(...filter.states);
+    }
+    if (filter.consumer_user_id) { conditions.push("o.consumer_user_id = ?"); params.push(filter.consumer_user_id); }
+    if (filter.occurred_after) { conditions.push("o.occurred_at >= ?"); params.push(filter.occurred_after); }
+    if (filter.occurred_before) { conditions.push("o.occurred_at <= ?"); params.push(filter.occurred_before); }
+    // Outcomes of one author's assets: join through meta_assets. Used by the
+    // gate for the author signal; an asset with no meta row cannot be joined
+    // and is not counted, which is the right answer for an unregistered asset.
+    let join = "";
+    if (filter.owner_user_id) {
+      join = " JOIN meta_assets a ON a.asset_id = o.asset_id";
+      conditions.push("a.owner_user_id = ?");
+      params.push(filter.owner_user_id);
+    }
+    const base = `FROM meta_asset_outcomes o${join} WHERE ${conditions.join(" AND ")}`;
+    return this.selectList(
+      `SELECT COUNT(*) AS c ${base}`,
+      params,
+      `SELECT o.* ${base} ORDER BY o.occurred_at DESC, o.id DESC`,
+      params,
+      pagination,
+      (r) => this.mapAssetOutcome(r),
+    );
+  }
+
+  private mapAssetOutcome(row: Row | null): AssetOutcomeEntity | null {
+    if (!row) return null;
+    const r = row as Record<string, unknown>;
+    return {
+      id: String(r.id),
+      team_id: String(r.team_id),
+      asset_id: String(r.asset_id),
+      asset_version: r.asset_version === null || r.asset_version === undefined ? null : Number(r.asset_version),
+      state: String(r.state) as AssetOutcomeEntity["state"],
+      relation: String(r.relation) as AssetOutcomeEntity["relation"],
+      corrected_reason: r.corrected_reason === null || r.corrected_reason === undefined ? null : (String(r.corrected_reason) as AssetOutcomeEntity["corrected_reason"]),
+      consumer_user_id: String(r.consumer_user_id),
+      consumer_agent_id: r.consumer_agent_id === null || r.consumer_agent_id === undefined ? null : String(r.consumer_agent_id),
+      task_id: r.task_id === null || r.task_id === undefined ? null : String(r.task_id),
+      run_id: r.run_id === null || r.run_id === undefined ? null : String(r.run_id),
+      source: String(r.source),
+      evidence_json: String(r.evidence_json),
+      occurred_at: String(r.occurred_at),
+      created_at: String(r.created_at),
+    };
   }
 
   private buildParticipationLogWhere(filter: ParticipationLogFilter): { sql: string; params: SQLInputValue[] } {

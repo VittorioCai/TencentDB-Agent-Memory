@@ -23,6 +23,9 @@ import type {
   ParticipationLogEntity,
   AppendParticipationLogInput,
   ParticipationLogFilter,
+  AssetOutcomeEntity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
   AssetEntity,
   FixedAssetBindingEntity,
   AgentFixedAssetCountRow,
@@ -148,6 +151,13 @@ export interface IMetadataStore {
     filter: ParticipationLogFilter,
     pagination?: PaginationParams | null,
   ): MaybePromise<ListPage<ParticipationLogEntity>>;
+
+  // ── AssetOutcome ──（资产使用结果；准入闸门只读它，不写）
+  appendAssetOutcome(input: AppendAssetOutcomeInput): MaybePromise<AssetOutcomeEntity>;
+  listAssetOutcomes(
+    filter: AssetOutcomeFilter,
+    pagination?: PaginationParams | null,
+  ): MaybePromise<ListPage<AssetOutcomeEntity>>;
 
   // ── Asset ──（仅主表；详情表留在 control 面板）
   createAsset(input: CreateAssetInput): MaybePromise<AssetEntity>;

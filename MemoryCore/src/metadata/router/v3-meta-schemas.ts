@@ -452,3 +452,43 @@ export const V3_SCHEMAS = {
 } as const;
 
 export type V3Route = keyof typeof V3_SCHEMAS;
+
+// ── AssetOutcome / admission gate ──
+const assetOutcomeState = z.enum(["validated", "corrected", "used"]);
+const assetOutcomeRelation = z.enum(["cross_user", "cross_agent", "self", "unknown"]);
+const assetCorrectedReason = z.enum(["wrong", "stale", "other"]);
+export const assetOutcomeAppendSchema = z.object({
+  team_id: nonEmpty,
+  asset_id: nonEmpty,
+  asset_version: z.number().int().nullable().optional(),
+  state: assetOutcomeState,
+  relation: assetOutcomeRelation.optional(),
+  corrected_reason: assetCorrectedReason.nullable().optional(),
+  /** Defaults to the caller; another user's id needs team admin. */
+  consumer_user_id: nonEmpty.optional(),
+  consumer_agent_id: nonEmpty.nullable().optional(),
+  task_id: nonEmpty.nullable().optional(),
+  run_id: nonEmpty.nullable().optional(),
+  source: z.string().optional(),
+  evidence_json: z.string().optional(),
+  occurred_at: z.string().datetime().optional(),
+  /** Re-run the gate for the asset after recording (default true). */
+  evaluate: z.boolean().optional(),
+});
+export const assetOutcomeListSchema = z
+  .object({
+    team_id: nonEmpty,
+    asset_id: nonEmpty.optional(),
+    states: z.array(assetOutcomeState).optional(),
+    consumer_user_id: nonEmpty.optional(),
+    owner_user_id: nonEmpty.optional(),
+    occurred_after: z.string().datetime().optional(),
+    occurred_before: z.string().datetime().optional(),
+  })
+  .merge(paginationInputSchema);
+export const assetGateEvaluateSchema = z.object({
+  asset_id: nonEmpty,
+  /** Write status / confidence / metadata_json.gate (default true); false = decide only. */
+  apply: z.boolean().optional(),
+});
+export const assetGateGetSchema = z.object({ asset_id: nonEmpty });

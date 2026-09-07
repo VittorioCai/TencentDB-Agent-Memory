@@ -30,6 +30,7 @@ import {
   type MemorySystemUserConfig,
 } from "../system-user.js";
 import { resolveUserId } from "./resolve-user-id.js";
+import { decideAsset, mergeGateIntoMetadata } from "./asset-gate.js";
 import type { V3AuthContext } from "../router/auth.js";
 import { DEFAULT_INSTANCE_ID, DEFAULT_AUTH_PROVIDER } from "../constants.js";
 import {
@@ -86,6 +87,10 @@ import type {
   PaginationParams,
   InstanceUserListFilter,
   UserListFilter,
+  AssetOutcomeEntity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
+  GateDecision,
 } from "../types.js";
 import { formatListResult, paginateArray, resolvePagination, wrapPaginated, DEFAULT_PAGINATION } from "../pagination.js";
 import { generateId, ID_PREFIX } from "../utils/id-generator.js";
@@ -1373,8 +1378,18 @@ export class MetadataService {
     // 为什么不是 "team"：Skill 内容常包含内部知识、脚本、凭证注释等，
     // "默认对整个 team 可见"对隐私敏感场景（例如个人调试用的 skill）不够安全。
     // 私密 → 主动共享的心智更符合直觉。
+    //
+    // status = "candidate" (2026-09-07): a skill enters as a candidate, not as
+    // an admitted asset. "active" was never in AssetStatus; it read as "no
+    // opinion", and the pool had no way to hold an asset back. A candidate is
+    // readable by its owner, team admins and reviewers (permission-checker)
+    // and by nobody else until the gate admits it on recorded outcomes —
+    // that is the candidate pool. The gate runs once here so the cold-start
+    // decision (review priority from the author's record) is on the asset
+    // from the moment it exists.
     let asset = await this.getAssetById(assetId);
     if (!asset) {
+      let created = false;
       try {
         asset = await this.createAsset({
           asset_id: assetId,
@@ -1384,14 +1399,23 @@ export class MetadataService {
           owner_user_id: agent.owner_user_id,
           source_type: "extracted",
           visibility: "private",
-          status: "active",
+          status: "candidate",
         });
+        created = true;
       } catch (err) {
         const raced = await this.getAssetById(assetId);
         if (raced) {
           asset = raced;
         } else {
           throw err;
+        }
+      }
+      if (created) {
+        try {
+          asset = (await this.evaluateAssetGate(assetId, { apply: true })).asset;
+        } catch (err) {
+          // The asset exists either way; a gate failure must not undo that.
+          this.logger.debug(`[META] gate evaluation on new skill asset ${assetId} failed: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     }
@@ -1836,6 +1860,111 @@ export class MetadataService {
   async unlinkTaskAgentForCaller(taskId: string, agentId: string, ctx: V3AuthContext): Promise<void> {
     await this.assertCallerIsTaskCreator(ctx, taskId);
     return this.unlinkTaskAgent(taskId, agentId);
+  }
+
+  // ============================================================
+  // Asset outcomes and the admission gate
+  // ============================================================
+  //
+  // An outcome is recorded by whoever can tie a use of an asset to a result;
+  // the gate turns the outcomes on file into the asset's status, so the
+  // product's own read paths admit or drop it. Both live here, next to the
+  // asset, rather than in a script beside the product.
+
+  /** Record an outcome. The consumer defaults to the caller; naming another user needs team admin. */
+  async appendAssetOutcomeForCaller(
+    input: Omit<AppendAssetOutcomeInput, "consumer_user_id"> & { consumer_user_id?: string },
+    ctx: V3AuthContext,
+    opts: { evaluate?: boolean } = {},
+  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null }> {
+    await this.requireActiveTeamMember(ctx, input.team_id);
+    const callerId = this.requireCallerId(ctx);
+    const consumer = input.consumer_user_id ?? callerId;
+    if (consumer !== callerId) await this.assertCallerIsTeamAdmin(ctx, input.team_id);
+    const asset = await this.getAssetById(input.asset_id);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${input.asset_id}`);
+    if (asset.team_id !== input.team_id) throw new MetadataError("team_mismatch", `asset ${input.asset_id} belongs to team ${asset.team_id}, not ${input.team_id}`);
+    const relation = input.relation ?? (asset.owner_user_id === consumer ? "self" : "cross_user");
+    const outcome = await this.store.appendAssetOutcome({ ...input, consumer_user_id: consumer, relation });
+    const gate = opts.evaluate === false ? null : (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision;
+    return { outcome, gate };
+  }
+
+  async listAssetOutcomesForCaller(
+    filter: AssetOutcomeFilter,
+    ctx: V3AuthContext,
+    pagination: PaginationParams = DEFAULT_PAGINATION,
+  ): Promise<PaginatedResult<AssetOutcomeEntity>> {
+    await this.requireActiveTeamMember(ctx, filter.team_id);
+    const page = await this.store.listAssetOutcomes(filter, pagination);
+    return wrapPaginated(page.items, page.total, pagination);
+  }
+
+  /**
+   * Decide one asset from the outcomes on file and, with `apply`, write the
+   * decision onto it: status (approved / candidate / failed), confidence, and
+   * metadata_json.gate. Service-level: no caller check, so the extraction
+   * hook and the outcome append can call it.
+   */
+  async evaluateAssetGate(assetId: string, opts: { apply?: boolean; now?: Date } = {}): Promise<{ decision: GateDecision; applied: boolean; asset: AssetEntity }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const own = await this.allOutcomes({ team_id: asset.team_id, asset_id: asset.asset_id });
+    const author = await this.allOutcomes({ team_id: asset.team_id, owner_user_id: asset.owner_user_id });
+    const decision = decideAsset({ asset, outcomes: own, authorOutcomes: author, now: opts.now });
+    if (opts.apply === false) return { decision, applied: false, asset };
+    const patch: Partial<AssetEntity> = {
+      status: decision.status_target,
+      confidence: decision.confidence,
+      metadata_json: mergeGateIntoMetadata(asset.metadata_json, decision),
+    };
+    const updated = await this.updateAsset(asset.asset_id, patch);
+    return { decision, applied: true, asset: updated };
+  }
+
+  /** Owner, team admin or reviewer may run the gate by hand. */
+  async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean } = {}) {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.assertCallerMayReview(ctx, asset);
+    return this.evaluateAssetGate(assetId, opts);
+  }
+
+  /** The decision on file (metadata_json.gate), or null when the gate has not run. */
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.requireActiveTeamMember(ctx, asset.team_id);
+    let gate: GateDecision | null = null;
+    try {
+      const m = JSON.parse(asset.metadata_json || "{}") as { gate?: GateDecision };
+      gate = m.gate && typeof m.gate === "object" && "decision" in m.gate ? m.gate : null;
+    } catch {
+      gate = null;
+    }
+    return { asset_id: asset.asset_id, status: asset.status, confidence: asset.confidence ?? null, gate };
+  }
+
+  private async assertCallerMayReview(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {
+    const callerId = this.requireCallerId(ctx);
+    if (asset.owner_user_id === callerId) return;
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") {
+      throw new MetadataError("permission_denied", "caller is not the asset owner, a team admin or a reviewer");
+    }
+  }
+
+  private async allOutcomes(filter: AssetOutcomeFilter): Promise<AssetOutcomeEntity[]> {
+    const out: AssetOutcomeEntity[] = [];
+    let offset = 0;
+    const limit = 200;
+    while (true) {
+      const page = await this.store.listAssetOutcomes(filter, { limit, offset });
+      out.push(...page.items);
+      if (offset + page.items.length >= page.total || page.items.length === 0) break;
+      offset += limit;
+    }
+    return out;
   }
 
   async appendParticipationLogForCaller(
