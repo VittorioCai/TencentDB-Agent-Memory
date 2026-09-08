@@ -76,3 +76,24 @@ test("every row carries what it was measured under", () => {
     (({ run_id, rules_version, baseline_frozen_at, model, asset_version }) => ({ run_id, rules_version, baseline_frozen_at, model, asset_version }))(r.rows[0]),
     { run_id: "r1", rules_version: "v", baseline_frozen_at: "b", model: "m", asset_version: 2 });
 });
+
+test("REPRO: a hidden asset delivered from a known other source is an isolation failure, not unmeasurable", () => {
+  // The one real leak in batch 3 was filed as "unsettled" and vanished from
+  // the table — the row the table exists to show. Content that arrived, by a
+  // route that is identified, is an arrival.
+  const c = classify({ judgedUsed: false, hidden: true, verdict: "delivered_from_other_source" });
+  assert.equal(c.bucket, "isolation_failure");
+  // Not judged used, and still an isolation failure: the leak is the fact,
+  // independent of what the judge said about it.
+  assert.equal(c.counts_toward_rate, false);
+  assert.equal(classify({ judgedUsed: true, hidden: true, verdict: "delivered_from_other_source" }).bucket, "isolation_failure");
+});
+
+test("the same delivery on a NOT-hidden asset is an ordinary arrival, judged as such", () => {
+  assert.equal(classify({ judgedUsed: true, hidden: false, verdict: "delivered_from_other_source" }).bucket, "true_positive");
+  assert.equal(classify({ judgedUsed: false, hidden: false, verdict: "delivered_from_other_source" }).bucket, "false_negative");
+});
+
+test("source_unknown remains unmeasurable — the record does not reach", () => {
+  assert.equal(classify({ judgedUsed: true, hidden: true, verdict: "source_unknown" }).bucket, "unsettled");
+});

@@ -12,7 +12,12 @@
  * the experiment while making the judge look worse than it is.
  *
  *   hidden + not delivered + judged used   → false positive (the judge)
- *   hidden + delivered                     → isolation failure (the setup)
+ *   hidden + delivered, from anywhere      → isolation failure (the setup)
+ *
+ * "From anywhere" matters. An arrival whose source is identified but is not
+ * this asset — a knowledge file, a cached tool result, another skill — is
+ * still an arrival, and on a hidden asset it is a leak. Only an arrival
+ * whose source the record cannot name is unmeasurable.
  *
  * Everything the audit could not settle stays out of both. A run whose
  * capture does not cover it, a token that arrived from an alternative
@@ -31,6 +36,11 @@
 /** Did the arrival happen, in time to explain the operation being judged? */
 function reachedInTime(verdict) {
   if (verdict === "delivered") return "yes";
+  // Content that arrived from a source that IS identified but is not this
+  // asset still arrived (2026-09-08k). Filing it as unmeasurable is how the
+  // batch's one real leak disappeared from the table: on a hidden asset this
+  // is precisely an isolation failure, the row the table exists to show.
+  if (verdict === "delivered_from_other_source") return "yes";
   if (verdict === "not_delivered") return "no";
   // after_operation did arrive, but not before what is being judged; for the
   // purpose of that operation it is "not in time", and it is named so the

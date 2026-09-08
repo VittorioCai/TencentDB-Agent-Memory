@@ -5,7 +5,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture, verifyCoverage, assetOwningTokenInResult } from "./delivery-audit.mjs";
+import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture, verifyCoverage, assetOwningTokenInResult, jsonCandidates, verifyTokensDiscriminative } from "./delivery-audit.mjs";
 
 const req = (messages, requestId) => ({ requestId, body: { json: { messages } } });
 const TOKENS = { "skl-hidden": { version: 2, tokens: ["10.244.7.19"] }, "skl-ok": { version: 2, tokens: ["47318"] } };
@@ -44,15 +44,18 @@ test("content that arrives after the operation does not explain it", () => {
   assert.match(f.findings[0].why, /later content cannot explain/);
 });
 
-test("attribution to something else is an alternative source, not a leak", () => {
+test("content that came from a known non-asset source did reach the model", () => {
+  // Not "this asset leaked" and not "we cannot tell": the content arrived,
+  // by a route that is identified. Whether that is an isolation failure is
+  // for the calibration to decide from whether the asset was hidden.
   const a = auditDelivery([req([
     { role: "system", content: "you are an agent" },
     { role: "tool", content: "  1→10.244.7.19:8096 documented here" },
     { role: "assistant", content: "probing" },
   ])], TOKENS, { operation: { request: 0, index: 2 }, coverageAsserted: true,
     attributionOf: () => ({ asset_id: null, path: "/home/agent/memory/persona.md" }) });
-  assert.equal(a.assets["skl-hidden"].verdict, "ambiguous_source");
-  assert.match(a.assets["skl-hidden"].findings[0].why, /alternative source/);
+  assert.equal(a.assets["skl-hidden"].verdict, "delivered_from_other_source");
+  assert.match(a.assets["skl-hidden"].findings[0].why, /persona\.md/);
 });
 
 test("an empty capture is not seen, never clean; asserted coverage is what upgrades it", () => {
@@ -129,14 +132,17 @@ test("REPRO 3a: with nothing recorded about the source, a hit is not a delivery"
 
 test("REPRO 3b: naming an asset in a command is not fetching it", () => {
   // `grep skl-hidden /tmp/other-memory` mentions the id and reads something
-  // else. Attribution comes from the collector, not from substrings.
+  // else. Attribution comes from the collector, not from substrings — so
+  // this is a delivery from a known other source, never a delivery of the
+  // asset whose id the command happens to contain.
   const a = auditDelivery([req([
     { role: "system", content: "you are an agent" },
     { role: "tool", content: "10.244.7.19:8096 found" },
     { role: "assistant", content: "probing" },
   ])], TOKENS, { operation: { request: 0, index: 2 }, coverageAsserted: true,
     attributionOf: () => ({ asset_id: null, command: "grep skl-hidden /tmp/other-memory" }) });
-  assert.equal(a.assets["skl-hidden"].verdict, "ambiguous_source");
+  assert.equal(a.assets["skl-hidden"].verdict, "delivered_from_other_source");
+  assert.notEqual(a.assets["skl-hidden"].verdict, "delivered");
 });
 
 test("helpers: messages carry their position; written paths are collected from arguments", () => {
@@ -228,4 +234,148 @@ test("coverage drives whether absence may be called 'not delivered'", () => {
   assert.equal(a.assets["skl-hidden"].verdict, "not_delivered");
   const b = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 0 }, coverageAsserted: false });
   assert.equal(b.assets["skl-hidden"].verdict, "not_seen_in_capture");
+});
+
+// ── "found another source" is not "could not find a source" ──
+
+test("REPRO: an identified non-asset source is a delivery, not an unknown", () => {
+  // 075637: the hidden asset's content DID reach the model, the source IS
+  // known (a knowledge file read back through a tool-result cache), and it
+  // arrived before the operation. Folding that into the same bucket as "we
+  // could not tell" makes the one real leak invisible in the calibration.
+  const a = auditDelivery([req([
+    { role: "system", content: "you are an agent" },
+    { role: "tool", content: "  1→SOP … 10.244.7.19:8096 documented-but-silent" },
+    { role: "assistant", content: "probing" },
+  ])], TOKENS, { operation: { request: 0, index: 2 }, coverageAsserted: true,
+    attributionOf: () => ({ asset_id: null, path: "/tmp/sop_scene.md" }) });
+  assert.equal(a.assets["skl-hidden"].verdict, "delivered_from_other_source");
+  assert.match(a.assets["skl-hidden"].findings[0].why, /\/tmp\/sop_scene\.md/);
+});
+
+test("nothing recorded about the source stays source_unknown", () => {
+  const a = auditDelivery([req([
+    { role: "system", content: "you are an agent" },
+    { role: "tool", content: "10.244.7.19:8096" },
+    { role: "assistant", content: "probing" },
+  ])], TOKENS, { operation: { request: 0, index: 2 }, coverageAsserted: true });
+  assert.equal(a.assets["skl-hidden"].verdict, "source_unknown");
+});
+
+test("REPRO: a probe attached late passes every existing check", () => {
+  // A real run of four turns, captured from turn three. Every request has
+  // its response, nothing truncated, all 2xx, the last ends stop — and the
+  // first turn's system prompt, which is where a token would sit, is simply
+  // not in the file. This is the very scenario the coverage check exists for.
+  const late = [
+    { event: "http.request", requestId: "c", body: { json: { messages: [
+      { role: "system", content: "sys" }, { role: "user", content: "go" },
+      { role: "assistant", content: null, tool_calls: [{ id: "t1", function: { name: "Bash", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "t1", content: "r1" }] } } },
+    { event: "http.response", requestId: "c", status: 200, body: { truncated: false, text: 'data: {"choices":[{"finish_reason":"tool_calls"}]}' } },
+    { event: "http.request", requestId: "d", body: { json: { messages: [
+      { role: "system", content: "sys" }, { role: "user", content: "go" },
+      { role: "assistant", content: null, tool_calls: [{ id: "t1", function: { name: "Bash", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "t1", content: "r1" },
+      { role: "assistant", content: "done" }] } } },
+    { event: "http.response", requestId: "d", status: 200, body: { truncated: false, text: 'data: {"choices":[{"finish_reason":"stop"}]}' } },
+  ];
+  const c = verifyCoverage(late);
+  assert.equal(c.complete, false);
+  assert.match(c.reasons.join(" "), /begins mid-conversation/);
+});
+
+test("a history that is not a prefix extension of the one before it is a gap or a splice", () => {
+  const t = (id, msgs, finish) => ([
+    { event: "http.request", requestId: id, body: { json: { messages: msgs } } },
+    { event: "http.response", requestId: id, status: 200, body: { truncated: false, text: `data: {"choices":[{"finish_reason":"${finish}"}]}` } },
+  ]);
+  const sys = { role: "system", content: "sys" }, user = { role: "user", content: "go" };
+  // Turn two replaced the system prompt: whatever turn one carried there is
+  // gone, so absence in turn two proves nothing about the run.
+  const swapped = [...t("a", [sys, user], "tool_calls"),
+                   ...t("b", [{ role: "system", content: "other" }, user, { role: "assistant", content: "x" }], "stop")];
+  const c = verifyCoverage(swapped);
+  assert.equal(c.complete, false);
+  assert.match(c.reasons.join(" "), /does not extend/);
+  // Growing normally is fine.
+  const grew = [...t("a", [sys, user], "tool_calls"),
+                ...t("b", [sys, user, { role: "assistant", content: "x" }], "stop")];
+  assert.equal(verifyCoverage(grew).complete, true);
+});
+
+test("REPRO: a command echoed back inside its own result is not a delivery", () => {
+  // Tool results begin `Command: curl …`, so the model's own command comes
+  // back as "input". If the model guessed the address and curled it, and the
+  // result also carries some skill_id, attribution by byte offset can hand
+  // that echo to the asset. Blocking only file paths left this open — the
+  // same defect through another channel.
+  const requests = [req([
+    { role: "system", content: "you are an agent" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash",
+      arguments: JSON.stringify({ command: "curl -sSk http://10.244.7.19:8096/skill-bridge/v3/skill/search" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: 'Command: curl -sSk http://10.244.7.19:8096/…\n{"data":{"skill_id":"skl-hidden","content":"…"}}' },
+    { role: "assistant", content: "probing" },
+  ])];
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 3 }, coverageAsserted: true, attributionOf: attributionFromCapture(requests) });
+  assert.equal(a.assets["skl-hidden"].verdict, "model_echo");
+  assert.match(a.assets["skl-hidden"].findings[0].why, /its own command/);
+});
+
+test("REPRO: an unresolvable target_ref must not silently anchor the operation to request 0", () => {
+  // Anchoring to request 0 makes everything look like it arrived afterwards,
+  // turning real deliveries into after_operation — the direction that hides
+  // a leak.
+  const requests = [req([], "aaa"), req([], "bbb")];
+  assert.equal(operationFromTargetRef("request(nope):msg[3]:call", requests), null);
+  assert.equal(operationFromTargetRef("request(bbb):msg[3]:call", requests).request, 1);
+});
+
+test("REPRO: a hit is attributed to the object it sits in, not to the nearest earlier id", () => {
+  // Byte offsets assume every hit puts its skill_id first. A response that
+  // puts the body before the id hands the token to the previous hit, with no
+  // error to notice.
+  const body = '{"items":[{"snippet":"port 47318 here","skill_id":"skl-ok"},{"snippet":"10.244.7.19:8096 here","skill_id":"skl-hidden"}]}';
+  assert.equal(assetOwningTokenInResult(body, "10.244.7.19"), "skl-hidden");
+  assert.equal(assetOwningTokenInResult(body, "47318"), "skl-ok");
+});
+
+test("a real skill response and a real search response, fixed as they actually look", () => {
+  // Taken from the shape the runs produce: a tool result opens with the
+  // command, then the envelope.
+  const single = 'Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name\n'
+    + '{"code":0,"message":"ok","request_id":"req-x","data":{"skill_id":"skl-hidden","name":"eval-bridge-endpoint-a",'
+    + '"content":"## The endpoint\\n\\nSend requests to the bridge at:\\n\\n    http://10.244.7.19:8096/skill-bridge/v3/skill/search\\n"}}';
+  assert.equal(assetOwningTokenInResult(single, "10.244.7.19"), "skl-hidden");
+  const search = 'Command: curl -sSk -X POST .../skill/search\n'
+    + '{"code":0,"data":{"items":[{"skill_id":"skl-hidden","name":"a","snippet":"…10.244.7.19:8096…"},'
+    + '{"skill_id":"skl-ok","name":"b","snippet":"…127.0.0.1:47318…"}]}}';
+  assert.equal(assetOwningTokenInResult(search, "10.244.7.19"), "skl-hidden");
+  assert.equal(assetOwningTokenInResult(search, "47318"), "skl-ok");
+  // Nothing parseable, and nothing is claimed.
+  assert.equal(assetOwningTokenInResult("just text with 10.244.7.19 in it", "10.244.7.19"), null);
+});
+
+test("REPRO: the command's own JSON must not be mistaken for the response", () => {
+  // A tool result is `Command: curl … -d '{"skill_name":"…"}'` and then the
+  // envelope. Taking the first brace takes the command, and every real
+  // attribution in the off arm was lost that way.
+  const real = `Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -d '{"skill_name": "eval-bridge-endpoint-a", "include_content": true}'\n`
+    + `{"code":0,"data":{"skill_id":"skl-hidden","content":"reach it at http://10.244.7.19:8096/skill-bridge/v3/skill/search"}}`;
+  assert.equal(assetOwningTokenInResult(real, "10.244.7.19"), "skl-hidden");
+});
+
+test("a token already in the opening request cannot carry a verdict", () => {
+  const requests = [req([{ role: "system", content: "the bridge is on port 47318" }, { role: "user", content: "go" }])];
+  const v = verifyTokensDiscriminative(requests, TOKENS);
+  assert.equal(v["skl-ok:47318"].ok, false);
+  assert.match(v["skl-ok:47318"].why, /already in the run's opening request/);
+  assert.equal(v["skl-hidden:10.244.7.19"].ok, true);
+});
+
+test("a bare number is usable only because it is absent from the opening request, and says so", () => {
+  const requests = [req([{ role: "system", content: "you are an agent" }, { role: "user", content: "go" }])];
+  const v = verifyTokensDiscriminative(requests, TOKENS);
+  assert.equal(v["skl-ok:47318"].ok, true);
+  assert.match(v["skl-ok:47318"].warn, /bare number can occur by chance/);
 });

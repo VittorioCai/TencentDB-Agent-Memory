@@ -28,7 +28,11 @@
  *      not a fetch of it: `grep skl-x /tmp/other-memory` mentions the id and
  *      reads something else. Attribution comes from the collector, which
  *      knows what each request actually returned — never from substring
- *      matching here.
+ *      matching here. Finding ANOTHER source is a result in its own right
+ *      (`delivered_from_other_source`) and must not be filed with "no source
+ *      could be found" (`source_unknown`): the first says content reached the
+ *      model by a route that is known, which is what an isolation failure
+ *      looks like; the second says the record does not reach.
  *   4. Absence is only evidence if the capture is known to cover the run.
  *      The longest single request is not the whole history: turn one may
  *      carry a token in a system prompt that turn two replaces. Every
@@ -93,7 +97,8 @@ export function pathsModelWroteTokenInto(entries, token) {
       }
       // A shell redirect writes without a file_path field.
       const cmd = parsed && typeof parsed.command === "string" ? parsed.command : args;
-      for (const m of cmd.matchAll(/(?:>>?|open\(\s*['"])\s*['"]?([^\s'"]+)/g)) paths.add(m[1]);
+      // Only things shaped like a path; `b)` out of `if (a > b)` is not one.
+      for (const m of cmd.matchAll(/(?:>>?|open\(\s*['"])\s*['"]?([^\s'"]+)/g)) { if (m[1].includes("/")) paths.add(m[1]); }
     }
   }
   return paths;
@@ -161,7 +166,29 @@ export function auditDelivery(requests, tokens, opts = {}) {
       const wrote = pathsModelWroteTokenInto(entries.filter((e) => before({ request: e.request, index: e.index }, firstInput)), t);
       const source = attributionOf ? attributionOf({ request: firstInput.request, index: firstInput.index }, firstInput.entry, t) : null;
       const sourcePath = source && typeof source === "object" ? source.path ?? "" : "";
-      if (wrote.size && [...wrote].some((p) => sourcePath.includes(p) || String(source?.command ?? "").includes(p))) {
+      // The plainest echo of all: a tool result opens by repeating the
+      // command that produced it, so a token the model put in its OWN
+      // arguments comes straight back as "input". Blocking only file paths
+      // left this open — the same defect through another channel
+      // (2026-09-08k). If the call that produced this result already carried
+      // the token, the arrival is that call talking to itself.
+      const callArgs = String((source && typeof source === "object" && source.args) || "").toLowerCase();
+      if (callArgs.includes(needle)) {
+        findings.push({ token: t, verdict: "model_echo", at,
+          why: `the call that produced this result already carried the token in its own arguments — the result is echoing its own command, not delivering content` });
+        continue;
+      }
+      // Path echo: the arrival came from reading somewhere the model had
+      // itself written the token. Compared whole, or by basename: an earlier
+      // version used substring matching, and a fragment like `b)` scraped
+      // out of `if (a > b)` would match almost any path — downgrading a real
+      // delivery to an echo, which is the direction that hides a leak.
+      const samePath = (p) => {
+        if (!p.includes("/")) return false;
+        const base = p.split("/").pop();
+        return sourcePath === p || (!!base && sourcePath.split("/").pop() === base);
+      };
+      if (wrote.size && [...wrote].some(samePath)) {
         findings.push({ token: t, verdict: "model_echo", at, wrote_paths: [...wrote],
           why: `it came back by reading ${sourcePath || "a path"} that the model had itself written this token into — its own text returning, not a delivery` });
         continue;
@@ -174,8 +201,15 @@ export function auditDelivery(requests, tokens, opts = {}) {
       const from = typeof source === "object" ? source.asset_id ?? null : source;
       const shared = (owners.get(t) ?? []).filter((a) => a !== assetId);
       if (from !== assetId) {
-        findings.push({ token: t, verdict: "ambiguous_source", at, from: from ?? "not an asset", shared_with: shared,
-          why: `arrived at ${at} from ${from ?? "something that is not a pool asset"}; an alternative source carries this token, which does not show this asset reached the model` });
+        // Identifying another source is a finding, not a gap. The content
+        // DID reach the model, and where it came from is known — it simply
+        // was not this asset. Folding that in with "we could not tell"
+        // (2026-09-08k) hid the one real leak in the batch: the calibration
+        // dropped it as unmeasurable instead of counting it as an isolation
+        // failure, which is exactly the row that most needed to be visible.
+        const where = (typeof source === "object" && (source.path || source.command)) || null;
+        findings.push({ token: t, verdict: "delivered_from_other_source", at, from: from ?? "not a pool asset", where, shared_with: shared,
+          why: `arrived at ${at} from ${from ?? `something that is not a pool asset${where ? ` (${String(where).slice(0, 80)})` : ""}`}; the content reached the model, and it did not come from this asset` });
         continue;
       }
       if (!operation) {
@@ -191,7 +225,7 @@ export function auditDelivery(requests, tokens, opts = {}) {
       findings.push({ token: t, verdict: "delivered", at, operation_at: `request ${operation.request} message ${operation.index}`,
         why: `came from this asset at ${at}, before the operation` });
     }
-    const rank = ["delivered", "ambiguous_source", "source_unknown", "delivered_order_unknown", "after_operation",
+    const rank = ["delivered", "delivered_from_other_source", "source_unknown", "delivered_order_unknown", "after_operation",
                   "not_seen_in_capture", "model_echo", "model_authored", "not_delivered"];
     const verdict = rank.find((v) => findings.some((f) => f.verdict === v)) ?? "not_delivered";
     assets[assetId] = { verdict, findings };
@@ -209,7 +243,12 @@ export function operationFromTargetRef(targetRef, requests) {
   if (!m) return null;
   const [, reqId, idx] = m;
   const at = (requests ?? []).findIndex((r) => String(r?.requestId ?? r?.request_id ?? "") === reqId);
-  return { request: at >= 0 ? at : 0, index: Number(idx), request_id: reqId, resolved_request: at >= 0 };
+  // Unresolvable means unknown, not request 0 (2026-09-08k). Anchoring to
+  // the first request makes every later arrival look like it came after the
+  // operation, which is the direction that hides a leak — and the caller
+  // had no flag it was obliged to read.
+  if (at < 0) return null;
+  return { request: at, index: Number(idx), request_id: reqId, resolved_request: true };
 }
 
 /**
@@ -232,7 +271,7 @@ export function attributionFromCapture(requests) {
       try { parsed = JSON.parse(args); } catch { parsed = null; }
       const command = typeof parsed?.command === "string" ? parsed.command : "";
       const path = typeof parsed?.file_path === "string" ? parsed.file_path : (typeof parsed?.path === "string" ? parsed.path : "");
-      byCallId.set(t.id, { path, command: command.slice(0, 200), tool: t?.function?.name ?? null });
+      byCallId.set(t.id, { path, command: command.slice(0, 200), args, tool: t?.function?.name ?? null });
     }
   }
   return (_pos, entry, token) => {
@@ -254,14 +293,67 @@ export function attributionFromCapture(requests) {
  * asset is the one whose id most closely precedes it. Returns null when the
  * result names no asset, or when the token appears before any of them.
  */
+/**
+ * Every balanced `{…}` / `[…]` span in a string, outermost first. Quotes and
+ * escapes are respected, so a brace inside a JSON string does not throw the
+ * count off. Bounded work: a span that never closes is skipped.
+ */
+export function jsonCandidates(text) {
+  const s = String(text ?? "");
+  const out = [];
+  for (let i = 0; i < s.length; i += 1) {
+    const open = s[i];
+    if (open !== "{" && open !== "[") continue;
+    const close = open === "{" ? "}" : "]";
+    let depth = 0, inStr = false, esc = false;
+    for (let j = i; j < s.length; j += 1) {
+      const ch = s[j];
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === open) depth += 1;
+      else if (ch === close) {
+        depth -= 1;
+        if (depth === 0) { out.push(s.slice(i, j + 1)); i = i; break; }
+      }
+    }
+  }
+  return out;
+}
+
 export function assetOwningTokenInResult(text, token) {
   const s = String(text ?? "");
-  const at = s.toLowerCase().indexOf(String(token ?? "").toLowerCase());
-  if (at < 0) return null;
-  let owner = null;
-  for (const m of s.matchAll(/"skill_id"\s*:\s*"([^"]+)"/g)) {
-    if (m.index < at) owner = m[1]; else break;
+  const needle = String(token ?? "").toLowerCase();
+  if (!needle || !s.toLowerCase().includes(needle)) return null;
+  // Parse rather than count bytes (2026-09-08k). Byte offsets assume every
+  // hit writes its skill_id before its body; a response that puts the body
+  // first hands the token to the previous hit, silently.
+  //
+  // A tool result is `Command: curl … -d '{"skill_name":"…"}'` and THEN the
+  // response, so the first `{` in the text belongs to the command, not the
+  // envelope — taking it lost every real attribution in the off arm the
+  // first time this was written. Every balanced candidate is tried, and the
+  // one that actually contains the token is the one that answers.
+  let parsed = null;
+  for (const candidate of jsonCandidates(s)) {
+    if (!candidate.toLowerCase().includes(needle)) continue;
+    try { parsed = JSON.parse(candidate); break; } catch { /* not this one */ }
   }
+  if (parsed == null) return null;
+  // The owner is the nearest enclosing object that names a skill_id.
+  let owner = null;
+  const walk = (node, inherited) => {
+    if (owner) return;
+    if (Array.isArray(node)) { for (const v of node) walk(v, inherited); return; }
+    if (node && typeof node === "object") {
+      const mine = typeof node.skill_id === "string" ? node.skill_id : inherited;
+      for (const v of Object.values(node)) walk(v, mine);
+      return;
+    }
+    if (typeof node === "string" && node.toLowerCase().includes(needle)) owner = inherited ?? null;
+  };
+  walk(parsed, null);
   return owner;
 }
 
@@ -279,6 +371,11 @@ export function assetOwningTokenInResult(text, token) {
  *   - a turn that ends `tool_calls` is asking to continue, so it must be
  *     followed by another request — if the last turn asks to continue and
  *     nothing follows, the capture stops mid-run;
+ *   - the conversation starts at its start: a first request already holding
+ *     assistant or tool turns was captured after the run began;
+ *   - each request extends the one before it, since every turn carries the
+ *     whole history — a divergence means a missing turn, a splice, or a
+ *     replaced system prompt;
  *   - the last turn ends on a terminal reason (`stop` / `end_turn`).
  *     `length` terminates too, but because the model was cut off, which is
  *     reported rather than treated as a clean end.
@@ -302,6 +399,27 @@ export function verifyCoverage(rows) {
     const all = [...String(txt).matchAll(/"finish_reason"\s*:\s*"([^"]+)"/g)].map((m) => m[1]);
     return all.length ? all[all.length - 1] : null;
   };
+  // Where the conversation starts. A run begins with the system prompt and
+  // the task; a first request that already holds assistant turns or tool
+  // results was captured after the run had begun — the probe attached late
+  // (2026-09-08k). Everything else about such a file looks perfect, which is
+  // why this has to be checked rather than assumed.
+  const msgsOf = (r) => (((r?.body ?? {}).json ?? r?.body ?? {}).messages ?? []);
+  const first = msgsOf(requests[0]);
+  if (first.some((m) => m?.role === "assistant" || m?.role === "tool")) {
+    reasons.push("the first captured request already contains assistant or tool messages — it begins mid-conversation, so earlier turns are not in this file");
+  }
+  // Each turn carries the whole history so far, so every request must extend
+  // the one before it. A history that diverges means a turn is missing, or
+  // that two runs were spliced, or that a system prompt was replaced — and a
+  // replaced system prompt is exactly where a token can vanish from view.
+  for (let i = 1; i < requests.length; i += 1) {
+    const prev = msgsOf(requests[i - 1]), cur = msgsOf(requests[i]);
+    if (cur.length < prev.length) { reasons.push(`request ${i} carries fewer messages than request ${i - 1} — the history shrank`); continue; }
+    const same = prev.every((m, k) => JSON.stringify(m) === JSON.stringify(cur[k]));
+    if (!same) reasons.push(`request ${i} does not extend request ${i - 1} — the earlier history was changed or a turn is missing`);
+  }
+
   const ordered = requests.map((r) => ({ req: r, res: resById.get(r.requestId) })).filter((p) => p.res);
   ordered.forEach((p, i) => {
     const b = p.res.body ?? {};
@@ -322,6 +440,41 @@ export function verifyCoverage(rows) {
     }
   });
   return { complete: reasons.length === 0, reasons, requests: requests.length, responses: responses.length };
+}
+
+/**
+ * Is a frozen token actually discriminative for this run?
+ *
+ * The module refuses to pull tokens out of asset bodies with a regex,
+ * because discriminativeness would then never have been checked. The frozen
+ * `tokens.json` has the same problem unless it is checked too: `47318` is a
+ * bare five-digit number, and a token already present in the run's opening
+ * request is not evidence of anything a later arrival delivered — it was in
+ * the room before the task started.
+ *
+ * Returns one entry per token: `ok`, or why it cannot carry a verdict.
+ */
+export function verifyTokensDiscriminative(requests, tokens) {
+  const first = (() => {
+    const r = (requests ?? [])[0];
+    const body = r?.body ?? {};
+    const json = (body && typeof body === "object" && "json" in body) ? body.json : body;
+    return (json?.messages ?? []).map((m) => textOf(m)).join("\n").toLowerCase();
+  })();
+  const out = {};
+  for (const [assetId, spec] of Object.entries(tokens ?? {})) {
+    for (const t of spec?.tokens ?? []) {
+      const key = `${assetId}:${t}`;
+      if (first.includes(String(t).toLowerCase())) {
+        out[key] = { ok: false, why: "the token is already in the run's opening request, so its later presence shows nothing" };
+      } else if (/^\d{1,6}$/.test(String(t))) {
+        out[key] = { ok: true, warn: "a bare number can occur by chance; it carries a verdict here only because it is absent from the opening request" };
+      } else {
+        out[key] = { ok: true };
+      }
+    }
+  }
+  return out;
 }
 
 export function summarizeDelivery(audit) {

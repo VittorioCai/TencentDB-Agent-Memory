@@ -64,7 +64,13 @@ so absence in them is evidence rather than a gap.
 |---|---|---|
 | gate-off, 5 of 5 | **delivered** | **delivered** |
 | gate-on, 4 of 5 | **not delivered** | **delivered** |
-| gate-on, 075637 | `ambiguous_source` | `ambiguous_source` |
+| gate-on, 075637 | `delivered_from_other_source` | `delivered_from_other_source` |
+
+The last row is an **isolation failure**, not an unmeasurable one: the
+content reached the model and the route is identified. Filing an identified
+other source together with "no source could be found" hid it — the one row
+the calibration most needed to show. Calibration for this batch is therefore
+TP 15 / FP 0 / TN 4 / FN 0 / **isolation failure 1** / unsettled 0.
 
 The off arm is the control that matters: with the gate off, the audit finds
 both assets reaching the model. With it on, the admitted asset still reaches
@@ -91,9 +97,27 @@ skill was read, and first arrival is what attribution follows.
 
 So this batch supports "the gate held: no pool asset was read on the model's
 path" and does not support "the model could not have known the wrong
-address". The agent's own knowledge file accumulating findings across runs is
-a contamination source in its own right, and one to settle before the
-extension scenarios.
+address". **The five gate-on runs are not five independent samples.** The knowledge
+file's `updated_at` is 2026-09-08T07:56:30Z, and this batch ran
+07:51:49–07:57:49 — the write lands between `075620` and `075637`. It holds
+`10.244.7.19` seven times and `47318` eighteen, written as conclusions
+carried across runs ("endpoint-b … outranks documented-but-silent
+endpoint-a", "cross-agent skills open via /skill/get by skill_id, never
+get-by-name"). Checked run by run:
+
+| run | started | vs. the file's update | read it |
+|---|---|---|---|
+| 075544 | 07:55:44 | before | no |
+| 075604 | 07:56:04 | before | no |
+| 075620 | 07:56:20 | before | no |
+| 075637 | 07:56:37 | **after** | **yes** |
+| 075749 | 07:57:49 | after | no |
+
+So the gate-on arm is **n=4 independent and 1 contaminated**, and must be
+reported that way rather than as n=5. Closing this means isolating the
+agent's own knowledge file per run — snapshot and restore, or make it
+read-only for the duration — and running the arm again. Until then the arm
+supports "the gate held" on four samples, not five.
 
 The other four gate-on runs carry the address nowhere in their captures.
 All five gate-off runs carry it, which is expected: they were served the
