@@ -132,6 +132,36 @@ in batch 2. Where both arms carry it the arms stay comparable; what it takes
 away is the reading "the model recovered on its own" for the off arm's
 second dial.
 
+## The gate-on arm, run again with the agent's memory isolated (2026-09-08 22:06)
+
+The contamination above was the reason to run the arm again rather than
+argue about it. `run-once.sh` now snapshots `profiles/<team|agent>/` — the
+product's L2 scene blocks and L3 persona for this agent — before each
+session and restores it after, recording both hashes in `run.json`. All five
+reruns report `isolated: true`, `written_during_run: false`, and the same
+`hash_before` and `hash_after` (`7d7f4b44…`): five runs starting from one
+memory state, which is what independent samples means here.
+
+| | hidden `skl-sZFb3KatWY6m` | admitted `skl-oBaDO5CceKnr` |
+|---|---|---|
+| before, 4 of 5 | not delivered | delivered |
+| before, 075637 | `delivered_from_other_source` → isolation failure | delivered |
+| **isolated, 5 of 5** | **not delivered** | **delivered** |
+
+All five pass, all five use only the admitted asset, all five record it
+`validated`. Calibration moves accordingly:
+
+| | TP | FP | TN | FN | isolation failure | rated |
+|---|---:|---:|---:|---:|---:|---:|
+| before | 15 | 0 | 4 | 0 | **1** | 19/20 |
+| isolated | 15 | 0 | 5 | 0 | **0** | **20/20** |
+
+So the leak was the accumulated memory and not the gate, and the arm is now
+five independent samples rather than four plus one. The gate-off arm was not
+re-run: its result is that both assets reach the model, which accumulated
+memory can only reinforce, never explain away. That is a stated choice, not
+an oversight — a clean comparison would re-run both.
+
 ## Evidence
 
 - Runs: `runs/20260908T0751*`–`20260908T0757*`, ten directories with raw
