@@ -57,22 +57,34 @@ unknown — the five gate-on runs read:
 
 | | hidden asset (`skl-sZFb3KatWY6m`) |
 |---|---|
-| 4 of 5 | `not_delivered` — the token appears nowhere in what the model was sent **or wrote** |
-| 075637 | `source_unknown` — it arrived as a tool result at message 14, and the run did not record what produced that message |
+| 4 of 5 | `not_seen_in_capture` — the token is in no message of any captured request, neither what the model was sent nor what it wrote |
+| 075637 | `ambiguous_source` — it arrived at request 6 message 14, from something that is not a pool asset |
 
-So the honest reading is **four confirmed undelivered and one unattributable**,
-not "one isolation failure". The content in 075637 is an SOP document the
-agent read back, whose text records the earlier finding and says endpoint-b
-outranks that address; it is not the gated asset. Whether it came from the
-asset cannot be settled from what this run recorded, so it is not counted as
-a leak and not counted as clean.
+**Four "not seen in the saved capture", and one "alternative source"** — not
+"one isolation failure", and not yet "four confirmed undelivered" either.
+Absence is only evidence once the capture is known to cover the run, and
+that check has not been done, so the audit refuses to upgrade it.
 
-Two gaps in the record stand behind that `source_unknown`, and both must
-close before the calibration numbers are frozen: `used-events` carry no
-`message_index`, so "did it arrive before the operation being judged" has no
-basis to compare against; and `delivered_content` did not cover the message
-the token arrived in. Until they do, this batch supports "the gate held" but
-not "the model could not have known the wrong address".
+The 075637 arrival is traced end to end. The model ran a `python3` one-liner
+(message 11) that read a CodeBuddy tool-result cache file and wrote its
+`data.content` to `/tmp/sop_scene.md`; it read that file back (message 13,
+`Read`), and the result arrived at message 14 with a matching
+`tool_call_id`. The cached payload is `skill-bridge-技能搜索接口验证.md`
+belonging to agent `agt-5e0y4l8a7a` — **the consumer's own knowledge file,
+not either pool asset** — and it carries both addresses, because it records
+what earlier runs found. Its `updated_at` is 2026-09-08T07:56:30, inside
+this batch's own window.
+
+The operation being judged sits at request 8 message 17, resolved from the
+used-event's `target_ref` (`request(<id>):msg[17]:<call>`), so the arrival
+did precede it. That makes this an alternative source that could have
+informed the run — not a leak of the gated asset, and not a clean isolation.
+
+So this batch supports "the gate held: no pool asset was read on the model's
+path" and does not support "the model could not have known the wrong
+address". The agent's own knowledge file accumulating findings across runs is
+a contamination source in its own right, and one to settle before the
+extension scenarios.
 
 The other four gate-on runs carry the address nowhere in their captures.
 All five gate-off runs carry it, which is expected: they were served the
