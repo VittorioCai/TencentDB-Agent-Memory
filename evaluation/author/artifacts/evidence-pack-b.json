@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-08T06:55:57.665Z",
+  "built_at": "2026-09-08T07:23:21.791Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "b",
@@ -356,11 +356,13 @@
       "total": 1,
       "note": "each skill as the version that existed at the cutoff"
     },
+    "validity_from": "core: gate_validity on every row",
     "outcomes": {
       "total": 0,
       "trusted": 0,
       "retracted": 0,
-      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read"
+      "validity_from": "core: gate_validity on every row",
+      "note": "kept and left out by Core's own verdict on each row (gate_validity): untrusted rows and rows a reviewer retracted are counted and left out — exactly the rows the gate does not read"
     },
     "calls": {
       "total": 438,

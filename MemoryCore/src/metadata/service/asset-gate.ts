@@ -103,19 +103,41 @@ export function boundToCurrent(o: AssetOutcomeEntity, asset: { version: number; 
 
 /**
  * One row per call. Rows that name the same call collapse to the latest by
- * occurred_at (then created_at); a row without a call id is its own call.
+ * occurred_at, then created_at; a row without a call id is its own call.
  * The result is what the gate counts.
+ *
+ * Both of those are millisecond clocks, and two rows about one call written
+ * back to back tie on both (2026-09-08e): appending `validated` and then
+ * `corrected` for one call produced two rows with identical timestamps, the
+ * first won, and the correction was dropped — the asset stayed admitted.
+ * A tie is not evidence of order, so it is not guessed: it resolves to the
+ * row that keeps the asset OUT (a corrected(wrong/stale) outranks a
+ * validated or a used), and failing that to the lowest row id, so the
+ * answer never depends on the order the store happened to return. Ties are
+ * counted and reported in the decision, because a tie means the record does
+ * not say which came last.
+ *
+ * The fuller fix is a monotonic per-row sequence from the store, the way
+ * assets carry `revision`; this rule is what holds until there is one.
  */
-export function collapseByCall(rows: AssetOutcomeEntity[]): AssetOutcomeEntity[] {
+export function collapseByCall(rows: AssetOutcomeEntity[]): { kept: AssetOutcomeEntity[]; ties: number } {
   const byCall = new Map<string, AssetOutcomeEntity>();
-  const later = (a: AssetOutcomeEntity, b: AssetOutcomeEntity) =>
-    a.occurred_at > b.occurred_at || (a.occurred_at === b.occurred_at && a.created_at > b.created_at);
+  const keepsOut = (o: AssetOutcomeEntity) => o.state === "corrected" && o.corrected_reason != null && DOWNWEIGHT_REASONS.has(o.corrected_reason);
+  let ties = 0;
+  const wins = (o: AssetOutcomeEntity, cur: AssetOutcomeEntity): boolean => {
+    if (o.occurred_at !== cur.occurred_at) return o.occurred_at > cur.occurred_at;
+    if (o.created_at !== cur.created_at) return o.created_at > cur.created_at;
+    ties += 1;
+    if (keepsOut(o) !== keepsOut(cur)) return keepsOut(o);
+    return o.id < cur.id;
+  };
   for (const o of rows) {
     const key = o.call_id ? `${o.asset_id}|call:${o.call_id}` : `${o.asset_id}|row:${o.id}`;
     const cur = byCall.get(key);
-    if (!cur || later(o, cur)) byCall.set(key, o);
+    if (!cur || wins(o, cur)) byCall.set(key, o);
   }
-  return [...byCall.values()].sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
+  const kept = [...byCall.values()].sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return { kept, ties };
 }
 
 /**
@@ -183,21 +205,56 @@ export function authorAssessmentOf(
   };
 }
 
+/**
+ * The one verdict on an outcome row: may the gate act on it, and is it
+ * about the text under assessment (2026-09-08e). Every consumer reads
+ * this — the decision, the listing Core returns, the Panel, the author
+ * pipeline — so there is one rule and not a copy per module that drifts.
+ *
+ * Three questions, in order, because they fail for different reasons:
+ *   trusted    — submitted by an admin or reviewer, naming the consumer,
+ *                with the call id, the version and evidence;
+ *   retracted  — a reviewer took it out of the evidence, with a reason;
+ *   bound      — `current` decides this text; `other_version` is about
+ *                another version or another content; `unbound` carries no
+ *                version, or no hash while the asset has one, and so
+ *                cannot claim any particular text.
+ *
+ * `usable` is the conjunction: trusted, not retracted, bound to current.
+ */
+export function outcomeValidity(
+  o: AssetOutcomeEntity,
+  asset: { version?: number | null; content_hash?: string | null } | null,
+): { usable: boolean; trusted: boolean; retracted: boolean; bound: "current" | "other_version" | "unbound" | "unknown"; reason: string | null } {
+  const trusted = o.trusted === true;
+  const retracted = !!o.retracted_at;
+  const bound = asset ? boundToCurrent(o, { version: asset.version ?? 1, content_hash: asset.content_hash ?? null }) : "unknown";
+  const reason = !trusted ? (o.untrusted_reason ?? "not submitted by an admin or reviewer with call id, version and evidence")
+    : retracted ? `retracted by ${o.retracted_by ?? "a reviewer"} at ${o.retracted_at}${o.retract_reason ? `: ${o.retract_reason}` : ""}`
+    : bound === "other_version" ? `about version ${o.asset_version ?? "?"}${o.content_hash ? ` (${o.content_hash.slice(0, 10)})` : ""}, not the text under assessment`
+    : bound === "unbound" ? (o.asset_version == null ? "carries no asset version" : "carries no content hash while the asset has one")
+    : null;
+  return { usable: trusted && !retracted && bound === "current", trusted, retracted, bound, reason };
+}
+
 export function decideAsset(input: DecideInput): GateDecision {
   const now = input.now ?? new Date();
   const version = input.asset.version ?? 1;
   const ownTrust = trustedOnly(input.outcomes);
-  const ownAll = collapseByCall(ownTrust.kept);
+  const ownCollapse = collapseByCall(ownTrust.kept);
+  const ownAll = ownCollapse.kept;
   // Version and content binding: only a row about this version and this
   // content decides it; rows about other versions/contents are reported;
   // rows with no version, or no hash while the asset has one, are history
   // that cannot claim the current text.
   const bind = { version, content_hash: input.asset.content_hash ?? null };
-  const own = ownAll.filter((o) => boundToCurrent(o, bind) === "current");
-  const otherVersion = ownAll.filter((o) => boundToCurrent(o, bind) === "other_version").length;
-  const unbound = ownAll.filter((o) => boundToCurrent(o, bind) === "unbound").length;
+  // Read through the shared verdict, not a second copy of the rule.
+  const vOf = (o: AssetOutcomeEntity) => outcomeValidity(o, bind);
+  const own = ownAll.filter((o) => vOf(o).bound === "current");
+  const otherVersion = ownAll.filter((o) => vOf(o).bound === "other_version").length;
+  const unbound = ownAll.filter((o) => vOf(o).bound === "unbound").length;
   const authorId = input.asset.owner_user_id;
-  const others = collapseByCall(trustedOnly(input.authorOutcomes).kept).filter((o) => o.asset_id !== input.asset.asset_id);
+  const others = collapseByCall(trustedOnly(input.authorOutcomes).kept).kept.filter((o) => o.asset_id !== input.asset.asset_id);
 
   const isCross = (o: AssetOutcomeEntity) => CROSS_PERSON.has(o.relation);
   const downweighting = own.filter((o) => o.state === "corrected" && o.corrected_reason != null && DOWNWEIGHT_REASONS.has(o.corrected_reason));
@@ -216,6 +273,7 @@ export function decideAsset(input: DecideInput): GateDecision {
     other_version: otherVersion,
     unbound_ignored: unbound,
     retracted_ignored: ownTrust.retracted,
+    same_call_ties: ownCollapse.ties,
   };
 
   // Author: the outcomes of this author's other assets, cross-person only.
@@ -283,6 +341,9 @@ export function decideAsset(input: DecideInput): GateDecision {
   }
   if (ownTrust.retracted > 0) {
     reasons.push(`${ownTrust.retracted} row(s) were retracted by a reviewer and were not read`);
+  }
+  if (ownCollapse.ties > 0) {
+    reasons.push(`${ownCollapse.ties} row(s) about a call carry the same timestamps as another row about that call, so the record does not say which came last; the one that keeps the asset out was taken`);
   }
 
   if (read.ignored) reasons.push(`context-based assessment: ${read.ignored}`);

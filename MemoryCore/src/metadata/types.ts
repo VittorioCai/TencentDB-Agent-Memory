@@ -569,6 +569,27 @@ export interface AssetOutcomeEntity {
   created_at: string;
 }
 
+/**
+ * An outcome row as a reader gets it: the stored row plus the gate's own
+ * verdict on it (2026-09-08e), computed by `outcomeValidity` — the same
+ * function the decision uses. `gate_validity` is derived, never stored,
+ * and is recomputed on every read because it depends on the asset's
+ * current version and content.
+ */
+export interface AssetOutcomeWithValidity extends AssetOutcomeEntity {
+  gate_validity: {
+    /** Trusted, not retracted, and about the asset's current version and content. */
+    usable: boolean;
+    trusted: boolean;
+    retracted: boolean;
+    bound: "current" | "other_version" | "unbound" | "unknown";
+    /** Why it is not usable, in the reader's words; null when it is. */
+    reason: string | null;
+    asset_version_now: number | null;
+    asset_content_hash_now: string | null;
+  };
+}
+
 export interface AppendAssetOutcomeInput {
   team_id: string;
   asset_id: string;
@@ -663,6 +684,8 @@ export interface GateDecision {
       unbound_ignored: number;
       /** Rows retracted by a reviewer: kept on file, not read. */
       retracted_ignored: number;
+      /** Rows about one call that tie on both clocks, so the record does not say which came last. */
+      same_call_ties?: number;
     };
     author: {
       user_id: string;

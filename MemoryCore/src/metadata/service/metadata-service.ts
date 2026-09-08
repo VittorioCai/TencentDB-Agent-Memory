@@ -31,7 +31,7 @@ import {
   type MemorySystemUserConfig,
 } from "../system-user.js";
 import { resolveUserId } from "./resolve-user-id.js";
-import { decideAsset, mergeGateIntoMetadata, gateOf, activeReview, effectiveStatus, expireReviews, reviewsOf } from "./asset-gate.js";
+import { decideAsset, mergeGateIntoMetadata, gateOf, activeReview, effectiveStatus, expireReviews, reviewsOf, outcomeValidity } from "./asset-gate.js";
 import type { V3AuthContext } from "../router/auth.js";
 import { DEFAULT_INSTANCE_ID, DEFAULT_AUTH_PROVIDER } from "../constants.js";
 import {
@@ -90,6 +90,7 @@ import type {
   InstanceUserListFilter,
   UserListFilter,
   AssetOutcomeEntity,
+  AssetOutcomeWithValidity,
   AppendAssetOutcomeInput,
   AssetOutcomeFilter,
   GateDecision,
@@ -2161,7 +2162,7 @@ export class MetadataService {
     filter: AssetOutcomeFilter,
     ctx: V3AuthContext,
     pagination: PaginationParams = DEFAULT_PAGINATION,
-  ): Promise<PaginatedResult<AssetOutcomeEntity>> {
+  ): Promise<PaginatedResult<AssetOutcomeWithValidity>> {
     const member = await this.requireActiveTeamMember(ctx, filter.team_id);
     const callerId = this.requireCallerId(ctx);
     const reviewerRole = member.role === "admin" || member.role === "reviewer";
@@ -2175,7 +2176,18 @@ export class MetadataService {
       throw new MetadataError("permission_denied", "listing outcomes across the team takes a team admin or reviewer");
     }
     const page = await this.store.listAssetOutcomes(filter, pagination);
-    return wrapPaginated(page.items, page.total, pagination);
+    // Every row carries the gate's own verdict on it (2026-09-08e). A
+    // reader — the Panel, the author pipeline, a reviewer — must not have
+    // to rebuild the rule from the raw fields and get a different answer.
+    // The asset a row is about is read once per asset id in the page.
+    const assets = new Map<string, AssetEntity | null>();
+    const rows: AssetOutcomeWithValidity[] = [];
+    for (const o of page.items) {
+      if (!assets.has(o.asset_id)) assets.set(o.asset_id, await this.getAssetById(o.asset_id));
+      const asset = assets.get(o.asset_id) ?? null;
+      rows.push({ ...o, gate_validity: { ...outcomeValidity(o, asset), asset_version_now: asset?.version ?? null, asset_content_hash_now: asset?.content_hash ?? null } });
+    }
+    return wrapPaginated(rows, page.total, pagination);
   }
 
   /**
@@ -2444,7 +2456,16 @@ export class MetadataService {
       if (err instanceof MetadataError && err.code === "stale_write") throw new MetadataError("stale_review", err.message);
       throw err;
     }
-    return { asset: updated, review, effective };
+    // The review is now on file; the status it resolved to was computed from
+    // the evidence as it stood a moment ago. An outcome recorded with
+    // `evaluate: false` (the batch sync path) does not touch the asset row,
+    // so the revision guard cannot see it: between the validation above and
+    // this write, a new correction could have arrived that the admit does
+    // not name. Re-deciding here settles it from the evidence on file, with
+    // the review in force — an admit that no longer covers everything falls
+    // back to failed instead of standing on a stale reading (2026-09-08e).
+    const settled = await this.evaluateAssetGate(assetId, { apply: true });
+    return { asset: settled.asset, review, effective: settled.effective };
   }
 
   /** The decision on file (metadata_json.gate), or null when the gate has not run. */

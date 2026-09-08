@@ -1,6 +1,6 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-08T06:56:54Z",
+  "at": "2026-09-08T07:24:06Z",
   "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
   "asset_id": "skl-sZFb3KatWY6m",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
@@ -45,7 +45,7 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "chain_complete": false,
-    "pack_sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
+    "pack_sha256": "80cf4e309f0a0c8116d9949d9ff6dbf10a84fecf554a249c49e2e4e705373d4f",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
   "decision_after": {
@@ -54,7 +54,7 @@
     "asset_id": "skl-sZFb3KatWY6m",
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
-    "decided_at": "2026-09-08T06:56:53.984Z",
+    "decided_at": "2026-09-08T07:24:06.962Z",
     "decision": "reject",
     "status_target": "failed",
     "confidence": 0,
@@ -93,7 +93,8 @@
         "untrusted_ignored": 2,
         "other_version": 0,
         "unbound_ignored": 0,
-        "retracted_ignored": 0
+        "retracted_ignored": 0,
+        "same_call_ties": 0
       },
       "author": {
         "user_id": "usr-n68ea5ythq",
@@ -138,10 +139,10 @@
           "author_user_id": "usr-n68ea5ythq",
           "asset_version": 2,
           "content_hash": "163c539025f09af8205023ec6d312a38",
-          "pack_sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
+          "pack_sha256": "80cf4e309f0a0c8116d9949d9ff6dbf10a84fecf554a249c49e2e4e705373d4f",
           "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-08T06:56:53.924Z"
+          "written_at": "2026-09-08T07:24:06.905Z"
         },
         "assessment_ignored": null
       }

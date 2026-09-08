@@ -203,6 +203,21 @@ export default function ReviewQueuePanel() {
                     {(g.signals.online.untrusted_ignored ?? 0) > 0 && (
                       <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.untrustedIgnored', { n: g.signals.online.untrusted_ignored })}</Text>
                     )}
+                    {/* What the counts above do NOT include: a reviewer who
+                        sees "validated 2 / corrected 0" must also see that
+                        rows were left out, and why (2026-09-08e). */}
+                    {(g.signals.online.retracted_ignored ?? 0) > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.retractedIgnored', { n: g.signals.online.retracted_ignored })}</Text>
+                    )}
+                    {(g.signals.online.other_version ?? 0) > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.otherVersion', { n: g.signals.online.other_version, v: g.asset_version ?? '?' })}</Text>
+                    )}
+                    {(g.signals.online.unbound_ignored ?? 0) > 0 && (
+                      <Text parent="div" theme="label" style={{ fontSize: 12 }}>{t('review.unboundIgnored', { n: g.signals.online.unbound_ignored })}</Text>
+                    )}
+                    {(g.signals.online.same_call_ties ?? 0) > 0 && (
+                      <Text parent="div" theme="warning" style={{ fontSize: 12 }}>{t('review.sameCallTies', { n: g.signals.online.same_call_ties })}</Text>
+                    )}
                     {r.gate?.review_requested && <Tag theme="primary">{t('review.submittedByOwner')}</Tag>}
                     {r.gate?.review && (
                       <Text parent="div" theme="label" style={{ fontSize: 12 }}>

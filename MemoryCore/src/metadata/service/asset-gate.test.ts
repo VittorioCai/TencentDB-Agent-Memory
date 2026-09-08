@@ -167,15 +167,41 @@ describe("decideAsset: what counts as evidence", () => {
       outcome({ call_id: "call-1", state: "validated", occurred_at: "2026-09-06T10:00:05Z" }),
       outcome({ call_id: "call-1", state: "validated", occurred_at: "2026-09-06T10:00:05Z", created_at: "2026-09-06T10:00:06Z" }),
     ];
-    const calls = collapseByCall(rows);
+    const { kept: calls, ties } = collapseByCall(rows);
     expect(calls).toHaveLength(1);
     expect(calls[0].state).toBe("validated");
+    expect(ties).toBe(0);   // these rows are ordered by their clocks
     const d = decideAsset({ asset, outcomes: rows, authorOutcomes: [], now: T0 });
     expect(d.signals.online.calls).toBe(1);
     expect(d.signals.online.validated).toBe(1);
     expect(d.signals.online.used).toBe(0);
     expect(d.confidence_n).toBe(1);
     expect(d.evidence_refs).toEqual([{ outcome_id: rows[2].id, state: "validated", relation: "cross_user", call_id: "call-1" }]);
+  });
+
+  it("two rows about one call written in the same millisecond: the tie is not guessed, it resolves against the asset and is reported", () => {
+    // Appending validated and then corrected for one call produced two rows
+    // with identical occurred_at AND created_at (both are millisecond
+    // clocks). The latest-wins rule then kept whichever the store returned
+    // first, so the correction was dropped and the asset stayed admitted.
+    const at = "2026-09-06T10:00:05.123Z";
+    const v = outcome({ call_id: "call-1", state: "validated", occurred_at: at, created_at: at });
+    const c = outcome({ call_id: "call-1", state: "corrected", corrected_reason: "wrong", occurred_at: at, created_at: at });
+    for (const rows of [[v, c], [c, v]]) {                       // either order the store returns them in
+      const { kept, ties } = collapseByCall(rows);
+      expect(kept).toHaveLength(1);
+      expect(kept[0].state).toBe("corrected");                   // the row that keeps the asset out
+      expect(ties).toBe(1);
+      const d = decideAsset({ asset, outcomes: rows, authorOutcomes: [], now: T0 });
+      expect(d.decision).toBe("reject");
+      expect(d.signals.online.same_call_ties).toBe(1);
+      expect(d.reasons.join("\n")).toMatch(/does not say which came last/);
+    }
+    // A tie between two rows of the same kind is broken by row id, so the
+    // answer does not depend on the order the store returned them either.
+    const v2 = outcome({ call_id: "call-2", state: "validated", occurred_at: at, created_at: at });
+    const v3 = outcome({ call_id: "call-2", state: "validated", occurred_at: at, created_at: at });
+    expect(collapseByCall([v2, v3]).kept[0].id).toBe(collapseByCall([v3, v2]).kept[0].id);
   });
 
   it("two real calls with the same arguments carry two call ids and stay two; a row without a call id is its own call", () => {
@@ -683,6 +709,112 @@ describe("the gate on the asset record", () => {
     expect(g2.review?.id).toBe(second.review.id);
   });
 
+  it("one validity rule, end to end: a retracted row leaves the decision, the listing verdict and the reasons together", async () => {
+    // Built through the service the product uses — assets created, outcomes
+    // submitted by an admin naming the consumer, retraction through the
+    // route — not from hand-made rows with the answer already in them.
+    await candidateSkill("skl-one", a, "team");
+    await store.updateAsset("skl-one", { content_hash: "hCUR" });
+    const good = await trusted("skl-one", b);                                             // usable
+    const bad = await trusted("skl-one", b, { state: "corrected", corrected_reason: "wrong" });
+    const old = await trusted("skl-one", b, { asset_version: 1, content_hash: "hOLD" });  // other content
+    // A submission that does not name the content is refused trust at the
+    // door — so "unbound" can only be a row from before that rule, which is
+    // what the store holds and what the migration left behind.
+    const noHash = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-one", b, { content_hash: undefined }), team_id: team, event_id: "e-nohash" }, ctx(admin));
+    expect(noHash.outcome.trusted).toBe(false);
+    const legacy = await store.appendAssetOutcome({ team_id: team, asset_id: "skl-one", asset_version: null, state: "validated", relation: "cross_user", consumer_user_id: b, trusted: true, call_id: "call-legacy", event_id: "e-legacy" });
+    expect((await store.getAssetById("skl-one"))?.status).toBe("failed");
+    await svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(r), { reason: "the probe used the wrong port" });
+
+    const d = await svc.evaluateAssetGate("skl-one", { apply: false });
+    expect(d.decision.decision).toBe("admit");                       // the correction is out of the evidence
+    expect(d.decision.signals.online.retracted_ignored).toBe(1);
+    expect(d.decision.signals.online.other_version).toBe(1);
+    expect(d.decision.signals.online.unbound_ignored).toBe(1);
+
+    // The listing a reader gets says the same thing about the same rows.
+    const rows = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-one" }, ctx(admin));
+    const by = new Map(rows.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(good.outcome.id)).toMatchObject({ usable: true, trusted: true, retracted: false, bound: "current", reason: null });
+    expect(by.get(bad.outcome.id)).toMatchObject({ usable: false, retracted: true, bound: "current" });
+    expect(by.get(bad.outcome.id)?.reason).toMatch(/^retracted by .*the probe used the wrong port/);
+    expect(by.get(old.outcome.id)).toMatchObject({ usable: false, trusted: true, retracted: false, bound: "other_version" });
+    expect(by.get(noHash.outcome.id)).toMatchObject({ usable: false, trusted: false });
+    expect(by.get(noHash.outcome.id)?.reason).toMatch(/content_hash/);
+    expect(by.get(legacy.id)).toMatchObject({ usable: false, trusted: true, retracted: false, bound: "unbound" });
+    expect(by.get(legacy.id)?.reason).toMatch(/carries no asset version/);
+    // What the decision counted and what the listing calls usable are the same set.
+    const usable = rows.items.filter((o) => o.gate_validity.usable).map((o) => o.id).sort();
+    expect(usable).toEqual([good.outcome.id]);
+    expect(d.decision.evidence_refs.map((x) => x.outcome_id).sort()).toEqual(usable);
+  });
+
+  it("a correction recorded with evaluate:false does not touch the asset row; the admit still cannot stand on the reading it was validated against", async () => {
+    // The batch sync path records without deciding, so the revision guard
+    // cannot see the new row. The interleaving is written out step by step.
+    await candidateSkill("skl-race2", a, "team");
+    const first = await trusted("skl-race2", b, { state: "corrected", corrected_reason: "wrong" });
+    expect((await store.getAssetById("skl-race2"))?.status).toBe("failed");
+    const asRead = (await store.getAssetById("skl-race2"))!;
+    const revBefore = asRead.revision ?? 0;
+    // …the reviewer decides to overrule the one correction they can see…
+    const overrode = [{ outcome_id: first.outcome.id, reason: "verified by hand" }];
+    // …and a second correction lands first, recorded without evaluation.
+    const second = await svc.appendAssetOutcomeForCaller(
+      { ...trustedBody("skl-race2", b, { state: "corrected", corrected_reason: "wrong", asset_version: asRead.version, content_hash: asRead.content_hash ?? null }), team_id: team, event_id: "e-late" },
+      ctx(admin), { evaluate: false },
+    );
+    expect((await store.getAssetById("skl-race2"))?.revision ?? 0).toBe(revBefore); // the row did not move
+    const res = await svc.reviewAssetGateForCaller("skl-race2", ctx(r), { decision: "admit", overrode, ...seen(asRead) });
+    expect(res.asset.status).toBe("failed");
+    expect(res.effective.reason).toMatch(new RegExp(second.outcome.id));
+    // The review is on file and keeps its override; it just does not cover everything.
+    const g = await svc.getAssetGateForCaller("skl-race2", ctx(a));
+    expect(g.review?.overrode).toEqual(overrode);
+    // Naming the second one too is what lifts it.
+    const now = (await store.getAssetById("skl-race2"))!;
+    const done = await svc.reviewAssetGateForCaller("skl-race2", ctx(r), { decision: "admit", overrode: [...overrode, { outcome_id: second.outcome.id, reason: "same bad probe" }], ...seen(now) });
+    expect(done.asset.status).toBe("approved");
+  });
+
+  it("three clocks are kept apart: when it happened, when it was recorded, when it was retracted", async () => {
+    await candidateSkill("skl-clock", a, "team");
+    // Happened before the admit, recorded after it. The row's occurred_at is
+    // the caller's; created_at is the registry's own clock, so the recorded
+    // time is necessarily later than the event here.
+    const late = await trusted("skl-clock", b, { state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-01T00:00:00.000Z" });
+    const row = await store.getAssetOutcomeById(late.outcome.id);
+    expect(row?.occurred_at).toBe("2026-09-01T00:00:00.000Z");
+    expect(row!.created_at > row!.occurred_at).toBe(true);
+    const d = await svc.evaluateAssetGate("skl-clock", { apply: false });
+    expect(d.decision.reject_evidence_latest_at).toBe(row!.created_at);   // recorded, not occurred
+    expect(d.decision.reject_evidence_latest_at).not.toBe(row!.occurred_at);
+    // as_of filters on when it happened — the evidence base's own question —
+    // and that is a different question from which clock the reject reports.
+    const before = await svc.evaluateAssetGate("skl-clock", { apply: false, asOf: "2026-08-31T00:00:00.000Z" });
+    expect(before.decision.decision).toBe("pending");
+  });
+
+  it("the same call twice is one call; two calls that look alike are two", async () => {
+    await candidateSkill("skl-dup", a, "team");
+    // Redelivery of one event: the row on file comes back, nothing is added.
+    const one = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-dup", b, { call_id: "call-1" }), team_id: team, event_id: "evt-1" }, ctx(admin));
+    const again = await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-dup", b, { call_id: "call-1" }), team_id: team, event_id: "evt-1" }, ctx(admin));
+    expect(again.duplicate).toBe(true);
+    expect(again.outcome.id).toBe(one.outcome.id);
+    expect((await store.listAssetOutcomes({ team_id: team, asset_id: "skl-dup" })).total).toBe(1);
+    // A later row about the SAME call supersedes it — one call, one verdict.
+    await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-dup", b, { call_id: "call-1", state: "corrected", corrected_reason: "wrong" }), team_id: team, event_id: "evt-2" }, ctx(admin));
+    const d = await svc.evaluateAssetGate("skl-dup", { apply: false });
+    expect(d.decision.signals.online.calls).toBe(1);
+    expect(d.decision.decision).toBe("reject");
+    // A different call with identical arguments is a second call.
+    await svc.appendAssetOutcomeForCaller({ ...trustedBody("skl-dup", b, { call_id: "call-2" }), team_id: team, event_id: "evt-3" }, ctx(admin));
+    const d2 = await svc.evaluateAssetGate("skl-dup", { apply: false });
+    expect(d2.decision.signals.online.calls).toBe(2);
+  });
+
   it("a team admin who is not the owner may set status (the management act) and nothing else", async () => {
     await candidateSkill("skl-adm2", a, "team");
     const res = await svc.updateAssetForCaller("skl-adm2", { status: "approved" }, ctx(admin));
@@ -798,7 +930,9 @@ describe("the gate on the asset record", () => {
       const after = (await store.getAssetById("skl-ms"))!;
       expect(after.updated_at).toBe(asRead.updated_at);
       expect(after.version).toBe(asRead.version);
-      expect(after.revision).toBe((asRead.revision ?? 0) + 1);
+      // The review writes twice (the decision, then the settling
+      // re-evaluation); what matters is that the revision moved at all.
+      expect(after.revision ?? 0).toBeGreaterThan(asRead.revision ?? 0);
       await expect(svc.reviewAssetGateForCaller("skl-ms", ctx(admin), { decision: "reject", note: "second", ...seen(asRead) })).rejects.toMatchObject({ code: "stale_review" });
       const g = await svc.getAssetGateForCaller("skl-ms", ctx(a));
       expect(g.reviews.map((x) => x.note)).toEqual(["first"]);

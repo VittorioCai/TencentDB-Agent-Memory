@@ -154,7 +154,7 @@ export interface GateDecision {
   reasons: string[];
   evidence_refs: Array<{ outcome_id: string; state: string; relation: string; call_id?: string | null }>;
   signals: {
-    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number; other_version?: number };
+    online: { validated: number; corrected: number; used: number; cross_user_validated: number; distinct_consumers: number; distinct_tasks: number; calls?: number; untrusted_ignored?: number; other_version?: number; unbound_ignored?: number; retracted_ignored?: number; same_call_ties?: number };
     author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null; assessment_ignored?: string | null };
   };
   review_priority: ReviewPriority | null;
@@ -224,4 +224,14 @@ export interface AssetOutcome {
   evidence_json: string;
   occurred_at: string;
   created_at: string;
+  /** Whether the gate may act on this row, decided by Core, not by the reader. */
+  gate_validity?: {
+    usable: boolean;
+    trusted: boolean;
+    retracted: boolean;
+    bound: 'current' | 'other_version' | 'unbound' | 'unknown';
+    reason: string | null;
+    asset_version_now: number | null;
+    asset_content_hash_now: string | null;
+  };
 }

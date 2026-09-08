@@ -303,6 +303,53 @@ no rollback; `skill/versions` returning `[2]` on the model path, `[2]` for
 a caller sending `manage` with a key that is not the user's, and `[2, 1]`
 for the admin's own key.
 
+## Self-audit (2026-09-08e): one rule, and three more places the clock was trusted
+
+Reviewing the previous round's own work rather than the review notes turned
+up four defects, three of them reachable today.
+
+**The same rule was implemented twice.** The gate decided what it may read
+(`trustedOnly` + `boundToCurrent`); the author pipeline decided the same
+thing again in JavaScript; the Panel decided it a third way by showing raw
+counts. Three copies drift. There is now one function — `outcomeValidity`
+in `asset-gate.ts` — which the decision itself calls, which Core stamps on
+every row `asset/outcome/list` returns (`gate_validity`: usable, trusted,
+retracted, bound, and the reason it is none of those), and which the
+evidence pack and the checker read instead of re-deriving. Live, on all
+four assets in the evidence base, the rows the listing calls usable are
+exactly the rows the decision cites.
+
+**Two rows about one call, written in the same millisecond, tie on both
+clocks.** `occurred_at` and `created_at` are both millisecond stamps;
+appending `validated` and then `corrected` for one call produced two rows
+identical on both, so "latest wins" kept whichever the store returned
+first — the correction was dropped and the asset stayed admitted. Verified
+directly against the store before fixing. A tie is not evidence of order,
+so it is no longer guessed: it resolves to the row that keeps the asset out
+(a corrected(wrong/stale) outranks a validated or a used), then to the
+lowest row id so the answer never depends on query order, and the tie is
+counted in `signals.online.same_call_ties` and stated in the reasons. **This
+is a product rule and it is provisional** — the complete fix is a monotonic
+per-row sequence from the store, as assets carry `revision`.
+
+**A window after a review was validated.** An outcome recorded with
+`evaluate: false` — the batch sync path — does not touch the asset row, so
+the revision guard cannot see it: a correction arriving between the
+validation of an admit and its write would not be named by that admit and
+not caught by the guard either. The review now re-decides after it lands,
+so the status rests on the evidence at write time.
+
+**Mongo raised the revision in a second statement.** `updateAsset` patched
+the fields and then `$inc`-ed the revision in a separate await, leaving a
+window in which a conditional write read the row after the fields moved but
+before the revision did. One statement now.
+
+Also from the audit, and not a defect: the model path still serves what is
+admitted — get, get pinned to the head, team search (3 rows), list,
+versions, export and get-by-name all answer normally with the stricter
+binding in place, which is what shows the check is running rather than
+silently passing everything.
+
 ## The rules
 
 ```

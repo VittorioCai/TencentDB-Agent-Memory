@@ -1,6 +1,6 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-08T06:57:06Z",
+  "at": "2026-09-08T07:23:33Z",
   "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
   "asset_id": "skl-ImeA29HL3Djj",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
@@ -44,7 +44,7 @@
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
     "chain_complete": false,
-    "pack_sha256": "b316dadcce716d59b22c7b50b7fe9d9f259bee64e52c2d0a53dceb0910ffd69b",
+    "pack_sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
   },
   "decision_after": {
@@ -53,7 +53,7 @@
     "asset_id": "skl-ImeA29HL3Djj",
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-    "decided_at": "2026-09-08T06:57:06.225Z",
+    "decided_at": "2026-09-08T07:23:33.963Z",
     "decision": "pending",
     "status_target": "candidate",
     "confidence": null,
@@ -77,7 +77,8 @@
         "untrusted_ignored": 0,
         "other_version": 0,
         "unbound_ignored": 0,
-        "retracted_ignored": 0
+        "retracted_ignored": 0,
+        "same_call_ties": 0
       },
       "author": {
         "user_id": "usr-n68ea5ythq",
@@ -123,10 +124,10 @@
           "author_user_id": "usr-n68ea5ythq",
           "asset_version": 1,
           "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-          "pack_sha256": "b316dadcce716d59b22c7b50b7fe9d9f259bee64e52c2d0a53dceb0910ffd69b",
+          "pack_sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
           "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-08T06:57:06.170Z"
+          "written_at": "2026-09-08T07:23:33.914Z"
         },
         "assessment_ignored": null
       }

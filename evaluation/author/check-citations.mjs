@@ -203,16 +203,19 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   if (assetId && cls === "harness_verified" && rec.meta?.asset_id === assetId && type === "execution_result") {
     const st = rec.meta?.state; const why = rec.meta?.corrected_reason;
     const byRecord = st === "validated" ? "supports" : st === "corrected" && (why === "wrong" || why === "stale") ? "contradicts" : null;
-    // The gate's own binding, applied here too (2026-09-08d): version AND
-    // content. A row with no version, or none of the hash while the asset
-    // carries one, is history that cannot speak for the current text.
-    const bound = !assetVersion ? "current"
+    // Core's own verdict on the row, carried in the pack (2026-09-08e).
+    // Comparing versions and hashes a second time here is a second copy of
+    // the rule, and a copy drifts; it is only computed locally when the
+    // pack came from a Core that did not stamp the row, and then the record
+    // says so. A retracted or untrusted row never reaches the pack.
+    const bound = rec.meta?.bound ?? (
+      !assetVersion ? "current"
       : rec.meta?.asset_version == null ? "unbound"
       : rec.meta.asset_version !== assetVersion ? "other_version"
       : !assetContentHash ? "current"
       : !rec.meta?.content_hash ? "unbound"
       : rec.meta.content_hash !== assetContentHash ? "other_version"
-      : "current";
+      : "current");
     if (byRecord && bound === "current") {
       if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
       return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };

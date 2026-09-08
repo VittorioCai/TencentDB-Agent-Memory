@@ -1172,10 +1172,15 @@ export class MongoMetadataStore implements IMetadataStore {
   }
 
   async updateAsset(assetId: string, patch: Partial<AssetEntity>): Promise<AssetEntity | null> {
-    await this.patchOne("meta_assets", { asset_id: assetId }, patch, ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"], true);
-    // An unconditional write raises the revision too, so a conditional write
-    // that read the row before it is refused.
-    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $inc: { revision: 1 } });
+    // One statement: the fields and the revision bump land together
+    // (2026-09-08e). Two awaits left a window in which a conditional write
+    // read the row after the fields changed but before the revision rose,
+    // and was allowed through on a revision that was already stale.
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"];
+    const $set: Document = {};
+    for (const k of allowed) if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) $set[k] = (patch as Record<string, unknown>)[k];
+    $set.updated_at = nowIso();
+    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $set, $inc: { revision: 1 } });
     return this.getAssetById(assetId);
   }
 

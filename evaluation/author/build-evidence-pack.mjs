@@ -145,7 +145,11 @@ export function outcomeRecord(o, tokensOf = () => ({ tokens: [], from: null })) 
     // registry binds an outcome to the text it is about and lets a reviewer
     // take a mistaken row out of the evidence. A pipeline that reads only
     // `trusted` would still count both.
-    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, content_hash: o.content_hash ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true, retracted_at: o.retracted_at ?? null, recorded_at: o.created_at ?? null, asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
+    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, content_hash: o.content_hash ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true, retracted_at: o.retracted_at ?? null, recorded_at: o.created_at ?? null,
+      // Core's own verdict, carried verbatim; the checker reads `bound`
+      // rather than comparing versions and hashes a second time.
+      gate_validity: o.gate_validity ?? null, bound: o.gate_validity?.bound ?? null,
+      asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
 }
 export function callRecord(r) {
   // One row, one id: the same request body from two sessions (or twice in
@@ -317,13 +321,22 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   // Outcomes on the author's assets — trusted rows only
   try {
     const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id }, author.key, "items", 100, 2000);
-    // The same two filters the gate applies (2026-09-08d): a row the gate
-    // does not read is not evidence here either. A retracted row stays on
-    // file in the registry; it is counted and left out of the pack.
-    const usable = rows.filter((o) => o.trusted === true && !o.retracted_at);
-    const trusted = usable;
-    excluded.untrusted_outcomes = rows.filter((o) => o.trusted !== true).length;
-    excluded.retracted_outcomes = rows.filter((o) => o.trusted === true && o.retracted_at).length;
+    // Core decides what the gate may read and stamps it on every row
+    // (`gate_validity`, from `outcomeValidity` — the same function the
+    // decision uses). The pack does not re-derive it: a second copy of the
+    // rule here is a copy that drifts (2026-09-08e). The fallback below is
+    // for a Core older than the field, and says so in the pack.
+    const stamped = rows.every((o) => o.gate_validity);
+    const usableOf = (o) => (stamped ? o.gate_validity.usable || (o.gate_validity.trusted && !o.gate_validity.retracted)
+      : o.trusted === true && !o.retracted_at);
+    // The pack keeps rows the gate trusts and has not had retracted, whatever
+    // version they are about — a result on an earlier version is still a
+    // result about the author. `bound` travels with the row so the checker
+    // can tell a result from a relation without recomputing anything.
+    const trusted = rows.filter(usableOf);
+    excluded.untrusted_outcomes = rows.filter((o) => (stamped ? !o.gate_validity.trusted : o.trusted !== true)).length;
+    excluded.retracted_outcomes = rows.filter((o) => (stamped ? o.gate_validity.trusted && o.gate_validity.retracted : o.trusted === true && o.retracted_at)).length;
+    sources.validity_from = stamped ? "core: gate_validity on every row" : "local fallback: Core did not stamp gate_validity (trusted + not retracted only)";
     // Tokens of the outcome's own asset AT THAT VERSION (the author owns the
     // asset, so the body is readable); no version → no tokens.
     const bodies = new Map();
@@ -337,7 +350,7 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       return { tokens: bodyTokens(body), from: `body of ${id} v${version}` };
     };
     trusted.forEach((o) => add(outcomeRecord(o, tokensOf)));
-    sources.outcomes = { total: rows.length, trusted: trusted.length, retracted: excluded.retracted_outcomes, note: "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read" };
+    sources.outcomes = { total: rows.length, trusted: trusted.length, retracted: excluded.retracted_outcomes, validity_from: sources.validity_from, note: "kept and left out by Core's own verdict on each row (gate_validity): untrusted rows and rows a reviewer retracted are counted and left out — exactly the rows the gate does not read" };
   } catch (e) { sources.outcomes = { error: String(e.message) }; }
   // Calls the proxy logged for the author's sessions, if an export was supplied
   if (callsFile && existsSync(callsFile)) {

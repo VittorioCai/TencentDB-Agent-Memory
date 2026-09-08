@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-08T06:56:40.223Z",
+  "built_at": "2026-09-08T07:23:21.899Z",
   "evidence_cutoff": "2026-09-07T20:03:34.813Z",
   "author": {
     "letter": "a",
@@ -84,11 +84,13 @@
       "total": 3,
       "note": "each skill as the version that existed at the cutoff"
     },
+    "validity_from": "core: gate_validity on every row",
     "outcomes": {
       "total": 23,
       "trusted": 4,
       "retracted": 0,
-      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read"
+      "validity_from": "core: gate_validity on every row",
+      "note": "kept and left out by Core's own verdict on each row (gate_validity): untrusted rows and rows a reviewer retracted are counted and left out — exactly the rows the gate does not read"
     },
     "calls": {
       "total": 9,
@@ -124,7 +126,7 @@
     "harness_verified": 4,
     "proxy_observed": 9
   },
-  "sha256": "b316dadcce716d59b22c7b50b7fe9d9f259bee64e52c2d0a53dceb0910ffd69b",
+  "sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
@@ -619,6 +621,16 @@
         "trusted": true,
         "retracted_at": null,
         "recorded_at": "2026-09-07T14:30:39.479Z",
+        "gate_validity": {
+          "usable": true,
+          "trusted": true,
+          "retracted": false,
+          "bound": "current",
+          "reason": null,
+          "asset_version_now": 2,
+          "asset_content_hash_now": "163c539025f09af8205023ec6d312a38"
+        },
+        "bound": "current",
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -644,6 +656,16 @@
         "trusted": true,
         "retracted_at": null,
         "recorded_at": "2026-09-07T14:30:39.573Z",
+        "gate_validity": {
+          "usable": true,
+          "trusted": true,
+          "retracted": false,
+          "bound": "current",
+          "reason": null,
+          "asset_version_now": 2,
+          "asset_content_hash_now": "a7a9113a3ace7f60aeed16080b9bfe8e"
+        },
+        "bound": "current",
         "asset_tokens": [
           "127.0.0.1:47318"
         ],
@@ -669,6 +691,16 @@
         "trusted": true,
         "retracted_at": null,
         "recorded_at": "2026-09-07T14:30:39.700Z",
+        "gate_validity": {
+          "usable": true,
+          "trusted": true,
+          "retracted": false,
+          "bound": "current",
+          "reason": null,
+          "asset_version_now": 2,
+          "asset_content_hash_now": "163c539025f09af8205023ec6d312a38"
+        },
+        "bound": "current",
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -694,6 +726,16 @@
         "trusted": true,
         "retracted_at": null,
         "recorded_at": "2026-09-07T14:30:39.807Z",
+        "gate_validity": {
+          "usable": true,
+          "trusted": true,
+          "retracted": false,
+          "bound": "current",
+          "reason": null,
+          "asset_version_now": 2,
+          "asset_content_hash_now": "a7a9113a3ace7f60aeed16080b9bfe8e"
+        },
+        "bound": "current",
         "asset_tokens": [
           "127.0.0.1:47318"
         ],

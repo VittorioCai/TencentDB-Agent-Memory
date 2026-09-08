@@ -283,6 +283,26 @@ test("the reviewer's counter-example: one call validated then corrected is one c
   assert.equal(r.competence, "low");   // was "medium": the success had been kept
 });
 
+test("Core's verdict on a row is what the checker uses; it does not re-derive the binding", () => {
+  // The row's own fields say it is about this version and content, but Core
+  // stamped it `other_version` (it knows what the asset holds now). The
+  // checker must follow Core, or the two drift apart.
+  const stamped = new Map([...pack,
+    ["outcome:oc", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user)", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, content_hash: "hNEW", consumer_user_id: "usr-b", call_id: "c-c", bound: "other_version" }, "harness_verified")],
+  ]);
+  const claim = { competence: "low", claims: [{ statement: "the asset is wrong", type: "execution_result", outcome: "failure", record_ids: ["outcome:oc"], quote: "corrected(wrong) on asset skl-a v2" }] };
+  const r = checkAssessment(claim, stamped, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, assetContentHash: "hNEW" });
+  assert.equal(r.asset_claim_check.verdict, "silent");
+  assert.match(r.claims_kept[0].note, /not version 2/);
+  // Stamped `current`, and it carries the relation.
+  const cur = new Map([...pack,
+    ["outcome:oc", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user)", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, content_hash: "hNEW", consumer_user_id: "usr-b", call_id: "c-c", bound: "current" }, "harness_verified")],
+  ]);
+  const r2 = checkAssessment(claim, cur, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, assetContentHash: "hNEW" });
+  assert.equal(r2.asset_claim_check.verdict, "contradicts");
+  assert.equal(r2.asset_claim_check.strength, "strong");
+});
+
 test("garbage in, unknown out", () => {
   const r = checkAssessment({ competence: "excellent", claims: "no" }, pack);
   assert.equal(r.competence, "unknown");
