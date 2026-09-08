@@ -241,6 +241,7 @@ export class SqliteMetadataStore implements IMetadataStore {
         source_type TEXT NOT NULL,
         source_ref TEXT,
         version INTEGER NOT NULL DEFAULT 1,
+        revision INTEGER NOT NULL DEFAULT 0,
         visibility TEXT NOT NULL DEFAULT 'team',
         status TEXT NOT NULL DEFAULT 'draft',
         confidence REAL,
@@ -356,6 +357,21 @@ export class SqliteMetadataStore implements IMetadataStore {
     this.migrateLegacyUserKeys();
     this.migrateAssetOutcomeTrustColumns();
     this.migrateAssetContentHashColumn();
+    this.migrateAssetRevisionColumn();
+  }
+
+  /**
+   * Existing databases (2026-09-08d): assets gain `revision`, raised by
+   * every write. `updated_at` was the conditional-write key and it is a
+   * millisecond clock — two writes inside one millisecond left version,
+   * hash and time all unchanged, so the second stale write landed and the
+   * first review vanished from the history.
+   */
+  private migrateAssetRevisionColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'revision'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"); } catch { /* concurrent init */ }
+    }
   }
 
   /** Existing databases (2026-09-08): assets gain content_hash, filled in as skills are read or versioned. */
@@ -1485,8 +1501,8 @@ export class SqliteMetadataStore implements IMetadataStore {
       `INSERT INTO meta_assets
         (asset_id, team_id, asset_type, name, description, owner_user_id, source_type, source_ref,
          version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref, content_hash,
-         created_at, updated_at, metadata_json)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         created_at, updated_at, metadata_json, revision)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       assetId,
       input.team_id,
       input.asset_type,
@@ -1507,6 +1523,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       now,
       now,
       input.metadata_json ?? "{}",
+      0,
     );
     return this.getAssetById(assetId)!;
   }
@@ -1526,12 +1543,15 @@ export class SqliteMetadataStore implements IMetadataStore {
     for (const k of allowed) { const v = (patch as Record<string, unknown>)[k]; if (k in patch && v !== undefined) fields[k] = v as SQLInputValue; }
     fields.updated_at = nowIso();
     const where: string[] = ["asset_id = ?"]; const params: SQLInputValue[] = [];
-    const sets = Object.keys(fields).map((k) => `${k} = ?`);
+    // `revision = revision + 1` is not a bound value: every write raises it,
+    // so a second write from the same read cannot match the row any more.
+    const sets = [...Object.keys(fields).map((k) => `${k} = ?`), "revision = revision + 1"];
     params.push(...Object.keys(fields).map((k) => fields[k]));
     params.push(assetId);
     if (expect.version !== undefined) { where.push("version = ?"); params.push(expect.version); }
     if (expect.content_hash !== undefined) { if (expect.content_hash === null) where.push("content_hash IS NULL"); else { where.push("content_hash = ?"); params.push(expect.content_hash); } }
     if (expect.updated_at !== undefined) { where.push("updated_at = ?"); params.push(expect.updated_at); }
+    if (expect.revision !== undefined) { where.push("COALESCE(revision, 0) = ?"); params.push(expect.revision); }
     const res = this.db.prepare(`UPDATE meta_assets SET ${sets.join(", ")} WHERE ${where.join(" AND ")}`).run(...params) as { changes: number | bigint };
     if (Number(res.changes) === 0) return null;
     return this.getAssetById(assetId);
@@ -1540,6 +1560,9 @@ export class SqliteMetadataStore implements IMetadataStore {
   updateAsset(assetId: string, patch: Partial<AssetEntity>): AssetEntity | null {
     const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"] as const;
     this.applyUpdate("meta_assets", "asset_id", assetId, allowed, patch);
+    // An unconditional write raises the revision too, so a conditional write
+    // that read the row before it is refused.
+    this.run("UPDATE meta_assets SET revision = COALESCE(revision, 0) + 1 WHERE asset_id = ?", assetId);
     return this.getAssetById(assetId);
   }
 
@@ -1922,6 +1945,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       source_type: String(r.source_type),
       source_ref: r.source_ref != null ? String(r.source_ref) : null,
       version: Number(r.version ?? 1),
+      revision: Number(r.revision ?? 0),
       visibility: String(r.visibility) as AssetEntity["visibility"],
       status: String(r.status) as AssetEntity["status"],
       confidence: r.confidence != null ? Number(r.confidence) : null,

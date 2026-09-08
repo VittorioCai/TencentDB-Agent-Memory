@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SqliteMetadataStore } from "../store/sqlite-adapter.js";
 import { MetadataService } from "./metadata-service.js";
 import { decideAsset, mergeGateIntoMetadata, collapseByCall, effectiveStatus, activeReview, expireReviews, authorAssessmentOf, GATE_RULES_VERSION } from "./asset-gate.js";
 import type { HumanReviewRecord } from "../types.js";
-import type { AssetOutcomeEntity, AssetEntity } from "../types.js";
+import type { AssetOutcomeEntity, AssetEntity, GateDecision } from "../types.js";
 import type { V3AuthContext } from "../router/auth.js";
 
 /**
@@ -240,19 +240,43 @@ describe("effectiveStatus and the review in force", () => {
   const rev = (over: Partial<HumanReviewRecord>): HumanReviewRecord => ({ id: "rev-1", decision: "admit", status: "approved", by: "usr-r", at: "2026-09-08T00:00:00Z", note: null, asset_version: 2, content_hash: "h2", ...over });
   const rule = (kind: "admit" | "reject" | "pending") => decideAsset({ asset, outcomes: kind === "admit" ? [outcome({})] : kind === "reject" ? [outcome({ state: "corrected", corrected_reason: "wrong" })] : [], authorOutcomes: [], now: T0 });
 
-  it("precedence: a human reject; a correction that ARRIVED AFTER a human admit; a human admit over corrections it saw; the rule's admit; else candidate", () => {
+  it("precedence: a human reject; an effective reject the admit did not name; a human admit that names every correction; the rule's admit; else candidate", () => {
     expect(effectiveStatus(rule("admit"), rev({ decision: "reject", status: "failed" }), T0)).toMatchObject({ status: "failed", source: "review", review_id: "rev-1" });
-    // The correction is dated 2026-09-06T10:00Z (the fixture); the admit at 2026-09-08 came after it: the reviewer saw it and overruled it.
-    const overruled = effectiveStatus(rule("reject"), rev({}), T0);
+    // An admit dated after the correction does NOT lift the reject on its
+    // own (2026-09-08d): being on file is no record that the reviewer read
+    // it, and the row may have been recorded after the event it describes.
+    const rejected = rule("reject");
+    const bare = effectiveStatus(rejected, rev({}), T0);
+    expect(bare).toMatchObject({ status: "failed", source: "rule", review_id: "rev-1" });
+    expect(bare.reason).toMatch(/did not name 1 corrected outcome/);
+    // Naming it, with a reason, is what overrules it.
+    const ids = rejected.reject_evidence_ids ?? [];
+    expect(ids.length).toBe(1);
+    const overruled = effectiveStatus(rejected, rev({ overrode: [{ outcome_id: ids[0], reason: "the probe used the wrong port; verified by hand" }] }), T0);
     expect(overruled).toMatchObject({ status: "approved", source: "review", review_id: "rev-1" });
-    expect(overruled.reason).toMatch(/already on file .* the reviewer overruled them/);
-    // An admit made before the correction arrived is outranked by it.
-    const outranked = effectiveStatus(rule("reject"), rev({ at: "2026-09-05T00:00:00Z" }), T0);
-    expect(outranked).toMatchObject({ status: "failed", source: "rule", review_id: "rev-1" });
-    expect(outranked.reason).toMatch(/arrived after the human admit/);
+    expect(overruled.reason).toMatch(/overruling 1 corrected outcome\(s\) named in the review/);
+    // Naming a different row does not: the live correction is still unhandled.
+    const wrongId = effectiveStatus(rejected, rev({ overrode: [{ outcome_id: "some-other-row", reason: "x" }] }), T0);
+    expect(wrongId).toMatchObject({ status: "failed", source: "rule" });
     expect(effectiveStatus(rule("pending"), rev({}), T0)).toMatchObject({ status: "approved", source: "review" });
     expect(effectiveStatus(rule("admit"), null, T0)).toMatchObject({ status: "approved", source: "rule", review_id: null });
     expect(effectiveStatus(rule("pending"), null, T0)).toMatchObject({ status: "candidate", source: "rule" });
+  });
+
+  it("a decision written before the ids existed names no evidence: an admit cannot lift its reject", () => {
+    const legacy = { ...rule("reject"), reject_evidence_ids: undefined } as unknown as GateDecision;
+    const e = effectiveStatus(legacy, rev({ overrode: [{ outcome_id: "anything", reason: "x" }] }), T0);
+    expect(e).toMatchObject({ status: "failed", source: "rule" });
+    expect(e.reason).toMatch(/the decision on file records none/);
+  });
+
+  it("a correction whose event predates the admit but reached the registry after it is not evidence the reviewer could have seen", () => {
+    // occurred 08:00, recorded 10:00, admit at 09:00 — the old rule read
+    // occurred_at and called this one "already on file".
+    const late = decideAsset({ asset, outcomes: [outcome({ state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-07T08:00:00.000Z", created_at: "2026-09-07T10:00:00.000Z" })], authorOutcomes: [], now: T0 });
+    expect(late.reject_evidence_latest_at).toBe("2026-09-07T10:00:00.000Z"); // recorded, not occurred
+    const e = effectiveStatus(late, rev({ at: "2026-09-07T09:00:00.000Z" }), T0);
+    expect(e).toMatchObject({ status: "failed", source: "rule" });
   });
 
   it("a review is in force only for the asset's current version and content; expired ones never are", () => {
@@ -295,7 +319,7 @@ const trustedBody = (assetId: string, consumer: string, over: Record<string, unk
 });
 const gateOfAsset = (a: AssetEntity): Record<string, unknown> => { try { return (JSON.parse(a.metadata_json || "{}").gate ?? {}) as Record<string, unknown>; } catch { return {}; } };
 /** A review request body naming what the reviewer read. */
-const seen = (a: { version: number; content_hash?: string | null }) => ({ expected_version: a.version, expected_content_hash: a.content_hash ?? null });
+const seen = (a: { version: number; content_hash?: string | null; revision?: number }) => ({ expected_version: a.version, expected_content_hash: a.content_hash ?? null, expected_revision: a.revision ?? 0 });
 
 describe("the gate on the asset record", () => {
   let store: SqliteMetadataStore;
@@ -369,10 +393,31 @@ describe("the gate on the asset record", () => {
     expect(await visibleTo(a, "manage")).toEqual(["skl-1", "skl-draft", "skl-ok"]);
     expect(await svc.checkAssetPermission({ user_id: a, asset_id: "skl-1", action: "read", purpose: "use" })).toEqual({ allowed: false, reason: "not_admitted:candidate" });
     expect((await svc.checkAssetPermission({ user_id: a, asset_id: "skl-ok", action: "read", purpose: "use" })).allowed).toBe(true);
-    const reads = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-1", "skl-ok", "skl-unregistered"], purpose: "use" });
+    // A read on the model's path says which row it is about to serve; the
+    // registry answers about that row (2026-09-08d).
+    const ok = (await store.getAssetById("skl-ok"))!;
+    const served = { "skl-ok": { version: ok.version, content_hash: ok.content_hash ?? null } };
+    const reads = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-1", "skl-ok", "skl-unregistered"], purpose: "use", served });
     expect(reads.get("skl-1")?.allowed).toBe(false);
     expect(reads.get("skl-ok")?.allowed).toBe(true);
     expect(reads.get("skl-unregistered")).toEqual({ allowed: false, reason: "unregistered" });
+    // A read that cannot say which version it is serving is refused, not waved through.
+    const blind = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-ok"], purpose: "use" });
+    expect(blind.get("skl-ok")).toEqual({ allowed: false, reason: "unbound_read:the served version is not known" });
+  });
+
+  it("an older version whose body hashes the same as the approved one is still a different row: the read is refused and the registry is not rolled back", async () => {
+    await candidateSkill("skl-roll", a, "team", "approved");
+    await store.updateAsset("skl-roll", { version: 3, content_hash: "same-body" });
+    const now = (await store.getAssetById("skl-roll"))!;
+    expect(now.version).toBe(3);
+    // v2 carries the same body hash (only a resource file differed): equality, not "not newer".
+    const back = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-roll"], purpose: "use", served: { "skl-roll": { version: 2, content_hash: "same-body" } } });
+    expect(back.get("skl-roll")).toEqual({ allowed: false, reason: "version_mismatch:registry=3,served=2" });
+    expect((await store.getAssetById("skl-roll"))?.version).toBe(3); // no rollback
+    // The registry holds a hash; a served row that carries none cannot claim it.
+    const noHash = await svc.decideAssetReads({ user_id: b, asset_ids: ["skl-roll"], purpose: "use", served: { "skl-roll": { version: 3, content_hash: null } } });
+    expect(noHash.get("skl-roll")?.reason).toMatch(/^unbound_read:the registry holds a content hash/);
   });
 
   it("a trusted cross-person validated outcome admits the asset, and the plain member can now read it", async () => {
@@ -634,7 +679,7 @@ describe("the gate on the asset record", () => {
     const g2 = await svc.getAssetGateForCaller("skl-h", ctx(a));
     expect(g2.status).toBe("failed");
     expect(g2.effective?.source).toBe("rule");
-    expect(g2.effective?.reason).toMatch(/arrived after the human admit/);
+    expect(g2.effective?.reason).toMatch(/did not name 1 corrected outcome/);
     expect(g2.review?.id).toBe(second.review.id);
   });
 
@@ -728,13 +773,48 @@ describe("the gate on the asset record", () => {
     const asRead = (await store.getAssetById("skl-race"))!;
     const first = await svc.reviewAssetGateForCaller("skl-race", ctx(r), { decision: "admit", note: "first", ...seen(asRead) });
     expect(first.asset.status).toBe("approved");
-    // The admin decided from the same read, but the row moved (updated_at changed): refused, history intact.
-    await expect(svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", note: "second", ...seen(asRead) })).resolves.toBeDefined();
-    // (same version and hash, so expected_version/hash pass; the conditional write on updated_at is exercised below)
-    const fresh = (await store.getAssetById("skl-race"))!;
-    await store.updateAsset("skl-race", { description: "moved" });
-    await expect(svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", ...seen(fresh) })).resolves.toBeDefined();
-    expect((await svc.getAssetGateForCaller("skl-race", ctx(a))).reviews.length).toBeGreaterThanOrEqual(2);
+    // The admin decided from the same read. Version and hash are unchanged,
+    // so those preconditions pass — the row's revision is what refuses it.
+    await expect(svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", note: "second", ...seen(asRead) })).rejects.toMatchObject({ code: "stale_review" });
+    const g = await svc.getAssetGateForCaller("skl-race", ctx(a));
+    expect(g.reviews.map((x) => [x.decision, x.note])).toEqual([["admit", "first"]]); // the first review is still there, alone
+    expect(g.status).toBe("approved");
+    // Re-read, then decide: that one lands.
+    const again = await svc.reviewAssetGateForCaller("skl-race", ctx(admin), { decision: "reject", note: "after re-reading", ...seen((await store.getAssetById("skl-race"))!) });
+    expect(again.asset.status).toBe("failed");
+    expect((await svc.getAssetGateForCaller("skl-race", ctx(a))).reviews.length).toBe(2);
+  });
+
+  it("two writes inside the same millisecond: the second is still refused — updated_at cannot tell them apart, the revision can", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-09-08T00:00:00.000Z"));
+      await candidateSkill("skl-ms", a, "team");
+      const asRead = (await store.getAssetById("skl-ms"))!;
+      const first = await svc.reviewAssetGateForCaller("skl-ms", ctx(r), { decision: "admit", note: "first", ...seen(asRead) });
+      expect(first.asset.status).toBe("approved");
+      // The clock has not moved: version, content_hash and updated_at are all
+      // exactly what the second reviewer read. Only the revision differs.
+      const after = (await store.getAssetById("skl-ms"))!;
+      expect(after.updated_at).toBe(asRead.updated_at);
+      expect(after.version).toBe(asRead.version);
+      expect(after.revision).toBe((asRead.revision ?? 0) + 1);
+      await expect(svc.reviewAssetGateForCaller("skl-ms", ctx(admin), { decision: "reject", note: "second", ...seen(asRead) })).rejects.toMatchObject({ code: "stale_review" });
+      const g = await svc.getAssetGateForCaller("skl-ms", ctx(a));
+      expect(g.reviews.map((x) => x.note)).toEqual(["first"]);
+      // Directly at the store: the same expectation cannot be used twice.
+      const row = (await store.getAssetById("skl-ms"))!;
+      expect(await store.updateAssetIf("skl-ms", { description: "one" }, { version: row.version, content_hash: row.content_hash ?? null, updated_at: row.updated_at, revision: row.revision ?? 0 })).not.toBeNull();
+      expect(await store.updateAssetIf("skl-ms", { description: "two" }, { version: row.version, content_hash: row.content_hash ?? null, updated_at: row.updated_at, revision: row.revision ?? 0 })).toBeNull();
+      expect((await store.getAssetById("skl-ms"))?.description).toBe("one");
+      // An unconditional write raises it too, so a conditional write from before it is refused.
+      const before = (await store.getAssetById("skl-ms"))!;
+      await store.updateAsset("skl-ms", { description: "by another path" });
+      expect(await store.updateAssetIf("skl-ms", { description: "three" }, { version: before.version, content_hash: before.content_hash ?? null, updated_at: before.updated_at, revision: before.revision ?? 0 })).toBeNull();
+      expect((await store.getAssetById("skl-ms"))?.description).toBe("by another path");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("a reviewer retracts a mistaken correction: it stays on file, the gate stops reading it, the asset is re-decided", async () => {
@@ -752,17 +832,29 @@ describe("the gate on the asset record", () => {
     await expect(svc.retractAssetOutcomeForCaller(bad.outcome.id, ctx(r), { reason: "again" })).rejects.toMatchObject({ code: "invalid_state" });
   });
 
-  it("a correction the reviewer already saw does not outrank their admit; one that arrives later does", async () => {
+  it("an admit lifts a rule reject only for the corrections it names, with a reason; a later one keeps the asset failed", async () => {
     await candidateSkill("skl-seen", a, "team");
-    await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-05T00:00:00.000Z" });
+    const bad = await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong", occurred_at: "2026-09-05T00:00:00.000Z" });
     expect((await store.getAssetById("skl-seen"))?.status).toBe("failed");
-    const rev = await svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", note: "the correction was a bad probe; verified by hand", ...seen((await store.getAssetById("skl-seen"))!) });
+    // A bare admit — the correction is on file, but nothing records that the
+    // reviewer read it. Accepted as a review, and the reject stands.
+    const bare = await svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", note: "looks fine to me", ...seen((await store.getAssetById("skl-seen"))!) });
+    expect(bare.asset.status).toBe("failed");
+    expect(bare.effective.reason).toMatch(/did not name 1 corrected outcome/);
+    // Naming a row that is not one of the live corrections is a mistake, not an override.
+    await expect(svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", overrode: [{ outcome_id: "o-nonexistent", reason: "x" }], ...seen((await store.getAssetById("skl-seen"))!) }))
+      .rejects.toMatchObject({ code: "invalid_request" });
+    // Naming it without a reason is refused too.
+    await expect(svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", overrode: [{ outcome_id: bad.outcome.id, reason: "  " }], ...seen((await store.getAssetById("skl-seen"))!) }))
+      .rejects.toMatchObject({ code: "invalid_request" });
+    const rev = await svc.reviewAssetGateForCaller("skl-seen", ctx(r), { decision: "admit", note: "verified by hand", overrode: [{ outcome_id: bad.outcome.id, reason: "the probe used the wrong port" }], ...seen((await store.getAssetById("skl-seen"))!) });
     expect(rev.asset.status).toBe("approved");
-    expect(rev.effective.reason).toMatch(/overruled/);
-    await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong" }); // new evidence, after the admit
+    expect(rev.effective.reason).toMatch(/overruling 1 corrected outcome\(s\) named in the review/);
+    expect(rev.review.overrode).toEqual([{ outcome_id: bad.outcome.id, reason: "the probe used the wrong port" }]);
+    await trusted("skl-seen", b, { state: "corrected", corrected_reason: "wrong" }); // new evidence, not named by any review
     const g = await svc.getAssetGateForCaller("skl-seen", ctx(a));
     expect(g.status).toBe("failed");
-    expect(g.effective?.reason).toMatch(/arrived after the human admit/);
+    expect(g.effective?.reason).toMatch(/did not name 1 corrected outcome/);
   });
 
   it("a trusted row must name the content when the asset carries a hash; a later resubmission adds the hash in place", async () => {

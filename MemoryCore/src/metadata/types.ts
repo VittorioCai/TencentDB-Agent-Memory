@@ -179,6 +179,15 @@ export interface AssetEntity {
   source_type: string;
   source_ref?: string | null;
   version: number;
+  /**
+   * A counter the store raises on every write to the row (2026-09-08d). It
+   * is the row's identity in time: `updated_at` is a millisecond clock and
+   * two writes in the same millisecond leave version, hash and time all
+   * unchanged, so a stale write would land. A caller that read the row at
+   * revision N writes conditional on N and is refused if anything moved.
+   * Absent on rows written before the column existed; read it as 0.
+   */
+  revision?: number;
   visibility: AssetVisibility;
   status: AssetStatus;
   confidence?: number | null;
@@ -424,8 +433,10 @@ export interface CreateAssetInput {
 export interface UpdateAssetExpect {
   version?: number;
   content_hash?: string | null;
-  /** The row's updated_at as read; any later write changes it. */
+  /** The row's updated_at as read; a write in the same millisecond does not change it, so this alone is not enough. */
   updated_at?: string;
+  /** The row's revision as read. Every write raises it, so this one is decisive. */
+  revision?: number;
 }
 
 export interface FixedAssetBindingInput {
@@ -667,7 +678,14 @@ export interface GateDecision {
     };
   };
   review_priority: ReviewPriority | null;
-  /** The latest corrected(wrong/stale) outcome the reject rests on; a human admit made after it is the reviewer's call. */
+  /**
+   * The corrected(wrong/stale) outcomes this reject rests on. A human admit
+   * lifts the reject only by naming every one of them (`review.overrode`).
+   * The time is the time the row was RECORDED, not the time the event it
+   * describes happened: a failure that happened before an admit but reached
+   * the registry after it is evidence the reviewer could not have seen.
+   */
+  reject_evidence_ids?: string[];
   reject_evidence_latest_at?: string | null;
   /**
    * When set, only outcomes with occurred_at <= evidence_as_of were read. An
@@ -692,6 +710,15 @@ export interface HumanReviewRecord {
   note: string | null;
   asset_version: number;
   content_hash: string | null;
+  /**
+   * The corrected outcomes this admit overrules, each named with the
+   * reviewer's reason (2026-09-08d). A human admit lifts a rule reject only
+   * for the rows it names: nothing is inferred from the fact that a
+   * correction was already on file when the reviewer clicked, because the
+   * record does not say they read it. A correction not named here keeps the
+   * asset rejected, and so does one that arrives afterwards.
+   */
+  overrode?: Array<{ outcome_id: string; reason: string }> | null;
   /** Set when the decision stopped applying, with the reason (a new version, a later review). */
   expired_at?: string | null;
   expired_reason?: string | null;

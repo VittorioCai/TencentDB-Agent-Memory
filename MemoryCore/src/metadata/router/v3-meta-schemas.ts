@@ -518,7 +518,13 @@ export const assetGateReviewSchema = z.object({
   asset_id: nonEmpty,
   decision: z.enum(["admit", "reject"]),
   note: z.string().max(2000).nullable().optional(),
-  /** The version and content the reviewer read; the decision is refused if the asset moved on. */
+  /** The version, content and row revision the reviewer read; the decision is refused if the asset moved on. */
   expected_version: z.number().int().min(1),
   expected_content_hash: nonEmpty.nullable().optional(),
+  expected_revision: z.number().int().min(0),
+  /**
+   * The corrected outcomes this admit overrules, each with the reviewer's
+   * reason. An admit that names none does not lift a rule reject.
+   */
+  overrode: z.array(z.object({ outcome_id: nonEmpty, reason: z.string().min(1).max(2000) })).max(50).optional(),
 });

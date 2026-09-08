@@ -1,6 +1,6 @@
 # Author assessment — usr-4u07qc2kuj — reading team skills through the skill bridge by name across agents
 
-assessed 2026-09-07T20:01:59.703Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack fc1188c0f9c3 (179/299 records shown; classes {"user_instruction":45,"assistant_report":44,"derived_memory":31,"proxy_observed":178,"authored_text":1})
+assessed 2026-09-07T20:01:59.703Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack ac465d6731c2 (179/299 records shown; classes {"user_instruction":45,"assistant_report":44,"derived_memory":31,"proxy_observed":178,"authored_text":1})
 
 **Competence: unknown** — no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive) (model said unknown)
 **Asset claim check: silent** (model said supports)
@@ -9,7 +9,7 @@ Derived summary: competence unknown: no business-level result; transport: 1 answ
 
 Model summary (as said): The agent consistently exercised the HTTP skill bridge, including get-by-name on its own skill and /skill/get by skill_id after team searches, and the skill text it owns explicitly documents that get-by-name is own-agent scoped and returns 40401 for another agent's skill, recommending search + get-by-skill_id. However, at the cutoff there is no harness-verified application-level outcome confirming the 40401 behavior in an actual response body; all recorded bridge responses are transport-level 200s (or unpaired 403s). Competence is therefore not determinable from verified results, though the operational pattern and authored instructions support the asset's stated approach.
 
-Chain: producer usr-4u07qc2kuj / agt-5e0y4l8a7a (operator unknown); sessions 7; operations 40; results 0. Breaks: producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown | results: no trusted outcome is recorded on this asset at or before the cutoff
+Chain: producer usr-4u07qc2kuj / agt-5e0y4l8a7a (operator unknown); sessions 8; operations 40; results 0. Breaks: producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown | results: no trusted outcome is recorded on this asset at or before the cutoff
 
 ## Surviving claims (4)
 - [claim · execution_result · success] The person's search command for 'convention address reach skill bridge' was answered by the bridge endpoint with HTTP status 200 (transport-level success; application body is not shown).

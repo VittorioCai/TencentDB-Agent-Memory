@@ -225,6 +225,84 @@ the asset carries and never fills it in.
 The outcome judge that feeds this lives beside the other judges:
 `evaluation/attribution/judge-outcome.mjs`.
 
+## Phase 4 review (2026-09-08d): what a review may overrule, and what a write may overwrite
+
+Six findings from the third review round, each answered with the
+counter-example as a test.
+
+**A row's revision, not its clock.** A conditional write conditioned on
+`version`, `content_hash` and `updated_at`. `updated_at` is a millisecond
+timestamp: two writes inside the same millisecond leave all three
+unchanged, so a second decision made from the same read landed and the
+first review vanished from the history. `meta_assets` now carries
+`revision`, raised by every write (conditional or not) and used as the
+decisive precondition; `asset/gate/review` requires `expected_revision`
+alongside the version and hash, so the staleness that is checked is the
+*reviewer's* read, not the handler's. Pinned by a test that freezes the
+clock: same version, same hash, same `updated_at`, and the second write is
+still refused.
+
+**A human admit overrules only what it names.** The previous rule read the
+timestamps — a correction dated before the admit was treated as one the
+reviewer had seen and overruled. Two things were wrong with it. The time
+compared was `occurred_at`, when the event happened, not when the row
+reached the registry: a failure that occurred at 08:00, was admitted over
+at 09:00 and only recorded at 10:00 came out approved, with a reason
+claiming the reviewer had seen it. And even with the right time, being on
+file is no record that anyone read it. Now: a rule reject stands unless
+the admit names every corrected outcome keeping it rejected, each with a
+reason (`review.overrode`, checked against a *fresh* evaluation at review
+time, not the decision on file). The decision carries
+`reject_evidence_ids`; `reject_evidence_latest_at` is the recorded time. A
+decision written before the field existed names nothing, so an admit
+cannot lift it. The Panel lists the corrections and asks for a reason per
+row before it will send the override.
+
+**Two read bypasses.** The served row had to be *not newer* than the
+registry's; an older version whose body hashes the same (a resource file
+changed, the body did not) passed, and so did a read that carried no
+version at all. It is now equality — same version, same content hash — and
+a read that cannot say which row it is serving is refused
+(`unbound_read`). The registry still follows a version forward and never
+rolls back to an older one being served. Separately, `skill/versions`
+re-read the raw `x-tdai-read-purpose` header and the presence of a user
+key when deciding how much history to show, undoing the admission filter's
+own downgrade; the filter now returns the purpose it actually ran under
+and every later step reads that.
+
+**The author pipeline reads what the gate reads.** The evidence pack
+filtered on `trusted` alone, and outcome records carried neither the
+content hash nor the retraction — so a retracted, hash-mismatched
+correction could still produce `low + contradicts/strong`. The pack now
+applies both of the gate's filters and carries version, content hash,
+retraction and recorded time on every outcome; the checker binds the
+identity relation to version **and** content. Per call, the ledger takes
+the row the call *finally* came to, not the first one seen: a call
+validated and then corrected is one corrected call.
+
+**Transport is not a business result.** A proxy 2xx could carry
+`supports (strong)`. It says the endpoint answered — nothing about whether
+the read succeeded or the task was done — so transport evidence now
+supports or contradicts at most weakly; `strong` needs a harness-verified
+result.
+
+**Pairing must be unique from both sides.** Checking only that a result had
+one candidate command let two results claim one command, the second
+overwriting the first, and both were reported as paired. Recomputed on the
+live evidence, 16 of B's 35 pairs were of that kind: B now reads 19 paired
+/ 34 ambiguous.
+
+Seen live after the change: `expected_revision` required and a wrong one
+refused (`stale_review`); a bare admit on the rejected asset leaving it
+`failed` and naming the two corrections, an admit naming both with reasons
+approving it, then a hand reject restoring it (the three live reviews were
+removed afterwards and the decision re-derived from the evidence alone —
+`reject`, source `rule`, no human review on file); a model read of v1 of an
+approved v2 skill refused with `version_mismatch:registry=2,served=1` with
+no rollback; `skill/versions` returning `[2]` on the model path, `[2]` for
+a caller sending `manage` with a key that is not the user's, and `[2, 1]`
+for the admin's own key.
+
 ## The rules
 
 ```

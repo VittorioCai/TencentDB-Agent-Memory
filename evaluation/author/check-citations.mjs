@@ -177,7 +177,7 @@ export function recordedOutcome(rec) {
  * The fact check for one claim: can the cited record carry a claim of this
  * type, and does the claim agree with what the record says?
  */
-export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = null, assetVersion = null) {
+export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = null, assetVersion = null, assetContentHash = null) {
   const type = normalizeType(claim?.type);
   if (!CLAIM_TYPES.has(type)) return { ok: false, reason: `claim type "${claim?.type}" not in the vocabulary`, type };
   const rec = recordOf(pack, foundIn);
@@ -203,15 +203,28 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   if (assetId && cls === "harness_verified" && rec.meta?.asset_id === assetId && type === "execution_result") {
     const st = rec.meta?.state; const why = rec.meta?.corrected_reason;
     const byRecord = st === "validated" ? "supports" : st === "corrected" && (why === "wrong" || why === "stale") ? "contradicts" : null;
-    const sameVersion = assetVersion == null || rec.meta?.asset_version == null || rec.meta.asset_version === assetVersion;
-    if (byRecord && sameVersion) {
+    // The gate's own binding, applied here too (2026-09-08d): version AND
+    // content. A row with no version, or none of the hash while the asset
+    // carries one, is history that cannot speak for the current text.
+    const bound = !assetVersion ? "current"
+      : rec.meta?.asset_version == null ? "unbound"
+      : rec.meta.asset_version !== assetVersion ? "other_version"
+      : !assetContentHash ? "current"
+      : !rec.meta?.content_hash ? "unbound"
+      : rec.meta.content_hash !== assetContentHash ? "other_version"
+      : "current";
+    if (byRecord && bound === "current") {
       if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
       return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };
     }
-    if (byRecord && !sameVersion) {
-      // An outcome on an earlier version of this asset is about that text,
-      // not the one under assessment: the result stands, the relation does not.
-      return { ok: true, type, outcome, relation: "silent", strength: null, note: `${foundIn} is about version ${rec.meta.asset_version} of this asset, not version ${assetVersion}; it neither supports nor contradicts the current text` };
+    if (byRecord) {
+      // An outcome on another version or another content of this asset is
+      // about that text, not the one under assessment: the result stands,
+      // the relation does not.
+      const note = bound === "other_version"
+        ? `${foundIn} is about version ${rec.meta.asset_version}${rec.meta.content_hash ? ` (${String(rec.meta.content_hash).slice(0, 10)})` : ""} of this asset, not version ${assetVersion}${assetContentHash ? ` (${String(assetContentHash).slice(0, 10)})` : ""}; it neither supports nor contradicts the current text`
+        : `${foundIn} carries no ${rec.meta?.asset_version == null ? "version" : "content hash"}, so it cannot claim the text under assessment`;
+      return { ok: true, type, outcome, relation: "silent", strength: null, note };
     }
   }
   let strength = null;
@@ -227,7 +240,15 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
       const hit = assetTokens.find((t) => names(q, fold(t)) || names(hay, fold(t)));
       if (!hit) return { ok: false, reason: `claims to ${relation === "supports" ? "support" : "contradict"} the asset but neither the quote nor ${foundIn} names the asset's token (${assetTokens.join(", ")})`, type };
     }
-    strength = type === "execution_result" ? "strong" : "weak";
+    // Strong means a business result: the harness watched the asset be used
+    // and recorded what came of it. A proxy 2xx says the endpoint answered
+    // and nothing about whether the read succeeded or the task was done, so
+    // transport evidence supports or contradicts at most weakly
+    // (2026-09-08d) — it can never carry a claim on its own.
+    strength = type === "execution_result" && cls === "harness_verified" ? "strong" : "weak";
+    if (type === "execution_result" && cls !== "harness_verified") {
+      return { ok: true, type, outcome, relation, strength, note: `${foundIn} is ${cls} — a transport observation; it can show the endpoint answered, not that the operation succeeded, so the relation is weak` };
+    }
   }
   return { ok: true, type, outcome, relation, strength };
 }
@@ -273,6 +294,7 @@ export function checkAssessment(raw, pack, opts = {}) {
     : [];
   const assetId = opts.assetId ?? null;
   const assetVersion = opts.assetVersion ?? null;
+  const assetContentHash = opts.assetContentHash ?? null;
   const authorId = opts.authorId ?? null;
   const kept = [], dropped = [];
   for (const [group, list] of [["claim", claims], ["counter_evidence", counter], ["asset_claim_check", accAsClaim]]) {
@@ -298,12 +320,12 @@ export function checkAssessment(raw, pack, opts = {}) {
         : v.found_in_all;
       let f = null; let foundIn = null;
       for (const id of candidates) {
-        const t = verifyFact(c, pack, id, assetTokens, assetId, assetVersion);
+        const t = verifyFact(c, pack, id, assetTokens, assetId, assetVersion, assetContentHash);
         if (t.ok) { f = t; foundIn = id; break; }
         if (!f) f = t;
       }
       if (!f.ok && isExec && /intent only|needs a proxy-observed call/.test(f.reason)) {
-        const asOp = verifyFact({ ...c, type: "observed_operation", relation_to_asset: "silent" }, pack, v.found_in, assetTokens, assetId, assetVersion);
+        const asOp = verifyFact({ ...c, type: "observed_operation", relation_to_asset: "silent" }, pack, v.found_in, assetTokens, assetId, assetVersion, assetContentHash);
         if (asOp.ok) { kept.push({ ...row, type: "observed_operation", outcome: null, relation: "silent", strength: null, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class, downgraded_from: "execution_result", note: `kept as intent: ${f.reason}` }); continue; }
       }
       if (!f.ok) { dropped.push({ ...row, type: f.type, reason: f.reason }); continue; }
@@ -321,14 +343,20 @@ export function checkAssessment(raw, pack, opts = {}) {
   // Only when the author is known: a harness row is "the author's own" or
   // "others' on the author's asset" relative to that author.
   const harness = authorId ? [...pack.keys()].map((id) => ({ id, rec: recordOf(pack, id) })).filter(({ rec }) => rec.evidence_class === "harness_verified" && recordedOutcome(rec)) : [];
-  const seenCall = new Set();
-  const ledgerRows = [];
+  // One call counts once, as what it FINALLY came to (2026-09-08d): a call
+  // recorded `used`, then `validated`, then `corrected` is one corrected
+  // call, not a success beside a failure. Keeping the first row read the
+  // history backwards. Ordering is by when the outcome was recorded, and by
+  // when the event happened when that is all a row carries.
+  const byCallFinal = new Map();
+  const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
   for (const { id, rec } of harness) {
     const key = rec.meta?.call_id ? `call:${rec.meta.call_id}` : id;
-    if (seenCall.has(key)) continue;
-    seenCall.add(key);
-    ledgerRows.push({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" });
+    const prev = byCallFinal.get(key);
+    if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });
   }
+  const ledgerRows = [...byCallFinal.values()].map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" }));
+  const supersededCalls = harness.length - ledgerRows.length;
   // Cited calls carry the transport ledger; with no author known, cited
   // harness rows are read as others' results (the pack ledger did not run).
   const transport = [...byCall.values()].filter((k) => recordOf(pack, k.found_in).evidence_class !== "harness_verified").map((k) => ({ ...k, ledger: "own_transport", from: "cited" }));
@@ -360,7 +388,7 @@ export function checkAssessment(raw, pack, opts = {}) {
     competence_basis: derived.basis,
     competence_as_said: said,
     competence_downgraded: derived.competence !== said,
-    execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, harness_records: ledgerRows.length, cited_transport_calls: transport.length },
+    execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, harness_records: ledgerRows.length, superseded_by_a_later_row: supersededCalls, cited_transport_calls: transport.length },
     asset_claim_check: assetClaim,
     asset_claim_as_said: accSaid,
     claims_kept: kept,

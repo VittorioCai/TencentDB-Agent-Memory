@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-07T19:56:40.687Z",
+  "built_at": "2026-09-08T06:55:57.665Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "b",
@@ -10,12 +10,11 @@
   },
   "domain": "reading team skills through the skill bridge by name across agents",
   "keywords": [
+    "skill bridge",
     "get-by-name",
     "40401",
-    "SKILL_NOT_FOUND",
     "skill_id",
-    "search",
-    "other agent"
+    "search"
   ],
   "asset_id": "skl-lUWmwEYqsZDZ",
   "asset": {
@@ -41,6 +40,7 @@
     "source_sessions": [
       "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
       "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
+      "f3a25403-8b00-4dad-a30f-484383d82d32",
       "fbd80e17-a3e0-4332-bb31-4ea1fa5ab320",
       "e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f",
       "62a164d0-073c-41ac-87d8-a556b0d4d3a0",
@@ -331,10 +331,11 @@
     ]
   },
   "pairing": {
-    "paired": 35,
-    "ambiguous": 18,
+    "paired": 19,
+    "ambiguous": 34,
     "unpaired": 68,
-    "intents_without_result": 20
+    "intents_without_result": 20,
+    "intents_ambiguous": 18
   },
   "sources": {
     "persona": {
@@ -358,7 +359,8 @@
     "outcomes": {
       "total": 0,
       "trusted": 0,
-      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out"
+      "retracted": 0,
+      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read"
     },
     "calls": {
       "total": 438,
@@ -367,10 +369,11 @@
     }
   },
   "excluded": {
-    "after_cutoff": 754,
+    "after_cutoff": 731,
     "modified_after_cutoff": 0,
     "no_timestamp": 0,
     "untrusted_outcomes": 0,
+    "retracted_outcomes": 0,
     "persona_after_cutoff": true,
     "other_users_calls": 0,
     "skills_created_after_cutoff": 0
@@ -389,7 +392,7 @@
     "proxy_observed": 178,
     "authored_text": 1
   },
-  "sha256": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
+  "sha256": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
   "records": [
     {
       "record_id": "l0:msg-6a1ed53b743b",
@@ -1415,8 +1418,8 @@
       "at": "2026-09-05T21:48:46.091Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "f3a25403-8b00-4dad-a30f-484383d82d32",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -1463,8 +1466,8 @@
       "at": "2026-09-05T21:48:53.173Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "fbd80e17-a3e0-4332-bb31-4ea1fa5ab320",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -1535,8 +1538,8 @@
       "at": "2026-09-05T21:49:34.205Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "f3a25403-8b00-4dad-a30f-484383d82d32",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -1649,8 +1652,8 @@
       "at": "2026-09-05T22:00:29.096Z",
       "meta": {
         "role": "assistant",
-        "session_id": "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
-        "task_id": "task-5e6xp4mrrw"
+        "session_id": null,
+        "task_id": null
       }
     },
     {
@@ -1841,8 +1844,8 @@
       "at": "2026-09-05T22:01:33.047Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -2156,8 +2159,8 @@
       "at": "2026-09-05T22:34:38.639Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -2431,9 +2434,10 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "abe0633b588c1bd1",
         "request_body": "{\"command\": \"curl -sk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/files/read -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d '{\\\"skill_id\\\": \\\"skl-sZFb3KatWY6m\\\", \\\"path\\\": \\\"SKILL.md\\\", \\\"encoding\\\": \\\"utf-8\\\"}'\", \"description\": \"Read SKILL.md of endpoint-a via skill_id\"}",
-        "paired_call": "call:efeb33c418651dbf",
-        "pairing": "paired",
+        "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
+          "call:efeb33c418651dbf",
           "call:59ab2f07a3ec3328",
           "call:cbc3dfd723076487",
           "call:f916be8ce36addc4",
@@ -2477,8 +2481,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "b77bbad15a9047de",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"SKILL.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:e8282d03743488dd",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "7 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:e8282d03743488dd"
+        ]
       }
     },
     {
@@ -2535,6 +2542,7 @@
         "body_hash": "1762d2222cf0668f",
         "request_body": "{\"command\": \"for p in \\\"README.md\\\" \\\"doc.md\\\" \\\"index.md\\\" \\\"skill.md\\\" \\\"eval-bridge-endpoint-a.md\\\" \\\"main.md\\\"; do echo \\\"== $p ==\\\"; curl -sk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/files/read -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d \\\"{\\\\\\\"skill_id\\\\\\\": \\\\\\\"skl-sZFb3KatWY6m\\\\\\\", \\\\\\\"path\\\\\\\": \\\\\\\"$p\\\\\\\", \\\\\\\"encoding\\\\\\\": \\\\\\\"utf-8\\\\\\\"}\\\"; echo; done\", \"description\": \"Probe plausible file paths in en",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:59ab2f07a3ec3328",
           "call:cbc3dfd723076487",
@@ -2580,6 +2588,7 @@
         "body_hash": "e7ffa308c2a8fc5f",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"README.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2620,6 +2629,7 @@
         "body_hash": "79b4ac2a4cbcf0e9",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"doc.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2642,6 +2652,7 @@
         "body_hash": "d46347957eb248d1",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"index.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2664,6 +2675,7 @@
         "body_hash": "2b2ae34ed7e62341",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"skill.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2686,6 +2698,7 @@
         "body_hash": "4572481125d05bea",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"eval-bridge-endpoint-a.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2708,6 +2721,7 @@
         "body_hash": "0560827b7b47920e",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"main.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:e8282d03743488dd",
           "call:5bf9dfdecfed90eb"
@@ -2729,8 +2743,15 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "4f6ea96fce97a0ec",
         "request_body": "{\"command\": \"for q in \\\"8096 bridge\\\" \\\"127.0.0.1 skill\\\" \\\"base url http skill bridge\\\" \\\"如何访问 skill bridge 用什么地址\\\" \\\"endpoint convention address record\\\"; do echo \\\"== $q ==\\\"; curl -sk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d \\\"{\\\\\\\"query\\\\\\\": \\\\\\\"$q\\\\\\\"}\\\"; echo; done\", \"description\": \"Search for skills with address details\"}",
-        "paired_call": "call:da0784005baae321",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_calls": [
+          "call:a6b60c8782a51e37",
+          "call:1e12ed3a58e33754",
+          "call:b7cc27e80a4d8a81",
+          "call:f1932e568379b4aa",
+          "call:da0784005baae321"
+        ]
       }
     },
     {
@@ -2748,8 +2769,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "d04873255f13e2e4",
         "request_body": "{\"query\":\"8096 bridge\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:2cfb3793485b09ba",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:2cfb3793485b09ba"
+        ]
       }
     },
     {
@@ -2767,8 +2791,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "165f487ce4ced18b",
         "request_body": "{\"query\":\"127.0.0.1 skill\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:2cfb3793485b09ba",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:2cfb3793485b09ba"
+        ]
       }
     },
     {
@@ -2786,8 +2813,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "85884214fba9237c",
         "request_body": "{\"query\":\"base url http skill bridge\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:2cfb3793485b09ba",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:2cfb3793485b09ba"
+        ]
       }
     },
     {
@@ -2805,8 +2835,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "d0afa4719c1f8206",
         "request_body": "{\"query\":\"如何访问 skill bridge 用什么地址\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:2cfb3793485b09ba",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:2cfb3793485b09ba"
+        ]
       }
     },
     {
@@ -2824,8 +2857,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "db425ae25aac534f",
         "request_body": "{\"query\":\"endpoint convention address record\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:2cfb3793485b09ba",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:2cfb3793485b09ba"
+        ]
       }
     },
     {
@@ -3941,8 +3977,15 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "c215bea11a32a0cf",
         "request_body": "{\"command\": \"for q in \\\"Required headers x-tdai-service-id x-conversation-id\\\" \\\"When to use fetch team skills HTTP\\\" \\\"authoritative supersedes correct current\\\" \\\"search request body JSON skill_name\\\" \\\"deprecated obsolete wrong do not use\\\"; do echo \\\"== $q ==\\\"; curl -sk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d \\\"{\\\\\\\"query\\\\\\\": \\\\\\\"$q\\\\\\\"}\\\"; echo; done\",",
-        "paired_call": "call:ad86b4ad17e986b4",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_calls": [
+          "call:913ff3b4f361883f",
+          "call:4fd4ead6a8a322c0",
+          "call:c0fe269af83138c8",
+          "call:e9b2c0c42c2ba996",
+          "call:ad86b4ad17e986b4"
+        ]
       }
     },
     {
@@ -3960,8 +4003,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "4dea429d1a0108bf",
         "request_body": "{\"query\":\"Required headers x-tdai-service-id x-conversation-id\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:4dd3046104707eea",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:4dd3046104707eea"
+        ]
       }
     },
     {
@@ -3979,8 +4025,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "7d3ccfda1d9d8998",
         "request_body": "{\"query\":\"When to use fetch team skills HTTP\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:4dd3046104707eea",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:4dd3046104707eea"
+        ]
       }
     },
     {
@@ -3998,8 +4047,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "3e42533a8faf54f9",
         "request_body": "{\"query\":\"authoritative supersedes correct current\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:4dd3046104707eea",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:4dd3046104707eea"
+        ]
       }
     },
     {
@@ -4017,8 +4069,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "42a6b53662dafc00",
         "request_body": "{\"query\":\"search request body JSON skill_name\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:4dd3046104707eea",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:4dd3046104707eea"
+        ]
       }
     },
     {
@@ -4036,8 +4091,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "aec12baa52356367",
         "request_body": "{\"query\":\"deprecated obsolete wrong do not use\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
-        "paired_intent": "call:4dd3046104707eea",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "5 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:4dd3046104707eea"
+        ]
       }
     },
     {
@@ -4056,6 +4114,7 @@
         "body_hash": "fda398f487a1f57e",
         "request_body": "{\"command\": \"echo \\\"=== PROBE A: http://10.244.7.19:8096/skill-bridge/v3/skill/search ===\\\"; curl -sk -w '\\\\n[HTTP %{http_code}] [total %{time_total}s]\\\\n' --max-time 20 -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d '{\\\"query\\\": \\\"team skill bridge convention endpoint\\\"}'; echo \\\"exit=$?\\\"\", \"description\": \"Probe skill-a documented address 10.244.7.19:8096\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:8b0ecdea8c0db34e"
         ]
@@ -4077,6 +4136,7 @@
         "body_hash": "d7b6119bbfe7e92a",
         "request_body": "{\"command\": \"echo \\\"=== PROBE B: http://127.0.0.1:47318/skill-bridge/v3/skill/search ===\\\"; curl -sk -w '\\\\n[HTTP %{http_code}] [total %{time_total}s]\\\\n' --max-time 20 -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f' -d '{\\\"query\\\": \\\"team skill bridge convention endpoint\\\"}'; echo \\\"exit=$?\\\"\", \"description\": \"Probe skill-b documented address 127.0.0.1:47318\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:8b0ecdea8c0db34e"
         ]
@@ -4098,6 +4158,7 @@
         "body_hash": "016dbcab87841d70",
         "request_body": "{\"query\":\"team skill bridge convention endpoint\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:68610ecd291c72a6",
           "call:c46a4e2a9d952df7"
@@ -4557,9 +4618,10 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "734c110224715931",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_name\\\": \\\"eval-bridge-endpoint-a\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Read eval-bridge-endpoint-a skill content\"}",
-        "paired_call": "call:f68148ae09c21180",
-        "pairing": "paired",
+        "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
+          "call:f68148ae09c21180",
           "call:af0126bc8acebadc"
         ]
       }
@@ -4598,8 +4660,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "3f18169a67726d8d",
         "request_body": "{\"skill_name\":\"eval-bridge-endpoint-a\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:72482f15da036b02",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "2 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:72482f15da036b02"
+        ]
       }
     },
     {
@@ -4636,9 +4701,10 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "bd158bf74ccaab2c",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/files/read -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_id\\\": \\\"skl-sZFb3KatWY6m\\\", \\\"path\\\": \\\"SKILL.md\\\", \\\"encoding\\\": \\\"utf-8\\\"}'\", \"description\": \"Read SKILL.md of eval-bridge-endpoint-a by skill_id\"}",
-        "paired_call": "call:f1c5171cf27f0fa7",
-        "pairing": "paired",
+        "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
+          "call:f1c5171cf27f0fa7",
           "call:e7809ced92fbdf39",
           "call:71bb34f33954be7d",
           "call:b4913430761f9011",
@@ -4682,8 +4748,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "b77bbad15a9047de",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"SKILL.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:b395c72bd3c78f2a",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "7 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:b395c72bd3c78f2a"
+        ]
       }
     },
     {
@@ -4720,9 +4789,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "054b29230e55f3ed",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_name\\\": \\\"skl-sZFb3KatWY6m\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Try get-by-name with skill_id for endpoint-a\"}",
-        "paired_call": "call:477795150656188f",
-        "pairing": "paired",
+        "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
+          "call:d7c7f3bcad81f5be",
+          "call:477795150656188f",
           "call:57552a6f1ea12af2"
         ]
       }
@@ -4742,9 +4813,10 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "2402ba78900ccb1f",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_name\\\": \\\"skl-oBaDO5CceKnr\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Try get-by-name with skill_id for endpoint-b\"}",
-        "paired_call": "call:0bcdb89224dc3764",
-        "pairing": "paired",
+        "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
+          "call:0bcdb89224dc3764",
           "call:8f8d8bd4a3be7285"
         ]
       }
@@ -4764,8 +4836,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "2efcce82c19f4f9b",
         "request_body": "{\"skill_name\":\"skl-sZFb3KatWY6m\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:0021de1e82f612a7",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "3 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:0021de1e82f612a7"
+        ]
       }
     },
     {
@@ -4783,8 +4858,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "564c588d6daf3318",
         "request_body": "{\"skill_name\":\"skl-oBaDO5CceKnr\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:5daf88613f7b036c",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "2 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:5daf88613f7b036c"
+        ]
       }
     },
     {
@@ -4803,6 +4881,7 @@
         "body_hash": "b0b3d4c432676bf3",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_name\\\": \\\"eval-bridge-endpoint-a\\\", \\\"agent_id\\\": \\\"agt-5e4hna56j9\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Probe get-by-name with agent_id scope\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:af0126bc8acebadc"
         ]
@@ -4824,6 +4903,7 @@
         "body_hash": "743a636bc9632cda",
         "request_body": "{\"command\": \"for p in \\\"skill.md\\\" \\\"README.md\\\" \\\"SKILL.md.md\\\" \\\"content.md\\\" \\\"main.md\\\" \\\"index.md\\\"; do echo \\\"== $p ==\\\"; curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/files/read -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d \\\"{\\\\\\\"skill_id\\\\\\\": \\\\\\\"skl-sZFb3KatWY6m\\\\\\\", \\\\\\\"path\\\\\\\": \\\\\\\"$p\\\\\\\", \\\\\\\"encoding\\\\\\\": \\\\\\\"utf-8\\\\\\\"}\\\" | head -c 400; echo; done\", \"description\": \"Probe common file paths for",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:e7809ced92fbdf39",
           "call:71bb34f33954be7d",
@@ -4850,6 +4930,7 @@
         "body_hash": "2b2ae34ed7e62341",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"skill.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -4872,6 +4953,7 @@
         "body_hash": "368ba199997a7543",
         "request_body": "{\"skill_name\":\"eval-bridge-endpoint-a\",\"agent_id\":\"agt-5e0y4l8a7a\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:72482f15da036b02",
           "call:389cafc567cd3b98"
@@ -4894,6 +4976,7 @@
         "body_hash": "e7ffa308c2a8fc5f",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"README.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -4916,6 +4999,7 @@
         "body_hash": "c62f701549ad4a4e",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"SKILL.md.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -4938,6 +5022,7 @@
         "body_hash": "7f4d56202110cff7",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"content.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -4960,6 +5045,7 @@
         "body_hash": "0560827b7b47920e",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"main.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -4982,6 +5068,7 @@
         "body_hash": "d46347957eb248d1",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"path\":\"index.md\",\"encoding\":\"utf-8\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b395c72bd3c78f2a",
           "call:acbde3d5e1c77e30"
@@ -5021,8 +5108,11 @@
         "observed_by": "proxy tool_call_logs",
         "body_hash": "130b25694c52c52a",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
-        "paired_intent": "call:0021de1e82f612a7",
-        "pairing": "paired"
+        "pairing": "ambiguous",
+        "pairing_reason": "3 results match this one command; which answered it is not known",
+        "candidate_intents": [
+          "call:0021de1e82f612a7"
+        ]
       }
     },
     {
@@ -5041,6 +5131,7 @@
         "body_hash": "aadad5caa4cd7f7e",
         "request_body": "{\"command\": \"curl -sSk -X POST \\\"http://127.0.0.1:8096/skill-bridge/v3/skill/get\\\" -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_id\\\": \\\"skl-sZFb3KatWY6m\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Fetch full content of eval-bridge-endpoint-a\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:57552a6f1ea12af2"
         ]
@@ -5062,6 +5153,7 @@
         "body_hash": "6f865a3825698484",
         "request_body": "{\"command\": \"curl -sSk -X POST \\\"http://127.0.0.1:8096/skill-bridge/v3/skill/get\\\" -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_id\\\": \\\"skl-oBaDO5CceKnr\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\", \"description\": \"Fetch full content of eval-bridge-endpoint-b\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:8f8d8bd4a3be7285"
         ]
@@ -5083,6 +5175,7 @@
         "body_hash": "130b25694c52c52a",
         "request_body": "{\"skill_id\":\"skl-sZFb3KatWY6m\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:0021de1e82f612a7",
           "call:f7ac8e50357bf3e3"
@@ -5105,6 +5198,7 @@
         "body_hash": "5e983b9cd7a13f24",
         "request_body": "{\"skill_id\":\"skl-oBaDO5CceKnr\",\"include_content\":true,\"include_manifest\":true,\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:5daf88613f7b036c",
           "call:7da1441df6f16b51"
@@ -5127,6 +5221,7 @@
         "body_hash": "84cdd5429bdd3eb0",
         "request_body": "{\"command\": \"echo \\\"== endpoint-a: http://10.244.7.19:8096 ==\\\"; curl -sSk -X POST \\\"http://10.244.7.19:8096/skill-bridge/v3/skill/search\\\" -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' --max-time 8 -w '\\\\n[http_code=%{http_code} time_total=%{time_total}s]\\\\n'; echo \\\"exit=$?\\\"\", \"description\": \"Probe endpoint-a reachability query\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:96ea6ade0b81256d"
         ]
@@ -5148,6 +5243,7 @@
         "body_hash": "1628c6c4d4b50c5e",
         "request_body": "{\"command\": \"echo \\\"== endpoint-b: http://127.0.0.1:47318 ==\\\"; curl -sSk -X POST \\\"http://127.0.0.1:47318/skill-bridge/v3/skill/search\\\" -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' --max-time 8 -w '\\\\n[http_code=%{http_code} time_total=%{time_total}s]\\\\n'; echo \\\"exit=$?\\\"\", \"description\": \"Probe endpoint-b reachability query\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:96ea6ade0b81256d"
         ]
@@ -5169,6 +5265,7 @@
         "body_hash": "59fdde996c918dbf",
         "request_body": "{\"query\":\"team-bridge-reachability\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:32d0f03d82ee3d13",
           "call:d2ab7e31adce9666"
@@ -5359,6 +5456,7 @@
         "body_hash": "e806781c88a623f5",
         "request_body": "{\"command\": \"start=$(date +%s); curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search \\\\\\n  -H 'content-type: application/json' \\\\\\n  -H 'x-tdai-service-id: default' \\\\\\n  -H 'x-conversation-id: 17724612-b90b-4fe5-a7cd-97ef14be9b4f' \\\\\\n  -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' --max-time 15; rc=$?; end=$(date +%s); echo; echo \\\"EXIT_CODE=$rc ELAPSED=$((end-start))s\\\"\", \"description\": \"Probe eval-bridge-endpoint-a documented address\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:8760e7134ce0d5df"
         ]
@@ -5380,6 +5478,7 @@
         "body_hash": "83069b5c7a588c9e",
         "request_body": "{\"command\": \"start=$(date +%s); curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search \\\\\\n  -H 'content-type: application/json' \\\\\\n  -H 'x-tdai-service-id: default' \\\\\\n  -H 'x-conversation-id: 17724612-b90b-4fe5-a7cd-97ef14be9b4f' \\\\\\n  -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' --max-time 15; rc=$?; end=$(date +%s); echo; echo \\\"EXIT_CODE=$rc ELAPSED=$((end-start))s\\\"\", \"description\": \"Probe eval-bridge-endpoint-b documented address\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:8760e7134ce0d5df"
         ]
@@ -5401,6 +5500,7 @@
         "body_hash": "59fdde996c918dbf",
         "request_body": "{\"query\":\"team-bridge-reachability\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e0y4l8a7a\",\"user_id\":\"usr-4u07qc2kuj\",\"scope\":\"team\",\"top_k\":50}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:2c00c3073830cfd7",
           "call:54d90ed05a2c4191"

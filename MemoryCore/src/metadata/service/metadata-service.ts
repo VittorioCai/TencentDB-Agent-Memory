@@ -1199,14 +1199,18 @@ export class MetadataService {
 
   /**
    * A write that must not overwrite a row that moved on since it was read
-   * (2026-09-08c): version, content hash and updated_at as read are the
-   * precondition; a mismatch is a stale_write, and the caller re-reads.
+   * (2026-09-08c): version, content hash, updated_at AND the row's revision
+   * as read are the precondition; a mismatch is a stale_write, and the
+   * caller re-reads. The revision is what makes it sound (2026-09-08d):
+   * `updated_at` is a millisecond clock, and two writes inside one
+   * millisecond leave version, hash and time all unchanged — the second
+   * stale write landed and the first review disappeared from the history.
    */
   private async writeAssetAsRead(asset: AssetEntity, patch: Partial<AssetEntity>, what: string): Promise<AssetEntity> {
-    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
     if (!updated) {
       const now = await this.getAssetById(asset.asset_id);
-      throw new MetadataError("stale_write", `${what}: asset ${asset.asset_id} changed since it was read (read v${asset.version}${asset.content_hash ? ` ${asset.content_hash.slice(0, 10)}` : ""} @ ${asset.updated_at}; now ${now ? `v${now.version}${now.content_hash ? ` ${now.content_hash.slice(0, 10)}` : ""} @ ${now.updated_at}` : "gone"}); read it again`);
+      throw new MetadataError("stale_write", `${what}: asset ${asset.asset_id} changed since it was read (read v${asset.version}${asset.content_hash ? ` ${asset.content_hash.slice(0, 10)}` : ""} @ ${asset.updated_at} rev ${asset.revision ?? 0}; now ${now ? `v${now.version}${now.content_hash ? ` ${now.content_hash.slice(0, 10)}` : ""} @ ${now.updated_at} rev ${now.revision ?? 0}` : "gone"}); read it again`);
     }
     return updated;
   }
@@ -1238,20 +1242,38 @@ export class MetadataService {
       const asset = await this.getAssetById(id);
       if (!asset) { out.set(id, { allowed: params.purpose !== "use", reason: "unregistered" }); continue; }
       const perm = await this.checkAssetPermission({ user_id: params.user_id, asset_id: id, action: "read", purpose: params.purpose, agent_id: params.agent_id });
-      // The served content must be the content the admission was about
-      // (2026-09-08b). A newer version not yet synced — the hook failed, or
-      // two writes raced — is denied on the model's path and the registry
-      // is brought up to date, so the window closes on the first read.
+      // The row about to be served must be exactly the row the admission
+      // was about (2026-09-08d): same version, same content. Equality, not
+      // "not newer" — a rollback to an older version whose text happens to
+      // hash the same as the approved one is still a different row, and an
+      // asset's non-content files can change without the body's hash
+      // moving. Missing binding is not a pass: a read that cannot say which
+      // version it is serving is refused on the model's path.
       const s = params.served?.[id];
-      if (perm.allowed && params.purpose === "use" && s && asset.status === "approved") {
-        const newer = s.version !== undefined && s.version > asset.version;
-        const hashDiffers = !!s.content_hash && !!asset.content_hash && s.content_hash !== asset.content_hash;
-        if (newer || hashDiffers) {
-          out.set(id, { allowed: false, reason: newer ? `version_mismatch:registry=${asset.version},served=${s.version}` : "content_hash_mismatch" });
-          // Awaited: the registry has caught up before this read answers.
-          await this.syncSkillAssetVersion({ skill_id: id, version: s.version ?? asset.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
-            .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
+      if (params.purpose === "use" && perm.allowed && asset.status === "approved") {
+        if (!s || s.version === undefined) {
+          out.set(id, { allowed: false, reason: "unbound_read:the served version is not known" });
           continue;
+        }
+        if (s.version !== asset.version) {
+          out.set(id, { allowed: false, reason: `version_mismatch:registry=${asset.version},served=${s.version}` });
+          // Only forward: the registry follows a new version, it does not
+          // roll back to an older one being served.
+          if (s.version > asset.version) {
+            // Awaited: the registry has caught up before this read answers.
+            await this.syncSkillAssetVersion({ skill_id: id, version: s.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
+              .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
+          }
+          continue;
+        }
+        if (asset.content_hash) {
+          if (!s.content_hash) { out.set(id, { allowed: false, reason: "unbound_read:the registry holds a content hash, the served row carries none" }); continue; }
+          if (s.content_hash !== asset.content_hash) {
+            out.set(id, { allowed: false, reason: "content_hash_mismatch" });
+            await this.syncSkillAssetVersion({ skill_id: id, version: s.version, content_hash: s.content_hash, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
+              .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
+            continue;
+          }
         }
       }
       out.set(id, perm);
@@ -2254,7 +2276,7 @@ export class MetadataService {
     };
     // Written only if the asset is still the one the decision was made on;
     // a row that moved on (a new version, a review) is decided afresh.
-    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
     if (!updated) {
       const attempt = (opts as { _attempt?: number })._attempt ?? 0;
       if (attempt >= 3) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
@@ -2297,7 +2319,7 @@ export class MetadataService {
     // land together, so no read sees the new text with the old approval.
     // Conditional on the row as read: a concurrent sync or review that got
     // in first is not overwritten — the row is re-read instead.
-    const moved = await this.store.updateAssetIf(asset.asset_id, { version: params.version, content_hash: params.content_hash ?? null, status: "candidate", confidence: null, metadata_json: JSON.stringify(m) }, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at });
+    const moved = await this.store.updateAssetIf(asset.asset_id, { version: params.version, content_hash: params.content_hash ?? null, status: "candidate", confidence: null, metadata_json: JSON.stringify(m) }, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
     if (!moved) {
       const now = await this.getAssetById(asset.asset_id);
       if (!now) throw new MetadataError("asset_not_found", `asset not found: ${params.skill_id}`);
@@ -2349,7 +2371,7 @@ export class MetadataService {
   async reviewAssetGateForCaller(
     assetId: string,
     ctx: V3AuthContext,
-    input: { decision: "admit" | "reject"; note?: string | null; expected_version?: number | null; expected_content_hash?: string | null },
+    input: { decision: "admit" | "reject"; note?: string | null; expected_version?: number | null; expected_content_hash?: string | null; expected_revision?: number | null; overrode?: Array<{ outcome_id: string; reason: string }> | null },
   ): Promise<{ asset: AssetEntity; review: HumanReviewRecord; effective: GateEffective }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
@@ -2372,6 +2394,13 @@ export class MetadataService {
       if (!input.expected_content_hash) throw new MetadataError("invalid_request", `expected_content_hash is required: the asset carries content hash ${asset.content_hash}`);
       if (input.expected_content_hash !== asset.content_hash) throw new MetadataError("stale_review", "the content the reviewer read is not the asset's content now; read it again");
     }
+    // The row's revision as the reviewer read it (2026-09-08d). Version and
+    // hash do not move when a second reviewer, or a status change, writes to
+    // the row — two decisions made from the same read would both pass those
+    // and the later one would silently replace the earlier. The revision
+    // rises on every write, so exactly one of them lands.
+    if (input.expected_revision === undefined || input.expected_revision === null) throw new MetadataError("invalid_request", "expected_revision is required: the row revision the reviewer read");
+    if (input.expected_revision !== (asset.revision ?? 0)) throw new MetadataError("stale_review", `the reviewer read revision ${input.expected_revision}, the asset is at ${asset.revision ?? 0}; read it again`);
     await this.assertManageRead(ctx, asset);
     const now = new Date();
     const status: HumanReviewRecord["status"] = input.decision === "admit" ? "approved" : "failed";
@@ -2380,19 +2409,34 @@ export class MetadataService {
     const gate0 = gateOf(asset.metadata_json);
     const prior = activeReview(gate0, asset);
     const gate = prior ? expireReviews(gate0, `superseded by a later review (${input.decision} by ${callerId})`, now) : gate0;
+    // The corrections in force right now, not the ones the decision on file
+    // happened to record: an admit is judged against the evidence as it
+    // stands when it is made (2026-09-08d).
+    const fresh = await this.evaluateAssetGate(assetId, { apply: false, now });
+    const decision = fresh.decision;
+    const live = decision.reject_evidence_ids ?? [];
+    const overrode = (input.overrode ?? []).map((o) => ({ outcome_id: String(o.outcome_id ?? "").trim(), reason: String(o.reason ?? "").trim() }));
+    if (overrode.length > 0) {
+      if (input.decision !== "admit") throw new MetadataError("invalid_request", "only an admit overrules corrected outcomes");
+      for (const o of overrode) {
+        if (!o.reason) throw new MetadataError("invalid_request", `overruling ${o.outcome_id || "an outcome"} needs a reason`);
+        if (!live.includes(o.outcome_id)) throw new MetadataError("invalid_request", `outcome ${o.outcome_id} is not one of the corrected outcomes rejecting this asset right now (${live.join(", ") || "none"})`);
+      }
+    }
+    // An admit that leaves a live correction unnamed is accepted and
+    // recorded — it just does not lift the reject. The reviewer is told
+    // which rows still stand in `effective.reason`.
     const review: HumanReviewRecord = {
       id: `rev-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       decision: input.decision, status, by: callerId, at: now.toISOString(), note: input.note ?? null,
       asset_version: asset.version, content_hash: asset.content_hash ?? null,
+      overrode: overrode.length ? overrode : null,
     };
     const reviews = [...reviewsOf(gate), review];
-    // Resolve against the rule's suggestion on file (or a fresh one).
-    const onFile = "decision" in gate ? (gate as unknown as GateDecision) : null;
-    const decision = onFile ?? decideAsset({ asset, outcomes: [], authorOutcomes: [], now });
     const effective = effectiveStatus(decision, review, now);
     let m: Record<string, unknown> = {};
     try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
-    m.gate = { ...gate, reviews, review, effective };
+    m.gate = { ...gate, ...decision, reviews, review, effective };
     let updated: AssetEntity;
     try {
       updated = await this.writeAssetAsRead(asset, { status: effective.status, metadata_json: JSON.stringify(m) }, "review");
@@ -2404,7 +2448,7 @@ export class MetadataService {
   }
 
   /** The decision on file (metadata_json.gate), or null when the gate has not run. */
-  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; content_hash: string | null; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: HumanReviewRecord | null; reviews: HumanReviewRecord[]; effective: GateEffective | null; review_request: unknown; review_requested: boolean }> {
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; content_hash: string | null; revision: number; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: HumanReviewRecord | null; reviews: HumanReviewRecord[]; effective: GateEffective | null; review_request: unknown; review_requested: boolean }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.requireActiveTeamMember(ctx, asset.team_id);
@@ -2413,7 +2457,7 @@ export class MetadataService {
     await this.assertManageRead(ctx, asset);
     const g = gateOf(asset.metadata_json);
     const gate = "decision" in g ? (g as unknown as GateDecision) : null;
-    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, version: asset.version, content_hash: asset.content_hash ?? null, created_at: asset.created_at, updated_at: asset.updated_at,
+    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, version: asset.version, content_hash: asset.content_hash ?? null, revision: asset.revision ?? 0, created_at: asset.created_at, updated_at: asset.updated_at,
       status: asset.status, confidence: asset.confidence ?? null, gate, review: activeReview(g, asset), reviews: reviewsOf(g),
       effective: (g.effective && typeof g.effective === "object" ? (g.effective as GateEffective) : null), review_request: g.review_request ?? null, review_requested: reviewRequested(asset) };
   }

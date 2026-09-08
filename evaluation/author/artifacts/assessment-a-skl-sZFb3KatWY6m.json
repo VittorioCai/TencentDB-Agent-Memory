@@ -80,7 +80,7 @@
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
     "file": "evaluation/author/artifacts/evidence-pack-a.json",
-    "sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+    "sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
     "record_count": 49,
     "by_class": {
       "authored_text": 2,
@@ -123,7 +123,8 @@
       "which",
       "address",
       "answers"
-    ]
+    ],
+    "records": 49
   },
   "model": {
     "url": "https://api.deepseek.com",
@@ -168,6 +169,7 @@
         }
       },
       "harness_records": 4,
+      "superseded_by_a_later_row": 0,
       "cited_transport_calls": 3
     },
     "asset_claim_check": {
@@ -395,8 +397,10 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "chain_complete": false,
-    "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+    "pack_sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
-  "rechecked_at": "2026-09-07T20:03:02.435Z"
+  "rechecked_at": "2026-09-08T06:55:28.742Z",
+  "pack_sha_at_generation": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+  "pack_rebuilt": true
 }

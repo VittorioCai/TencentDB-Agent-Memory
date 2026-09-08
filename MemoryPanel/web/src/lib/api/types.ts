@@ -158,6 +158,12 @@ export interface GateDecision {
     author: { user_id: string; validated: number; corrected: number; distinct_consumers: number; recent_wrong_asset_ids: string[]; assessment: AuthorAssessmentSummary | null; assessment_ignored?: string | null };
   };
   review_priority: ReviewPriority | null;
+  /**
+   * The corrected outcomes this reject rests on. An admit lifts the reject
+   * only by naming every one of them (`HumanReview.overrode`).
+   */
+  reject_evidence_ids?: string[];
+  reject_evidence_latest_at?: string | null;
   evidence_as_of?: string | null;
 }
 export interface HumanReview {
@@ -170,6 +176,8 @@ export interface HumanReview {
   /** The version and content the decision was made on (2026-09-08b). */
   asset_version?: number;
   content_hash?: string | null;
+  /** The corrected outcomes this admit overrules, each with the reviewer's reason. */
+  overrode?: Array<{ outcome_id: string; reason: string }> | null;
   expired_at?: string | null;
   expired_reason?: string | null;
 }
@@ -189,6 +197,8 @@ export interface AssetGateView {
   confidence: number | null;
   version?: number;
   content_hash?: string | null;
+  /** The row revision the view was rendered from; a review must send it back. */
+  revision?: number;
   gate: GateDecision | null;
   /** The human decision in force for the current version, or null. */
   review: HumanReview | null;

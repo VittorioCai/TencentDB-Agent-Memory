@@ -109,9 +109,24 @@ export const gateApi = {
   get: (assetId: string) => metaPost<AssetGateView>('asset/gate/get', { asset_id: assetId }),
   evaluate: (assetId: string, apply = true) =>
     metaPost<{ decision: AssetGateView['gate']; applied: boolean; asset: Asset }>('asset/gate/evaluate', { asset_id: assetId, apply }),
-  /** The decision names the version and content the reviewer read; Core refuses it if the asset moved on (stale_review). */
-  review: (assetId: string, decision: 'admit' | 'reject', note: string | undefined, seen: { version: number; content_hash?: string | null }) =>
-    metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', { asset_id: assetId, decision, note: note ?? null, expected_version: seen.version, expected_content_hash: seen.content_hash ?? null }),
+  /**
+   * The decision names the version, content and row revision the reviewer
+   * read; Core refuses it if the asset moved on (stale_review). `overrode`
+   * names the corrected outcomes an admit overrules, each with a reason —
+   * an admit that names none does not lift a rule reject.
+   */
+  review: (
+    assetId: string,
+    decision: 'admit' | 'reject',
+    note: string | undefined,
+    seen: { version: number; content_hash?: string | null; revision: number },
+    overrode?: Array<{ outcome_id: string; reason: string }>,
+  ) =>
+    metaPost<{ asset: Asset; review: AssetGateView['review'] }>('asset/gate/review', {
+      asset_id: assetId, decision, note: note ?? null,
+      expected_version: seen.version, expected_content_hash: seen.content_hash ?? null, expected_revision: seen.revision,
+      overrode: overrode && overrode.length ? overrode : undefined,
+    }),
   /** A reviewer retracts a mistaken outcome; it stays on file and the gate stops reading it. */
   retractOutcome: (outcomeId: string, reason: string) =>
     metaPost<{ outcome: AssetOutcome; decision: AssetGateView['gate'] }>('asset/outcome/retract', { outcome_id: outcomeId, reason }),

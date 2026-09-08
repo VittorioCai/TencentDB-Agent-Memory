@@ -256,14 +256,16 @@ type SkillLike = { skill_id: string; team_id?: string; owner_agent_id?: string; 
 async function admissionFilter<T extends SkillLike>(
   items: T[],
   ctx: { deps: SkillRouterDeps; auth: V2AuthContext; user_id?: string; team_id?: string; agent_id?: string },
-): Promise<{ allowed: T[]; denied: Array<{ skill_id: string; reason: string }> }> {
-  if (items.length === 0) return { allowed: [], denied: [] };
+): Promise<{ allowed: T[]; denied: Array<{ skill_id: string; reason: string }>; purpose: "use" | "manage" }> {
+  // Nothing to admit, so nothing was admitted under "manage": the honest
+  // answer for a caller that reads the purpose is the model's path.
+  if (items.length === 0) return { allowed: [], denied: [], purpose: "use" };
   let purpose: "use" | "manage" = ctx.auth.readPurpose === "manage" ? "manage" : "use";
   if (!ctx.deps.getMetadataService || !ctx.user_id) {
-    if (purpose === "manage") return { allowed: items, denied: [] };
+    if (purpose === "manage") return { allowed: items, denied: [], purpose };
     const why = !ctx.user_id ? "no user_id on the request" : "no metadata service";
     ctx.deps.logger.warn(`[skill-admission] ${why}; denying ${items.length} skill(s) on the model path`);
-    return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })) };
+    return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })), purpose };
   }
   const meta = await ctx.deps.getMetadataService(ctx.auth.serviceId);
   // "manage" is a person's read: the request must carry a user key that
@@ -292,7 +294,11 @@ async function admissionFilter<T extends SkillLike>(
         .catch((err: unknown) => ctx.deps.logger.warn(`[skill-admission] ensureSkillAsset ${s.skill_id} failed: ${(err as Error).message}`));
     }
   }
-  return { allowed, denied };
+  // The purpose the admission actually ran under — "manage" only when a
+  // user key resolved to the user being read for. Every later step reads
+  // this, never the request header: a downgrade decided here must not be
+  // undone downstream (2026-09-08d).
+  return { allowed, denied, purpose };
 }
 
 /**
@@ -686,7 +692,7 @@ export async function handleVersions(body: unknown, _auth: V2AuthContext, reques
     if (admV.allowed.length === 0) return notAdmitted(pre.data.skill_id, admV.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.listVersions(pre.data);
     // On the model's path only the admitted version's summary is history the model may see.
-    if (_auth.readPurpose !== "manage" || !_auth.userKey) {
+    if (admV.purpose !== "manage") {
       r.items = r.items.filter((s) => s.version === targetV.version && (!targetV.content_hash || s.content_hash === targetV.content_hash));
       r.total = r.items.length;
     }

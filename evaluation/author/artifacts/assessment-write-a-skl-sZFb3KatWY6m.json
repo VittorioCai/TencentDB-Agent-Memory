@@ -1,6 +1,6 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-07T20:03:02Z",
+  "at": "2026-09-08T06:56:54Z",
   "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
   "asset_id": "skl-sZFb3KatWY6m",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
@@ -45,7 +45,7 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "chain_complete": false,
-    "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+    "pack_sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
   "decision_after": {
@@ -54,7 +54,7 @@
     "asset_id": "skl-sZFb3KatWY6m",
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
-    "decided_at": "2026-09-07T20:03:02.610Z",
+    "decided_at": "2026-09-08T06:56:53.984Z",
     "decision": "reject",
     "status_target": "failed",
     "confidence": 0,
@@ -91,7 +91,9 @@
         "distinct_tasks": 0,
         "calls": 2,
         "untrusted_ignored": 2,
-        "other_version": 0
+        "other_version": 0,
+        "unbound_ignored": 0,
+        "retracted_ignored": 0
       },
       "author": {
         "user_id": "usr-n68ea5ythq",
@@ -136,15 +138,20 @@
           "author_user_id": "usr-n68ea5ythq",
           "asset_version": 2,
           "content_hash": "163c539025f09af8205023ec6d312a38",
-          "pack_sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+          "pack_sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
           "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-07T20:03:02.551Z"
+          "written_at": "2026-09-08T06:56:53.924Z"
         },
         "assessment_ignored": null
       }
     },
     "review_priority": null,
+    "reject_evidence_ids": [
+      "ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+      "c91cdca6-40f5-4e84-b03b-f65713584044"
+    ],
+    "reject_evidence_latest_at": "2026-09-07T14:30:39.700Z",
     "evidence_as_of": "2026-09-06T08:47:33Z"
   },
   "status_after": "failed"

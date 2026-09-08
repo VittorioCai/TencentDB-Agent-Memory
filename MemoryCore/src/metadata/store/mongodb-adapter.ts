@@ -1088,7 +1088,12 @@ export class MongoMetadataStore implements IMetadataStore {
     if (expect.version !== undefined) filter.version = expect.version;
     if (expect.content_hash !== undefined) filter.content_hash = expect.content_hash;
     if (expect.updated_at !== undefined) filter.updated_at = expect.updated_at;
-    const res = await this.col("meta_assets").updateOne(filter, { $set });
+    // The revision is the decisive condition: `$inc` raises it on every
+    // write, so a second write from the same read finds no match — where
+    // `updated_at`, a millisecond clock, could be unchanged (2026-09-08d).
+    // A row written before the field existed carries revision 0.
+    if (expect.revision !== undefined) filter.$or = expect.revision === 0 ? [{ revision: 0 }, { revision: { $exists: false } }] : [{ revision: expect.revision }];
+    const res = await this.col("meta_assets").updateOne(filter, { $set, $inc: { revision: 1 } });
     if (!res.matchedCount) return null;
     return this.getAssetById(assetId);
   }
@@ -1142,6 +1147,7 @@ export class MongoMetadataStore implements IMetadataStore {
       source_type: input.source_type,
       source_ref: input.source_ref ?? null,
       version: 1,
+      revision: 0,
       visibility: input.visibility ?? "team",
       status: input.status ?? "draft",
       confidence: input.confidence ?? null,
@@ -1159,11 +1165,17 @@ export class MongoMetadataStore implements IMetadataStore {
   }
 
   async getAssetById(assetId: string): Promise<AssetEntity | null> {
-    return this.col<AssetEntity>("meta_assets").findOne({ asset_id: assetId } as Document, PROJECT_NO_ID) as Promise<AssetEntity | null>;
+    const doc = (await this.col<AssetEntity>("meta_assets").findOne({ asset_id: assetId } as Document, PROJECT_NO_ID)) as AssetEntity | null;
+    // A row written before the revision field existed reads as revision 0,
+    // which is what a conditional write on it expects.
+    return doc ? { ...doc, revision: doc.revision ?? 0 } : null;
   }
 
   async updateAsset(assetId: string, patch: Partial<AssetEntity>): Promise<AssetEntity | null> {
     await this.patchOne("meta_assets", { asset_id: assetId }, patch, ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"], true);
+    // An unconditional write raises the revision too, so a conditional write
+    // that read the row before it is refused.
+    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $inc: { revision: 1 } });
     return this.getAssetById(assetId);
   }
 

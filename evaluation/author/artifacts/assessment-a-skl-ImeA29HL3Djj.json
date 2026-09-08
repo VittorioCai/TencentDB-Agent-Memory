@@ -55,7 +55,7 @@
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
     "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-a-skl-ImeA29HL3Djj.json",
-    "sha256": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
+    "sha256": "b316dadcce716d59b22c7b50b7fe9d9f259bee64e52c2d0a53dceb0910ffd69b",
     "record_count": 50,
     "by_class": {
       "authored_text": 3,
@@ -98,7 +98,8 @@
       "which",
       "address",
       "answers"
-    ]
+    ],
+    "records": 50
   },
   "model": {
     "url": "https://api.deepseek.com",
@@ -143,6 +144,7 @@
         }
       },
       "harness_records": 4,
+      "superseded_by_a_later_row": 0,
       "cited_transport_calls": 3
     },
     "asset_claim_check": {
@@ -386,7 +388,10 @@
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
     "chain_complete": false,
-    "pack_sha256": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
-    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
-  }
+    "pack_sha256": "b316dadcce716d59b22c7b50b7fe9d9f259bee64e52c2d0a53dceb0910ffd69b",
+    "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
+  },
+  "pack_sha_at_generation": "c81f815a7c90bfd8ddf00a8b7e9c912f1807143da41494cfd4b662126dfde7ad",
+  "pack_rebuilt": true,
+  "rechecked_at": "2026-09-08T06:56:40.253Z"
 }

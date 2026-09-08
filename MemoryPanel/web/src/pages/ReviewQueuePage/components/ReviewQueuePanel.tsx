@@ -53,6 +53,9 @@ export default function ReviewQueuePanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ row: Row; decision: 'admit' | 'reject' } | null>(null);
   const [note, setNote] = useState('');
+  // An admit over a rule reject must name each corrected outcome it
+  // overrules, with a reason (2026-09-08d). One reason per outcome id.
+  const [overrode, setOverrode] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const canReview = role === 'admin' || role === 'reviewer';
 
@@ -90,14 +93,30 @@ export default function ReviewQueuePanel() {
     finally { setBusy(null); }
   }
 
+  /** The corrected outcomes keeping this asset rejected right now. */
+  const rejectEvidence = useCallback((row: Row | undefined): string[] => (
+    row?.gate?.gate?.decision === 'reject' ? (row.gate.gate.reject_evidence_ids ?? []) : []
+  ), []);
+
   async function submitReview() {
     if (!reviewing) return;
+    const live = reviewing.decision === 'admit' ? rejectEvidence(reviewing.row) : [];
+    const named = live.filter((id) => (overrode[id] ?? '').trim().length > 0);
     setBusy(reviewing.row.asset.asset_id);
     try {
-      // The version and content this row was rendered from: the decision applies to them only.
-      const seen = { version: reviewing.row.gate?.version ?? reviewing.row.asset.version, content_hash: reviewing.row.gate?.content_hash ?? null };
-      await gateApi.review(reviewing.row.asset.asset_id, reviewing.decision, note.trim() || undefined, seen);
-      setReviewing(null); setNote('');
+      // The version, content and revision this row was rendered from: the
+      // decision applies to that row only, and the revision is what tells
+      // two writes in the same millisecond apart.
+      const seen = {
+        version: reviewing.row.gate?.version ?? reviewing.row.asset.version,
+        content_hash: reviewing.row.gate?.content_hash ?? null,
+        revision: reviewing.row.gate?.revision ?? 0,
+      };
+      await gateApi.review(
+        reviewing.row.asset.asset_id, reviewing.decision, note.trim() || undefined, seen,
+        named.map((id) => ({ outcome_id: id, reason: overrode[id].trim() })),
+      );
+      setReviewing(null); setNote(''); setOverrode({});
       await refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -266,16 +285,35 @@ export default function ReviewQueuePanel() {
         )}
       </Card>
 
-      <Modal visible={!!reviewing} caption={reviewing ? t(reviewing.decision === 'admit' ? 'review.confirmAdmit' : 'review.confirmReject', { name: reviewing.row.asset.name }) : ''} onClose={() => setReviewing(null)}>
+      <Modal visible={!!reviewing} caption={reviewing ? t(reviewing.decision === 'admit' ? 'review.confirmAdmit' : 'review.confirmReject', { name: reviewing.row.asset.name }) : ''} onClose={() => { setReviewing(null); setOverrode({}); }}>
         <Modal.Body>
           <Text parent="div" style={{ marginBottom: 8 }}>{t('review.noteHint')}</Text>
           <Input value={note} onChange={(v: string) => setNote(v)} placeholder={t('review.notePlaceholder')} style={{ width: '100%' }} />
+          {reviewing?.decision === 'admit' && rejectEvidence(reviewing.row).length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Alert type="warning">{t('review.overrideHint')}</Alert>
+              {rejectEvidence(reviewing.row).map((id) => (
+                <div key={id} style={{ marginTop: 8 }}>
+                  <Text parent="div" theme="label" style={{ fontFamily: 'monospace', fontSize: 12 }}>{id}</Text>
+                  <Input
+                    value={overrode[id] ?? ''}
+                    onChange={(v: string) => setOverrode((o) => ({ ...o, [id]: v }))}
+                    placeholder={t('review.overridePlaceholder')}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              ))}
+              {rejectEvidence(reviewing.row).some((id) => !(overrode[id] ?? '').trim()) && (
+                <Text parent="div" theme="warning" style={{ marginTop: 8 }}>{t('review.overrideIncomplete')}</Text>
+              )}
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button type={reviewing?.decision === 'admit' ? 'primary' : 'error'} loading={!!busy} onClick={() => void submitReview()}>
             {reviewing ? t(reviewing.decision === 'admit' ? 'review.admit' : 'review.reject') : ''}
           </Button>
-          <Button onClick={() => setReviewing(null)}>{t('review.cancel')}</Button>
+          <Button onClick={() => { setReviewing(null); setOverrode({}); }}>{t('review.cancel')}</Button>
         </Modal.Footer>
       </Modal>
     </div>

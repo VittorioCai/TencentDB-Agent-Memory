@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-07T19:56:32.102Z",
+  "built_at": "2026-09-08T06:55:02.039Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "a",
@@ -13,10 +13,7 @@
     "skill bridge address",
     "10.244.7.19",
     "127.0.0.1:47318",
-    "timed out",
-    "reachability",
-    "container",
-    "host"
+    "timed out"
   ],
   "asset_id": "skl-sZFb3KatWY6m",
   "asset": {
@@ -90,7 +87,8 @@
     "paired": 3,
     "ambiguous": 1,
     "unpaired": 0,
-    "intents_without_result": 0
+    "intents_without_result": 0,
+    "intents_ambiguous": 2
   },
   "sources": {
     "persona": {
@@ -114,7 +112,8 @@
     "outcomes": {
       "total": 23,
       "trusted": 4,
-      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out"
+      "retracted": 0,
+      "note": "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read"
     },
     "calls": {
       "total": 9,
@@ -127,6 +126,7 @@
     "modified_after_cutoff": 0,
     "no_timestamp": 0,
     "untrusted_outcomes": 19,
+    "retracted_outcomes": 0,
     "persona_after_cutoff": false,
     "other_users_calls": 0,
     "skills_created_after_cutoff": 1
@@ -149,7 +149,7 @@
     "harness_verified": 4,
     "proxy_observed": 9
   },
-  "sha256": "1bb919846db7a95463b4cd988555b753c23a2acef670d482da5d3feaddfe5e49",
+  "sha256": "014787d751b776e38c0f8590b95363801ee5dd6fb65d0270b9ac7624f9fc3f3a",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
@@ -634,6 +634,7 @@
       "meta": {
         "asset_id": "skl-sZFb3KatWY6m",
         "asset_version": 2,
+        "content_hash": "163c539025f09af8205023ec6d312a38",
         "state": "corrected",
         "corrected_reason": "wrong",
         "relation": "cross_user",
@@ -641,6 +642,8 @@
         "run_id": "20260905T220020Z-gate-off",
         "call_id": "call_00_G9aDxkOvysoOoLobMkc56726",
         "trusted": true,
+        "retracted_at": null,
+        "recorded_at": "2026-09-07T14:30:39.479Z",
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -656,6 +659,7 @@
       "meta": {
         "asset_id": "skl-oBaDO5CceKnr",
         "asset_version": 2,
+        "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
         "state": "validated",
         "corrected_reason": null,
         "relation": "cross_user",
@@ -663,6 +667,8 @@
         "run_id": "20260905T220020Z-gate-off",
         "call_id": "call_01_zEo9sgfRF9BvaP8sOaqG1636",
         "trusted": true,
+        "retracted_at": null,
+        "recorded_at": "2026-09-07T14:30:39.573Z",
         "asset_tokens": [
           "127.0.0.1:47318"
         ],
@@ -678,6 +684,7 @@
       "meta": {
         "asset_id": "skl-sZFb3KatWY6m",
         "asset_version": 2,
+        "content_hash": "163c539025f09af8205023ec6d312a38",
         "state": "corrected",
         "corrected_reason": "wrong",
         "relation": "cross_user",
@@ -685,6 +692,8 @@
         "run_id": "20260905T223401Z-gate-off",
         "call_id": "call_00_po2EaBdfFVj3or2ywENy5238",
         "trusted": true,
+        "retracted_at": null,
+        "recorded_at": "2026-09-07T14:30:39.700Z",
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -700,6 +709,7 @@
       "meta": {
         "asset_id": "skl-oBaDO5CceKnr",
         "asset_version": 2,
+        "content_hash": "a7a9113a3ace7f60aeed16080b9bfe8e",
         "state": "validated",
         "corrected_reason": null,
         "relation": "cross_user",
@@ -707,6 +717,8 @@
         "run_id": "20260905T223401Z-gate-off",
         "call_id": "call_01_ebKwaVNqWpkSBzI7UgpE6226",
         "trusted": true,
+        "retracted_at": null,
+        "recorded_at": "2026-09-07T14:30:39.807Z",
         "asset_tokens": [
           "127.0.0.1:47318"
         ],
@@ -843,6 +855,7 @@
         "body_hash": "9be4cc28592e0c51",
         "request_body": "{\"command\": \"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' -w '\\\\n---HTTP %{http_code} in %{time_total}s---\\\\n'\", \"description\": \"Probe skill A documented endpoint with reachability query\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:3064d6813ca55d7c"
         ]
@@ -864,6 +877,7 @@
         "body_hash": "1c47bc3050dbb2d8",
         "request_body": "{\"command\": \"curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: 6ae29c1e-a7c8-468d-a988-35ec676b848a' -d '{\\\"query\\\": \\\"team-bridge-reachability\\\"}' -w '\\\\n---HTTP %{http_code} in %{time_total}s---\\\\n'\", \"description\": \"Probe skill B documented endpoint with reachability query\"}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_calls": [
           "call:3064d6813ca55d7c"
         ]
@@ -885,6 +899,7 @@
         "body_hash": "6753dfd86ed4a007",
         "request_body": "{\"query\":\"team-bridge-reachability\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-5e4hna56j9\",\"user_id\":\"usr-n68ea5ythq\",\"scope\":\"team\",\"top_k\":50}",
         "pairing": "ambiguous",
+        "pairing_reason": "2 commands could have produced this result",
         "candidate_intents": [
           "call:b5903fc59d61214c",
           "call:d332718e481fcbe0"

@@ -19,7 +19,7 @@
  *
  * Usage:
  *   node evaluation/author/assess.mjs --pack=F --domain="…" --asset-claim="…" [--asset=ID]
- *        [--budget-chars=60000] [--model=…] [--out=F] [--dry-run] [--recheck=F]
+ *        [--budget-chars=60000] [--model=…] [--out=F] [--dry-run] [--recheck=F [--allow-pack-change]]
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -175,17 +175,27 @@ function renderMd({ pack, verified, domain, assessedAt, modelName, sel }) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const a = parseArgs(process.argv.slice(2));
-  if (!a.pack || !a.domain || !a["asset-claim"]) { console.error("usage: node assess.mjs --pack=F --domain=… --asset-claim=… [--asset=ID] [--budget-chars=N] [--model=M] [--out=F] [--dry-run] [--recheck=F]"); process.exit(2); }
+  if (!a.pack || !a.domain || !a["asset-claim"]) { console.error("usage: node assess.mjs --pack=F --domain=… --asset-claim=… [--asset=ID] [--budget-chars=N] [--model=M] [--out=F] [--dry-run] [--recheck=F [--allow-pack-change]]"); process.exit(2); }
   const pack = JSON.parse(readFileSync(a.pack, "utf8"));
   if (pack.schema !== "author-evidence-pack-v2") { console.error(`pack schema ${pack.schema}: rebuild it with build-evidence-pack.mjs (v2 carries evidence classes and the cutoff)`); process.exit(1); }
   const packMap = new Map(pack.records.map((r) => [r.record_id, r]));
-  const opts = { assetTokens: pack.asset?.tokens ?? [], assetId: pack.asset_id ?? null, assetVersion: pack.asset?.version ?? null, authorId: pack.author?.user_id ?? null };
+  const opts = { assetTokens: pack.asset?.tokens ?? [], assetId: pack.asset_id ?? null, assetVersion: pack.asset?.version ?? null, assetContentHash: pack.asset?.content_hash ?? null, authorId: pack.author?.user_id ?? null };
   // --recheck=F: re-run the check on a saved assessment's raw model output
   // (after a checker change) without another model call; the pack must be
   // the one the assessment was made from.
   if (a.recheck) {
     const prev = JSON.parse(readFileSync(a.recheck, "utf8"));
-    if (prev.pack?.sha256 !== pack.sha256) { console.error(`recheck: pack sha mismatch (${prev.pack?.sha256} vs ${pack.sha256})`); process.exit(1); }
+    // The pack must be the one the assessment was made from — unless it was
+    // rebuilt on purpose because the BUILDER changed (2026-09-08d: outcome
+    // records gained the content hash and the retraction, and retracted rows
+    // left the pack). Then both shas are recorded, so the recheck says which
+    // evidence it read.
+    if (prev.pack?.sha256 !== pack.sha256) {
+      if (!a["allow-pack-change"]) { console.error(`recheck: pack sha mismatch (${prev.pack?.sha256} vs ${pack.sha256}); pass --allow-pack-change if the pack was deliberately rebuilt`); process.exit(1); }
+      prev.pack_sha_at_generation = prev.pack?.sha256 ?? null;
+      prev.pack_rebuilt = true;
+      prev.pack = { ...(prev.pack ?? {}), sha256: pack.sha256, records: pack.records.length };
+    }
     let raw = {}; try { raw = JSON.parse(prev.raw_model_output); } catch { raw = {}; }
     const verified = checkAssessment(raw, packMap, opts);
     prev.verified = verified;

@@ -141,7 +141,11 @@ export function bodyTokens(content) {
 export function outcomeRecord(o, tokensOf = () => ({ tokens: [], from: null })) {
   const tk = tokensOf(o.asset_id, o.asset_version);
   return { record_id: `outcome:${o.id}`, kind: "outcome", evidence_class: "harness_verified", text: `${o.state}${o.corrected_reason ? `(${o.corrected_reason})` : ""} on asset ${o.asset_id} v${o.asset_version ?? "?"}${tk.tokens.length ? ` (tokens of v${o.asset_version}: ${tk.tokens.join(", ")})` : ""} by ${o.consumer_user_id} (${o.relation}) at ${o.occurred_at}; run ${o.run_id ?? "?"}; call ${o.call_id ?? "?"}; evidence ${String(o.evidence_json ?? "").slice(0, 300)}`, at: o.occurred_at ?? null,
-    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true, asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
+    // content_hash and retracted_at travel with the row (2026-09-08d): the
+    // registry binds an outcome to the text it is about and lets a reviewer
+    // take a mistaken row out of the evidence. A pipeline that reads only
+    // `trusted` would still count both.
+    meta: { asset_id: o.asset_id, asset_version: o.asset_version ?? null, content_hash: o.content_hash ?? null, state: o.state, corrected_reason: o.corrected_reason ?? null, relation: o.relation, consumer_user_id: o.consumer_user_id, run_id: o.run_id ?? null, call_id: o.call_id ?? null, trusted: o.trusted === true, retracted_at: o.retracted_at ?? null, recorded_at: o.created_at ?? null, asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
 }
 export function callRecord(r) {
   // One row, one id: the same request body from two sessions (or twice in
@@ -160,29 +164,59 @@ export function callRecord(r) {
  * Tie each bridge_call (a result) to the model_intent (a command) it
  * answered: same session, the call within 30 s after the intent, the
  * intent's command naming the call's endpoint, and a value from the call's
- * body (skill_name, skill_id, query) present in the command. Exactly one
- * candidate → paired; several → ambiguous (the result is real, but which
- * command it answered is not known); none → unpaired. Only a paired call
- * lets an execution result stand on the command's quote; an intent with no
- * paired call carries intent only.
+ * body (skill_name, skill_id, query) present in the command.
+ *
+ * The match must be unique from BOTH sides (2026-09-08d). Checking only
+ * that a result had one candidate command let two results claim the same
+ * command — a duplicated service record, a retry, or the other result's own
+ * command missing from the export — and the second silently overwrote the
+ * first, so both were reported as paired. Now: exactly one candidate on
+ * each side → paired; anything else → ambiguous (the result is real, but
+ * which command it answered is not known); no candidate → unpaired. Only a
+ * paired call lets an execution result stand on the command's quote; an
+ * intent with no paired call carries intent only.
  */
 export function pairCalls(records) {
   const calls = records.filter((r) => r.kind === "call");
   const intents = calls.filter((r) => r.meta.kind === "model_intent");
   const results = calls.filter((r) => r.meta.kind === "bridge_call");
   const valuesOf = (body) => { try { const b = JSON.parse(body || "{}"); return ["skill_name", "skill_id", "query"].map((k) => b?.[k]).filter((v) => typeof v === "string" && v.length >= 3); } catch { return []; } };
+  // The whole candidate graph first: who could answer whom, both ways.
+  const candidatesOf = new Map();   // result id → intent records
+  const claimedBy = new Map();      // intent id → result records
   for (const res of results) {
     const t = Date.parse(res.at);
     const cands = intents.filter((it) => it.meta.session_key === res.meta.session_key && it.meta.session_key
       && Date.parse(it.at) <= t && t - Date.parse(it.at) <= 30_000
       && (!res.meta.endpoint || (it.meta.request_body || "").includes(`/skill/${res.meta.endpoint}`))
       && valuesOf(res.meta.request_body).some((v) => (it.meta.request_body || "").includes(v)));
-    if (cands.length === 1) { res.meta.paired_intent = cands[0].record_id; res.meta.pairing = "paired"; cands[0].meta.paired_call = res.record_id; cands[0].meta.pairing = "paired"; }
-    else if (cands.length > 1) { res.meta.pairing = "ambiguous"; res.meta.candidate_intents = cands.map((c) => c.record_id); for (const c of cands) { c.meta.pairing = c.meta.pairing ?? "ambiguous"; (c.meta.candidate_calls ??= []).push(res.record_id); } }
-    else res.meta.pairing = "unpaired";
+    candidatesOf.set(res.record_id, cands);
+    for (const c of cands) { if (!claimedBy.has(c.record_id)) claimedBy.set(c.record_id, []); claimedBy.get(c.record_id).push(res); }
+  }
+  const ambiguous = (res, cands, why) => {
+    res.meta.pairing = "ambiguous";
+    res.meta.pairing_reason = why;
+    res.meta.candidate_intents = cands.map((c) => c.record_id);
+    for (const c of cands) { c.meta.pairing = "ambiguous"; c.meta.pairing_reason = why; (c.meta.candidate_calls ??= []).push(res.record_id); }
+  };
+  for (const res of results) {
+    const cands = candidatesOf.get(res.record_id) ?? [];
+    if (cands.length === 0) { res.meta.pairing = "unpaired"; continue; }
+    if (cands.length > 1) { ambiguous(res, cands, `${cands.length} commands could have produced this result`); continue; }
+    const it = cands[0];
+    const rivals = claimedBy.get(it.record_id) ?? [];
+    if (rivals.length > 1) { ambiguous(res, [it], `${rivals.length} results match this one command; which answered it is not known`); continue; }
+    res.meta.paired_intent = it.record_id; res.meta.pairing = "paired";
+    it.meta.paired_call = res.record_id; it.meta.pairing = "paired";
   }
   for (const it of intents) if (!it.meta.pairing) it.meta.pairing = "no_result";
-  return { paired: results.filter((r) => r.meta.pairing === "paired").length, ambiguous: results.filter((r) => r.meta.pairing === "ambiguous").length, unpaired: results.filter((r) => r.meta.pairing === "unpaired").length, intents_without_result: intents.filter((r) => r.meta.pairing === "no_result").length };
+  return {
+    paired: results.filter((r) => r.meta.pairing === "paired").length,
+    ambiguous: results.filter((r) => r.meta.pairing === "ambiguous").length,
+    unpaired: results.filter((r) => r.meta.pairing === "unpaired").length,
+    intents_without_result: intents.filter((r) => r.meta.pairing === "no_result").length,
+    intents_ambiguous: intents.filter((r) => r.meta.pairing === "ambiguous").length,
+  };
 }
 
 /** Discriminative tokens of an asset: from a tokens file when it names the asset, else what its body carries. */
@@ -215,7 +249,7 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   const cut = cutoff ? new Date(cutoff).toISOString() : new Date().toISOString();
   const ids = { team_id: author.team_id, user_id: author.user_id, agent_id: author.agent_id };
   const records = new Map();
-  const excluded = { after_cutoff: 0, modified_after_cutoff: 0, no_timestamp: 0, untrusted_outcomes: 0, persona_after_cutoff: false, other_users_calls: 0, skills_created_after_cutoff: 0 };
+  const excluded = { after_cutoff: 0, modified_after_cutoff: 0, no_timestamp: 0, untrusted_outcomes: 0, retracted_outcomes: 0, persona_after_cutoff: false, other_users_calls: 0, skills_created_after_cutoff: 0 };
   const add = (r) => {
     if (!r.text || !r.text.trim()) return;
     if (!r.at) { excluded.no_timestamp += 1; return; }
@@ -283,8 +317,13 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   // Outcomes on the author's assets — trusted rows only
   try {
     const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id }, author.key, "items", 100, 2000);
-    const trusted = rows.filter((o) => o.trusted === true);
-    excluded.untrusted_outcomes = rows.length - trusted.length;
+    // The same two filters the gate applies (2026-09-08d): a row the gate
+    // does not read is not evidence here either. A retracted row stays on
+    // file in the registry; it is counted and left out of the pack.
+    const usable = rows.filter((o) => o.trusted === true && !o.retracted_at);
+    const trusted = usable;
+    excluded.untrusted_outcomes = rows.filter((o) => o.trusted !== true).length;
+    excluded.retracted_outcomes = rows.filter((o) => o.trusted === true && o.retracted_at).length;
     // Tokens of the outcome's own asset AT THAT VERSION (the author owns the
     // asset, so the body is readable); no version → no tokens.
     const bodies = new Map();
@@ -298,7 +337,7 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       return { tokens: bodyTokens(body), from: `body of ${id} v${version}` };
     };
     trusted.forEach((o) => add(outcomeRecord(o, tokensOf)));
-    sources.outcomes = { total: rows.length, trusted: trusted.length, note: "untrusted rows (a consumer's own report, or missing call id / version / evidence) are counted and left out" };
+    sources.outcomes = { total: rows.length, trusted: trusted.length, retracted: excluded.retracted_outcomes, note: "untrusted rows (a consumer's own report, or missing call id / version / evidence) and rows a reviewer retracted are counted and left out — the same rows the gate does not read" };
   } catch (e) { sources.outcomes = { error: String(e.message) }; }
   // Calls the proxy logged for the author's sessions, if an export was supplied
   if (callsFile && existsSync(callsFile)) {

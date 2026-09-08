@@ -236,6 +236,53 @@ test("an outcome on an earlier version of the asset is a result, not a relation 
   assert.equal(same.asset_claim_check.verdict, "contradicts");
 });
 
+test("the reviewer's counter-example: a transport 2xx alone cannot carry a strong support", () => {
+  // One HTTP 200, no business result. The verdict may stand — the endpoint
+  // did answer at that address — but at transport strength, not strong.
+  const r = checkAssessment({
+    competence: "medium",
+    claims: [{ statement: "the address answered", type: "execution_result", outcome: "success", record_ids: ["call:t200"], quote: "bridge_call search status=200 http://10.244.7.19:8096", relation_to_asset: "supports" }],
+  }, new Map([...pack, ["call:t200", rec("call", "2026-09-06 bridge_call search status=200 http://10.244.7.19:8096/skill-bridge/v3/skill/search", { kind: "bridge_call", upstream_status: 200 }, "proxy_observed")]]), { assetTokens: tokens, assetId: "skl-a", assetVersion: 2 });
+  assert.equal(r.competence, "unknown");           // transport never decides competence
+  assert.equal(r.asset_claim_check.verdict, "supports");
+  assert.equal(r.asset_claim_check.strength, "weak");  // was "strong"
+  assert.match(r.claims_kept[0].note, /transport observation/);
+  // A harness outcome at the same version and content is what "strong" means.
+  const strong = checkAssessment({ competence: "medium", claims: [{ statement: "the consumer was corrected", type: "execution_result", outcome: "failure", record_ids: ["outcome:o1"], quote: "corrected(wrong) on asset skl-a v2" }] }, pack, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2 });
+  assert.equal(strong.asset_claim_check.strength, "strong");
+});
+
+test("the reviewer's counter-example: a correction on other content of the same version cannot contradict the text under assessment", () => {
+  const hashed = new Map([...pack,
+    ["outcome:oh", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user); the probe timed out", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, content_hash: "hOLD", consumer_user_id: "usr-b", call_id: "c-h" }, "harness_verified")],
+  ]);
+  const claim = { competence: "low", claims: [{ statement: "the asset is wrong", type: "execution_result", outcome: "failure", record_ids: ["outcome:oh"], quote: "corrected(wrong) on asset skl-a v2" }] };
+  // Same version, different content: a result, not a relation.
+  const other = checkAssessment(claim, hashed, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, assetContentHash: "hNEW" });
+  assert.equal(other.asset_claim_check.verdict, "silent");
+  assert.match(other.claims_kept[0].note, /not version 2 \(hNEW/);
+  // The asset carries a hash, the row carries none: it cannot claim the text.
+  const unbound = checkAssessment({ competence: "low", claims: [{ statement: "the asset is wrong", type: "execution_result", outcome: "failure", record_ids: ["outcome:o1"], quote: "corrected(wrong) on asset skl-a v2" }] }, pack, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, assetContentHash: "hNEW" });
+  assert.equal(unbound.asset_claim_check.verdict, "silent");
+  assert.match(unbound.claims_kept[0].note, /carries no content hash/);
+  // Matching hash: the relation stands.
+  const same = checkAssessment(claim, hashed, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, assetContentHash: "hOLD" });
+  assert.equal(same.asset_claim_check.verdict, "contradicts");
+  assert.equal(same.asset_claim_check.strength, "strong");
+});
+
+test("the reviewer's counter-example: one call validated then corrected is one corrected call, not a success beside a failure", () => {
+  const sameCall = new Map([
+    ["outcome:v", rec("outcome", "validated on asset skl-a v2 by usr-a (self) at 2026-09-04", { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-a", call_id: "call-9", recorded_at: "2026-09-04T00:00:00Z" }, "harness_verified")],
+    ["outcome:c", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-a (self) at 2026-09-05", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-a", call_id: "call-9", recorded_at: "2026-09-05T00:00:00Z" }, "harness_verified")],
+  ]);
+  const r = checkAssessment({ competence: "medium", claims: [] }, sameCall, { assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(r.execution_claims.ledgers.own_business.success, 0);
+  assert.equal(r.execution_claims.ledgers.own_business.failure, 1);
+  assert.equal(r.execution_claims.superseded_by_a_later_row, 1);
+  assert.equal(r.competence, "low");   // was "medium": the success had been kept
+});
+
 test("garbage in, unknown out", () => {
   const r = checkAssessment({ competence: "excellent", claims: "no" }, pack);
   assert.equal(r.competence, "unknown");

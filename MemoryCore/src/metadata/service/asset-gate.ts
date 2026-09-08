@@ -337,7 +337,11 @@ export function decideAsset(input: DecideInput): GateDecision {
     evidence_refs,
     signals: { online, author },
     review_priority,
-    reject_evidence_latest_at: downweighting.length ? downweighting.map((o) => o.occurred_at).sort().slice(-1)[0] : null,
+    reject_evidence_ids: downweighting.map((o) => o.id),
+    // The time the row reached the registry (created_at), not the time the
+    // event it describes happened: a failure that occurred before a human
+    // admit but was recorded after it is evidence the reviewer never saw.
+    reject_evidence_latest_at: downweighting.length ? downweighting.map((o) => o.created_at ?? o.occurred_at).sort().slice(-1)[0] : null,
     evidence_as_of: input.asOf ?? null,
   };
 }
@@ -379,26 +383,36 @@ export function activeReview(gate: Record<string, unknown>, asset: { version: nu
 }
 
 /**
- * What the asset's status resolves to. A human reject wins. A rule reject
- * (a trusted correction on this very version and content) wins over a
- * human admit only when the correction arrived AFTER the admit — new
- * evidence the reviewer never saw; a correction already on file when the
- * reviewer admitted is one they saw and overruled, and the admit stands.
- * A mistaken correction is retracted through asset/outcome/retract, which
- * keeps it on file and stops the gate reading it. Then a human admit lifts
- * a pending; then the rule's admit; else candidate.
+ * What the asset's status resolves to. A human reject wins. Then an
+ * effective reject: a trusted correction on this very version and content
+ * keeps the asset failed even under a human admit — UNLESS that admit names
+ * the correction and says why (`review.overrode`). Nothing is inferred from
+ * timestamps: that a correction was on file when the reviewer clicked is no
+ * record that they read it, and the row may have reached the registry after
+ * the event it describes. A correction the admit did not name — one that
+ * arrived later, or one nobody addressed — keeps the reject. A mistaken
+ * correction is retracted through asset/outcome/retract, which keeps it on
+ * file and stops the gate reading it. Then a human admit lifts a pending;
+ * then the rule's admit; else candidate.
  */
 export function effectiveStatus(decision: GateDecision, review: HumanReviewRecord | null, now: Date = new Date()): GateEffective {
   const at = now.toISOString();
   if (review?.decision === "reject") return { status: "failed", source: "review", review_id: review.id, reason: `human reject by ${review.by} on version ${review.asset_version}`, at };
   if (decision.decision === "reject") {
-    // Strictly earlier: a correction dated the same instant as the admit was not one the reviewer read.
-    if (review?.decision === "admit" && decision.reject_evidence_latest_at && decision.reject_evidence_latest_at < review.at) {
+    const live = decision.reject_evidence_ids ?? [];
+    const named = new Set((review?.overrode ?? []).map((o) => o.outcome_id));
+    const unhandled = live.filter((id) => !named.has(id));
+    // Only an admit that names every live correction lifts the reject, and
+    // only when the decision says which rows those are: a decision written
+    // before this field existed names none, and the reject stands.
+    if (review?.decision === "admit" && live.length > 0 && unhandled.length === 0) {
       return { status: "approved", source: "review", review_id: review.id, at,
-        reason: `human admit by ${review.by} on version ${review.asset_version} with the corrected outcome(s) already on file (latest ${decision.reject_evidence_latest_at}); the reviewer overruled them` };
+        reason: `human admit by ${review.by} on version ${review.asset_version}, overruling ${live.length} corrected outcome(s) named in the review: ${(review.overrode ?? []).map((o) => `${o.outcome_id} (${o.reason})`).join("; ")}` };
     }
     return { status: "failed", source: "rule", review_id: review?.id ?? null, at,
-      reason: review ? `rule reject: a corrected outcome at ${decision.reject_evidence_latest_at ?? "?"} arrived after the human admit by ${review.by} (${review.at}); the review stays on file` : "rule reject (corrected outcome)" };
+      reason: review?.decision === "admit"
+        ? `rule reject: the human admit by ${review.by} (${review.at}) did not name ${unhandled.length || live.length} corrected outcome(s)${unhandled.length ? ` (${unhandled.join(", ")})` : " (the decision on file records none)"}; the review stays on file`
+        : "rule reject (corrected outcome)" };
   }
   if (review?.decision === "admit") return { status: "approved", source: "review", review_id: review.id, reason: `human admit by ${review.by} on version ${review.asset_version}`, at };
   if (decision.decision === "admit") return { status: "approved", source: "rule", review_id: null, reason: "rule admit (cross-person validated, no corrected)", at };

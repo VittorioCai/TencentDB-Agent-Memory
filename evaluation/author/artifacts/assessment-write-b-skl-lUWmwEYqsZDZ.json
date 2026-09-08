@@ -1,6 +1,6 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-07T20:03:02Z",
+  "at": "2026-09-08T06:57:40Z",
   "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json",
   "asset_id": "skl-lUWmwEYqsZDZ",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
@@ -42,7 +42,7 @@
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
     "chain_complete": false,
-    "pack_sha256": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
+    "pack_sha256": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
     "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
   "decision_after": {
@@ -51,7 +51,7 @@
     "asset_id": "skl-lUWmwEYqsZDZ",
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
-    "decided_at": "2026-09-07T20:03:02.744Z",
+    "decided_at": "2026-09-08T06:57:40.107Z",
     "decision": "pending",
     "status_target": "candidate",
     "confidence": null,
@@ -73,7 +73,9 @@
         "distinct_tasks": 0,
         "calls": 0,
         "untrusted_ignored": 0,
-        "other_version": 0
+        "other_version": 0,
+        "unbound_ignored": 0,
+        "retracted_ignored": 0
       },
       "author": {
         "user_id": "usr-4u07qc2kuj",
@@ -115,15 +117,17 @@
           "author_user_id": "usr-4u07qc2kuj",
           "asset_version": 3,
           "content_hash": "50636f458d57384d9035dd04a27fadba",
-          "pack_sha256": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
+          "pack_sha256": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
           "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-07T20:03:02.700Z"
+          "written_at": "2026-09-08T06:57:40.056Z"
         },
         "assessment_ignored": null
       }
     },
     "review_priority": "high",
+    "reject_evidence_ids": [],
+    "reject_evidence_latest_at": null,
     "evidence_as_of": null
   },
   "status_after": "candidate"
