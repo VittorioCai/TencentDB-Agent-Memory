@@ -151,6 +151,35 @@ if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
   cp "$GATE_BASELINE" "$RUN_DIR/gate_baseline.json"
 fi
 
+# ── 0b. the agent's own memory, snapshotted ──────────────────────
+# L2 scene blocks and the L3 persona live under
+# profiles/<team|agent>/ and are the product's own memory of this agent.
+# They accumulate ACROSS runs: batch 3 found a scene block, written at
+# 07:56:30 in the middle of that batch's own 07:51–07:58 window, carrying
+# conclusions from earlier runs ("endpoint-b … outranks documented-but-silent
+# endpoint-a") and both scenario addresses. The model reached it through the
+# product's own `scenario/read`, so run five was reading what runs one to
+# four had taught it — the arm was not five independent samples.
+#
+# Snapshot before, restore after, and record the hash either way, so a run
+# either starts from the same memory as its siblings or says that it did not.
+MEM_ROOT="${MEM_ROOT:-/data/tdai-memory/profiles}"
+MEM_SNAP="$RUN_DIR/agent-memory-before.tar.gz"
+mem_hash() {  # prints a stable hash of the agent memory tree, or "absent"
+  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
+    "cd '$MEM_ROOT' 2>/dev/null && find . -type f | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1" 2>/dev/null || echo absent
+}
+if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" ]]; then
+  if docker exec "${CORE_CONTAINER:-tdai-memory-core}" test -d "$MEM_ROOT" 2>/dev/null; then
+    docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$MEM_SNAP" 2>/dev/null \
+      && info "agent memory snapshotted ($(mem_hash | cut -c1-12)…)" \
+      || warn "could not snapshot agent memory; this run is not isolated from earlier ones"
+  else
+    warn "no agent memory tree at $MEM_ROOT — nothing to isolate"
+  fi
+fi
+MEM_HASH_BEFORE="$(mem_hash)"
+
 # ── 1. the session ───────────────────────────────────────────────
 # The capture is produced by the observability probe sitting between proxy and
 # model. Where the probe sits is not a detail: a probe between client and proxy
@@ -203,6 +232,28 @@ else
        State check: bash evaluation/runner/prepare.sh --status"
   fi
   cp "$PROBE_OUT" "$CAPTURE"
+fi
+
+# ── 1b. restore the agent's memory ───────────────────────────────
+# What the run wrote into the product's memory is kept beside the run (so it
+# can be read later) and then rolled back, so the next run starts where this
+# one did. Both hashes go into run.json: equal means the run changed nothing,
+# different means it did and the rollback is what keeps the arm comparable.
+MEM_HASH_AFTER="$(mem_hash)"
+if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" ]]; then
+  docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$RUN_DIR/agent-memory-after.tar.gz" 2>/dev/null || :
+  if docker exec -i "${CORE_CONTAINER:-tdai-memory-core}" sh -c "rm -rf '$MEM_ROOT'/* && tar xzf - -C '$MEM_ROOT'" < "$MEM_SNAP" 2>/dev/null; then
+    MEM_HASH_RESTORED="$(mem_hash)"
+    if [[ "$MEM_HASH_RESTORED" == "$MEM_HASH_BEFORE" ]]; then
+      [[ "$MEM_HASH_AFTER" == "$MEM_HASH_BEFORE" ]] \
+        && info "agent memory unchanged by this run" \
+        || info "agent memory was written during the run and has been rolled back"
+    else
+      warn "agent memory did not restore to its pre-run hash — later runs are NOT isolated from this one"
+    fi
+  else
+    warn "could not restore agent memory; later runs are NOT isolated from this one"
+  fi
 fi
 
 # ── 2. the service's own records ─────────────────────────────────
@@ -476,7 +527,10 @@ node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
   || warn "context-confounders failed (see context-confounders.log)"
 
 # ── 6. manifest ──────────────────────────────────────────────────
-RUN_TASK_NAME="$TASK_NAME" python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
+RUN_TASK_NAME="$TASK_NAME" \
+MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM_HASH_BEFORE:-}" MEM_HASH_AFTER="${MEM_HASH_AFTER:-}" \
+MEM_ISOLATED="$([[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" && "${MEM_HASH_RESTORED:-}" == "${MEM_HASH_BEFORE:-}" ]] && echo 1 || echo 0)" \
+python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
 import json, os, re, sys
 run_dir, run_id, label, identity, started, verdict, conv_id, resolved_line, extraction, gate, ablate = sys.argv[1:12]
 
@@ -536,6 +590,18 @@ manifest = {
     # read from the mounted core config, or "unknown" if it could not be read.
     # Off for the on/off comparison — a disclosed design choice, not a default.
     "auto_extraction_enabled": {"true": True, "false": False}.get(extraction, None),
+    # The product's own memory of this agent (L2 scene blocks, L3 persona),
+    # hashed before and after. Equal means the run changed nothing; different
+    # means it did and was rolled back, so the next run starts where this one
+    # did. `isolated` false is the flag that says this run may have been
+    # reading what earlier runs in its own batch wrote.
+    "agent_memory": {
+        "root": os.environ.get("MEM_ROOT_REPORT", "/data/tdai-memory/profiles"),
+        "hash_before": os.environ.get("MEM_HASH_BEFORE") or None,
+        "hash_after": os.environ.get("MEM_HASH_AFTER") or None,
+        "written_during_run": bool(os.environ.get("MEM_HASH_BEFORE")) and os.environ.get("MEM_HASH_BEFORE") != os.environ.get("MEM_HASH_AFTER"),
+        "isolated": os.environ.get("MEM_ISOLATED") == "1",
+    },
     "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
     "gate": gate_block,
