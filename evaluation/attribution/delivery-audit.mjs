@@ -43,6 +43,31 @@
  * would decide this on discriminativeness it never verified.
  */
 
+/**
+ * Does this text carry the token?
+ *
+ * Not as simply as it sounds. A search result does not hand back the asset's
+ * text: SQLite's FTS5 snippet splits on punctuation and pads with spaces, so
+ * `10.244.7.19` arrives as `10.244 . 7.19`. A contiguous-substring match
+ * misses that, and missing an arrival is the direction that hides a leak —
+ * it reads as "not delivered", which the calibration files as a clean true
+ * negative. One real false positive in the record was this and nothing else.
+ *
+ * So whitespace is normalised away as a fallback, and the match reports HOW
+ * it matched: gluing text together can in principle join two unrelated
+ * numbers across a line break, and a reader should be able to tell an exact
+ * hit from a reconstructed one.
+ */
+export function containsToken(text, token) {
+  const t = String(text ?? "");
+  const needle = String(token ?? "").toLowerCase();
+  if (!needle) return { hit: false, mode: null };
+  if (t.toLowerCase().includes(needle)) return { hit: true, mode: "exact" };
+  const squeeze = (x) => x.toLowerCase().replace(/\s+/g, "");
+  if (squeeze(t).includes(squeeze(needle))) return { hit: true, mode: "whitespace_normalised" };
+  return { hit: false, mode: null };
+}
+
 const INPUT_ROLES = new Set(["system", "user", "tool"]);
 
 function textOf(message) {
@@ -82,13 +107,12 @@ const before = (a, b) => a.request < b.request || (a.request === b.request && a.
  * reading one of these paths is the model's own text coming back.
  */
 export function pathsModelWroteTokenInto(entries, token) {
-  const needle = String(token).toLowerCase();
   const paths = new Set();
   for (const { message } of entries) {
     if (message?.role !== "assistant") continue;
     for (const t of message?.tool_calls ?? []) {
       const args = String(t?.function?.arguments ?? "");
-      if (!args.toLowerCase().includes(needle)) continue;
+      if (!containsToken(args, token).hit) continue;
       // Whatever path this call names is a place the token may now live.
       let parsed = null;
       try { parsed = JSON.parse(args); } catch { parsed = null; }
@@ -148,8 +172,9 @@ export function auditDelivery(requests, tokens, opts = {}) {
       for (const e of entries) {
         const pos = { request: e.request, index: e.index };
         const role = e.message?.role;
-        if (INPUT_ROLES.has(role) && textOf(e.message).toLowerCase().includes(needle)) inputs.push({ ...pos, role, entry: e });
-        if (role === "assistant" && authoredTextOf(e.message).toLowerCase().includes(needle)) authored.push(pos);
+        const asInput = INPUT_ROLES.has(role) ? containsToken(textOf(e.message), t) : { hit: false };
+        if (asInput.hit) inputs.push({ ...pos, role, entry: e, match: asInput.mode });
+        if (role === "assistant" && containsToken(authoredTextOf(e.message), t).hit) authored.push(pos);
       }
       const where = (p) => `request ${p.request} message ${p.index}`;
 
@@ -169,8 +194,8 @@ export function auditDelivery(requests, tokens, opts = {}) {
       // as much an echo, and checking only the first left that open.
       const judged = inputs.map((hit) => {
         const source = attributionOf ? attributionOf({ request: hit.request, index: hit.index }, hit.entry, t) : null;
-        const callArgs = String((source && typeof source === "object" && source.args) || "").toLowerCase();
-        if (callArgs.includes(needle)) {
+        const callArgs = String((source && typeof source === "object" && source.args) || "");
+        if (containsToken(callArgs, t).hit) {
           return { ...hit, kind: "echo", why: "the call that produced this result already carried the token in its own arguments — the result is echoing its own command" };
         }
         const wrote = pathsModelWroteTokenInto(entries.filter((e) => before({ request: e.request, index: e.index }, hit)), t);
@@ -191,19 +216,33 @@ export function auditDelivery(requests, tokens, opts = {}) {
           : { ...hit, kind: "other", from, place, why: `came from ${from ?? `something that is not a pool asset${place ? ` (${String(place).slice(0, 80)})` : ""}`}` };
       });
 
-      const inTime = operation ? judged.filter((h) => before({ request: h.request, index: h.index }, operation)) : judged;
-      const arrivals = inTime.filter((h) => h.kind !== "echo");
-      const trail = judged.map((h) => ({ at: where(h), kind: h.kind, from: h.from ?? null, why: h.why }));
+      // An echo is not an arrival anywhere, so it leaves the whole set — not
+      // just the in-time slice (2026-09-08m). Leaving echoes in `judged` let
+      // a run whose only appearances were the model quoting itself fall
+      // through to `after_operation`, which says "it arrived, just late"
+      // about content that never arrived, and named an echo as the arrival.
+      const real = judged.filter((h) => h.kind !== "echo");
+      const inTime = operation ? real.filter((h) => before({ request: h.request, index: h.index }, operation)) : real;
+      const arrivals = inTime;
+      const trail = judged.map((h) => ({ at: where(h), kind: h.kind, from: h.from ?? null, match: h.match ?? null, why: h.why }));
 
       if (!arrivals.length) {
-        const echoesOnly = inTime.length && inTime.every((h) => h.kind === "echo");
-        if (echoesOnly) { findings.push({ token: t, verdict: "model_echo", at: where(inTime[0]), arrivals: trail, why: inTime[0].why }); continue; }
-        if (judged.length) {
-          // It did arrive, but not before what is being judged.
-          findings.push({ token: t, verdict: "after_operation", at: where(judged[0]), arrivals: trail, operation_at: where(operation),
-            why: `every arrival is at or after the operation at ${where(operation)}; later content cannot explain an earlier operation` });
+        if (!real.length) {
+          // Nothing reached the model. Two shapes, kept apart because they
+          // say different things about the record: the token came back as
+          // input but only as the model's own words returning (echo), or it
+          // never appeared on the input side at all (authored).
+          findings.push(judged.length
+            ? { token: t, verdict: "model_echo", at: where(judged[0]), arrivals: trail,
+                why: `${judged[0].why} — nothing reached the model; every appearance on the input side is its own text coming back` }
+            : { token: t, verdict: "model_authored", at: where(authored[0]), arrivals: trail,
+                why: "only the model's own messages and tool arguments name it; the model writing a token is not the asset reaching the model" });
           continue;
         }
+        // Something did arrive, but not before what is being judged.
+        findings.push({ token: t, verdict: "after_operation", at: where(real[0]), arrivals: trail, operation_at: where(operation),
+          why: `every arrival is at or after the operation at ${where(operation)}; later content cannot explain an earlier operation` });
+        continue;
       }
       if (!operation) {
         findings.push({ token: t, verdict: "delivered_order_unknown", at: where(arrivals[0]), arrivals: trail,
@@ -323,7 +362,7 @@ export function jsonCandidates(text) {
 export function assetOwningTokenInResult(text, token) {
   const s = String(text ?? "");
   const needle = String(token ?? "").toLowerCase();
-  if (!needle || !s.toLowerCase().includes(needle)) return null;
+  if (!needle || !containsToken(s, token).hit) return null;
   // Parse rather than count bytes (2026-09-08k). Byte offsets assume every
   // hit writes its skill_id before its body; a response that puts the body
   // first hands the token to the previous hit, silently.
@@ -335,7 +374,7 @@ export function assetOwningTokenInResult(text, token) {
   // one that actually contains the token is the one that answers.
   let parsed = null;
   for (const candidate of jsonCandidates(s)) {
-    if (!candidate.toLowerCase().includes(needle)) continue;
+    if (!containsToken(candidate, token).hit) continue;
     try { parsed = JSON.parse(candidate); break; } catch { /* not this one */ }
   }
   if (parsed == null) return null;
@@ -349,7 +388,7 @@ export function assetOwningTokenInResult(text, token) {
       for (const v of Object.values(node)) walk(v, mine);
       return;
     }
-    if (typeof node === "string" && node.toLowerCase().includes(needle)) owner = inherited ?? null;
+    if (typeof node === "string" && containsToken(node, token).hit) owner = inherited ?? null;
   };
   walk(parsed, null);
   return owner;
@@ -463,7 +502,7 @@ export function verifyTokensDiscriminative(requests, tokens) {
   for (const [assetId, spec] of Object.entries(tokens ?? {})) {
     for (const t of spec?.tokens ?? []) {
       const key = `${assetId}:${t}`;
-      if (first.includes(String(t).toLowerCase())) {
+      if (containsToken(first, t).hit) {
         out[key] = { ok: false, why: "the token is already in the run's opening request, so its later presence shows nothing" };
       } else if (/^\d{1,6}$/.test(String(t))) {
         out[key] = { ok: true, warn: "a bare number can occur by chance; it carries a verdict here only because it is absent from the opening request" };

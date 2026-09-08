@@ -34,8 +34,14 @@
  */
 
 /** Did the arrival happen, in time to explain the operation being judged? */
-function reachedInTime(verdict) {
+function reachedInTime(verdict, coverageAsserted) {
   if (verdict === "delivered") return "yes";
+  // The model's own words — written by it, or echoed back from its own
+  // command — are evidence that nothing reached it, PROVIDED the capture is
+  // known to cover the run (2026-09-08m). Filing them as unsettled made the
+  // sharpest false positive there is unmeasurable: the model dialled an
+  // address it was never given, and the judge called the asset used.
+  if (verdict === "model_authored" || verdict === "model_echo") return coverageAsserted ? "no" : "unsettled";
   // Content that arrived from a source that IS identified but is not this
   // asset still arrived (2026-09-08k). Filing it as unmeasurable is how the
   // batch's one real leak disappeared from the table: on a hidden asset this
@@ -55,8 +61,17 @@ function reachedInTime(verdict) {
  * @param hidden      was it hidden from the model for this run
  * @param verdict     the delivery audit's verdict
  */
-export function classify({ judgedUsed, hidden, verdict }) {
-  const reached = reachedInTime(verdict);
+export function classify({ judgedUsed, hidden, verdict, coverageAsserted }) {
+  // Whether the asset was hidden is half of every verdict below, so not
+  // knowing it is not the same as it being visible (2026-09-08m). Batch 1
+  // recorded no gate block; `hidden` defaulted to false, and three gate-on
+  // runs became true negatives. A leak in one of them would have been a true
+  // negative too, which made that batch's "isolation failures: 0"
+  // structurally guaranteed rather than measured.
+  if (hidden === null || hidden === undefined) {
+    return { bucket: "unsettled", why: "the run does not record whether it was hidden, so neither a leak nor a clean isolation can be read from it", counts_toward_rate: false };
+  }
+  const reached = reachedInTime(verdict, coverageAsserted);
   if (reached === "unsettled") {
     return { bucket: "unsettled", why: `delivery is ${verdict}: neither for nor against the judge`, counts_toward_rate: false };
   }
@@ -88,7 +103,8 @@ export function calibrate(runs) {
         run_id: r.run_id, label: r.label, rules_version: r.rules_version ?? null,
         started_at: r.started_at ?? null, baseline_frozen_at: r.baseline_frozen_at ?? null,
         model: r.model ?? null, asset_id: assetId, asset_version: a.asset_version ?? null,
-        judged_used: !!a.judgedUsed, hidden: !!a.hidden, delivery: a.verdict, ...c,
+        judged_used: !!a.judgedUsed, hidden: a.hidden ?? null, delivery: a.verdict,
+        capture_complete: a.coverageAsserted ?? null, run_verdict: r.run_verdict ?? null, ...c,
       });
     }
   }

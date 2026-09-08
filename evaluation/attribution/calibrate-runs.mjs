@@ -37,7 +37,18 @@ export function runInput(dir) {
   });
 
   const used = new Set(readLines(`${dir}/used-events.jsonl`).map((e) => e.asset_id));
-  const statusAtStart = run.gate?.status_at_start ?? {};
+  // Two mechanisms, two records. The Core gate writes the asset's `status`,
+  // so hidden reads as `failed`; the earlier batches flipped `visibility`
+  // from outside, so hidden reads as `private`. Reading only the first made
+  // three gate-on runs in batch 1 look not-hidden — and a leak in one of
+  // them would have been filed as a clean true negative.
+  const hiddenOf = (assetId) => {
+    const st = run.gate?.status_at_start;
+    if (st && assetId in st) return st[assetId] === "failed";
+    const vis = run.gate?.visibility_at_start;
+    if (vis && assetId in vis) return vis[assetId] === "private";
+    return null;
+  };
   const model = (rows.map((r) => /"model"\s*:\s*"([^"]+)"/.exec(JSON.stringify(r.body ?? "")))
     .find(Boolean) ?? [])[1] ?? null;
 
@@ -45,9 +56,12 @@ export function runInput(dir) {
   for (const [assetId, spec] of Object.entries(tokens)) {
     assets[assetId] = {
       judgedUsed: used.has(assetId),
-      // Hidden means the gate had put it out of reach for this run.
-      hidden: statusAtStart[assetId] === "failed",
+      // Hidden means the gate had put it out of reach for this run — and
+      // null means the run did not record the gate at all, which is not the
+      // same as "not hidden" (2026-09-08m).
+      hidden: hiddenOf(assetId),
       verdict: audit.assets[assetId]?.verdict ?? "not_seen_in_capture",
+      coverageAsserted: coverage.complete,
       asset_version: spec?.version ?? null,
     };
   }
@@ -56,7 +70,7 @@ export function runInput(dir) {
     rules_version: baseline.rules_version ?? null,
     started_at: run.started_at ?? null,
     baseline_frozen_at: run.gate?.baseline_frozen_at ?? baseline.frozen_at ?? null,
-    model, capture_complete: coverage.complete, coverage_reasons: coverage.reasons,
+    model, run_verdict: (readJson(`${dir}/verdict.json`, {}) ?? {}).verdict ?? null, capture_complete: coverage.complete, coverage_reasons: coverage.reasons,
     // Marked by the runner when a source outside the frozen pool was written
     // during the batch this run belongs to; such a run is not an independent
     // sample and must not be counted as one.
@@ -117,6 +131,8 @@ ${contaminated.map((r) => `- \`${r}\``).join("\n")}
 
 **不测的**:这个资产是否真的帮助了任务。送达且被判使用,不等于它起了作用。
 
+**冻结规则那一行至今没有任何反例。** 累计里的数字来自多个规则集,读者容易以为反例问题已经解决——没有。能验证 \`${frozen ?? "冻结规则"}\` 的只有批次三,而它 FP 0、FN 0,一个反例都没有。累计准确率不能替它作证。
+
 **假阴性一列至今是 0,而这件事本身需要解释。** \`未判 used + 内容已到达\` 这条分支从未触发,意味着到目前为止**只要内容到达,判定器就判 used**。如果确实如此,那它测的是**送达**,而不是**使用**——恰恰是本课题要区分的东西。要让这一列从"是 0"变成"可达而恰好是 0",需要构造"模型确实读了资产,但操作不使用它"的场景。
 
 **判据是保守的**:说不清一律未定。真实错误率**不会被低估**,但可测样本会变小。
@@ -141,10 +157,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   console.log(table);
   console.log("\n## Per run\n");
-  console.log("| run | rules | model | capture | asset | hidden | judged used | delivery | bucket |");
-  console.log("|---|---|---|---|---|---|---|---|---|");
+  console.log("| run | rules | model | run verdict | capture | asset | hidden | judged used | delivery | bucket |");
+  console.log("|---|---|---|---|---|---|---|---|---|---|");
   for (const r of result.rows) {
     const src = runs.find((x) => x.run_id === r.run_id);
-    console.log(`| ${r.run_id} | ${r.rules_version ?? "—"} | ${r.model ?? "—"} | ${src?.capture_complete ? "complete" : "INCOMPLETE"} | ${r.asset_id} | ${r.hidden} | ${r.judged_used} | ${r.delivery} | ${r.bucket} |`);
+    console.log(`| ${r.run_id} | ${r.rules_version ?? "—"} | ${r.model ?? "—"} | ${r.run_verdict ?? "—"} | ${src?.capture_complete ? "complete" : "INCOMPLETE"} | ${r.asset_id} | ${r.hidden === null ? "unknown" : r.hidden} | ${r.judged_used} | ${r.delivery} | ${r.bucket} |`);
   }
 }

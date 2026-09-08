@@ -5,7 +5,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture, verifyCoverage, assetOwningTokenInResult, jsonCandidates, verifyTokensDiscriminative } from "./delivery-audit.mjs";
+import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture, verifyCoverage, assetOwningTokenInResult, jsonCandidates, verifyTokensDiscriminative, containsToken } from "./delivery-audit.mjs";
 
 const req = (messages, requestId) => ({ requestId, body: { json: { messages } } });
 const TOKENS = { "skl-hidden": { version: 2, tokens: ["10.244.7.19"] }, "skl-ok": { version: 2, tokens: ["47318"] } };
@@ -421,4 +421,53 @@ test("REPRO: an echo among later arrivals must be caught, not only at the first 
   const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 4 }, coverageAsserted: true, attributionOf });
   // The echo must not promote this to `delivered`.
   assert.equal(a.assets["skl-ok"].verdict, "delivered_from_other_source");
+});
+
+test("REPRO: a token broken up by an FTS snippet is still the token", () => {
+  // Real shape, from a search result in 20260905T153518Z-gate-off: FTS5
+  // splits on punctuation and pads with spaces, so `10.244.7.19` arrives as
+  // `10.244 . 7.19`. Matching a contiguous substring misses it — and missing
+  // an arrival is the dangerous direction: a leak then reads as not
+  // delivered, which the calibration files as a true negative.
+  const snippet = 'Command: curl .../skill/search\n{"items":[{"skill_id":"skl-hidden","snippet":"…to   the   <mark>bridge</mark>   at : \\n \\n         <mark>http</mark> : / / 10.244 . 7.19 : 8096 / <mark>skill</mark> - <mark>bridge</mark> / v3 / <mark>skill</mark> / search \\n \\n Required…"}]}';
+  const requests = [req([
+    { role: "system", content: "you are an agent" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/search -d '{\"query\":\"bridge\"}'" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: snippet },
+    { role: "assistant", content: "the snippets document 10.244.7.19:8096" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c2", function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://10.244.7.19:8096/…" }) } }] },
+  ])];
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 4 }, coverageAsserted: true,
+    attributionOf: attributionFromCapture(requests) });
+  assert.equal(a.assets["skl-hidden"].verdict, "delivered");
+  // and it says the match was only found after normalising whitespace
+  assert.match(a.assets["skl-hidden"].findings[0].arrivals[0].why ?? "", /./);
+});
+
+test("normalising whitespace must not glue unrelated text into a token", () => {
+  // `10.244` at the end of one line and `7.19` at the start of the next are
+  // not necessarily one address, so the match is reported as normalised
+  // rather than exact and the reader can tell them apart.
+  assert.equal(containsToken("plain 10.244.7.19 here", "10.244.7.19").mode, "exact");
+  assert.equal(containsToken("10.244 . 7.19", "10.244.7.19").mode, "whitespace_normalised");
+  assert.equal(containsToken("nothing like it", "10.244.7.19").mode, null);
+});
+
+test("REPRO: echoes must leave `judged` too, or the verdict names the wrong thing", () => {
+  // Every arrival is an echo of the model's own command, and they sit after
+  // the operation. `inTime` empties, the echoes-only branch short-circuits
+  // on `inTime.length`, and the verdict falls through to after_operation —
+  // "it arrived, just late" — pointing at an echo. Nothing arrived at all.
+  const requests = [req([
+    { role: "system", content: "you are an agent" },
+    { role: "assistant", content: "from what I know the address is 10.244.7.19:8096" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://10.244.7.19:8096/x" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: "Command: curl http://10.244.7.19:8096/x\ntimed out" },
+  ])];
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 2 }, coverageAsserted: true,
+    attributionOf: attributionFromCapture(requests) });
+  // It came back as input, so it is an echo rather than "never seen"; either
+  // way nothing reached the model, which is what the verdict has to convey.
+  assert.equal(a.assets["skl-hidden"].verdict, "model_echo");
+  assert.match(a.assets["skl-hidden"].findings[0].why, /nothing reached the model/);
 });

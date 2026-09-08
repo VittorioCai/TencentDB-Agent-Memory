@@ -97,3 +97,34 @@ test("the same delivery on a NOT-hidden asset is an ordinary arrival, judged as 
 test("source_unknown remains unmeasurable — the record does not reach", () => {
   assert.equal(classify({ judgedUsed: true, hidden: true, verdict: "source_unknown" }).bucket, "unsettled");
 });
+
+test("REPRO: when coverage is asserted, the model's own words are proof of NON-delivery", () => {
+  // model_authored and model_echo both mean nothing reached the model. Filing
+  // them as unsettled makes "the model dialled an address it was never given,
+  // and the judge called it used" unmeasurable — which is precisely the false
+  // positive the calibration exists to catch.
+  for (const v of ["model_authored", "model_echo"]) {
+    const c = classify({ judgedUsed: true, hidden: true, verdict: v, coverageAsserted: true });
+    assert.equal(c.bucket, "false_positive", v);
+    assert.equal(c.counts_toward_rate, true, v);
+    // Not judged used and nothing arrived is an ordinary true negative.
+    assert.equal(classify({ judgedUsed: false, hidden: true, verdict: v, coverageAsserted: true }).bucket, "true_negative", v);
+  }
+});
+
+test("without asserted coverage the same verdicts stay unsettled — absence is not yet evidence", () => {
+  const c = classify({ judgedUsed: true, hidden: true, verdict: "model_authored", coverageAsserted: false });
+  assert.equal(c.bucket, "unsettled");
+});
+
+test("REPRO: an unknown isolation condition must not be rendered as `not hidden`", () => {
+  // Batch 1 recorded no gate block, so hidden defaulted to false and three
+  // gate-on runs were filed as true negatives. Had one of them leaked it
+  // would have been a true negative too — which is why that batch's
+  // "isolation failures: 0" was structurally guaranteed rather than measured.
+  const c = classify({ judgedUsed: false, hidden: null, verdict: "delivered", coverageAsserted: true });
+  assert.equal(c.bucket, "unsettled");
+  assert.match(c.why, /whether it was hidden/);
+  // Known-not-hidden is unaffected.
+  assert.equal(classify({ judgedUsed: false, hidden: false, verdict: "delivered", coverageAsserted: true }).bucket, "false_negative");
+});

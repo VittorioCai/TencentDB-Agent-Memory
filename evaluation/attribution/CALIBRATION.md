@@ -9,7 +9,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-08T21:40:48.470Z。
+生成于 2026-09-08T21:57:07.497Z。
 
 ## 判据
 
@@ -29,9 +29,9 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 
 | set | TP | FP | TN | FN | isolation failure | unsettled | rated/total | accuracy |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| rules unrecorded | 29 | 1 | 8 | 0 | 0 | 0 | 38/38 | 0.974 |
+| rules unrecorded | 24 | 0 | 8 | 0 | 0 | 6 | 32/38 | 1 |
 | rules gate-rules-2026-09-08f (frozen) | 15 | 0 | 4 | 0 | 1 | 0 | 19/20 | 1 |
-| **cumulative** | 44 | 1 | 12 | 0 | 1 | 0 | 57/58 | 0.982 |
+| **cumulative** | 39 | 0 | 12 | 0 | 1 | 6 | 51/58 | 1 |
 
 An isolation failure is not a judging error: the asset was hidden and its
 content reached the model anyway, so calling it used was right and the
@@ -45,6 +45,8 @@ neither side; `rated/total` is how much of the batch measured anything.
 **测的**:归因判定与内容送达是否一致——判定器有没有凭空说"用了"。
 
 **不测的**:这个资产是否真的帮助了任务。送达且被判使用,不等于它起了作用。
+
+**冻结规则那一行至今没有任何反例。** 累计里的数字来自多个规则集,读者容易以为反例问题已经解决——没有。能验证 `gate-rules-2026-09-08f` 的只有批次三,而它 FP 0、FN 0,一个反例都没有。累计准确率不能替它作证。
 
 **假阴性一列至今是 0,而这件事本身需要解释。** `未判 used + 内容已到达` 这条分支从未触发,意味着到目前为止**只要内容到达,判定器就判 used**。如果确实如此,那它测的是**送达**,而不是**使用**——恰恰是本课题要区分的东西。要让这一列从"是 0"变成"可达而恰好是 0",需要构造"模型确实读了资产,但操作不使用它"的场景。
 
