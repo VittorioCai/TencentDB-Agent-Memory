@@ -303,6 +303,31 @@ test("Core's verdict on a row is what the checker uses; it does not re-derive th
   assert.equal(r2.asset_claim_check.strength, "strong");
 });
 
+test("REPRO 2: a corrected row superseded by a later validated of the same call cannot still contradict", () => {
+  // Core and the ledger both take the final result for the call (validated).
+  // The model cites the earlier corrected row, which is history.
+  // Its own pack: the base fixture carries other outcomes, and this test is
+  // about which row of ONE call counts.
+  const rows = new Map([
+    ["outcome:oc1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "call-9", recorded_at: "2026-09-05T00:00:00Z", bound: "current", final: false, superseded_by: "outcome:ov1" }, "harness_verified")],
+    ["outcome:ov1", rec("outcome", "validated on asset skl-a v2 by usr-b (cross_user) at 2026-09-06", { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "call-9", recorded_at: "2026-09-06T00:00:00Z", bound: "current", final: true }, "harness_verified")],
+  ]);
+  const cite = (id) => ({ competence: "low", claims: [{ statement: "the asset is wrong", type: "execution_result", outcome: "failure", record_ids: [id], quote: "on asset skl-a v2" }] });
+  const stale = checkAssessment(cite("outcome:oc1"), rows, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(stale.asset_claim_check.verdict, "silent");
+  assert.match(stale.claims_kept[0].note, /superseded/);
+  // The final row does carry the relation, and the ledger agrees with it.
+  const fin = checkAssessment({ competence: "medium", claims: [{ statement: "the consumer validated it", type: "execution_result", outcome: "success", record_ids: ["outcome:ov1"], quote: "validated on asset skl-a v2" }] }, rows, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(fin.asset_claim_check.verdict, "supports");
+  // The superseded corrected row is not a failure in the ledger either: the
+  // ledger and the relation check now take the same row for the call.
+  assert.deepEqual(fin.execution_claims.ledgers.others_on_assets, { success: 1, failure: 0 });
+  assert.equal(fin.execution_claims.superseded_by_a_later_row, 1);
+  assert.equal(fin.competence, "medium");
+  // Without the fix the same two rows gave one success AND one failure.
+  assert.deepEqual(stale.execution_claims.ledgers.others_on_assets, { success: 1, failure: 0 });
+});
+
 test("garbage in, unknown out", () => {
   const r = checkAssessment({ competence: "excellent", claims: "no" }, pack);
   assert.equal(r.competence, "unknown");

@@ -350,6 +350,55 @@ versions, export and get-by-name all answer normally with the stricter
 binding in place, which is what shows the check is running rather than
 silently passing everything.
 
+## Third round of closures (2026-09-08f): the evidence set, finality, and the request history
+
+Three defects, each reproduced first and each fixed at the point the rule
+lives rather than at the function that showed it.
+
+**A decision could be written over evidence it never read.** `revision`
+covers the asset row, and an outcome lands in another table — so a human
+admit covering c1 could be written after c2 arrived, and an immediate
+re-decision said `failed` while the row said `approved`. Re-deciding
+afterwards narrows the window; it does not close it. Assets now carry
+`evidence_revision`, raised **in the store** by every write to the evidence
+— a new row, a confirmation in place, a retraction — so nothing that writes
+to the store can bypass it, and raised *after* the row lands, so a reader
+that saw the row cannot also have seen the old counter. A decision reads
+the counter before it reads the outcomes and writes conditional on both it
+and the asset revision; evidence that arrived in between refuses the write
+and the decision is taken again. Pinned by a test that puts the interleave
+where the defect lives — inside the store call that hands the decision its
+rows, after the rows are produced and before the write.
+
+**The ledger and the claim check disagreed about which row is the result of
+a call.** A call reported `corrected` and then `validated` ends validated;
+Core counted it that way and so did the ledger, but a model quoting the
+earlier `corrected` row still produced contradicts/strong. Finality is now
+decided once, by Core, with the gate's own collapse rule and in the gate's
+own order — filter to what the gate may read, *then* collapse, so retracting
+the last row of a call makes the row before it the result again instead of
+leaving the listing and the decision disagreeing. Every row comes back with
+`final` and `superseded_by`; a superseded row is history and may be quoted
+but carries no conclusion, in the ledger or in a supports/contradicts.
+
+**The request history was dropped on every re-evaluation.** `expireReviews`
+appended expired requests to `review_requests`, but that key was missing
+from `GATE_KEPT_KEYS`, so the merge that writes a decision silently dropped
+it and only the latest expiry survived. Added, with a note on the list
+saying that anything under `gate` a re-evaluation must not destroy belongs
+in it. `review_requests` is also returned by `asset/gate/get` now — it was
+kept on file since 2026-09-08c but no reader could see it, so "the history
+is kept" was not checkable from the product. Human decisions (`reviews`)
+and requests (`review_requests`) are separate lists and are checked
+separately.
+
+Live on the running stack, one throwaway asset from creation to deletion:
+`evidence_revision` 0 → 1 → 2 as the two outcomes landed; the listing marked
+the earlier row `final=false, superseded_by=<the later row>`; the decision
+counted one call and admitted; every row the decision rested on was one the
+listing called usable. The four evidence-base assets and the model-path
+positive control were unchanged.
+
 ## The rules
 
 ```

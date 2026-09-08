@@ -242,6 +242,7 @@ export class SqliteMetadataStore implements IMetadataStore {
         source_ref TEXT,
         version INTEGER NOT NULL DEFAULT 1,
         revision INTEGER NOT NULL DEFAULT 0,
+        evidence_revision INTEGER NOT NULL DEFAULT 0,
         visibility TEXT NOT NULL DEFAULT 'team',
         status TEXT NOT NULL DEFAULT 'draft',
         confidence REAL,
@@ -358,6 +359,30 @@ export class SqliteMetadataStore implements IMetadataStore {
     this.migrateAssetOutcomeTrustColumns();
     this.migrateAssetContentHashColumn();
     this.migrateAssetRevisionColumn();
+    this.migrateAssetEvidenceRevisionColumn();
+  }
+
+  /**
+   * Existing databases (2026-09-08f): assets gain `evidence_revision`,
+   * raised whenever an outcome about the asset is added, confirmed in place
+   * or retracted. A decision is written conditional on it, so evidence that
+   * landed after the decision read it refuses the write.
+   */
+  private migrateAssetEvidenceRevisionColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'evidence_revision'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN evidence_revision INTEGER NOT NULL DEFAULT 0"); } catch { /* concurrent init */ }
+    }
+  }
+
+  /**
+   * The evidence about an asset changed. Raised AFTER the row itself lands,
+   * so a reader that saw the new row can never also have seen the old
+   * counter. Touches nothing else: an edit to the asset's name is not
+   * evidence, and evidence is not an edit.
+   */
+  bumpAssetEvidence(assetId: string): void {
+    this.run("UPDATE meta_assets SET evidence_revision = COALESCE(evidence_revision, 0) + 1 WHERE asset_id = ?", assetId);
   }
 
   /**
@@ -1363,6 +1388,11 @@ export class SqliteMetadataStore implements IMetadataStore {
       entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
       entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.content_hash, entity.occurred_at, entity.created_at,
     );
+    // The evidence about the asset just changed, and the counter rises with
+    // it, in the store (2026-09-08f). Putting this in the service left it
+    // bypassable: anything writing straight to the store — a migration, a
+    // test, a script — added evidence a decision could then be written over.
+    this.bumpAssetEvidence(entity.asset_id);
     return entity;
   }
 
@@ -1381,7 +1411,10 @@ export class SqliteMetadataStore implements IMetadataStore {
     if (Object.keys(p).length === 0) return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
     const sets = Object.keys(p).map((k) => `${k} = ?`).join(", ");
     this.run(`UPDATE meta_asset_outcomes SET ${sets} WHERE id = ?`, ...(Object.values(p) as SQLInputValue[]), id);
-    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+    const row = this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+    // Confirming a row in place, or retracting it, changes the evidence too.
+    if (row) this.bumpAssetEvidence(row.asset_id);
+    return row;
   }
 
   listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {
@@ -1501,8 +1534,8 @@ export class SqliteMetadataStore implements IMetadataStore {
       `INSERT INTO meta_assets
         (asset_id, team_id, asset_type, name, description, owner_user_id, source_type, source_ref,
          version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref, content_hash,
-         created_at, updated_at, metadata_json, revision)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         created_at, updated_at, metadata_json, revision, evidence_revision)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       assetId,
       input.team_id,
       input.asset_type,
@@ -1523,6 +1556,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       now,
       now,
       input.metadata_json ?? "{}",
+      0,
       0,
     );
     return this.getAssetById(assetId)!;
@@ -1552,6 +1586,7 @@ export class SqliteMetadataStore implements IMetadataStore {
     if (expect.content_hash !== undefined) { if (expect.content_hash === null) where.push("content_hash IS NULL"); else { where.push("content_hash = ?"); params.push(expect.content_hash); } }
     if (expect.updated_at !== undefined) { where.push("updated_at = ?"); params.push(expect.updated_at); }
     if (expect.revision !== undefined) { where.push("COALESCE(revision, 0) = ?"); params.push(expect.revision); }
+    if (expect.evidence_revision !== undefined) { where.push("COALESCE(evidence_revision, 0) = ?"); params.push(expect.evidence_revision); }
     const res = this.db.prepare(`UPDATE meta_assets SET ${sets.join(", ")} WHERE ${where.join(" AND ")}`).run(...params) as { changes: number | bigint };
     if (Number(res.changes) === 0) return null;
     return this.getAssetById(assetId);
@@ -1946,6 +1981,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       source_ref: r.source_ref != null ? String(r.source_ref) : null,
       version: Number(r.version ?? 1),
       revision: Number(r.revision ?? 0),
+      evidence_revision: Number(r.evidence_revision ?? 0),
       visibility: String(r.visibility) as AssetEntity["visibility"],
       status: String(r.status) as AssetEntity["status"],
       confidence: r.confidence != null ? Number(r.confidence) : null,

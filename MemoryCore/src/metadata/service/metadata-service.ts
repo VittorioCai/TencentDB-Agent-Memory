@@ -31,7 +31,7 @@ import {
   type MemorySystemUserConfig,
 } from "../system-user.js";
 import { resolveUserId } from "./resolve-user-id.js";
-import { decideAsset, mergeGateIntoMetadata, gateOf, activeReview, effectiveStatus, expireReviews, reviewsOf, outcomeValidity } from "./asset-gate.js";
+import { decideAsset, mergeGateIntoMetadata, gateOf, activeReview, effectiveStatus, expireReviews, reviewsOf, outcomeValidity, collapseByCall, trustedOnly } from "./asset-gate.js";
 import type { V3AuthContext } from "../router/auth.js";
 import { DEFAULT_INSTANCE_ID, DEFAULT_AUTH_PROVIDER } from "../constants.js";
 import {
@@ -1207,8 +1207,12 @@ export class MetadataService {
    * millisecond leave version, hash and time all unchanged — the second
    * stale write landed and the first review disappeared from the history.
    */
-  private async writeAssetAsRead(asset: AssetEntity, patch: Partial<AssetEntity>, what: string): Promise<AssetEntity> {
-    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
+  private async writeAssetAsRead(asset: AssetEntity, patch: Partial<AssetEntity>, what: string, opts: { expectEvidence?: boolean } = {}): Promise<AssetEntity> {
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0,
+      // A write that carries a DECISION must also be conditional on the
+      // evidence it was decided from; a write that carries an edit must not
+      // be, or an outcome landing elsewhere would refuse an unrelated save.
+      ...(opts.expectEvidence ? { evidence_revision: asset.evidence_revision ?? 0 } : {}) });
     if (!updated) {
       const now = await this.getAssetById(asset.asset_id);
       throw new MetadataError("stale_write", `${what}: asset ${asset.asset_id} changed since it was read (read v${asset.version}${asset.content_hash ? ` ${asset.content_hash.slice(0, 10)}` : ""} @ ${asset.updated_at} rev ${asset.revision ?? 0}; now ${now ? `v${now.version}${now.content_hash ? ` ${now.content_hash.slice(0, 10)}` : ""} @ ${now.updated_at} rev ${now.revision ?? 0}` : "gone"}); read it again`);
@@ -2181,11 +2185,45 @@ export class MetadataService {
     // to rebuild the rule from the raw fields and get a different answer.
     // The asset a row is about is read once per asset id in the page.
     const assets = new Map<string, AssetEntity | null>();
+    // Which row is the last word on its call (2026-09-08f). `collapseByCall`
+    // is the gate's own rule, and it needs every row about the call, not the
+    // ones this page happens to hold — so the rows for each asset in the
+    // page are read once, in full, and the answer is memoised per asset.
+    // The gate filters to what it may read and THEN collapses, so this does
+    // the same, in the same order: otherwise retracting the last row would
+    // leave the listing calling the earlier one superseded while the gate
+    // counted it — the two answers drifting again.
+    const finalOf = new Map<string, Map<string, string>>();
+    const finalFor = async (assetId: string): Promise<Map<string, string>> => {
+      const hit = finalOf.get(assetId);
+      if (hit) return hit;
+      const readable = trustedOnly(await this.allOutcomes({ team_id: filter.team_id, asset_id: assetId })).kept;
+      const winners = new Map(collapseByCall(readable).kept.map((o) => [o.call_id ? `call:${o.call_id}` : `row:${o.id}`, o.id]));
+      const m = new Map<string, string>();
+      for (const o of readable) m.set(o.id, winners.get(o.call_id ? `call:${o.call_id}` : `row:${o.id}`) ?? o.id);
+      finalOf.set(assetId, m);
+      return m;
+    };
     const rows: AssetOutcomeWithValidity[] = [];
     for (const o of page.items) {
       if (!assets.has(o.asset_id)) assets.set(o.asset_id, await this.getAssetById(o.asset_id));
       const asset = assets.get(o.asset_id) ?? null;
-      rows.push({ ...o, gate_validity: { ...outcomeValidity(o, asset), asset_version_now: asset?.version ?? null, asset_content_hash_now: asset?.content_hash ?? null } });
+      const v = outcomeValidity(o, asset);
+      // A row the gate does not read has no standing on its call at all; the
+      // reason it is out is already the trust or retraction reason.
+      const winner = v.trusted && !v.retracted ? ((await finalFor(o.asset_id)).get(o.id) ?? o.id) : null;
+      const isFinal = winner === o.id;
+      rows.push({ ...o, gate_validity: {
+        ...v,
+        // A superseded row is history: it is a record of what happened, and
+        // it is not the result of its call any more, so nothing may rest on
+        // it — not the ledger, not a supports/contradicts.
+        usable: v.usable && isFinal,
+        final: isFinal,
+        superseded_by: isFinal || !winner ? null : winner,
+        reason: v.reason ?? (isFinal ? null : winner ? `superseded by ${winner}, a later result for the same call` : "not read by the gate"),
+        asset_version_now: asset?.version ?? null, asset_content_hash_now: asset?.content_hash ?? null,
+      } });
     }
     return wrapPaginated(rows, page.total, pagination);
   }
@@ -2288,7 +2326,12 @@ export class MetadataService {
     };
     // Written only if the asset is still the one the decision was made on;
     // a row that moved on (a new version, a review) is decided afresh.
-    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
+    // Conditional on the asset AND on the evidence it was decided from. The
+    // asset row does not move when an outcome lands, so `revision` alone let
+    // a decision made before a correction arrived be written after it
+    // (2026-09-08f). `asset.evidence_revision` was read before the outcomes
+    // were, so any row that arrived since refuses this write.
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0, evidence_revision: asset.evidence_revision ?? 0 });
     if (!updated) {
       const attempt = (opts as { _attempt?: number })._attempt ?? 0;
       if (attempt >= 3) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
@@ -2451,7 +2494,7 @@ export class MetadataService {
     m.gate = { ...gate, ...decision, reviews, review, effective };
     let updated: AssetEntity;
     try {
-      updated = await this.writeAssetAsRead(asset, { status: effective.status, metadata_json: JSON.stringify(m) }, "review");
+      updated = await this.writeAssetAsRead(asset, { status: effective.status, metadata_json: JSON.stringify(m) }, "review", { expectEvidence: true });
     } catch (err) {
       if (err instanceof MetadataError && err.code === "stale_write") throw new MetadataError("stale_review", err.message);
       throw err;
@@ -2469,7 +2512,7 @@ export class MetadataService {
   }
 
   /** The decision on file (metadata_json.gate), or null when the gate has not run. */
-  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; content_hash: string | null; revision: number; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: HumanReviewRecord | null; reviews: HumanReviewRecord[]; effective: GateEffective | null; review_request: unknown; review_requested: boolean }> {
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; content_hash: string | null; revision: number; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: HumanReviewRecord | null; reviews: HumanReviewRecord[]; effective: GateEffective | null; review_request: unknown; review_requests: unknown[]; review_requested: boolean }> {
     const asset = await this.getAssetById(assetId);
     if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.requireActiveTeamMember(ctx, asset.team_id);
@@ -2480,7 +2523,12 @@ export class MetadataService {
     const gate = "decision" in g ? (g as unknown as GateDecision) : null;
     return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, version: asset.version, content_hash: asset.content_hash ?? null, revision: asset.revision ?? 0, created_at: asset.created_at, updated_at: asset.updated_at,
       status: asset.status, confidence: asset.confidence ?? null, gate, review: activeReview(g, asset), reviews: reviewsOf(g),
-      effective: (g.effective && typeof g.effective === "object" ? (g.effective as GateEffective) : null), review_request: g.review_request ?? null, review_requested: reviewRequested(asset) };
+      effective: (g.effective && typeof g.effective === "object" ? (g.effective as GateEffective) : null), review_request: g.review_request ?? null,
+      // The expired requests, oldest first. Kept on file since 2026-09-08c
+      // but not returned until 2026-09-08f, so "the history is kept" could
+      // not be checked by anyone reading the product.
+      review_requests: Array.isArray(g.review_requests) ? (g.review_requests as unknown[]) : [],
+      review_requested: reviewRequested(asset) };
   }
 
   private async assertCallerMayReview(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {

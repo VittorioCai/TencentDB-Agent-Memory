@@ -216,6 +216,13 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
       : !rec.meta?.content_hash ? "unbound"
       : rec.meta.content_hash !== assetContentHash ? "other_version"
       : "current");
+    // Superseded by a later result for the same call: the row is a record of
+    // what happened, not the result of that call any more. Core decides this
+    // (`final`), with the same collapse rule the gate uses.
+    if (byRecord && rec.meta?.final === false) {
+      return { ok: true, type, outcome, relation: "silent", strength: null,
+        note: `${foundIn} was superseded by ${rec.meta?.superseded_by ?? "a later result"} for the same call; it is history and cannot support or contradict the asset` };
+    }
     if (byRecord && bound === "current") {
       if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
       return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };
@@ -346,19 +353,27 @@ export function checkAssessment(raw, pack, opts = {}) {
   // Only when the author is known: a harness row is "the author's own" or
   // "others' on the author's asset" relative to that author.
   const harness = authorId ? [...pack.keys()].map((id) => ({ id, rec: recordOf(pack, id) })).filter(({ rec }) => rec.evidence_class === "harness_verified" && recordedOutcome(rec)) : [];
-  // One call counts once, as what it FINALLY came to (2026-09-08d): a call
-  // recorded `used`, then `validated`, then `corrected` is one corrected
-  // call, not a success beside a failure. Keeping the first row read the
-  // history backwards. Ordering is by when the outcome was recorded, and by
-  // when the event happened when that is all a row carries.
-  const byCallFinal = new Map();
-  const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
-  for (const { id, rec } of harness) {
-    const key = rec.meta?.call_id ? `call:${rec.meta.call_id}` : id;
-    const prev = byCallFinal.get(key);
-    if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });
+  // One call counts once, as what it FINALLY came to: a call recorded
+  // `used`, then `validated`, then `corrected` is one corrected call, not a
+  // success beside a failure. Which row that is comes from Core (`final`),
+  // the same answer the gate and the relation check above use — the ledger
+  // deciding it separately is how the two came apart (2026-09-08f). The
+  // local fallback is for a pack built against a Core without the field.
+  const stamped = harness.some(({ rec }) => rec.meta?.final !== undefined && rec.meta?.final !== null);
+  let ledgerRows;
+  if (stamped) {
+    ledgerRows = harness.filter(({ rec }) => rec.meta.final !== false)
+      .map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "core" }));
+  } else {
+    const byCallFinal = new Map();
+    const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
+    for (const { id, rec } of harness) {
+      const key = rec.meta?.call_id ? `call:${rec.meta.call_id}` : id;
+      const prev = byCallFinal.get(key);
+      if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });
+    }
+    ledgerRows = [...byCallFinal.values()].map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" }));
   }
-  const ledgerRows = [...byCallFinal.values()].map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" }));
   const supersededCalls = harness.length - ledgerRows.length;
   // Cited calls carry the transport ledger; with no author known, cited
   // harness rows are read as others' results (the pack ledger did not run).

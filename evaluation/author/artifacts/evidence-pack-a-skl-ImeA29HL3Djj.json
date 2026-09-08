@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-08T07:23:21.899Z",
+  "built_at": "2026-09-08T07:44:48.823Z",
   "evidence_cutoff": "2026-09-07T20:03:34.813Z",
   "author": {
     "letter": "a",
@@ -126,7 +126,7 @@
     "harness_verified": 4,
     "proxy_observed": 9
   },
-  "sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
+  "sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
@@ -627,10 +627,14 @@
           "retracted": false,
           "bound": "current",
           "reason": null,
+          "final": true,
+          "superseded_by": null,
           "asset_version_now": 2,
           "asset_content_hash_now": "163c539025f09af8205023ec6d312a38"
         },
         "bound": "current",
+        "final": true,
+        "superseded_by": null,
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -662,10 +666,14 @@
           "retracted": false,
           "bound": "current",
           "reason": null,
+          "final": true,
+          "superseded_by": null,
           "asset_version_now": 2,
           "asset_content_hash_now": "a7a9113a3ace7f60aeed16080b9bfe8e"
         },
         "bound": "current",
+        "final": true,
+        "superseded_by": null,
         "asset_tokens": [
           "127.0.0.1:47318"
         ],
@@ -697,10 +705,14 @@
           "retracted": false,
           "bound": "current",
           "reason": null,
+          "final": true,
+          "superseded_by": null,
           "asset_version_now": 2,
           "asset_content_hash_now": "163c539025f09af8205023ec6d312a38"
         },
         "bound": "current",
+        "final": true,
+        "superseded_by": null,
         "asset_tokens": [
           "10.244.7.19:8096"
         ],
@@ -732,10 +744,14 @@
           "retracted": false,
           "bound": "current",
           "reason": null,
+          "final": true,
+          "superseded_by": null,
           "asset_version_now": 2,
           "asset_content_hash_now": "a7a9113a3ace7f60aeed16080b9bfe8e"
         },
         "bound": "current",
+        "final": true,
+        "superseded_by": null,
         "asset_tokens": [
           "127.0.0.1:47318"
         ],

@@ -171,6 +171,8 @@ export interface IMetadataStore {
   updateAsset(assetId: string, patch: Partial<AssetEntity>): MaybePromise<AssetEntity | null>;
   /** Conditional update: applied only when the row still matches `expect`; null when it does not (or is missing). One statement, so version, hash, status and metadata land together. */
   updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): MaybePromise<AssetEntity | null>;
+  /** The evidence about this asset changed; raised after the outcome row lands. */
+  bumpAssetEvidence(assetId: string): MaybePromise<void>;
   deleteAssets(assetIds: string[]): MaybePromise<BatchDeleteResult>;
   listAssetsByTeam(teamId: string, pagination?: PaginationParams | null, filter?: AssetFilter): MaybePromise<ListPage<AssetEntity>>;
   touchAssetUsage(assetId: string): MaybePromise<void>;

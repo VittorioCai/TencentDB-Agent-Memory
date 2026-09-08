@@ -1,6 +1,6 @@
 # Author assessment — usr-n68ea5ythq — reaching the team skill bridge over HTTP from an agent session: which address answers
 
-assessed 2026-09-07T19:59:34.950Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack 80cf4e309f0a (49/49 records shown; classes {"authored_text":2,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
+assessed 2026-09-07T19:59:34.950Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack 7302daaa6d03 (49/49 records shown; classes {"authored_text":2,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
 
 **Competence: medium** — 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration (model said medium)
 **Asset claim check: contradicts** (strong) — outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 — "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)" (model said contradicts)

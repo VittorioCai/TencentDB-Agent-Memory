@@ -1039,6 +1039,9 @@ export class MongoMetadataStore implements IMetadataStore {
       created_at: now,
     };
     await this.col("meta_asset_outcomes").insertOne(entity);
+    // After the row lands, so a reader that saw it cannot also have seen the
+    // old counter (2026-09-08f).
+    await this.bumpAssetEvidence(entity.asset_id);
     return entity;
   }
 
@@ -1058,7 +1061,11 @@ export class MongoMetadataStore implements IMetadataStore {
     for (const k of allowed) if (patch[k] !== undefined) $set[k] = patch[k];
     if (Object.keys($set).length) await this.col("meta_asset_outcomes").updateOne({ id }, { $set });
     const d = await this.col("meta_asset_outcomes").findOne({ id });
-    return d ? this.mapAssetOutcomeDoc(d) : null;
+    if (!d) return null;
+    const row = this.mapAssetOutcomeDoc(d);
+    // Confirming a row in place, or retracting it, changes the evidence.
+    if (Object.keys($set).length) await this.bumpAssetEvidence(row.asset_id);
+    return row;
   }
 
   /** Rows written before 2026-09-08 lack the trust fields; read them as untrusted. */
@@ -1092,10 +1099,19 @@ export class MongoMetadataStore implements IMetadataStore {
     // write, so a second write from the same read finds no match — where
     // `updated_at`, a millisecond clock, could be unchanged (2026-09-08d).
     // A row written before the field existed carries revision 0.
-    if (expect.revision !== undefined) filter.$or = expect.revision === 0 ? [{ revision: 0 }, { revision: { $exists: false } }] : [{ revision: expect.revision }];
+    const eq = (field: string, n: number): Document => (n === 0 ? { $or: [{ [field]: 0 }, { [field]: { $exists: false } }] } : { [field]: n });
+    const and: Document[] = [];
+    if (expect.revision !== undefined) and.push(eq("revision", expect.revision));
+    if (expect.evidence_revision !== undefined) and.push(eq("evidence_revision", expect.evidence_revision));
+    if (and.length) filter.$and = and;
     const res = await this.col("meta_assets").updateOne(filter, { $set, $inc: { revision: 1 } });
     if (!res.matchedCount) return null;
     return this.getAssetById(assetId);
+  }
+
+  async bumpAssetEvidence(assetId: string): Promise<void> {
+    // Raised after the outcome row lands; touches nothing else on the asset.
+    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $inc: { evidence_revision: 1 } });
   }
 
   async listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): Promise<ListPage<AssetOutcomeEntity>> {
@@ -1148,6 +1164,7 @@ export class MongoMetadataStore implements IMetadataStore {
       source_ref: input.source_ref ?? null,
       version: 1,
       revision: 0,
+      evidence_revision: 0,
       visibility: input.visibility ?? "team",
       status: input.status ?? "draft",
       confidence: input.confidence ?? null,
@@ -1168,7 +1185,7 @@ export class MongoMetadataStore implements IMetadataStore {
     const doc = (await this.col<AssetEntity>("meta_assets").findOne({ asset_id: assetId } as Document, PROJECT_NO_ID)) as AssetEntity | null;
     // A row written before the revision field existed reads as revision 0,
     // which is what a conditional write on it expects.
-    return doc ? { ...doc, revision: doc.revision ?? 0 } : null;
+    return doc ? { ...doc, revision: doc.revision ?? 0, evidence_revision: doc.evidence_revision ?? 0 } : null;
   }
 
   async updateAsset(assetId: string, patch: Partial<AssetEntity>): Promise<AssetEntity | null> {

@@ -1,6 +1,6 @@
 {
   "schema": "assessment-write-record-v2",
-  "at": "2026-09-08T07:23:33Z",
+  "at": "2026-09-08T07:45:03Z",
   "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
   "asset_id": "skl-ImeA29HL3Djj",
   "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
@@ -44,7 +44,7 @@
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
     "chain_complete": false,
-    "pack_sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
+    "pack_sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
   },
   "decision_after": {
@@ -53,7 +53,7 @@
     "asset_id": "skl-ImeA29HL3Djj",
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-    "decided_at": "2026-09-08T07:23:33.963Z",
+    "decided_at": "2026-09-08T07:45:03.557Z",
     "decision": "pending",
     "status_target": "candidate",
     "confidence": null,
@@ -124,10 +124,10 @@
           "author_user_id": "usr-n68ea5ythq",
           "asset_version": 1,
           "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
-          "pack_sha256": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
+          "pack_sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
           "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json",
           "written_by": "usr-n3h5ewx4ja",
-          "written_at": "2026-09-08T07:23:33.914Z"
+          "written_at": "2026-09-08T07:45:03.508Z"
         },
         "assessment_ignored": null
       }

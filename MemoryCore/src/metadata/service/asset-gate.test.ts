@@ -815,6 +815,112 @@ describe("the gate on the asset record", () => {
     expect(d2.decision.signals.online.calls).toBe(2);
   });
 
+  it("REPRO 1: a correction that lands after the evidence was read, before the decision is written", async () => {
+    await candidateSkill("skl-ev", a, "team");
+    const c1 = await trusted("skl-ev", b, { state: "corrected", corrected_reason: "wrong" });
+    expect((await store.getAssetById("skl-ev"))?.status).toBe("failed");
+    const asRead = (await store.getAssetById("skl-ev"))!;
+    // The interleave is placed BETWEEN reading the evidence and writing the
+    // decision back, not before the call: the store hands the rows over and
+    // c2 lands while the decision is still being computed.
+    // The interleave sits in the gap the defect lives in: the evidence for
+    // the decision that will be WRITTEN has already been read, and c2 lands
+    // before the write. Read 1 is the validation of the override, read 2 is
+    // the decision that gets written; c2 lands after read 2 hands its rows
+    // over. (The author-signal query filters by owner, not asset, so it is
+    // not one of these reads.)
+    let reads = 0;
+    const real = store.listAssetOutcomes.bind(store);
+    (store as unknown as { listAssetOutcomes: typeof real }).listAssetOutcomes = ((filter, pagination) => {
+      const rows = real(filter, pagination);
+      if (filter.asset_id === "skl-ev") {
+        reads += 1;
+        if (reads === 2) {
+          store.appendAssetOutcome({ team_id: team, asset_id: "skl-ev", asset_version: asRead.version, content_hash: asRead.content_hash ?? null, state: "corrected", corrected_reason: "wrong", relation: "cross_user", consumer_user_id: b, trusted: true, call_id: "call-c2", event_id: "evt-c2" });
+        }
+      }
+      return rows;
+    }) as typeof real;
+    try {
+      await svc.reviewAssetGateForCaller("skl-ev", ctx(r), { decision: "admit", overrode: [{ outcome_id: c1.outcome.id, reason: "bad probe" }], ...seen(asRead) });
+    } catch { /* refusing it is the correct outcome */ }
+    (store as unknown as { listAssetOutcomes: typeof real }).listAssetOutcomes = real;
+    // Whatever happened, the row on file and an immediate re-decision must agree.
+    const onFile = (await store.getAssetById("skl-ev"))!.status;
+    const now = await svc.evaluateAssetGate("skl-ev", { apply: false });
+    expect(onFile).toBe(now.effective.status);
+    expect(onFile).toBe("failed");
+  });
+
+  it("REPRO 3: two version changes and two fresh requests keep the whole request history", async () => {
+    await candidateSkill("skl-hist", a, "private");
+    await svc.submitAssetForReviewForCaller("skl-hist", ctx(a), { note: "v1" });
+    await svc.syncSkillAssetVersion({ skill_id: "skl-hist", version: 2, content_hash: "h2" });
+    await svc.submitAssetForReviewForCaller("skl-hist", ctx(a), { note: "v2" });
+    await svc.syncSkillAssetVersion({ skill_id: "skl-hist", version: 3, content_hash: "h3" });
+    await svc.submitAssetForReviewForCaller("skl-hist", ctx(a), { note: "v3" });
+    const g = gateOfAsset((await store.getAssetById("skl-hist"))!);
+    const history = (g.review_requests as Array<{ asset_version: number }> | undefined) ?? [];
+    expect(history.map((x) => x.asset_version)).toEqual([1, 2]);
+    expect((g.review_request as { asset_version: number }).asset_version).toBe(3);
+    // A re-evaluation must not quietly drop it, and a reader must be able to see it.
+    await svc.evaluateAssetGate("skl-hist", { apply: true });
+    const view = await svc.getAssetGateForCaller("skl-hist", ctx(a));
+    expect((view.review_requests as Array<{ asset_version: number; expired_reason?: string }>).map((x) => [x.asset_version, !!x.expired_reason])).toEqual([[1, true], [2, true]]);
+    expect((view.review_request as { asset_version: number }).asset_version).toBe(3);
+    // Human decisions are a separate history and are not mixed in with requests.
+    expect(view.reviews).toEqual([]);
+  });
+
+  it("one call reported twice: the earlier row is history in the listing too, in either order, and with a tie or a retraction", async () => {
+    await candidateSkill("skl-fin", a, "team");
+    // corrected first, then validated: the call ends validated.
+    const c = await trusted("skl-fin", b, { state: "corrected", corrected_reason: "wrong", call_id: "call-1", occurred_at: "2026-09-05T00:00:00.000Z" });
+    const v = await trusted("skl-fin", b, { state: "validated", call_id: "call-1", occurred_at: "2026-09-06T00:00:00.000Z" });
+    let rows = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-fin" }, ctx(admin));
+    let by = new Map(rows.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(v.outcome.id)).toMatchObject({ final: true, usable: true, superseded_by: null });
+    expect(by.get(c.outcome.id)).toMatchObject({ final: false, usable: false, superseded_by: v.outcome.id });
+    expect(by.get(c.outcome.id)?.reason).toMatch(/superseded by .*later result for the same call/);
+    expect((await svc.evaluateAssetGate("skl-fin", { apply: false })).decision.decision).toBe("admit");
+
+    // The other order on a second call: validated first, then corrected.
+    const v2 = await trusted("skl-fin", b, { state: "validated", call_id: "call-2", occurred_at: "2026-09-05T00:00:00.000Z" });
+    const c2 = await trusted("skl-fin", b, { state: "corrected", corrected_reason: "wrong", call_id: "call-2", occurred_at: "2026-09-06T00:00:00.000Z" });
+    rows = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-fin" }, ctx(admin));
+    by = new Map(rows.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(c2.outcome.id)).toMatchObject({ final: true, usable: true });
+    expect(by.get(v2.outcome.id)).toMatchObject({ final: false, usable: false, superseded_by: c2.outcome.id });
+    expect((await svc.evaluateAssetGate("skl-fin", { apply: false })).decision.decision).toBe("reject");
+
+    // A tie on both clocks: the row that keeps the asset out is the final one.
+    const at = "2026-09-07T00:00:00.000Z";
+    const tv = await trusted("skl-fin", b, { state: "validated", call_id: "call-3", occurred_at: at });
+    const tc = await trusted("skl-fin", b, { state: "corrected", corrected_reason: "wrong", call_id: "call-3", occurred_at: at });
+    rows = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-fin" }, ctx(admin));
+    by = new Map(rows.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(tc.outcome.id)?.final).toBe(true);
+    expect(by.get(tv.outcome.id)).toMatchObject({ final: false, superseded_by: tc.outcome.id });
+
+    // Retracting the final row: it is out of the evidence, and the row it
+    // superseded does NOT come back as the result of that call.
+    // Retracting the final row of a call: the gate stops reading it, so the
+    // call's last word is the row before it — and the listing must say the
+    // same thing the decision does, not the opposite.
+    await svc.retractAssetOutcomeForCaller(c2.outcome.id, ctx(r), { reason: "bad probe" });
+    rows = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-fin" }, ctx(admin));
+    by = new Map(rows.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(c2.outcome.id)).toMatchObject({ retracted: true, usable: false, final: false, superseded_by: null });
+    expect(by.get(v2.outcome.id)).toMatchObject({ final: true, usable: true });
+    const after = await svc.evaluateAssetGate("skl-fin", { apply: false });
+    const usable = rows.items.filter((o) => o.gate_validity.usable).map((o) => o.id).sort();
+    // One usable row per call the decision counted, and everything the
+    // decision rests on is a row the listing calls usable. (For a reject
+    // `evidence_refs` is the rejecting subset, not the whole set.)
+    expect(usable).toHaveLength(after.decision.signals.online.calls);
+    expect(after.decision.evidence_refs.every((x) => usable.includes(x.outcome_id))).toBe(true);
+  });
+
   it("a team admin who is not the owner may set status (the management act) and nothing else", async () => {
     await candidateSkill("skl-adm2", a, "team");
     const res = await svc.updateAssetForCaller("skl-adm2", { status: "approved" }, ctx(admin));

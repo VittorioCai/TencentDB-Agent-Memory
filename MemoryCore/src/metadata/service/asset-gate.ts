@@ -412,9 +412,15 @@ export function decideAsset(input: DecideInput): GateDecision {
  * a re-evaluation: the context-based author assessment, the human review
  * history (`reviews`, append-only; `review` is the one in force, kept for
  * readers of the earlier shape — a re-evaluation used to drop it, which was
- * a bug), the owner's request for review, and the resolved `effective`.
+ * a bug), the owner's request for review AND the history of expired
+ * requests (`review_requests` — left out until 2026-09-08f, so every
+ * re-evaluation quietly dropped it and only the most recent expiry
+ * survived), and the resolved `effective`.
+ *
+ * Anything under `gate` that a re-evaluation must not destroy belongs in
+ * this list; forgetting an entry loses the data with no error.
  */
-export const GATE_KEPT_KEYS = ["author_assessment", "reviews", "review", "review_request", "effective"] as const;
+export const GATE_KEPT_KEYS = ["author_assessment", "reviews", "review", "review_request", "review_requests", "effective"] as const;
 
 /** The human review history on an asset, oldest first. */
 export function reviewsOf(gate: Record<string, unknown>): HumanReviewRecord[] {

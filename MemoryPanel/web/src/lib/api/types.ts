@@ -184,7 +184,7 @@ export interface HumanReview {
 /** The rule's suggestion and the human decision resolved to the status the asset carries. */
 export interface GateEffective { status: 'approved' | 'failed' | 'candidate'; source: 'rule' | 'review'; review_id: string | null; reason: string; at: string }
 /** The owner's request that the team review a candidate (2026-09-08). */
-export interface ReviewRequest { requested_at?: string; requested_by?: string; note?: string | null; asset_version?: number; withdrawn_at?: string; withdrawn_by?: string }
+export interface ReviewRequest { requested_at?: string; requested_by?: string; note?: string | null; asset_version?: number; content_hash?: string | null; withdrawn_at?: string; withdrawn_by?: string; expired_at?: string; expired_reason?: string }
 export interface AssetGateView {
   asset_id: string;
   name: string;
@@ -206,6 +206,8 @@ export interface AssetGateView {
   reviews?: HumanReview[];
   effective?: GateEffective | null;
   review_request?: ReviewRequest | null;
+  /** Requests that expired with a version or content change, oldest first. */
+  review_requests?: ReviewRequest[];
   review_requested?: boolean;
 }
 export interface AssetOutcome {

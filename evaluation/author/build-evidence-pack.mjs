@@ -149,6 +149,9 @@ export function outcomeRecord(o, tokensOf = () => ({ tokens: [], from: null })) 
       // Core's own verdict, carried verbatim; the checker reads `bound`
       // rather than comparing versions and hashes a second time.
       gate_validity: o.gate_validity ?? null, bound: o.gate_validity?.bound ?? null,
+      // Whether this row is still the result of its call. A superseded row
+      // is history: it may be quoted, but nothing rests on it (2026-09-08f).
+      final: o.gate_validity ? o.gate_validity.final !== false : null, superseded_by: o.gate_validity?.superseded_by ?? null,
       asset_tokens: tk.tokens, asset_tokens_from: tk.from } };
 }
 export function callRecord(r) {

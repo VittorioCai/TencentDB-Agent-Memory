@@ -188,6 +188,16 @@ export interface AssetEntity {
    * Absent on rows written before the column existed; read it as 0.
    */
   revision?: number;
+  /**
+   * A counter the store raises whenever the EVIDENCE about this asset
+   * changes — an outcome added, confirmed in place, or retracted
+   * (2026-09-08f). `revision` covers the asset row; it says nothing about
+   * the rows the decision is made from, and those live in another table.
+   * A decision therefore reads this, decides, and writes conditional on it:
+   * evidence that arrived after the read refuses the write instead of being
+   * silently written over. Absent on rows from before the column; read as 0.
+   */
+  evidence_revision?: number;
   visibility: AssetVisibility;
   status: AssetStatus;
   confidence?: number | null;
@@ -437,6 +447,8 @@ export interface UpdateAssetExpect {
   updated_at?: string;
   /** The row's revision as read. Every write raises it, so this one is decisive. */
   revision?: number;
+  /** The evidence counter as read. A decision written after new evidence landed is refused. */
+  evidence_revision?: number;
 }
 
 export interface FixedAssetBindingInput {
@@ -583,6 +595,14 @@ export interface AssetOutcomeWithValidity extends AssetOutcomeEntity {
     trusted: boolean;
     retracted: boolean;
     bound: "current" | "other_version" | "unbound" | "unknown";
+    /**
+     * Whether this row is the last word on its call. A call can be reported
+     * more than once — used, then validated, then corrected — and only the
+     * final result counts; the earlier rows stay on file as history and may
+     * not carry a conclusion (2026-09-08f).
+     */
+    final: boolean;
+    superseded_by: string | null;
     /** Why it is not usable, in the reader's words; null when it is. */
     reason: string | null;
     asset_version_now: number | null;
