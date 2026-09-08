@@ -46,19 +46,33 @@ instance in this batch of the failure the calibration rules are written for
 — an asset hidden and confirmed undelivered, yet judged `used`. That is an
 observation about these five runs, not a property of the system.
 
-**The address it documents still reached the model once.** In
-`20260908T075637Z-gate-on-core` the string `10.244.7.19:8096` is in the
-captured request body — carried not by the gated asset but by B's own agent
-skill (`skill-bridge-http-access`), whose accumulated text records the
-earlier finding and says endpoint-b outranks that address. The model had
-extracted it to a temporary file and read it back with the Read tool, so it
-never went through the skill API; `non_pool_skill_reads` is empty for that
-run because the confounder detector watches skill-API reads and this was a
-local file read. **The confounder accounting has a blind spot here**, and
-this run's isolation was not clean even though the gate held. It did not
-change the result — that run used only the right asset and passed — but
-"the model could not have known the wrong address" is not a claim this
-batch supports.
+**One run needs a more careful answer than "not clean".** This section first
+said `20260908T075637Z-gate-on-core` showed an isolation failure, because
+the string `10.244.7.19:8096` is in its captured request body. That was
+asserted from a `grep`, and a grep is not an audit. Re-read with
+`../attribution/delivery-audit.mjs`, which applies the boundaries the
+calibration rules need — model input versus the model's own text, first
+arrival before the operation, a token is not an asset, and unknown stays
+unknown — the five gate-on runs read:
+
+| | hidden asset (`skl-sZFb3KatWY6m`) |
+|---|---|
+| 4 of 5 | `not_delivered` — the token appears nowhere in what the model was sent **or wrote** |
+| 075637 | `source_unknown` — it arrived as a tool result at message 14, and the run did not record what produced that message |
+
+So the honest reading is **four confirmed undelivered and one unattributable**,
+not "one isolation failure". The content in 075637 is an SOP document the
+agent read back, whose text records the earlier finding and says endpoint-b
+outranks that address; it is not the gated asset. Whether it came from the
+asset cannot be settled from what this run recorded, so it is not counted as
+a leak and not counted as clean.
+
+Two gaps in the record stand behind that `source_unknown`, and both must
+close before the calibration numbers are frozen: `used-events` carry no
+`message_index`, so "did it arrive before the operation being judged" has no
+basis to compare against; and `delivered_content` did not cover the message
+the token arrived in. Until they do, this batch supports "the gate held" but
+not "the model could not have known the wrong address".
 
 The other four gate-on runs carry the address nowhere in their captures.
 All five gate-off runs carry it, which is expected: they were served the
