@@ -514,6 +514,33 @@ export function verifyTokensDiscriminative(requests, tokens) {
   return out;
 }
 
+/**
+ * Where the operation being judged sits, taken from ACCEPTANCE rather than
+ * from attribution.
+ *
+ * `verdict.json` records each attempt the run made at the task with the
+ * tool-call that made it; the last one is what the acceptance decided on.
+ * That position exists whatever the attribution judge concluded — which
+ * matters, because the alternative source is the used-event's `target_ref`,
+ * and a run where the judge said nothing has no used-event and therefore no
+ * anchor. Under that rule a false negative was structurally unreachable:
+ * "content arrived and the judge stayed quiet" always came back as
+ * `delivered_order_unknown` and fell out of the table as unmeasurable
+ * (2026-09-09). An anchor that depends on the judgement cannot be used to
+ * check the judgement.
+ */
+export function operationFromAcceptance(verdictJson, requests) {
+  const attempts = verdictJson?.attempts;
+  if (!Array.isArray(attempts) || !attempts.length) return null;
+  const last = attempts[attempts.length - 1];
+  const callId = last?.call_id;
+  if (!callId) return null;
+  for (const { request, index, message } of allMessages(requests)) {
+    if ((message?.tool_calls ?? []).some((t) => t?.id === callId)) return { request, index, call_id: callId, from: "acceptance" };
+  }
+  return null;
+}
+
 export function summarizeDelivery(audit) {
   return Object.entries(audit.assets).map(([id, a]) => `${id}: ${a.verdict}` +
     (a.findings.length ? ` (${a.findings.map((f) => `${f.token}→${f.verdict}`).join(", ")})` : ""));

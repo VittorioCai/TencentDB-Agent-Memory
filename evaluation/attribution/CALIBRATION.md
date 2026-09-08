@@ -9,7 +9,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-08T21:57:07.497Z。
+生成于 2026-09-08T22:12:59.284Z。
 
 ## 判据
 
@@ -30,8 +30,8 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 | set | TP | FP | TN | FN | isolation failure | unsettled | rated/total | accuracy |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | rules unrecorded | 24 | 0 | 8 | 0 | 0 | 6 | 32/38 | 1 |
-| rules gate-rules-2026-09-08f (frozen) | 15 | 0 | 4 | 0 | 1 | 0 | 19/20 | 1 |
-| **cumulative** | 39 | 0 | 12 | 0 | 1 | 6 | 51/58 | 1 |
+| rules gate-rules-2026-09-08f (frozen) | 20 | 0 | 9 | 0 | 1 | 0 | 29/30 | 1 |
+| **cumulative** | 44 | 0 | 17 | 0 | 1 | 6 | 61/68 | 1 |
 
 An isolation failure is not a judging error: the asset was hidden and its
 content reached the model anyway, so calling it used was right and the
@@ -48,7 +48,11 @@ neither side; `rated/total` is how much of the batch measured anything.
 
 **冻结规则那一行至今没有任何反例。** 累计里的数字来自多个规则集,读者容易以为反例问题已经解决——没有。能验证 `gate-rules-2026-09-08f` 的只有批次三,而它 FP 0、FN 0,一个反例都没有。累计准确率不能替它作证。
 
-**假阴性一列至今是 0,而这件事本身需要解释。** `未判 used + 内容已到达` 这条分支从未触发,意味着到目前为止**只要内容到达,判定器就判 used**。如果确实如此,那它测的是**送达**,而不是**使用**——恰恰是本课题要区分的东西。要让这一列从"是 0"变成"可达而恰好是 0",需要构造"模型确实读了资产,但操作不使用它"的场景。
+**假阴性一列是 0,而且这个 0 是测出来的,不是够不着。** 六个桶每一个都由 `calibration-reachability.test.mjs` 走**完整链路**验证过——磁盘上的运行目录、真实的 `runInput`、同一个 `classify`,不是把裁定直接喂给分类器。
+
+这条验证本身翻出一个结构缺陷:操作锚点原来取自 used-event 的 `target_ref`,而**没判 used 的运行根本没有 used-event**,于是"内容到达了、判定器没说话"永远落进 `delivered_order_unknown`,假阴性**结构上不可达**。**用来检验判定的锚点不能依赖那个判定。** 锚点已改为取自**验收**(`verdict.json` 的 attempts,记着任务被判定的那次尝试和它的调用 id),无论判定器说什么它都在。换锚点后真实数据一格未变。
+
+所以这一列的 0 现在意味着:在这批数据里,**只要内容到达,判定器就判 used**。它测的更像**送达**而不是**使用**。要把两者分开,需要"模型确实读了资产、但操作不使用它"的真实场景。
 
 **判据是保守的**:说不清一律未定。真实错误率**不会被低估**,但可测样本会变小。
 

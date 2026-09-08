@@ -54,14 +54,32 @@ function capture(messages) {
   return rows;
 }
 
+/**
+ * Where a message sits once the conversation has been split into turns.
+ * A `target_ref` names a request and an index inside it, so a fixture cannot
+ * just quote the position in the flat list — the same message appears in
+ * every later request, and the ref has to name one of them.
+ */
+function refTo(messages, msgIndex, callId) {
+  const boundaries = [];
+  messages.forEach((m, i) => { if (m.role === "assistant") boundaries.push(i); });
+  const n = boundaries.findIndex((cut) => cut > msgIndex);
+  if (n < 0) throw new Error(`message ${msgIndex} is in no request; the fixture needs a turn after it`);
+  return `request(req-${n}):msg[${msgIndex}]:${callId}`;
+}
+
 /** Write a run directory the way run-once.sh lays one out, and read it back through the real reader. */
-function runDir({ messages, used, hidden, targetRef, gate = true }) {
+function runDir({ messages, used, hidden, operationAt, gate = true }) {
+  const targetRef = refTo(messages, operationAt[0], operationAt[1]);
   const dir = mkdtempSync(join(tmpdir(), "calib-"));
   mkdirSync(dir, { recursive: true });
   writeFileSync(`${dir}/capture.jsonl`, capture(messages).map((r) => JSON.stringify(r)).join("\n"));
   writeFileSync(`${dir}/tokens.json`, JSON.stringify(TOKENS));
   writeFileSync(`${dir}/used-events.jsonl`, (used ?? []).map((a) => JSON.stringify({ asset_id: a, state: "used", target_ref: targetRef })).join("\n"));
-  writeFileSync(`${dir}/verdict.json`, JSON.stringify({ verdict: "PASS" }));
+  // Acceptance records the attempt the task was judged on, with the call that
+  // made it — the anchor the audit uses, independent of the attribution judge.
+  writeFileSync(`${dir}/verdict.json`, JSON.stringify({ verdict: "PASS", reason: "synthetic",
+    attempts: [{ call_id: operationAt[1], message_index: operationAt[0], ok: true }] }));
   writeFileSync(`${dir}/run.json`, JSON.stringify({
     run_id: dir.split("/").pop(), label: "synthetic", started_at: "2026-09-09T00:00:00Z",
     ...(gate ? { gate: { mode: "on", baseline_frozen_at: "2026-09-06T08:47:33Z",
@@ -86,10 +104,12 @@ const readsThenActs = (assetId, token) => [
   { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/get" }) } }] },
   { role: "tool", tool_call_id: "c1", content: `Command: curl .../skill/get\n{"data":{"skill_id":"${assetId}","content":"reach it at ${token}"}}` },
   { role: "assistant", content: null, tool_calls: [{ id: "c2", function: { name: "Bash", arguments: JSON.stringify({ command: `curl http://${token}/x` }) } }] },
+  { role: "tool", tool_call_id: "c2", content: "code 0" },
+  { role: "assistant", content: "reported" },
 ];
 
 test("TRUE POSITIVE is reachable: the asset arrived, and the judge said used", () => {
-  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, targetRef: "request(req-0):msg[4]:c2" });
+  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, operationAt: [4, "c2"] });
   const row = bucketOf(d, OK);
   assert.equal(row.delivery, "delivered");
   assert.equal(row.bucket, "true_positive");
@@ -98,7 +118,7 @@ test("TRUE POSITIVE is reachable: the asset arrived, and the judge said used", (
 test("FALSE NEGATIVE is reachable: the asset arrived and the judge did NOT say used", () => {
   // The column that has never been filled. If it cannot be filled, the judge
   // is measuring delivery rather than use; this proves it can.
-  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [], hidden: false, targetRef: "request(req-0):msg[4]:c2" });
+  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [], hidden: false, operationAt: [4, "c2"] });
   const row = bucketOf(d, OK);
   assert.equal(row.delivery, "delivered");
   assert.equal(row.judged_used, false);
@@ -113,15 +133,17 @@ test("FALSE POSITIVE is reachable: the model never received it, and the judge sa
     { role: "user", content: "reach the bridge" },
     { role: "assistant", content: "I recall the address is 10.244.7.19:8096" },
     { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://10.244.7.19:8096/x" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: "timed out" },
+    { role: "assistant", content: "reported" },
   ];
-  const d = make({ messages, used: [HIDDEN], hidden: true, targetRef: "request(req-0):msg[3]:c1" });
+  const d = make({ messages, used: [HIDDEN], hidden: true, operationAt: [3, "c1"] });
   const row = bucketOf(d, HIDDEN);
   assert.equal(row.delivery, "model_authored");
   assert.equal(row.bucket, "false_positive");
 });
 
 test("TRUE NEGATIVE is reachable: nothing arrived and the judge kept quiet", () => {
-  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: true, targetRef: "request(req-0):msg[4]:c2" });
+  const d = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: true, operationAt: [4, "c2"] });
   const row = bucketOf(d, HIDDEN);
   assert.equal(row.delivery, "not_delivered");
   assert.equal(row.bucket, "true_negative");
@@ -134,8 +156,10 @@ test("ISOLATION FAILURE is reachable: hidden, but its content came in another wa
     { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Read", arguments: JSON.stringify({ file_path: "/tmp/sop.md" }) } }] },
     { role: "tool", tool_call_id: "c1", content: "  1→SOP: the address is 10.244.7.19:8096" },
     { role: "assistant", content: null, tool_calls: [{ id: "c2", function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://10.244.7.19:8096/x" }) } }] },
+    { role: "tool", tool_call_id: "c2", content: "timed out" },
+    { role: "assistant", content: "reported" },
   ];
-  const d = make({ messages, used: [HIDDEN], hidden: true, targetRef: "request(req-0):msg[4]:c2" });
+  const d = make({ messages, used: [HIDDEN], hidden: true, operationAt: [4, "c2"] });
   const row = bucketOf(d, HIDDEN);
   assert.equal(row.delivery, "delivered_from_other_source");
   assert.equal(row.bucket, "isolation_failure");
@@ -145,7 +169,7 @@ test("ISOLATION FAILURE is reachable: hidden, but its content came in another wa
 
 test("UNSETTLED is reachable, and for the two different reasons it should be", () => {
   // The run did not record the gate at all.
-  const noGate = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, targetRef: "request(req-0):msg[4]:c2", gate: false });
+  const noGate = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, operationAt: [4, "c2"], gate: false });
   const a = bucketOf(noGate, OK);
   assert.equal(a.hidden, null);
   assert.equal(a.bucket, "unsettled");
@@ -158,8 +182,9 @@ test("UNSETTLED is reachable, and for the two different reasons it should be", (
     { role: "tool", tool_call_id: "c1", content: "no answer" },
     { role: "assistant", content: null, tool_calls: [{ id: "c2", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/get" }) } }] },
     { role: "tool", tool_call_id: "c2", content: `{"data":{"skill_id":"${OK}","content":"reach it at 127.0.0.1:47318"}}` },
+    { role: "assistant", content: "reported" },
   ];
-  const d = make({ messages: late, used: [OK], hidden: false, targetRef: "request(req-0):msg[1]:c1" });
+  const d = make({ messages: late, used: [OK], hidden: false, operationAt: [1, "c1"] });
   const b = bucketOf(d, OK);
   assert.equal(b.delivery, "after_operation");
   assert.equal(b.bucket, "false_positive", "content that arrived after the operation cannot have been used by it");
@@ -168,9 +193,9 @@ test("UNSETTLED is reachable, and for the two different reasons it should be", (
 test("all six buckets are reachable through the real reader, not just through classify()", () => {
   const seen = new Set();
   for (const [spec, asset] of [
-    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, targetRef: "request(req-0):msg[4]:c2" }, OK],
-    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [], hidden: false, targetRef: "request(req-0):msg[4]:c2" }, OK],
-    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: true, targetRef: "request(req-0):msg[4]:c2" }, HIDDEN],
+    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, operationAt: [4, "c2"] }, OK],
+    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [], hidden: false, operationAt: [4, "c2"] }, OK],
+    [{ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: true, operationAt: [4, "c2"] }, HIDDEN],
   ]) seen.add(bucketOf(make(spec), asset).bucket);
   assert.deepEqual([...seen].sort(), ["false_negative", "true_negative", "true_positive"]);
 });

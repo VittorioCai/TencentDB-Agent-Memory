@@ -12,7 +12,7 @@
  * claim, not a measurement.
  */
 import { readFileSync, existsSync } from "node:fs";
-import { auditDelivery, attributionFromCapture, operationFromTargetRef, verifyCoverage } from "./delivery-audit.mjs";
+import { auditDelivery, attributionFromCapture, operationFromTargetRef, operationFromAcceptance, verifyCoverage } from "./delivery-audit.mjs";
 import { calibrate, renderCalibration } from "./calibration.mjs";
 
 const readJson = (p, fallback = null) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback);
@@ -27,10 +27,16 @@ export function runInput(dir) {
   const run = readJson(`${dir}/run.json`, {}) ?? {};
   const baseline = readJson(`${dir}/gate_baseline.json`, {}) ?? {};
 
-  let operation = null;
-  for (const e of readLines(`${dir}/used-events.jsonl`)) {
-    const op = operationFromTargetRef(e.target_ref, requests);
-    if (op && (!operation || op.request < operation.request || (op.request === operation.request && op.index < operation.index))) operation = op;
+  // Acceptance first: it records the attempt the task was judged on, and it
+  // is there whether or not the attribution judge said anything. Falling back
+  // to the used-event's target_ref made a false negative unreachable, since a
+  // run with no "used" verdict has no such event (2026-09-09).
+  let operation = operationFromAcceptance(readJson(`${dir}/verdict.json`, null), requests);
+  if (!operation) {
+    for (const e of readLines(`${dir}/used-events.jsonl`)) {
+      const op = operationFromTargetRef(e.target_ref, requests);
+      if (op && (!operation || op.request < operation.request || (op.request === operation.request && op.index < operation.index))) operation = op;
+    }
   }
   const audit = auditDelivery(requests, tokens, {
     operation, attributionOf: attributionFromCapture(requests), coverageAsserted: coverage.complete,
@@ -133,7 +139,11 @@ ${contaminated.map((r) => `- \`${r}\``).join("\n")}
 
 **冻结规则那一行至今没有任何反例。** 累计里的数字来自多个规则集,读者容易以为反例问题已经解决——没有。能验证 \`${frozen ?? "冻结规则"}\` 的只有批次三,而它 FP 0、FN 0,一个反例都没有。累计准确率不能替它作证。
 
-**假阴性一列至今是 0,而这件事本身需要解释。** \`未判 used + 内容已到达\` 这条分支从未触发,意味着到目前为止**只要内容到达,判定器就判 used**。如果确实如此,那它测的是**送达**,而不是**使用**——恰恰是本课题要区分的东西。要让这一列从"是 0"变成"可达而恰好是 0",需要构造"模型确实读了资产,但操作不使用它"的场景。
+**假阴性一列是 0,而且这个 0 是测出来的,不是够不着。** 六个桶每一个都由 \`calibration-reachability.test.mjs\` 走**完整链路**验证过——磁盘上的运行目录、真实的 \`runInput\`、同一个 \`classify\`,不是把裁定直接喂给分类器。
+
+这条验证本身翻出一个结构缺陷:操作锚点原来取自 used-event 的 \`target_ref\`,而**没判 used 的运行根本没有 used-event**,于是"内容到达了、判定器没说话"永远落进 \`delivered_order_unknown\`,假阴性**结构上不可达**。**用来检验判定的锚点不能依赖那个判定。** 锚点已改为取自**验收**(\`verdict.json\` 的 attempts,记着任务被判定的那次尝试和它的调用 id),无论判定器说什么它都在。换锚点后真实数据一格未变。
+
+所以这一列的 0 现在意味着:在这批数据里,**只要内容到达,判定器就判 used**。它测的更像**送达**而不是**使用**。要把两者分开,需要"模型确实读了资产、但操作不使用它"的真实场景。
 
 **判据是保守的**:说不清一律未定。真实错误率**不会被低估**,但可测样本会变小。
 
