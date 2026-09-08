@@ -51,13 +51,32 @@ import type {
 } from "../types.js";
 
 /**
- * gate-rules-2026-09-08b: the decision is about one version. Only trusted
- * outcomes recorded against the asset's current version decide it; a
- * later version starts as a candidate with no inherited verdict, and a
- * late correction of an earlier version does not fail the version that
- * fixed it. Human decisions are per version too (see effectiveStatus).
+ * gate-rules-2026-09-08f — the version frozen for batch 3.
+ *
+ * The label was left at `08b` while the rules changed four times, so
+ * decisions on file named rules that no longer described them; a comparison
+ * batch has to say which rules produced its numbers, so it is corrected
+ * here and frozen. What the label now stands for:
+ *
+ *   08b  the decision is about one version. Only trusted outcomes recorded
+ *        against the asset's current version decide it; a later version
+ *        starts as a candidate with no inherited verdict, and a late
+ *        correction of an earlier version does not fail the version that
+ *        fixed it. Human decisions are per version too.
+ *   08c  outcomes and reviews are bound to the content hash as well as the
+ *        version; review requests expire with the content, history kept.
+ *   08d  a human admit lifts a rule reject only for the corrected outcomes
+ *        it names with a reason — never by being later than them; the
+ *        reject's timestamp is when the row was recorded, not when the
+ *        event happened.
+ *   08e  one validity rule (`outcomeValidity`) for every consumer; a tie
+ *        between two rows about one call resolves against admission and is
+ *        reported.
+ *   08f  a decision is written conditional on the evidence set it was read
+ *        from (`evidence_revision`); finality per call is decided once by
+ *        Core and used by the ledger and the claim check alike.
  */
-export const GATE_RULES_VERSION = "gate-rules-2026-09-08b";
+export const GATE_RULES_VERSION = "gate-rules-2026-09-08f";
 export const RECENT_WRONG_WINDOW_DAYS = 30;
 /** `corrected` reasons that count against an asset (and its author). */
 export const DOWNWEIGHT_REASONS = new Set(["wrong", "stale"]);
