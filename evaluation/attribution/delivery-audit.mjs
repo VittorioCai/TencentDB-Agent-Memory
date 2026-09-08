@@ -137,93 +137,91 @@ export function auditDelivery(requests, tokens, opts = {}) {
     const findings = [];
     for (const t of spec?.tokens ?? []) {
       const needle = String(t).toLowerCase();
-      let firstInput = null, firstAuthored = null;
+
+      // EVERY arrival, not just the first (2026-09-08l). Taking only the
+      // earliest let a knowledge file mask a genuine read of the asset that
+      // happened later and still before the operation: the verdict then
+      // rested on "content arrived from somewhere", and would have handed
+      // out the same true positive had the real read never happened. The
+      // conclusion was right in batch 3; the reasoning was not.
+      const inputs = [], authored = [];
       for (const e of entries) {
         const pos = { request: e.request, index: e.index };
         const role = e.message?.role;
-        if (INPUT_ROLES.has(role) && textOf(e.message).toLowerCase().includes(needle)) {
-          if (!firstInput || before(pos, firstInput)) firstInput = { ...pos, role, entry: e };
-        }
-        if (role === "assistant" && authoredTextOf(e.message).toLowerCase().includes(needle)) {
-          if (!firstAuthored || before(pos, firstAuthored)) firstAuthored = { ...pos, entry: e };
-        }
+        if (INPUT_ROLES.has(role) && textOf(e.message).toLowerCase().includes(needle)) inputs.push({ ...pos, role, entry: e });
+        if (role === "assistant" && authoredTextOf(e.message).toLowerCase().includes(needle)) authored.push(pos);
       }
+      const where = (p) => `request ${p.request} message ${p.index}`;
 
-      const at = firstInput ? `request ${firstInput.request} message ${firstInput.index}` : null;
-      if (!firstInput && !firstAuthored) {
+      if (!inputs.length && !authored.length) {
         findings.push(coverage
           ? { token: t, verdict: "not_delivered", why: "the token appears nowhere in the capture, and the capture is asserted to cover the run" }
           : { token: t, verdict: "not_seen_in_capture", why: "the token is not in the saved capture; whether the capture covers the whole run has not been checked, so this is not yet 'not delivered'" });
         continue;
       }
-      if (!firstInput) {
-        findings.push({ token: t, verdict: "model_authored", at: `request ${firstAuthored.request} message ${firstAuthored.index}`,
+      if (!inputs.length) {
+        findings.push({ token: t, verdict: "model_authored", at: where(authored[0]),
           why: "only the model's own messages and tool arguments name it; the model writing a token is not the asset reaching the model" });
         continue;
       }
-      // An echo is a LINK, not an order: the arrival came from reading a
-      // path the model had itself written the token into.
-      const wrote = pathsModelWroteTokenInto(entries.filter((e) => before({ request: e.request, index: e.index }, firstInput)), t);
-      const source = attributionOf ? attributionOf({ request: firstInput.request, index: firstInput.index }, firstInput.entry, t) : null;
-      const sourcePath = source && typeof source === "object" ? source.path ?? "" : "";
-      // The plainest echo of all: a tool result opens by repeating the
-      // command that produced it, so a token the model put in its OWN
-      // arguments comes straight back as "input". Blocking only file paths
-      // left this open — the same defect through another channel
-      // (2026-09-08k). If the call that produced this result already carried
-      // the token, the arrival is that call talking to itself.
-      const callArgs = String((source && typeof source === "object" && source.args) || "").toLowerCase();
-      if (callArgs.includes(needle)) {
-        findings.push({ token: t, verdict: "model_echo", at,
-          why: `the call that produced this result already carried the token in its own arguments — the result is echoing its own command, not delivering content` });
-        continue;
-      }
-      // Path echo: the arrival came from reading somewhere the model had
-      // itself written the token. Compared whole, or by basename: an earlier
-      // version used substring matching, and a fragment like `b)` scraped
-      // out of `if (a > b)` would match almost any path — downgrading a real
-      // delivery to an echo, which is the direction that hides a leak.
-      const samePath = (p) => {
-        if (!p.includes("/")) return false;
-        const base = p.split("/").pop();
-        return sourcePath === p || (!!base && sourcePath.split("/").pop() === base);
-      };
-      if (wrote.size && [...wrote].some(samePath)) {
-        findings.push({ token: t, verdict: "model_echo", at, wrote_paths: [...wrote],
-          why: `it came back by reading ${sourcePath || "a path"} that the model had itself written this token into — its own text returning, not a delivery` });
-        continue;
-      }
-      if (!attributionOf || !source) {
-        findings.push({ token: t, verdict: "source_unknown", at, role: firstInput.role,
-          why: `arrived as ${firstInput.role} at ${at}, but nothing in the record says what produced that content, so whether it came from this asset cannot be said` });
-        continue;
-      }
-      const from = typeof source === "object" ? source.asset_id ?? null : source;
-      const shared = (owners.get(t) ?? []).filter((a) => a !== assetId);
-      if (from !== assetId) {
-        // Identifying another source is a finding, not a gap. The content
-        // DID reach the model, and where it came from is known — it simply
-        // was not this asset. Folding that in with "we could not tell"
-        // (2026-09-08k) hid the one real leak in the batch: the calibration
-        // dropped it as unmeasurable instead of counting it as an isolation
-        // failure, which is exactly the row that most needed to be visible.
-        const where = (typeof source === "object" && (source.path || source.command)) || null;
-        findings.push({ token: t, verdict: "delivered_from_other_source", at, from: from ?? "not a pool asset", where, shared_with: shared,
-          why: `arrived at ${at} from ${from ?? `something that is not a pool asset${where ? ` (${String(where).slice(0, 80)})` : ""}`}; the content reached the model, and it did not come from this asset` });
-        continue;
+
+      // Judge each arrival on its own: an echo among the later ones is just
+      // as much an echo, and checking only the first left that open.
+      const judged = inputs.map((hit) => {
+        const source = attributionOf ? attributionOf({ request: hit.request, index: hit.index }, hit.entry, t) : null;
+        const callArgs = String((source && typeof source === "object" && source.args) || "").toLowerCase();
+        if (callArgs.includes(needle)) {
+          return { ...hit, kind: "echo", why: "the call that produced this result already carried the token in its own arguments — the result is echoing its own command" };
+        }
+        const wrote = pathsModelWroteTokenInto(entries.filter((e) => before({ request: e.request, index: e.index }, hit)), t);
+        const sourcePath = source && typeof source === "object" ? source.path ?? "" : "";
+        const samePath = (pth) => {
+          if (!pth.includes("/")) return false;
+          const base = pth.split("/").pop();
+          return sourcePath === pth || (!!base && sourcePath.split("/").pop() === base);
+        };
+        if (wrote.size && [...wrote].some(samePath)) {
+          return { ...hit, kind: "echo", why: `it came back by reading ${sourcePath || "a path"} that the model had itself written this token into` };
+        }
+        if (!attributionOf || !source) return { ...hit, kind: "unattributed", why: "nothing in the record says what produced this content" };
+        const from = typeof source === "object" ? source.asset_id ?? null : source;
+        const place = (typeof source === "object" && (source.path || source.command)) || null;
+        return from === assetId
+          ? { ...hit, kind: "asset", from, why: "came from this asset" }
+          : { ...hit, kind: "other", from, place, why: `came from ${from ?? `something that is not a pool asset${place ? ` (${String(place).slice(0, 80)})` : ""}`}` };
+      });
+
+      const inTime = operation ? judged.filter((h) => before({ request: h.request, index: h.index }, operation)) : judged;
+      const arrivals = inTime.filter((h) => h.kind !== "echo");
+      const trail = judged.map((h) => ({ at: where(h), kind: h.kind, from: h.from ?? null, why: h.why }));
+
+      if (!arrivals.length) {
+        const echoesOnly = inTime.length && inTime.every((h) => h.kind === "echo");
+        if (echoesOnly) { findings.push({ token: t, verdict: "model_echo", at: where(inTime[0]), arrivals: trail, why: inTime[0].why }); continue; }
+        if (judged.length) {
+          // It did arrive, but not before what is being judged.
+          findings.push({ token: t, verdict: "after_operation", at: where(judged[0]), arrivals: trail, operation_at: where(operation),
+            why: `every arrival is at or after the operation at ${where(operation)}; later content cannot explain an earlier operation` });
+          continue;
+        }
       }
       if (!operation) {
-        findings.push({ token: t, verdict: "delivered_order_unknown", at,
-          why: `came from this asset at ${at}, but the operation being judged has no resolved position, so whether it arrived first is unknown` });
+        findings.push({ token: t, verdict: "delivered_order_unknown", at: where(arrivals[0]), arrivals: trail,
+          why: "content arrived, but the operation being judged has no resolved position, so whether it arrived first is unknown" });
         continue;
       }
-      if (!before({ request: firstInput.request, index: firstInput.index }, operation)) {
-        findings.push({ token: t, verdict: "after_operation", at, operation_at: `request ${operation.request} message ${operation.index}`,
-          why: `came from this asset at ${at}, after the operation at request ${operation.request} message ${operation.index}; later content cannot explain an earlier operation` });
+      // One arrival from the asset itself settles it, wherever it sits among
+      // the others; an identified other source is the next strongest.
+      const own = arrivals.find((h) => h.kind === "asset");
+      if (own) { findings.push({ token: t, verdict: "delivered", at: where(own), arrivals: trail, operation_at: where(operation), why: `came from this asset at ${where(own)}, before the operation` }); continue; }
+      const other = arrivals.find((h) => h.kind === "other");
+      if (other) {
+        findings.push({ token: t, verdict: "delivered_from_other_source", at: where(other), arrivals: trail, from: other.from ?? "not a pool asset", where: other.place, shared_with: (owners.get(t) ?? []).filter((a) => a !== assetId),
+          why: `${other.why} at ${where(other)}; the content reached the model, and no arrival before the operation came from this asset` });
         continue;
       }
-      findings.push({ token: t, verdict: "delivered", at, operation_at: `request ${operation.request} message ${operation.index}`,
-        why: `came from this asset at ${at}, before the operation` });
+      findings.push({ token: t, verdict: "source_unknown", at: where(arrivals[0]), arrivals: trail,
+        why: `content arrived at ${where(arrivals[0])}, but nothing in the record says what produced it, so whether it came from this asset cannot be said` });
     }
     const rank = ["delivered", "delivered_from_other_source", "source_unknown", "delivered_order_unknown", "after_operation",
                   "not_seen_in_capture", "model_echo", "model_authored", "not_delivered"];

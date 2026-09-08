@@ -86,7 +86,7 @@ test("REPRO 1a: a token written through a tool ARGUMENT, then read back, is an e
   ])], TOKENS, { operation: { request: 0, index: 5 }, coverageAsserted: true,
     attributionOf: (pos) => (pos.index === 4 ? { asset_id: null, path: "/tmp/n.md" } : null) });
   assert.equal(a.assets["skl-hidden"].verdict, "model_echo");
-  assert.deepEqual(a.assets["skl-hidden"].findings[0].wrote_paths, ["/tmp/n.md"]);
+  assert.match(a.assets["skl-hidden"].findings[0].why, /\/tmp\/n\.md/);
 });
 
 test("REPRO 1b: guessing a token earlier does not make a later genuine read an echo", () => {
@@ -378,4 +378,47 @@ test("a bare number is usable only because it is absent from the opening request
   const v = verifyTokensDiscriminative(requests, TOKENS);
   assert.equal(v["skl-ok:47318"].ok, true);
   assert.match(v["skl-ok:47318"].warn, /bare number can occur by chance/);
+});
+
+test("REPRO: an earlier arrival from elsewhere must not hide a later real read of the asset", () => {
+  // Both arrivals precede the operation. Taking only the first one lets a
+  // knowledge file at m1 mask a genuine /skill/get at m3, and the verdict
+  // then rests on "content arrived from somewhere" — which would hand out
+  // the same true positive even if the real read had never happened.
+  const requests = [req([
+    { role: "system", content: "you are an agent" },
+    { role: "tool", tool_call_id: "c0", content: "  1→SOP notes … 10.244.7.19:8096 …" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/get" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: '{"data":{"skill_id":"skl-hidden","content":"reach it at 10.244.7.19:8096"}}' },
+    { role: "assistant", content: "probing" },
+  ])];
+  const attributionOf = (pos, entry, token) => {
+    if (pos.index === 1) return { asset_id: null, path: "/tmp/sop.md" };
+    return attributionFromCapture(requests)(pos, entry, token);
+  };
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 4 }, coverageAsserted: true, attributionOf });
+  assert.equal(a.assets["skl-hidden"].verdict, "delivered");
+  // …and the other arrival is still on the record, not thrown away.
+  const f = a.assets["skl-hidden"].findings[0];
+  assert.ok(f.arrivals.length >= 2, "both arrivals are kept");
+});
+
+test("REPRO: an echo among later arrivals must be caught, not only at the first one", () => {
+  // The first arrival is a genuine other source; the second is the model's
+  // own curl echoed back. Checking echoes only at the first arrival lets the
+  // second count as a delivery of whichever asset the result happens to name.
+  const requests = [req([
+    { role: "system", content: "you are an agent" },
+    { role: "tool", tool_call_id: "c0", content: "  1→notes … 47318 …" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://127.0.0.1:47318/skill-bridge/v3/skill/search" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: 'Command: curl http://127.0.0.1:47318/…\n{"data":{"skill_id":"skl-ok","items":[]}}' },
+    { role: "assistant", content: "done" },
+  ])];
+  const attributionOf = (pos, entry, token) => {
+    if (pos.index === 1) return { asset_id: null, path: "/tmp/notes.md" };
+    return attributionFromCapture(requests)(pos, entry, token);
+  };
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 4 }, coverageAsserted: true, attributionOf });
+  // The echo must not promote this to `delivered`.
+  assert.equal(a.assets["skl-ok"].verdict, "delivered_from_other_source");
 });
