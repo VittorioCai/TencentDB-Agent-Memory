@@ -2132,7 +2132,7 @@ export class MetadataService {
             content_hash: input.content_hash ?? existing.content_hash,
             evidence_json: input.evidence_json ?? existing.evidence_json, relation,
           });
-          const gate = opts.evaluate !== false ? (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision : null;
+          const gate = opts.evaluate !== false ? await this.decideAfterEvidenceChange(asset.asset_id) : null;
           return { outcome: confirmed ?? existing, gate, duplicate: false, confirmed: true };
         }
         return { outcome: existing, gate: null, duplicate: true };
@@ -2152,8 +2152,28 @@ export class MetadataService {
       if (raced) return { outcome: raced, gate: null, duplicate: true };
       throw err;
     }
-    const gate = trusted && opts.evaluate !== false ? (await this.evaluateAssetGate(asset.asset_id, { apply: true })).decision : null;
+    const gate = trusted && opts.evaluate !== false ? await this.decideAfterEvidenceChange(asset.asset_id) : null;
     return { outcome, gate, duplicate: false };
+  }
+
+  /**
+   * Re-decide after the evidence changed, and never fail the write that
+   * changed it (2026-09-08g). The row is already on file; a decision refused
+   * because the evidence moved again means another writer is deciding with
+   * evidence that includes this row, so the asset converges without this
+   * call succeeding. Reporting `stale_write` here would tell a caller its
+   * outcome was rejected when it was recorded.
+   */
+  private async decideAfterEvidenceChange(assetId: string): Promise<GateDecision | null> {
+    try {
+      return (await this.evaluateAssetGate(assetId, { apply: true })).decision;
+    } catch (err) {
+      if (err instanceof MetadataError && err.code === "stale_write") {
+        this.logger.debug(`[META] gate: ${assetId} was being decided concurrently; the row is on file and a later decision covers it`);
+        return null;
+      }
+      throw err;
+    }
   }
 
   /**
@@ -2333,8 +2353,15 @@ export class MetadataService {
     // were, so any row that arrived since refuses this write.
     const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0, evidence_revision: asset.evidence_revision ?? 0 });
     if (!updated) {
+      // Binding the write to the evidence set made refusals ordinary rather
+      // than rare: a burst of outcomes, each re-deciding, has every decision
+      // reading evidence that the next append has already moved. Three
+      // immediate retries were not enough — 8 of 12 concurrent submissions
+      // failed (2026-09-08g). A wider budget with a yield between attempts
+      // lets the queue drain; a refusal that survives it is reported.
       const attempt = (opts as { _attempt?: number })._attempt ?? 0;
-      if (attempt >= 3) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
+      if (attempt >= 8) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
+      await new Promise((r) => setTimeout(r, attempt * 2));
       return this.evaluateAssetGate(assetId, { ...opts, _attempt: attempt + 1 } as typeof opts);
     }
     return { decision, effective, review, applied: true, asset: updated };
@@ -2389,8 +2416,12 @@ export class MetadataService {
    * A reviewer retracts an outcome row (2026-09-08c): a correction that was
    * mistaken, a validation that was not. The row stays on file with who,
    * when and why; the gate stops reading it and the asset is re-decided.
+   *
+   * `decision` is null when that re-decision was refused because the
+   * evidence moved again while it ran (2026-09-08g). The retraction itself
+   * has landed; another writer is deciding with evidence that includes it.
    */
-  async retractAssetOutcomeForCaller(outcomeId: string, ctx: V3AuthContext, input: { reason: string }): Promise<{ outcome: AssetOutcomeEntity; decision: GateDecision }> {
+  async retractAssetOutcomeForCaller(outcomeId: string, ctx: V3AuthContext, input: { reason: string }): Promise<{ outcome: AssetOutcomeEntity; decision: GateDecision | null }> {
     const callerId = this.requireCallerId(ctx);
     const row = await this.store.getAssetOutcomeById(outcomeId);
     if (!row) throw new MetadataError("outcome_not_found", `outcome not found: ${outcomeId}`);
@@ -2401,7 +2432,7 @@ export class MetadataService {
     if (row.retracted_at) throw new MetadataError("invalid_state", `outcome ${outcomeId} was already retracted at ${row.retracted_at} by ${row.retracted_by}`);
     if (!input.reason || !input.reason.trim()) throw new MetadataError("invalid_request", "a reason is required to retract an outcome");
     const updated = await this.store.updateAssetOutcome(row.id, { retracted_at: new Date().toISOString(), retracted_by: callerId, retract_reason: input.reason.trim() });
-    const { decision } = await this.evaluateAssetGate(row.asset_id, { apply: true });
+    const decision = await this.decideAfterEvidenceChange(row.asset_id);
     return { outcome: updated ?? row, decision };
   }
 

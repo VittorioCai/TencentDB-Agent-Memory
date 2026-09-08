@@ -63,7 +63,7 @@ import type {
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
-import { DuplicateUserKeyError } from "./interface.js";
+import { DuplicateUserKeyError, type IMetadataStore } from "./interface.js";
 
 const require = createRequire(import.meta.url);
 function requireNodeSqlite(): typeof import("node:sqlite") {

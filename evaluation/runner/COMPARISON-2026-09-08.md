@@ -74,5 +74,9 @@ second dial.
 - Runs: `runs/20260908T0751*`–`20260908T0757*`, ten directories with raw
   capture, per-run gate state, outcome events and receipts.
 - Driver logs: `runs/batch3-{off,on}-{1..5}.log`.
-- Baseline: `../gate/artifacts/gate_baseline_batch3.json`.
+- Baseline: `../gate/artifacts/gate_baseline_batch3.json`. Its `code_commit` first read
+  `9701d4f`, the last commit when it was frozen; the `08f` rules label it names was
+  committed as `747fe9a`, so the field was corrected to that. The per-run copies keep
+  the earlier value; each run's `gate-apply.json` and `receipt.json` recorded
+  `gate-rules-2026-09-08f` from Core at run time, which is the label that matters.
 - Decisions at freeze: `../gate/artifacts/core-apply-asof-2026-09-08f.json`.

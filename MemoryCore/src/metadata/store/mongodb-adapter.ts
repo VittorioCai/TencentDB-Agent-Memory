@@ -67,7 +67,7 @@ import type {
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
-import { DuplicateUserKeyError } from "./interface.js";
+import { DuplicateUserKeyError, type IMetadataStore } from "./interface.js";
 
 function nowIso(): string {
   return new Date().toISOString();

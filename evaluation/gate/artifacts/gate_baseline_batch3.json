@@ -843,11 +843,11 @@
       }
     }
   ],
-  "note": "Batch 3 baseline. The evidence is frozen from the same two preparation runs as before; apply.sh resets to this before every run, and nothing a comparison run produces feeds back into it. The rules are frozen at gate-rules-2026-09-08f and the code at 9701d4f: a batch that cannot say which rules produced its numbers cannot be compared with another batch.",
+  "note": "Batch 3 baseline. The evidence is frozen from the same two preparation runs as before; apply.sh resets to this before every run, and nothing a comparison run produces feeds back into it. The rules are frozen at gate-rules-2026-09-08f and the code at 747fe9a: a batch that cannot say which rules produced its numbers cannot be compared with another batch.",
   "batch": 3,
   "frozen_for_batch3_at": "2026-09-08T07:49:00Z",
   "rules_version": "gate-rules-2026-09-08f",
-  "code_commit": "9701d4f",
+  "code_commit": "747fe9a",
   "derives_from": {
     "baseline": "gate_baseline.json",
     "frozen_at": "2026-09-06T08:47:33Z",
@@ -874,5 +874,6 @@
         "c91cdca6-40f5-4e84-b03b-f65713584044"
       ]
     }
-  }
+  },
+  "code_commit_note": "The decisions at freeze were computed by the working tree that became 747fe9a (asset-gate.ts carrying the gate-rules-2026-09-08f label, not yet committed). The file first recorded 9701d4f, the last commit at the time, which does not contain that label; the ten batch-3 run directories carry that earlier value in their copies. Corrected 2026-09-08 during the self-audit; every run's gate-apply.json and receipt.json recorded gate-rules-2026-09-08f from Core at run time, so the runs themselves are correctly labelled."
 }

@@ -56,6 +56,12 @@ export default function ReviewQueuePanel() {
   // An admit over a rule reject must name each corrected outcome it
   // overrules, with a reason (2026-09-08d). One reason per outcome id.
   const [overrode, setOverrode] = useState<Record<string, string>>({});
+  // The corrections an admit must name, from a FRESH evaluation taken when
+  // the modal opens — Core validates the override against the evidence as it
+  // stands now, and the decision on file may predate a correction (or the
+  // field itself). Showing the on-file list let a reviewer send an admit
+  // that could not lift the reject (2026-09-08g).
+  const [liveReject, setLiveReject] = useState<{ asset_id: string; ids: string[] } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const canReview = role === 'admin' || role === 'reviewer';
 
@@ -93,10 +99,21 @@ export default function ReviewQueuePanel() {
     finally { setBusy(null); }
   }
 
-  /** The corrected outcomes keeping this asset rejected right now. */
-  const rejectEvidence = useCallback((row: Row | undefined): string[] => (
-    row?.gate?.gate?.decision === 'reject' ? (row.gate.gate.reject_evidence_ids ?? []) : []
-  ), []);
+  /** The corrected outcomes keeping this asset rejected right now: the fresh list when we have it, else what is on file. */
+  const rejectEvidence = useCallback((row: Row | undefined): string[] => {
+    if (!row) return [];
+    if (liveReject && liveReject.asset_id === row.asset.asset_id) return liveReject.ids;
+    return row.gate?.gate?.decision === 'reject' ? (row.gate.gate.reject_evidence_ids ?? []) : [];
+  }, [liveReject]);
+
+  async function openReview(row: Row, decision: 'admit' | 'reject') {
+    setReviewing({ row, decision }); setNote(''); setOverrode({}); setLiveReject(null);
+    if (decision !== 'admit') return;
+    try {
+      const fresh = await gateApi.evaluate(row.asset.asset_id, false);
+      setLiveReject({ asset_id: row.asset.asset_id, ids: fresh.decision?.decision === 'reject' ? (fresh.decision.reject_evidence_ids ?? []) : [] });
+    } catch (e) { tea.notify.error(e); }
+  }
 
   async function submitReview() {
     if (!reviewing) return;
@@ -274,10 +291,10 @@ export default function ReviewQueuePanel() {
                     <>
                       <Button type="link" disabled={busy === r.asset.asset_id} onClick={() => void evaluate(r)}>{t('review.reevaluate')}</Button>
                       {pool !== 'approved' && (
-                        <Button type="link" disabled={busy === r.asset.asset_id || r.asset.owner_user_id === auth?.user_id} onClick={() => { setReviewing({ row: r, decision: 'admit' }); setNote(''); }}>{t('review.admit')}</Button>
+                        <Button type="link" disabled={busy === r.asset.asset_id || r.asset.owner_user_id === auth?.user_id} onClick={() => void openReview(r, 'admit')}>{t('review.admit')}</Button>
                       )}
                       {pool !== 'failed' && (
-                        <Button type="link" disabled={busy === r.asset.asset_id || r.asset.owner_user_id === auth?.user_id} onClick={() => { setReviewing({ row: r, decision: 'reject' }); setNote(''); }}>{t('review.reject')}</Button>
+                        <Button type="link" disabled={busy === r.asset.asset_id || r.asset.owner_user_id === auth?.user_id} onClick={() => void openReview(r, 'reject')}>{t('review.reject')}</Button>
                       )}
                     </>
                   )}

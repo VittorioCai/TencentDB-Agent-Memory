@@ -127,9 +127,14 @@ export const gateApi = {
       expected_version: seen.version, expected_content_hash: seen.content_hash ?? null, expected_revision: seen.revision,
       overrode: overrode && overrode.length ? overrode : undefined,
     }),
-  /** A reviewer retracts a mistaken outcome; it stays on file and the gate stops reading it. */
+  /**
+   * A reviewer retracts a mistaken outcome; it stays on file and the gate
+   * stops reading it. `decision` is null when the re-decision was refused
+   * because the evidence moved again — the retraction landed either way, so
+   * read the asset again rather than treating null as a failure.
+   */
   retractOutcome: (outcomeId: string, reason: string) =>
-    metaPost<{ outcome: AssetOutcome; decision: AssetGateView['gate'] }>('asset/outcome/retract', { outcome_id: outcomeId, reason }),
+    metaPost<{ outcome: AssetOutcome; decision: AssetGateView['gate'] | null }>('asset/outcome/retract', { outcome_id: outcomeId, reason }),
   outcomes: (teamId: string, params?: { asset_id?: string; owner_user_id?: string }) =>
     metaListAll<AssetOutcome>('asset/outcome/list', { team_id: teamId, asset_id: params?.asset_id, owner_user_id: params?.owner_user_id }),
   /** The owner asks the team to review a candidate, or takes the request back (2026-09-08). */
