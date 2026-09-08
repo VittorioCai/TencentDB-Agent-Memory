@@ -196,6 +196,21 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   }
   let relation = claim?.relation_to_asset === undefined || claim?.relation_to_asset === null ? "silent" : normalizeVerdict(claim.relation_to_asset);
   if (!CLAIM_VERDICTS.has(relation)) return { ok: false, reason: `relation_to_asset "${claim?.relation_to_asset}" not in the vocabulary`, type };
+  // Superseded by a later result for the same call: the row records what
+  // happened and is no longer the result of that call, so nothing rests on
+  // it — whatever asset is being judged. Core decides this (`final`), with
+  // the same collapse rule the gate uses.
+  //
+  // This check used to sit inside the same-asset branch below, so judging a
+  // DIFFERENT asset that documents the same address skipped it entirely and
+  // the row fell through to the generic token match as contradicts/strong —
+  // while the ledger, which does honour `final`, counted only the later
+  // success. Ledger and prose split (2026-09-08i). Finality is a property of
+  // the row, not of which asset happens to be under assessment.
+  if (cls === "harness_verified" && rec.meta?.final === false) {
+    return { ok: true, type, outcome, relation: "silent", strength: null,
+      note: `${foundIn} was superseded by ${rec.meta?.superseded_by ?? "a later result"} for the same call; it is history and cannot support or contradict any asset` };
+  }
   // A harness-verified outcome recorded ON the assessed asset is about that
   // asset by identity, and its state is the relation: corrected(wrong/stale)
   // contradicts what the asset asserts, validated supports it. The model's
@@ -216,13 +231,6 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
       : !rec.meta?.content_hash ? "unbound"
       : rec.meta.content_hash !== assetContentHash ? "other_version"
       : "current");
-    // Superseded by a later result for the same call: the row is a record of
-    // what happened, not the result of that call any more. Core decides this
-    // (`final`), with the same collapse rule the gate uses.
-    if (byRecord && rec.meta?.final === false) {
-      return { ok: true, type, outcome, relation: "silent", strength: null,
-        note: `${foundIn} was superseded by ${rec.meta?.superseded_by ?? "a later result"} for the same call; it is history and cannot support or contradict the asset` };
-    }
     if (byRecord && bound === "current") {
       if (relation !== "silent" && relation !== byRecord) return { ok: false, reason: `labelled ${relation}, but ${foundIn} is a ${st}${why ? `(${why})` : ""} outcome on this very asset, which ${byRecord === "supports" ? "supports" : "contradicts"} it`, type };
       return { ok: true, type, outcome, relation: byRecord, strength: "strong", by_identity: true };
@@ -368,9 +376,10 @@ export function checkAssessment(raw, pack, opts = {}) {
     const byCallFinal = new Map();
     const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
     for (const { id, rec } of harness) {
-      // Keyed by asset too, as Core keys it. A call that touched two assets
-      // produces one row per asset, and collapsing them together would let a
-      // result on one asset supersede a result on another (2026-09-08h).
+      // Keyed by asset too, as Core keys it. One call can carry results about
+      // two assets — one row each — and that is still one call; collapsing
+      // the rows together would let the result about one asset displace the
+      // result about the other (2026-09-08h).
       const key = rec.meta?.call_id ? `${rec.meta.asset_id ?? "?"}|call:${rec.meta.call_id}` : id;
       const prev = byCallFinal.get(key);
       if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });

@@ -356,10 +356,13 @@ test("a cited id missing its kind prefix resolves when unambiguous; an unknown i
   assert.deepEqual(v.record_ids, ["l0:msg1"]);
 });
 
-test("one call that touched two assets is two calls, not one", () => {
-  // Core keys the collapse by asset AND call; the checker's fallback keyed by
-  // call alone, so a result on one asset could supersede a result on another
-  // (2026-09-08h). Fallback path: no `final` stamp on these records.
+test("one call carrying results about two assets: the two rows do not supersede each other", () => {
+  // One call, two rows — one per asset it touched. That is still ONE call:
+  // the call count and its cost do not double, and nothing here says they
+  // do. What the key fixes is supersession: Core keys the collapse by asset
+  // AND call, while the checker's fallback keyed by call alone, so the row
+  // about one asset could displace the row about the other (2026-09-08h).
+  // Fallback path: no `final` stamp on these records.
   const rows = new Map([
     ["outcome:x1", rec("outcome", "validated on asset skl-a v2 by usr-b (cross_user)", { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "call-shared", recorded_at: "2026-09-05T00:00:00Z" }, "harness_verified")],
     ["outcome:x2", rec("outcome", "corrected(wrong) on asset skl-b v1 by usr-b (cross_user)", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-b", asset_version: 1, consumer_user_id: "usr-b", call_id: "call-shared", recorded_at: "2026-09-06T00:00:00Z" }, "harness_verified")],
@@ -369,4 +372,35 @@ test("one call that touched two assets is two calls, not one", () => {
   // alone, the later row won and the success vanished.
   assert.deepEqual(r.execution_claims.ledgers.others_on_assets, { success: 1, failure: 1 });
   assert.equal(r.execution_claims.superseded_by_a_later_row, 0);
+});
+
+test("REPRO: a superseded result cannot contradict ANOTHER asset that shares the token", () => {
+  // The `final:false` check sat inside the same-asset branch, so it only ran
+  // when the row was about the asset under assessment. Judging a different
+  // asset that documents the same address, the branch was skipped and the
+  // row reached the generic token match — a corrected row that a later
+  // validated had already superseded came back as contradicts/strong, while
+  // the ledger (which does honour `final`) counted only the success. Ledger
+  // and prose split (2026-09-08i).
+  const rows = new Map([
+    ["outcome:sup", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user); 10.244.7.19:8096 timed out",
+      { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b",
+        call_id: "call-9", recorded_at: "2026-09-05T00:00:00Z", bound: "current", final: false, superseded_by: "outcome:ok" }, "harness_verified")],
+    ["outcome:ok", rec("outcome", "validated on asset skl-a v2 by usr-b (cross_user)",
+      { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b",
+        call_id: "call-9", recorded_at: "2026-09-06T00:00:00Z", bound: "current", final: true }, "harness_verified")],
+  ]);
+  const cite = { competence: "low", claims: [{ statement: "the address is wrong", type: "execution_result", outcome: "failure",
+    record_ids: ["outcome:sup"], quote: "10.244.7.19:8096 timed out", relation_to_asset: "contradicts" }] };
+
+  // Judging the asset the row is about: already silent before this fix.
+  const own = checkAssessment(cite, rows, { assetTokens: tokens, assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(own.asset_claim_check.verdict, "silent");
+
+  // Judging the cold-start asset that documents the SAME address.
+  const other = checkAssessment(cite, rows, { assetTokens: tokens, assetId: "skl-c", assetVersion: 1, authorId: "usr-a" });
+  assert.equal(other.asset_claim_check.verdict, "silent");
+  assert.match(other.claims_kept[0].note, /superseded/);
+  // And the split is gone: the ledger counts the success, the prose says nothing.
+  assert.deepEqual(other.execution_claims.ledgers.others_on_assets, { success: 1, failure: 0 });
 });

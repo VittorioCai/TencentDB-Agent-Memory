@@ -437,9 +437,11 @@ the ledger by evidence that came later. Finality is now computed inside the
 listing's own `occurred_after` / `occurred_before` window, and the evidence
 pack passes its cutoff with the query so Core answers for the pack's window.
 
-**One call on two assets is two calls.** Core keys the collapse by asset and
-call; the author checker's fallback keyed by call alone, so a result on one
-asset could supersede a result on another. Keyed by both now.
+**One call can carry results about two assets, and that is still one call.**
+Core keys the collapse by asset and call; the author checker's fallback keyed
+by call alone, so the row about one asset could displace the row about the
+other. Keyed by both now. The call count and the cost do not double — what
+changes is only which rows may supersede which.
 
 ## The rules
 
