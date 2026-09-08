@@ -114,7 +114,11 @@ info "run $RUN_ID → $RUN_DIR"
 # The state the product then reports is read back and kept with the run — a
 # run whose gate state is unknown is not comparable with anything, so a
 # failure here ends the run before a capture exists that could be misread.
-GATE_BASELINE="$EVAL/gate/artifacts/gate_baseline.json"
+# The frozen baseline this run starts from. A batch pins its own (batch 3
+# runs against gate_baseline_batch3.json, which names the rules version and
+# the commit) by exporting GATE_BASELINE; the default is unchanged, so a
+# rerun of an earlier batch reproduces it.
+GATE_BASELINE="${GATE_BASELINE:-$EVAL/gate/artifacts/gate_baseline.json}"
 [[ -f "$TASK_DIR/gate_baseline.json" ]] && GATE_BASELINE="$TASK_DIR/gate_baseline.json"
 if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
   [[ -f "$GATE_BASELINE" ]] || die "gate/ablation requested but no baseline at $GATE_BASELINE (build it: node evaluation/gate/build-baseline.mjs …)"
