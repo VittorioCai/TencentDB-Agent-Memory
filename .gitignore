@@ -145,3 +145,10 @@ submission/
 # provenance 产出物：含真实会话与资产内容，不入库
 evaluation/provenance/artifacts/
 evaluation/runner/runs/
+
+# attribution 的两个共享暂存路径：run-once.sh 每次运行前删除、各阶段重写、
+# 再拷进 runs/<run_id>/。留在库里只会让工作树永远是脏的，而入库的那份不过是
+# "最后一次提交时恰好是哪次运行"，会被误读成有意义的基准。每次运行的那份在
+# runs/<run_id>/ 里，那才是记录。（provenance 下的同类文件本来就已忽略。）
+evaluation/attribution/artifacts/run-artifacts.json
+evaluation/attribution/artifacts/used-events.jsonl
