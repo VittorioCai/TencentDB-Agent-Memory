@@ -80,7 +80,7 @@
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
     "file": "evaluation/author/artifacts/evidence-pack-a.json",
-    "sha256": "7302daaa6d031ee827d9022dd5d540e6451799b23de26c5023f826625e6d46e8",
+    "sha256": "be408c48e1d15417b7446b88b5c19f5eb8e068b2c0d4a76180b86ce94d8362ab",
     "record_count": 49,
     "by_class": {
       "authored_text": 2,
@@ -396,11 +396,11 @@
     "author_user_id": "usr-n68ea5ythq",
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
-    "chain_complete": false,
-    "pack_sha256": "7302daaa6d031ee827d9022dd5d540e6451799b23de26c5023f826625e6d46e8",
+    "chain_complete": true,
+    "pack_sha256": "be408c48e1d15417b7446b88b5c19f5eb8e068b2c0d4a76180b86ce94d8362ab",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
-  "rechecked_at": "2026-09-08T07:44:48.854Z",
-  "pack_sha_at_generation": "80cf4e309f0a0c8116d9949d9ff6dbf10a84fecf554a249c49e2e4e705373d4f",
+  "rechecked_at": "2026-09-08T13:40:01.494Z",
+  "pack_sha_at_generation": "7302daaa6d031ee827d9022dd5d540e6451799b23de26c5023f826625e6d46e8",
   "pack_rebuilt": true
 }

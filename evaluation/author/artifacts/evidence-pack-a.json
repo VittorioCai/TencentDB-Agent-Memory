@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-08T07:44:28.903Z",
+  "built_at": "2026-09-08T13:41:43.431Z",
   "evidence_cutoff": "2026-09-06T08:47:33.000Z",
   "author": {
     "letter": "a",
@@ -32,11 +32,14 @@
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
     "producer": {
-      "owner_user_id": "usr-n68ea5ythq",
+      "asset_owner_user_id": "usr-n68ea5ythq",
       "owner_agent_id": "agt-5e4hna56j9",
-      "operator": "unknown"
+      "wrote_this_version": "usr-n68ea5ythq",
+      "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v2"
     },
-    "source_sessions": [],
+    "source_sessions": [
+      "6ae29c1e-a7c8-468d-a988-35ec676b848a"
+    ],
     "naming_messages": [
       "l0:msg-76898e301d59",
       "l0:msg-3955d1697761",
@@ -77,11 +80,8 @@
         "at": "2026-09-05T22:01:22.682Z"
       }
     ],
-    "complete": false,
-    "breaks": [
-      "producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown",
-      "source session: 4 L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none)"
-    ]
+    "complete": true,
+    "breaks": []
   },
   "pairing": {
     "paired": 3,
@@ -111,8 +111,8 @@
     },
     "validity_from": "core: gate_validity on every row",
     "outcomes": {
-      "total": 23,
-      "trusted": 4,
+      "total": 35,
+      "trusted": 16,
       "retracted": 0,
       "validity_from": "core: gate_validity on every row",
       "note": "kept and left out by Core's own verdict on each row (gate_validity): untrusted rows and rows a reviewer retracted are counted and left out — exactly the rows the gate does not read"
@@ -124,7 +124,7 @@
     }
   },
   "excluded": {
-    "after_cutoff": 0,
+    "after_cutoff": 12,
     "modified_after_cutoff": 0,
     "no_timestamp": 0,
     "untrusted_outcomes": 19,
@@ -151,7 +151,7 @@
     "harness_verified": 4,
     "proxy_observed": 9
   },
-  "sha256": "7302daaa6d031ee827d9022dd5d540e6451799b23de26c5023f826625e6d46e8",
+  "sha256": "be408c48e1d15417b7446b88b5c19f5eb8e068b2c0d4a76180b86ce94d8362ab",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
@@ -203,8 +203,8 @@
       "at": "2026-09-05T20:02:04.375Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -215,8 +215,8 @@
       "at": "2026-09-05T20:02:04.376Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -227,8 +227,8 @@
       "at": "2026-09-05T20:02:09.376Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -239,8 +239,8 @@
       "at": "2026-09-05T20:02:09.377Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -251,8 +251,8 @@
       "at": "2026-09-05T20:02:28.636Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -263,8 +263,8 @@
       "at": "2026-09-05T20:02:28.637Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -329,8 +329,8 @@
       "at": "2026-09-05T20:03:56.188Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -341,8 +341,8 @@
       "at": "2026-09-05T20:03:56.189Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {

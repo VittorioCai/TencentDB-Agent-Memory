@@ -55,7 +55,7 @@
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
     "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-a-skl-ImeA29HL3Djj.json",
-    "sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
+    "sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
     "record_count": 50,
     "by_class": {
       "authored_text": 3,
@@ -388,10 +388,10 @@
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
     "chain_complete": false,
-    "pack_sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
+    "pack_sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.json"
   },
-  "pack_sha_at_generation": "4e7e9866249e62149a7aab05e7e7cbe4a244014a5f18ea99b692d2397295950d",
+  "pack_sha_at_generation": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
   "pack_rebuilt": true,
-  "rechecked_at": "2026-09-08T07:44:48.917Z"
+  "rechecked_at": "2026-09-08T13:40:01.558Z"
 }

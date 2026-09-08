@@ -325,7 +325,7 @@
   "asset_claim": "get-by-name through the skill bridge returns 40401 SKILL_NOT_FOUND for a skill owned by another agent; search first and get by skill_id instead",
   "pack": {
     "file": "evaluation/author/artifacts/evidence-pack-b.json",
-    "sha256": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
+    "sha256": "bd0ab2c72016322c794636fce887a8bc327541bde5550130102b8d7cd81c82a4",
     "record_count": 299,
     "by_class": {
       "user_instruction": 45,
@@ -484,7 +484,7 @@
       "across",
       "agents"
     ],
-    "records": 299
+    "records": 292
   },
   "model": {
     "url": "https://api.deepseek.com",
@@ -681,10 +681,10 @@
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
     "chain_complete": false,
-    "pack_sha256": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
+    "pack_sha256": "bd0ab2c72016322c794636fce887a8bc327541bde5550130102b8d7cd81c82a4",
     "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
-  "rechecked_at": "2026-09-08T07:44:48.884Z",
-  "pack_sha_at_generation": "fc1188c0f9c375b5192b25af41a31e3298e29d73cc888053a2e866c64d95367a",
+  "rechecked_at": "2026-09-08T13:40:01.528Z",
+  "pack_sha_at_generation": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
   "pack_rebuilt": true
 }

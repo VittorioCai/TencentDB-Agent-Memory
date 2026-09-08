@@ -118,6 +118,21 @@ export function l1Record(m) {
     meta: { type: m.type ?? null, scene: m.scene_name ?? null, session_id: m.session_id ?? m.sessionId ?? null, task_id: m.task_id ?? m.taskId ?? null, source_message_ids: src, priority: m.priority ?? null,
       created_at: created, updated_at: updated, provenance: Array.isArray(src) && src.length ? "traceable" : "source_unavailable" } };
 }
+/**
+ * Two copies of one record, merged so the poorer never replaces the richer.
+ * The same message arrives from `conversation/query`, which returns
+ * `session_id`, and from `conversation/search`, which returns only
+ * content/id/role/score/timestamp; a plain overwrite dropped the session id
+ * on every message the search found (2026-09-08g).
+ */
+export function mergeRecord(prev, next) {
+  const meta = { ...next.meta };
+  for (const [k, v] of Object.entries(prev.meta ?? {})) {
+    if (v !== null && v !== undefined && (meta[k] === null || meta[k] === undefined)) meta[k] = v;
+  }
+  return { ...prev, ...next, meta };
+}
+
 export function l0Record(m) {
   const role = m.role ?? null;
   const cls = role === "tool" ? "tool_result" : role === "user" ? "user_instruction" : "assistant_report";
@@ -256,6 +271,9 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   const cut = cutoff ? new Date(cutoff).toISOString() : new Date().toISOString();
   const ids = { team_id: author.team_id, user_id: author.user_id, agent_id: author.agent_id };
   const records = new Map();
+  // skill_id → its version rows, kept so the chain can say who wrote the
+  // version under assessment rather than reporting the operator as unknown.
+  const skillVersions = new Map();
   const excluded = { after_cutoff: 0, modified_after_cutoff: 0, no_timestamp: 0, untrusted_outcomes: 0, retracted_outcomes: 0, persona_after_cutoff: false, other_users_calls: 0, skills_created_after_cutoff: 0 };
   const add = (r) => {
     if (!r.text || !r.text.trim()) return;
@@ -263,10 +281,17 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     if (r.at > cut) {
       // A row created before the cutoff but modified after it is the
       // modified text; the earlier text is not kept anywhere.
-      if (r.meta?.created_at && r.meta.created_at <= cut) excluded.modified_after_cutoff += 1; else excluded.after_cutoff += 1;
+      if (r.meta?.created_at && r.meta.created_at <= cut) excluded.modified_after_cutoff += 1; else { excluded.after_cutoff += 1; if (process.env.PACK_DEBUG) console.error(`  [after_cutoff] ${r.kind} ${r.record_id} at=${r.at}`); }
       return;
     }
-    records.set(r.record_id, r);
+    // Merge, do not overwrite (2026-09-08g). The same message arrives twice —
+    // once from `conversation/query`, which returns `session_id`, and once
+    // from `conversation/search`, which returns only content/id/role/score/
+    // timestamp. A plain `set` let the poorer copy replace the richer one, so
+    // every message the search found lost its session id and the chain
+    // reported "carries no session id" about data the product had returned.
+    const prev = records.get(r.record_id);
+    records.set(r.record_id, prev ? mergeRecord(prev, r) : r);
   };
   const sources = {};
 
@@ -314,6 +339,7 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     for (const s of items) {
       let versions = [];
       try { const v = await post("/v3/skill/versions", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, skill_id: s.skill_id, pagination: { limit: 100 } }, author.key); versions = v.items ?? []; } catch { versions = [s]; }
+      skillVersions.set(s.skill_id, versions);
       const atCut = versions.filter((v) => v.created_at_ms && new Date(v.created_at_ms).toISOString() <= cut).sort((a, b) => b.version - a.version)[0];
       if (!atCut) { excluded.skills_created_after_cutoff += 1; continue; }
       const content = (await bodyAt(s.skill_id, atCut.version)) ?? "";
@@ -383,19 +409,42 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       const sessions = [...new Set(naming.map((r) => r.meta.session_id).filter(Boolean))];
       const ops = list.filter((r) => r.kind === "call" && mentions(r.text));
       const results = list.filter((r) => r.kind === "outcome" && r.meta.asset_id === assetId);
+      // Who wrote THIS version. The skill store keeps one row per version
+      // with the caller's user_id on it, and `/v3/skill/versions` returns it
+      // as `owner_user_id` — a misleading name (it is the writer of that
+      // version, not an owner), which is why this was read as unavailable
+      // until 2026-09-08g and reported as a break for weeks.
+      let rows = skillVersions.get(assetId);
+      if (!rows) {
+        // The assessed asset is normally in the author's own skill list; fetch
+        // it directly when it is not, rather than reporting a break.
+        try { const v = await post("/v3/skill/versions", { team_id: author.team_id, agent_id: author.agent_id, user_id: author.user_id, skill_id: assetId, pagination: { limit: 100 } }, author.key); rows = v.items ?? []; } catch { rows = []; }
+      }
+      const versionRow = rows.find((v) => v.version === a.version) ?? null;
+      const writer = versionRow?.owner_user_id ?? null;
       const breaks = [];
-      breaks.push("producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown");
-      if (!sessions.length) breaks.push(naming.length ? `source session: ${naming.length} L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none)` : "source session: no L0 message at or before the cutoff names the asset or its tokens");
+      if (!writer) breaks.push("producer: no version row for this version, so who wrote it is unknown");
+      if (!sessions.length) breaks.push(naming.length ? `source session: ${naming.length} L0 message(s) name the asset or its tokens but carry no session id` : "source session: no L0 message at or before the cutoff names the asset or its tokens");
       if (!ops.length) breaks.push(sources.calls?.total ? "operations: no proxy-observed call carries the asset's tokens" : "operations: no proxy call export was supplied, so no observed operation can be tied to the asset");
       if (!results.length) breaks.push("results: no trusted outcome is recorded on this asset at or before the cutoff");
       chain = {
         asset_version: a.version, content_hash: a.content_hash ?? null,
-        producer: { owner_user_id: a.owner_user_id, owner_agent_id: author.agent_id, operator: "unknown" },
+        producer: {
+          asset_owner_user_id: a.owner_user_id,
+          owner_agent_id: author.agent_id,
+          // The user the skill store recorded on this version's own row.
+          wrote_this_version: writer,
+          wrote_this_version_from: writer ? `skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v${a.version}` : null,
+        },
         source_sessions: sessions,
         naming_messages: naming.map((r) => r.record_id),
         operations: ops.map((r) => ({ record_id: r.record_id, at: r.at, status: r.meta.upstream_status, kind: r.meta.kind })),
         results: results.map((r) => ({ record_id: r.record_id, state: r.meta.state, corrected_reason: r.meta.corrected_reason, at: r.at })),
-        complete: breaks.length === 1, // the operator is always unknown
+        // Complete means every link is named: the version, who wrote it, the
+        // sessions that produced it, the operations, the results. Until
+        // 2026-09-08g this read `=== 1`, because the producer was assumed to
+        // be permanently unknown and one break was the floor.
+        complete: breaks.length === 0,
         breaks,
       };
     } catch (e) { asset = { asset_id: assetId, error: String(e.message) }; }
@@ -428,6 +477,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(pack, null, 2) + "\n");
   console.log(`evidence pack for ${a.author} (${author.user_id}) cutoff ${pack.evidence_cutoff}: ${pack.record_count} record(s) ${JSON.stringify(pack.by_class)}; excluded ${JSON.stringify(pack.excluded)} → ${out}`);
-  if (pack.chain) console.log(`  chain: ${pack.chain.complete ? "complete but for the operator" : `${pack.chain.breaks.length} break(s)`} — ${pack.chain.breaks.join(" | ")}`);
+  if (pack.chain) console.log(`  chain: ${pack.chain.complete ? "complete — every link named" : `${pack.chain.breaks.length} break(s)`} — ${pack.chain.breaks.join(" | ")}`);
   for (const [k, v] of Object.entries(pack.sources)) if (v.error) console.log(`  [warn] ${k}: ${v.error}`);
 }

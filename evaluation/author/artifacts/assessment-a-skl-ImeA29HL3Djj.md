@@ -1,6 +1,6 @@
 # Author assessment — usr-n68ea5ythq — reaching the team skill bridge over HTTP from an agent session: which address answers
 
-assessed 2026-09-07T20:07:44.770Z · evidence cutoff 2026-09-07T20:03:34.813Z · model deepseek-v4-flash · pack c44081c36704 (50/50 records shown; classes {"authored_text":3,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
+assessed 2026-09-07T20:07:44.770Z · evidence cutoff 2026-09-07T20:03:34.813Z · model deepseek-v4-flash · pack e01acccf50f2 (50/50 records shown; classes {"authored_text":3,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
 
 **Competence: medium** — 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration (model said medium)
 **Asset claim check: contradicts** (strong) — outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47 — "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)" (model said contradicts)
@@ -9,7 +9,7 @@ Derived summary: competence medium: 2 business-level success(es) (own 0, others 
 
 Model summary (as said): The worker's proxy log shows successful HTTP bridge calls for fetching team skills and searching the skill bridge over 127.0.0.1:8096, and reachability probes were sent to both documented candidates including the asset's URL. Harness-verified outcomes recorded the token 10.244.7.19:8096 as corrected(wrong) on a skill carrying that address and validated the rival 127.0.0.1:47318 endpoint, so the assessed asset's claim is contradicted even though no direct result exists on skl-ImeA29HL3Djj v1 itself. Overall this supports medium operational competence in issuing bridge HTTP requests, but no high-confidence personal result for the contested address is available.
 
-Chain: producer usr-n68ea5ythq / agt-5e4hna56j9 (operator unknown); sessions 0; operations 1; results 0. Breaks: producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown | source session: 3 L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none) | results: no trusted outcome is recorded on this asset at or before the cutoff
+Chain: producer undefined / agt-5e4hna56j9 (operator undefined); sessions 1; operations 1; results 0. Breaks: results: no trusted outcome is recorded on this asset at or before the cutoff
 
 ## Surviving claims (11)
 - [claim · execution_result · success] The worker successfully fetched the eval-bridge-endpoint-a skill through the bridge on 127.0.0.1:8096, with an HTTP 200 bridge_call in response.

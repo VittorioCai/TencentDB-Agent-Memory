@@ -12,7 +12,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pairCalls, outcomeRecord, bodyTokens } from "./build-evidence-pack.mjs";
+import { pairCalls, outcomeRecord, bodyTokens, l0Record, mergeRecord } from "./build-evidence-pack.mjs";
 
 const call = (id, kind, at, body, over = {}) => ({
   record_id: `call:${id}`, kind: "call", evidence_class: "proxy_observed", at,
@@ -89,4 +89,22 @@ test("an outcome record carries its binding and its retraction, so the reader ca
 test("body tokens are exact host:port and skill ids, never a bare host", () => {
   assert.deepEqual(bodyTokens("reach it at 10.244.7.19:8096 or skl-sZFb3KatWY6m"), ["10.244.7.19:8096", "skl-sZFb3KatWY6m"]);
   assert.deepEqual(bodyTokens("the host is 10.244.7.19"), []);
+});
+
+test("the same message from two endpoints merges instead of overwriting", () => {
+  // conversation/query returns session_id; conversation/search returns only
+  // content/id/role/score/timestamp. A plain overwrite let the search copy
+  // replace the query copy, and every message the search found lost its
+  // session id — which the chain then reported as "carries no session id"
+  // about data the product had returned (2026-09-08g).
+  const fromQuery = l0Record({ id: "m1", role: "assistant", content: "probed 10.244.7.19:8096", timestamp: "2026-09-05T10:00:00Z", session_id: "sess-1", task_id: "t1" });
+  const fromSearch = l0Record({ id: "m1", role: "assistant", content: "probed 10.244.7.19:8096", timestamp: "2026-09-05T10:00:00Z" });
+  assert.equal(fromQuery.meta.session_id, "sess-1");
+  assert.equal(fromSearch.meta.session_id, null);
+  // The merge keeps what the richer copy had.
+  const merged = mergeRecord(fromQuery, fromSearch);
+  assert.equal(merged.meta.session_id, "sess-1");
+  assert.equal(merged.meta.task_id, "t1");
+  // …in either arrival order.
+  assert.equal(mergeRecord(fromSearch, fromQuery).meta.session_id, "sess-1");
 });

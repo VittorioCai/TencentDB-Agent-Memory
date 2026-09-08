@@ -110,10 +110,23 @@ All runs: `deepseek-v4-flash`, temperature 0, JSON output.
   the command), and the match must be unique from both sides. An ambiguous
   pair — two commands with the same query, one answered; or one command and
   two results — is kept as intent on both sides.
-- The source chain breaks at the same two places for everyone: the skill
-  store does not record who wrote a version, and the conversation query
-  returns no session id — so "the author's own session produced this" is
-  read from the author's key scope, not from a link the product stores.
+- The source chain used to break at two places for everyone, and both were
+  ours, not the product's (2026-09-08g). The skill store keeps **one row per
+  version with the writer's `user_id` on it**, returned by
+  `/v3/skill/versions` as `owner_user_id` — a misleading name, which is why
+  it was read as "the operator is unknown" for weeks; the chain now names
+  who wrote the version under assessment. And `/v3/conversation/query` does
+  return `session_id`: what dropped it was the pack itself, because
+  `/v3/conversation/search` returns only content/id/role/score/timestamp,
+  and a search hit overwrote the query's richer copy of the same message.
+  Records are merged now instead of overwritten. A's chain is complete —
+  version → writer → session → operations → results, no breaks; B's and the
+  cold-start candidate's carry one break each, and it is a fact about the
+  evidence, not a gap in the tooling: no trusted outcome exists on those
+  assets at or before the cutoff.
+- That `conversation/search` and `conversation/query` return different
+  fields for the same message is a product inconsistency. It is worked
+  around here (join by message id), not fixed.
 - Between two runs at temperature 0 the model chose different records to
   cite; the checker kept what was verifiable each time (B: high → unknown →
   high as the checker learned to read the bridge_call row beside the

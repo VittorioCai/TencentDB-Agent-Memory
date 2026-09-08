@@ -1,6 +1,6 @@
 {
   "schema": "author-evidence-pack-v2",
-  "built_at": "2026-09-08T07:44:48.823Z",
+  "built_at": "2026-09-08T13:39:39.169Z",
   "evidence_cutoff": "2026-09-07T20:03:34.813Z",
   "author": {
     "letter": "a",
@@ -32,11 +32,14 @@
     "asset_version": 1,
     "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
     "producer": {
-      "owner_user_id": "usr-n68ea5ythq",
+      "asset_owner_user_id": "usr-n68ea5ythq",
       "owner_agent_id": "agt-5e4hna56j9",
-      "operator": "unknown"
+      "wrote_this_version": "usr-n68ea5ythq",
+      "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v1"
     },
-    "source_sessions": [],
+    "source_sessions": [
+      "6ae29c1e-a7c8-468d-a988-35ec676b848a"
+    ],
     "naming_messages": [
       "l0:msg-76898e301d59",
       "l0:msg-3955d1697761",
@@ -53,8 +56,6 @@
     "results": [],
     "complete": false,
     "breaks": [
-      "producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown",
-      "source session: 3 L0 message(s) name the asset or its tokens but carry no session id (the conversation query returns none)",
       "results: no trusted outcome is recorded on this asset at or before the cutoff"
     ]
   },
@@ -86,8 +87,8 @@
     },
     "validity_from": "core: gate_validity on every row",
     "outcomes": {
-      "total": 23,
-      "trusted": 4,
+      "total": 35,
+      "trusted": 16,
       "retracted": 0,
       "validity_from": "core: gate_validity on every row",
       "note": "kept and left out by Core's own verdict on each row (gate_validity): untrusted rows and rows a reviewer retracted are counted and left out — exactly the rows the gate does not read"
@@ -99,7 +100,7 @@
     }
   },
   "excluded": {
-    "after_cutoff": 0,
+    "after_cutoff": 12,
     "modified_after_cutoff": 0,
     "no_timestamp": 0,
     "untrusted_outcomes": 19,
@@ -126,7 +127,7 @@
     "harness_verified": 4,
     "proxy_observed": 9
   },
-  "sha256": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
+  "sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
   "records": [
     {
       "record_id": "skill:skl-sZFb3KatWY6m@2",
@@ -178,8 +179,8 @@
       "at": "2026-09-05T20:02:04.375Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -190,8 +191,8 @@
       "at": "2026-09-05T20:02:04.376Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -202,8 +203,8 @@
       "at": "2026-09-05T20:02:09.376Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -214,8 +215,8 @@
       "at": "2026-09-05T20:02:09.377Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -226,8 +227,8 @@
       "at": "2026-09-05T20:02:28.636Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -238,8 +239,8 @@
       "at": "2026-09-05T20:02:28.637Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -304,8 +305,8 @@
       "at": "2026-09-05T20:03:56.188Z",
       "meta": {
         "role": "user",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
@@ -316,8 +317,8 @@
       "at": "2026-09-05T20:03:56.189Z",
       "meta": {
         "role": "assistant",
-        "session_id": null,
-        "task_id": null
+        "session_id": "6ae29c1e-a7c8-468d-a988-35ec676b848a",
+        "task_id": "task-5e6xp4mrrw"
       }
     },
     {
