@@ -1,0 +1,47 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>第三批 off/on 对照</title><style>
+:root { --fg:#1c1e21; --muted:#65676b; --line:#dfe1e5; --bg:#fff; --code:#f5f6f7; --accent:#1a4d8f; }
+* { box-sizing: border-box; }
+body { margin:0; font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; color:var(--fg); background:var(--bg); }
+.wrap { max-width: 860px; margin: 0 auto; padding: 32px 24px 80px; }
+nav.top { border-bottom:1px solid var(--line); background:#fafbfc; }
+nav.top .wrap { padding:14px 24px; display:flex; gap:20px; align-items:baseline; flex-wrap:wrap; }
+nav.top a { color:var(--accent); text-decoration:none; font-size:14px; }
+nav.top a:hover { text-decoration:underline; }
+nav.top .home { font-weight:600; color:var(--fg); }
+h1 { font-size:26px; margin:28px 0 14px; line-height:1.3; }
+h2 { font-size:20px; margin:32px 0 12px; padding-top:14px; border-top:1px solid var(--line); }
+h3 { font-size:17px; margin:24px 0 8px; }
+p { margin:12px 0; }
+code { background:var(--code); padding:2px 5px; border-radius:3px; font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+pre { background:var(--code); padding:14px 16px; border-radius:6px; overflow-x:auto; font-size:13px; line-height:1.5; }
+pre code { background:none; padding:0; }
+table { border-collapse:collapse; margin:16px 0; font-size:14px; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:7px 11px; text-align:left; vertical-align:top; }
+th { background:#f5f6f7; font-weight:600; }
+blockquote { margin:14px 0; padding:2px 16px; border-left:3px solid var(--line); color:var(--muted); }
+ul, ol { margin:12px 0; padding-left:26px; }
+li { margin:5px 0; }
+a { color:var(--accent); }
+.note { background:#fff8e6; border:1px solid #f0d9a0; border-radius:6px; padding:12px 16px; margin:20px 0; font-size:14px; }
+</style></head><body><nav class="top"><div class="wrap">
+<a class="home" href="index.html">题目四 · 资产准入闸门</a>
+<a href="index.html">总览</a>
+<a href="batch3.html">第三批 off/on 对照</a>
+<a href="gate.html">闸门设计与验证</a>
+<a href="author.html">作者证据链</a>
+<a href="plan.html">执行计划与修订记录</a>
+</div></nav><div class="wrap"><h1>Gate on / off comparison, batch 3 — 2026-09-08</h1>
+<p>Same task, same consumer (B, <code>usr-4u07qc2kuj</code> / <code>agt-5e0y4l8a7a</code>), same frozen evidence as batches 1 and 2 — the same two preparation runs and the same events. Five runs gate-off then five gate-on, all <code>run-once.sh --auto</code>, launched in one sequence between 07:51 and 07:58 UTC. Rendered table: <code>summary-2026-09-08.md</code>.</p>
+<p><strong>What is new in this batch is the rules, not the evidence.</strong> Batch 3 runs against <code>evaluation/gate/artifacts/gate_baseline_batch3.json</code>, which pins <code>rules_version: gate-rules-2026-09-08f</code> and the code commit. Batches 1 and 2 stay on file under their own rules and are not recomputed; their numbers are not merged with these.</p>
+<p>The rules that changed since batch 2 (<code>gate-rules-2026-09-07</code>): outcomes, reviews and requests bound to the content hash; a human admit lifts a rule reject only for the corrected outcomes it names with a reason; one validity rule for every consumer; a decision written conditional on the evidence set it was read from; finality per call decided once by Core.</p>
+<h2>Result</h2>
+<table><thead><tr><th>arm</th><th>started</th><th>PASS</th><th>first batch of calls all ok</th><th>failed attempts</th><th>corrected outcomes</th></tr></thead><tbody><tr><td>gate-off</td><td>5</td><td>5</td><td>0/5</td><td>4</td><td>3 (+2 needs_review)</td></tr><tr><td>gate-on</td><td>5</td><td>5</td><td>5/5</td><td>0</td><td>0</td></tr></tbody></table>
+<p>Both arms pass on the endpoint success rate, which is what the acceptance measures — the last attempt decides, and a run that dials the wrong address, times out and then dials the right one still passes. The gate shows in the first batch of calls: with it off, 4 of 5 runs dialled the wrong address first; with it on, none did, because the asset documenting that address was not in the pool the model could reach.</p>
+<p>Per-run outcomes: off — the right asset validated 5/5, the wrong asset corrected(wrong) 3/5 and needs_review 2/5. On — the right asset validated 4/5, and one run recorded <code>needs_review</code>, which produces no outcome by design (<code>outcome.md</code> names the skipped event rather than dropping it).</p>
+<h2>Isolation: what the on arm can and cannot claim</h2>
+<p><strong>The asset was never delivered.</strong> In all five gate-on runs the hidden asset appears in no system prompt, no available-skills block and no skill read: the read path refused it, and no run recorded it as used. There is no instance in this batch of the failure the calibration rules are written for — an asset hidden and confirmed undelivered, yet judged <code>used</code>. That is an observation about these five runs, not a property of the system.</p>
+<p><strong>The address it documents still reached the model once.</strong> In <code>20260908T075637Z-gate-on-core</code> the string <code>10.244.7.19:8096</code> is in the captured request body — carried not by the gated asset but by B&#x27;s own agent skill (<code>skill-bridge-http-access</code>), whose accumulated text records the earlier finding and says endpoint-b outranks that address. The model had extracted it to a temporary file and read it back with the Read tool, so it never went through the skill API; <code>non_pool_skill_reads</code> is empty for that run because the confounder detector watches skill-API reads and this was a local file read. <strong>The confounder accounting has a blind spot here</strong>, and this run&#x27;s isolation was not clean even though the gate held. It did not change the result — that run used only the right asset and passed — but &quot;the model could not have known the wrong address&quot; is not a claim this batch supports.</p>
+<p>The other four gate-on runs carry the address nowhere in their captures. All five gate-off runs carry it, which is expected: they were served the asset.</p>
+<p>Both arms carry an L3 memory block with a watched line (5/5, both arms), as in batch 2. Where both arms carry it the arms stay comparable; what it takes away is the reading &quot;the model recovered on its own&quot; for the off arm&#x27;s second dial.</p>
+<h2>Evidence</h2>
+<ul><li>Runs: <code>runs/20260908T0751*</code>–<code>20260908T0757*</code>, ten directories with raw capture, per-run gate state, outcome events and receipts.</li><li>Driver logs: <code>runs/batch3-{off,on}-{1..5}.log</code>.</li><li>Baseline: <code>../gate/artifacts/gate_baseline_batch3.json</code>. Its <code>code_commit</code> first read <code>9701d4f</code>, the last commit when it was frozen; the <code>08f</code> rules label it names was committed as <code>747fe9a</code>, so the field was corrected to that. The per-run copies keep the earlier value; each run&#x27;s <code>gate-apply.json</code> and <code>receipt.json</code> recorded <code>gate-rules-2026-09-08f</code> from Core at run time, which is the label that matters.</li><li>Decisions at freeze: <code>../gate/artifacts/core-apply-asof-2026-09-08f.json</code>.</li></ul></div></body></html>

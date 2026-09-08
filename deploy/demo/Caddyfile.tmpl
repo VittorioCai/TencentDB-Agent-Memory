@@ -1,0 +1,27 @@
+# Two ports, deliberately.
+#
+# The Panel's build references its assets absolutely (`/assets/main-*.js`,
+# `/logo.png`) and vite has no `base` set, so it cannot be reverse-proxied
+# under a sub-path without rewriting those. Rather than rewrite, the Panel
+# gets its own port and the docs site gets another. Nothing to break.
+#
+# Basic auth on both: the address is public and this holds real team data.
+# Over plain HTTP the credentials travel in the clear, which is why the
+# password here is single-use and the data is a demo copy.
+
+:80 {
+	basicauth {
+		demo {$DEMO_PASSWORD_HASH}
+	}
+	root * /srv/site
+	file_server
+	encode gzip
+}
+
+:8125 {
+	basicauth {
+		demo {$DEMO_PASSWORD_HASH}
+	}
+	reverse_proxy tdai-memory-hub:8125
+	encode gzip
+}

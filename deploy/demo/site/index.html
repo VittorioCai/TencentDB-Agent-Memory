@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>题目四 · 资产准入闸门</title>
+<style>
+:root { --fg:#1c1e21; --muted:#65676b; --line:#dfe1e5; --bg:#fff; --code:#f5f6f7; --accent:#1a4d8f; }
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;color:var(--fg);background:var(--bg)}
+nav.top{border-bottom:1px solid var(--line);background:#fafbfc}
+nav.top .wrap{padding:14px 24px;display:flex;gap:20px;align-items:baseline;flex-wrap:wrap}
+nav.top a{color:var(--accent);text-decoration:none;font-size:14px}
+nav.top a:hover{text-decoration:underline}
+nav.top .home{font-weight:600;color:var(--fg)}
+.wrap{max-width:860px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:27px;margin:6px 0 6px}
+.sub{color:var(--muted);margin:0 0 26px;font-size:15px}
+h2{font-size:19px;margin:34px 0 12px;padding-top:14px;border-top:1px solid var(--line)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.card{border:1px solid var(--line);border-radius:8px;padding:16px 18px;text-decoration:none;color:inherit;display:block}
+.card:hover{border-color:var(--accent);background:#fafcff}
+.card b{display:block;font-size:16px;margin-bottom:5px;color:var(--accent)}
+.card span{color:var(--muted);font-size:14px;line-height:1.5}
+.note{background:#fff8e6;border:1px solid #f0d9a0;border-radius:6px;padding:13px 16px;margin:18px 0;font-size:14px}
+.note b{color:#8a6100}
+table{border-collapse:collapse;margin:14px 0;font-size:14px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left}
+th{background:#f5f6f7;font-weight:600}
+code{background:var(--code);padding:2px 5px;border-radius:3px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.muted{color:var(--muted);font-size:14px}
+</style></head><body>
+<nav class="top"><div class="wrap">
+<a class="home" href="index.html">题目四 · 资产准入闸门</a>
+<a href="index.html">总览</a><a href="batch3.html">第三批 off/on 对照</a>
+<a href="gate.html">闸门设计与验证</a><a href="author.html">作者证据链</a><a href="plan.html">执行计划与修订记录</a>
+</div></nav>
+<div class="wrap">
+
+<h1>资产准入闸门</h1>
+<p class="sub">团队资产在被模型读到之前，先由产品自己判定能不能用。这里是可以点开的产品，和支撑它的评测证据。</p>
+
+<div class="note">
+<b>这是演示实例。</b>交付的数字以仓库中的冻结基线和十次运行的原始记录为准，不以这台机器上的当前状态为准。
+你可以在审核队列里随便点——准入、拒绝、逐条推翻纠错都可以；点乱了运行 <code>reset.sh</code> 十秒还原。
+</div>
+
+<h2>看产品</h2>
+<div class="cards">
+  <a class="card" href="/panel/#/review"><b>审核队列 →</b><span>闸门对每个资产的判定和理由、被排除的证据行（不受信 / 已撤回 / 其他版本 / 无绑定 / 时间并列）、作者评估，以及人工复核：准入必须逐条点名它推翻的纠错并写明理由。</span></a>
+  <a class="card" href="/panel/"><b>完整面板 →</b><span>资产列表、技能、团队与成员。审核队列之外的部分。</span></a>
+</div>
+
+<h2>看评测</h2>
+<div class="cards">
+  <a class="card" href="batch3.html"><b>第三批 off/on 对照 →</b><span>规则冻结后各跑五次。两臂验收都通过；差别在首批调用——关闭时 4/5 先拨了错地址，开启时 0/5。含隔离性说明，包括那一次地址经另一条通道到达。</span></a>
+  <a class="card" href="gate.html"><b>闸门设计与验证 →</b><span>准入规则、版本与内容绑定、人工复核的边界、每一轮复审的反例与实测记录。</span></a>
+  <a class="card" href="author.html"><b>作者证据链 →</b><span>从作者自己的记录出发的评估：引文核验、事实核验、三本账、以及资产版本 → 写入者 → 来源会话 → 操作 → 结果这条链。</span></a>
+  <a class="card" href="plan.html"><b>执行计划与修订记录 →</b><span>阶段划分、验收条件，以及每一轮改了什么、为什么改、哪些仍未解决。</span></a>
+</div>
+
+<h2>一句话说清它做什么</h2>
+<p>一个团队成员写下的技能，可能是错的。产品不能因为"它在库里"就把它喂给别人的模型。</p>
+<table>
+<tr><th>问题</th><th>这里的做法</th></tr>
+<tr><td>作者自己说自己对</td><td>只有<b>他人</b>使用后的受信结果才算证据；作者不能复核自己的资产</td></tr>
+<tr><td>旧结论套用到新版本</td><td>判定绑定<b>版本 + 内容哈希</b>；改一个字，此前的准入即失效，重新回到候选</td></tr>
+<tr><td>人工一句"我看过了"就放行</td><td>准入要<b>逐条点名</b>它推翻的每条纠错并写理由；没点名的仍然生效，资产维持不通过</td></tr>
+<tr><td>判定写下时证据已经变了</td><td>写入同时受<b>资产版本与证据集合</b>约束；期间到达的新证据会让这次写入被拒、重新判定</td></tr>
+<tr><td>报告说"隔离干净"其实不干净</td><td>隔离失败与归因错误分开记；覆盖不足记 unknown，不记干净</td></tr>
+</table>
+
+<p class="muted">评测部分：任务三、四，以及任务五的一部分。</p>
+
+</div></body></html>
