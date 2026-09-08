@@ -443,6 +443,56 @@ by call alone, so the row about one asset could displace the row about the
 other. Keyed by both now. The call count and the cost do not double — what
 changes is only which rows may supersede which.
 
+## Isolation, measured on content (2026-09-08j)
+
+The confounder detector watched skill-API reads and reported "0 non-pool
+reads" for a run whose captured body carried a hidden asset's address. A
+report that cannot tell an isolation failure from an attribution error is
+not usable for calibration, so `../attribution/delivery-audit.mjs` asks a
+different question: did this asset's content reach the model, before the
+operation being judged, and can the arrival be attributed to that asset?
+
+Scanning for tokens and calling every hit a delivery would be worse than the
+blind spot — it would rewrite a real false positive into an "isolation
+failure" and hide the error. Four boundaries hold, and each is a place an
+earlier draft was wrong:
+
+- **Received is not written.** Input is system, user and tool. What the model
+  wrote includes its tool-call *arguments*: a token written into a `Write`
+  argument and read back was invisible to a content-only scan. And order is
+  not an echo relation — mentioning an address from memory and later
+  genuinely reading the asset is a delivery. An echo is the **link**: the
+  arrival came from reading a path the model had itself written that token
+  into.
+- **First arrival, before the operation.** The operation's position is
+  resolved from the used-event's `target_ref`, which the runner already
+  records; it was there all along and simply had not been joined up.
+- **A token is not an asset, and naming one is not fetching it.**
+  `grep skl-x /tmp/other` mentions an id and reads something else.
+  Attribution comes from the **response**: a skill response carries its own
+  `skill_id`, and in a search result the token belongs to the hit it sits
+  inside. Reading the request instead misses `get-by-name`, which asks by
+  name — the positive control failed exactly there before this was fixed.
+- **Absence needs coverage.** `verifyCoverage` checks request/response
+  pairing, truncation, status, and the finish-reason chain: a turn ending
+  `tool_calls` must be followed by another, and the last must end `stop`.
+  Without that, "not seen" stays `not_seen_in_capture` and never becomes
+  `not_delivered`.
+
+Batch 3, all ten captures complete:
+
+| arm | hidden asset | admitted asset |
+|---|---|---|
+| gate-off, 5/5 | delivered | delivered |
+| gate-on, 4/5 | **not delivered** | delivered |
+| gate-on, 1/5 | `ambiguous_source` | `ambiguous_source` |
+
+The off arm is the control: with the gate off the audit finds both assets
+reaching the model, so a `not_delivered` in the on arm is a finding and not
+a blind spot. The one exception traces to the consumer's own knowledge file,
+carried in through a tool-result cache — an alternative source, neither a
+leak nor a clean isolation.
+
 ## The rules
 
 ```

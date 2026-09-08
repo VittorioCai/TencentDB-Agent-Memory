@@ -5,7 +5,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture } from "./delivery-audit.mjs";
+import { auditDelivery, allMessages, pathsModelWroteTokenInto, operationFromTargetRef, attributionFromCapture, verifyCoverage, assetOwningTokenInResult } from "./delivery-audit.mjs";
 
 const req = (messages, requestId) => ({ requestId, body: { json: { messages } } });
 const TOKENS = { "skl-hidden": { version: 2, tokens: ["10.244.7.19"] }, "skl-ok": { version: 2, tokens: ["47318"] } };
@@ -158,17 +158,74 @@ test("the operation's position comes from the used-event's target_ref", () => {
   assert.equal(operationFromTargetRef("nonsense", requests), null);
 });
 
-test("attribution is read from the call that produced the result, not from the text", () => {
+test("attribution is the response's own binding, not the command text", () => {
+  // The command may ask by name, or be a search returning several hits; only
+  // the response says which asset the content came from. And a command that
+  // merely mentions an id (`grep skl-hidden …`) returns content that names
+  // no asset at all.
   const requests = [req([
-    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/get -d '{\"skill_id\":\"skl-hidden\"}'" }) } }] },
-    { role: "tool", tool_call_id: "c1", content: "10.244.7.19:8096" },
+    { role: "assistant", content: null, tool_calls: [{ id: "c1", function: { name: "Bash", arguments: JSON.stringify({ command: "curl .../skill/get-by-name -d '{\"skill_name\":\"endpoint-a\"}'" }) } }] },
+    { role: "tool", tool_call_id: "c1", content: '{"data":{"skill_id":"skl-hidden","content":"reach it at 10.244.7.19:8096"}}' },
     { role: "assistant", content: null, tool_calls: [{ id: "c2", function: { name: "Bash", arguments: JSON.stringify({ command: "grep skl-hidden /tmp/other-memory" }) } }] },
     { role: "tool", tool_call_id: "c2", content: "10.244.7.19:8096" },
   ])];
   const attributionOf = attributionFromCapture(requests);
   const entries = allMessages(requests);
-  // The skill read is attributed to the asset; the grep is not.
-  assert.equal(attributionOf({ request: 0, index: 1 }, entries[1]).asset_id, "skl-hidden");
-  assert.equal(attributionOf({ request: 0, index: 3 }, entries[3]).asset_id, null);
-  assert.match(attributionOf({ request: 0, index: 3 }, entries[3]).command, /^grep skl-hidden/);
+  // Asked by NAME, and still attributed — because the response carries the id.
+  assert.equal(attributionOf({ request: 0, index: 1 }, entries[1], "10.244.7.19").asset_id, "skl-hidden");
+  // The grep's output names no asset, so it attributes to none.
+  assert.equal(attributionOf({ request: 0, index: 3 }, entries[3], "10.244.7.19").asset_id, null);
+});
+
+test("in a search result, the token belongs to the hit it sits inside", () => {
+  const body = '{"items":[{"skill_id":"skl-ok","snippet":"port 47318 here"},{"skill_id":"skl-hidden","snippet":"10.244.7.19:8096 here"}]}';
+  assert.equal(assetOwningTokenInResult(body, "47318"), "skl-ok");
+  assert.equal(assetOwningTokenInResult(body, "10.244.7.19"), "skl-hidden");
+  assert.equal(assetOwningTokenInResult("no ids here, just 10.244.7.19", "10.244.7.19"), null);
+});
+
+// ── coverage: absence is only evidence if the capture is the whole run ──
+
+const turn = (id, finish, opts = {}) => [
+  { event: "http.request", requestId: id, body: { json: { messages: [] } } },
+  { event: "http.response", requestId: id, status: opts.status ?? 200,
+    body: { truncated: opts.truncated ?? false, text: `data: {"choices":[{"finish_reason":"${finish}"}]}` } },
+];
+
+test("a run that asked for tools each turn and then stopped is complete", () => {
+  const c = verifyCoverage([...turn("a", "tool_calls"), ...turn("b", "tool_calls"), ...turn("c", "stop")]);
+  assert.equal(c.complete, true);
+  assert.deepEqual(c.reasons, []);
+  assert.equal(c.requests, 3);
+});
+
+test("a capture that stops while the model is still calling tools is not complete", () => {
+  const c = verifyCoverage([...turn("a", "tool_calls"), ...turn("b", "tool_calls")]);
+  assert.equal(c.complete, false);
+  assert.match(c.reasons.join(" "), /asked to continue and nothing follows/);
+});
+
+test("an unanswered request, a truncated body, a non-2xx, and an empty capture are all incomplete", () => {
+  const orphan = [{ event: "http.request", requestId: "x", body: { json: { messages: [] } } }];
+  assert.match(verifyCoverage(orphan).reasons.join(" "), /has no response/);
+  assert.match(verifyCoverage(turn("a", "stop", { truncated: true })).reasons.join(" "), /truncated/);
+  assert.match(verifyCoverage(turn("a", "stop", { status: 500 })).reasons.join(" "), /returned 500/);
+  assert.equal(verifyCoverage([]).complete, false);
+});
+
+test("being cut off by length ends the run, but is reported rather than called clean", () => {
+  const c = verifyCoverage(turn("a", "length"));
+  assert.equal(c.complete, false);
+  assert.match(c.reasons.join(" "), /cut off/);
+});
+
+test("coverage drives whether absence may be called 'not delivered'", () => {
+  const rows = [...turn("a", "stop")];
+  const requests = rows.filter((r) => r.event === "http.request");
+  const cov = verifyCoverage(rows);
+  assert.equal(cov.complete, true);
+  const a = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 0 }, coverageAsserted: cov.complete });
+  assert.equal(a.assets["skl-hidden"].verdict, "not_delivered");
+  const b = auditDelivery(requests, TOKENS, { operation: { request: 0, index: 0 }, coverageAsserted: false });
+  assert.equal(b.assets["skl-hidden"].verdict, "not_seen_in_capture");
 });

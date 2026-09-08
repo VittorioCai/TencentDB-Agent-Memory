@@ -106,7 +106,7 @@ export function pathsModelWroteTokenInto(entries, token) {
  *                        resolved from the used-event's target_ref; null when
  *                        unknown, which makes the ordering unknown rather
  *                        than assumed
- * @param opts.attributionOf  (position, entry) => asset_id | null — what the
+ * @param opts.attributionOf  (position, entry, token) => { asset_id, … } | null — what the
  *                        collector says this content actually came from.
  *                        Never inferred from strings here.
  * @param opts.coverageAsserted  true only when the caller has checked the
@@ -159,7 +159,7 @@ export function auditDelivery(requests, tokens, opts = {}) {
       // An echo is a LINK, not an order: the arrival came from reading a
       // path the model had itself written the token into.
       const wrote = pathsModelWroteTokenInto(entries.filter((e) => before({ request: e.request, index: e.index }, firstInput)), t);
-      const source = attributionOf ? attributionOf({ request: firstInput.request, index: firstInput.index }, firstInput.entry) : null;
+      const source = attributionOf ? attributionOf({ request: firstInput.request, index: firstInput.index }, firstInput.entry, t) : null;
       const sourcePath = source && typeof source === "object" ? source.path ?? "" : "";
       if (wrote.size && [...wrote].some((p) => sourcePath.includes(p) || String(source?.command ?? "").includes(p))) {
         findings.push({ token: t, verdict: "model_echo", at, wrote_paths: [...wrote],
@@ -232,17 +232,96 @@ export function attributionFromCapture(requests) {
       try { parsed = JSON.parse(args); } catch { parsed = null; }
       const command = typeof parsed?.command === "string" ? parsed.command : "";
       const path = typeof parsed?.file_path === "string" ? parsed.file_path : (typeof parsed?.path === "string" ? parsed.path : "");
-      // A skill read names the asset in the request body it sends.
-      let asset_id = null;
-      const m = /"skill_id"\s*:\s*"([^"]+)"/.exec(command) || /"skill_id"\s*:\s*"([^"]+)"/.exec(args);
-      if (m && /\/skill\/(get|files\/read|export)/.test(command)) asset_id = m[1];
-      byCallId.set(t.id, { asset_id, path, command: command.slice(0, 200), tool: t?.function?.name ?? null });
+      byCallId.set(t.id, { path, command: command.slice(0, 200), tool: t?.function?.name ?? null });
     }
   }
-  return (_pos, entry) => {
+  return (_pos, entry, token) => {
     const id = entry?.message?.tool_call_id;
-    return id ? (byCallId.get(id) ?? null) : null;
+    if (!id) return null;
+    const call = byCallId.get(id);
+    if (!call) return null;
+    // The response is the binding: the server says which asset it returned.
+    // Reading the request instead misses `get-by-name`, which asks by name,
+    // and cannot tell which of a search's several results carried the token.
+    return { ...call, asset_id: assetOwningTokenInResult(textOf(entry.message), token) };
   };
+}
+
+/**
+ * Which asset a token belongs to inside a tool result. A result carries the
+ * response verbatim, and a skill response names its `skill_id`; a search
+ * response names one per hit. The token sits inside one hit's body, so the
+ * asset is the one whose id most closely precedes it. Returns null when the
+ * result names no asset, or when the token appears before any of them.
+ */
+export function assetOwningTokenInResult(text, token) {
+  const s = String(text ?? "");
+  const at = s.toLowerCase().indexOf(String(token ?? "").toLowerCase());
+  if (at < 0) return null;
+  let owner = null;
+  for (const m of s.matchAll(/"skill_id"\s*:\s*"([^"]+)"/g)) {
+    if (m.index < at) owner = m[1]; else break;
+  }
+  return owner;
+}
+
+/**
+ * Does the capture cover the whole run?
+ *
+ * "The token is not in the capture" is only evidence of absence if the
+ * capture is the whole conversation. A non-empty file is not that: the probe
+ * could have been attached late, or stopped early, and either way the file
+ * looks fine. So coverage is checked from the shape of the exchange rather
+ * than asserted:
+ *
+ *   - every request has its response and every response its request;
+ *   - nothing was truncated and every response is 2xx;
+ *   - a turn that ends `tool_calls` is asking to continue, so it must be
+ *     followed by another request — if the last turn asks to continue and
+ *     nothing follows, the capture stops mid-run;
+ *   - the last turn ends on a terminal reason (`stop` / `end_turn`).
+ *     `length` terminates too, but because the model was cut off, which is
+ *     reported rather than treated as a clean end.
+ *
+ * Returns { complete, reasons } — reasons are why not, and are empty when it
+ * is complete.
+ */
+export function verifyCoverage(rows) {
+  const reasons = [];
+  const requests = (rows ?? []).filter((r) => r?.event === "http.request");
+  const responses = (rows ?? []).filter((r) => r?.event === "http.response");
+  if (!requests.length) return { complete: false, reasons: ["the capture holds no model request at all"], requests: 0, responses: 0 };
+
+  const reqIds = new Set(requests.map((r) => r.requestId));
+  const resById = new Map(responses.map((r) => [r.requestId, r]));
+  for (const r of requests) if (!resById.has(r.requestId)) reasons.push(`request ${r.requestId} has no response — the capture stops inside a turn`);
+  for (const r of responses) if (!reqIds.has(r.requestId)) reasons.push(`response ${r.requestId} has no request — the capture starts inside a turn`);
+
+  const finishOf = (res) => {
+    const txt = (res?.body ?? {}).text ?? "";
+    const all = [...String(txt).matchAll(/"finish_reason"\s*:\s*"([^"]+)"/g)].map((m) => m[1]);
+    return all.length ? all[all.length - 1] : null;
+  };
+  const ordered = requests.map((r) => ({ req: r, res: resById.get(r.requestId) })).filter((p) => p.res);
+  ordered.forEach((p, i) => {
+    const b = p.res.body ?? {};
+    if (b.truncated) reasons.push(`response ${i} was truncated, so its content is not all here`);
+    const status = Number(p.res.status ?? 0);
+    if (status < 200 || status >= 300) reasons.push(`response ${i} returned ${status}`);
+    const fin = finishOf(p.res);
+    const last = i === ordered.length - 1;
+    if (!last && fin && fin !== "tool_calls") {
+      // A turn that ended cleanly followed by more turns is not a gap, but it
+      // does mean the run continued past a natural end; worth naming.
+      reasons.push(`turn ${i} ended "${fin}" yet more turns follow — the capture may join two runs`);
+    }
+    if (last) {
+      if (fin === "tool_calls") reasons.push(`the last turn ended "tool_calls" — it asked to continue and nothing follows, so the capture stops mid-run`);
+      else if (fin === "length") reasons.push(`the last turn ended "length" — the model was cut off; the run ended, but not by finishing`);
+      else if (!fin) reasons.push("the last turn carries no finish_reason, so whether the run ended cannot be told");
+    }
+  });
+  return { complete: reasons.length === 0, reasons, requests: requests.length, responses: responses.length };
 }
 
 export function summarizeDelivery(audit) {

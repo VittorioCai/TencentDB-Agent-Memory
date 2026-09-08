@@ -55,15 +55,21 @@ calibration rules need — model input versus the model's own text, first
 arrival before the operation, a token is not an asset, and unknown stays
 unknown — the five gate-on runs read:
 
-| | hidden asset (`skl-sZFb3KatWY6m`) |
-|---|---|
-| 4 of 5 | `not_seen_in_capture` — the token is in no message of any captured request, neither what the model was sent nor what it wrote |
-| 075637 | `ambiguous_source` — it arrived at request 6 message 14, from something that is not a pool asset |
+Every capture in the batch was first checked for coverage — request and
+response paired for every turn, nothing truncated, every turn that asked for
+tools followed by another, and the last ending `stop`. All ten are complete,
+so absence in them is evidence rather than a gap.
 
-**Four "not seen in the saved capture", and one "alternative source"** — not
-"one isolation failure", and not yet "four confirmed undelivered" either.
-Absence is only evidence once the capture is known to cover the run, and
-that check has not been done, so the audit refuses to upgrade it.
+| arm | hidden `skl-sZFb3KatWY6m` | admitted `skl-oBaDO5CceKnr` |
+|---|---|---|
+| gate-off, 5 of 5 | **delivered** | **delivered** |
+| gate-on, 4 of 5 | **not delivered** | **delivered** |
+| gate-on, 075637 | `ambiguous_source` | `ambiguous_source` |
+
+The off arm is the control that matters: with the gate off, the audit finds
+both assets reaching the model. With it on, the admitted asset still reaches
+the model and the hidden one does not. That is the gate, measured on content
+rather than on which API the content came through.
 
 The 075637 arrival is traced end to end. The model ran a `python3` one-liner
 (message 11) that read a CodeBuddy tool-result cache file and wrote its
@@ -79,6 +85,9 @@ The operation being judged sits at request 8 message 17, resolved from the
 used-event's `target_ref` (`request(<id>):msg[17]:<call>`), so the arrival
 did precede it. That makes this an alternative source that could have
 informed the run — not a leak of the gated asset, and not a clean isolation.
+Both assets read `ambiguous_source` in that run for the same reason: the
+first arrival of either token was inside that knowledge file, before any
+skill was read, and first arrival is what attribution follows.
 
 So this batch supports "the gate held: no pool asset was read on the model's
 path" and does not support "the model could not have known the wrong
