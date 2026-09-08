@@ -412,6 +412,35 @@ counted one call and admitted; every row the decision rested on was one the
 listing called usable. The four evidence-base assets and the model-path
 positive control were unchanged.
 
+## Before the calibration freeze (2026-09-08h): three that had to close first
+
+Named in review as things the two open trade-offs must not swallow. All
+three reproduced, all three fixed.
+
+**A decision row and the evidence counter must land together.** SQLite wrote
+the outcome row and then raised `evidence_revision` as a second statement,
+outside any transaction. A crash between them leaves evidence on file that
+the counter does not know about — and a decision read before it can then be
+written over that evidence permanently. Both `appendAssetOutcome` and
+`updateAssetOutcome` now run the write and the bump in one `tx()`; the test
+makes the bump throw and asserts no row survives. On MongoDB the pair spans
+two collections and cannot be made atomic without a session transaction, so
+that is stated in the adapter rather than papered over: the deployed stack
+is SQLite.
+
+**`final` is a question about a window, not about all history.** The listing
+computed the last word on a call over every row for the asset, while
+answering a query that might be filtered by time. As of a cutoff an earlier
+row *is* the last word, and a row the same listing excludes must not be what
+supersedes it — otherwise a result that stood at the cutoff is dropped from
+the ledger by evidence that came later. Finality is now computed inside the
+listing's own `occurred_after` / `occurred_before` window, and the evidence
+pack passes its cutoff with the query so Core answers for the pack's window.
+
+**One call on two assets is two calls.** Core keys the collapse by asset and
+call; the author checker's fallback keyed by call alone, so a result on one
+asset could supersede a result on another. Keyed by both now.
+
 ## The rules
 
 ```

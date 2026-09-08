@@ -2217,7 +2217,14 @@ export class MetadataService {
     const finalFor = async (assetId: string): Promise<Map<string, string>> => {
       const hit = finalOf.get(assetId);
       if (hit) return hit;
-      const readable = trustedOnly(await this.allOutcomes({ team_id: filter.team_id, asset_id: assetId })).kept;
+      // Within the SAME window the listing is answering for. `final` means
+      // "the last word on this call", and that is a question about a period:
+      // as of the cutoff an earlier row IS the last word, and a row the
+      // listing excludes must not be what supersedes it (2026-09-08h).
+      const readable = trustedOnly(await this.allOutcomes({
+        team_id: filter.team_id, asset_id: assetId,
+        occurred_after: filter.occurred_after, occurred_before: filter.occurred_before,
+      })).kept;
       const winners = new Map(collapseByCall(readable).kept.map((o) => [o.call_id ? `call:${o.call_id}` : `row:${o.id}`, o.id]));
       const m = new Map<string, string>();
       for (const o of readable) m.set(o.id, winners.get(o.call_id ? `call:${o.call_id}` : `row:${o.id}`) ?? o.id);

@@ -368,7 +368,10 @@ export function checkAssessment(raw, pack, opts = {}) {
     const byCallFinal = new Map();
     const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
     for (const { id, rec } of harness) {
-      const key = rec.meta?.call_id ? `call:${rec.meta.call_id}` : id;
+      // Keyed by asset too, as Core keys it. A call that touched two assets
+      // produces one row per asset, and collapsing them together would let a
+      // result on one asset supersede a result on another (2026-09-08h).
+      const key = rec.meta?.call_id ? `${rec.meta.asset_id ?? "?"}|call:${rec.meta.call_id}` : id;
       const prev = byCallFinal.get(key);
       if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });
     }

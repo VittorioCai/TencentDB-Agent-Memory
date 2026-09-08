@@ -45,7 +45,9 @@ over HTTP from an agent session: which address answers*, asset
 Pack: 49 records — proxy_observed 9 (3 bridge_calls paired with their
 commands, 1 ambiguous: two probes with the same query, only one of which
 reached the proxy; 2 commands ambiguous on their side), harness_verified 4
-(19 untrusted and 0 retracted rows left out), assistant_report 4,
+(of the 8 rows in the window; 4 untrusted, 0 retracted left out — the counts
+describe the window, not all history, because the cutoff now goes to Core
+with the query), assistant_report 4,
 user_instruction 4, derived_memory 4 (all source_unavailable),
 team_principles 22, authored_text 2 (the versions that existed at the
 cutoff; 1 skill created later excluded). Chain: results 2 (corrected

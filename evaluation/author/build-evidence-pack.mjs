@@ -349,7 +349,12 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
   } catch (e) { sources.skills = { error: String(e.message) }; }
   // Outcomes on the author's assets — trusted rows only
   try {
-    const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id }, author.key, "items", 100, 2000);
+    // The cutoff goes to Core, not just applied here: `gate_validity.final`
+    // means "the last word on this call", and Core has to answer that for the
+    // SAME window the pack is built for. Without it a row that is final as of
+    // the cutoff comes back marked superseded by a row the pack excludes
+    // (2026-09-08h).
+    const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id, occurred_before: cut }, author.key, "items", 100, 2000);
     // Core decides what the gate may read and stamps it on every row
     // (`gate_validity`, from `outcomeValidity` — the same function the
     // decision uses). The pack does not re-derive it: a second copy of the

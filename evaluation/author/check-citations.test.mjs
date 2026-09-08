@@ -355,3 +355,18 @@ test("a cited id missing its kind prefix resolves when unambiguous; an unknown i
   assert.equal(v.ok, true);
   assert.deepEqual(v.record_ids, ["l0:msg1"]);
 });
+
+test("one call that touched two assets is two calls, not one", () => {
+  // Core keys the collapse by asset AND call; the checker's fallback keyed by
+  // call alone, so a result on one asset could supersede a result on another
+  // (2026-09-08h). Fallback path: no `final` stamp on these records.
+  const rows = new Map([
+    ["outcome:x1", rec("outcome", "validated on asset skl-a v2 by usr-b (cross_user)", { state: "validated", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "call-shared", recorded_at: "2026-09-05T00:00:00Z" }, "harness_verified")],
+    ["outcome:x2", rec("outcome", "corrected(wrong) on asset skl-b v1 by usr-b (cross_user)", { state: "corrected", corrected_reason: "wrong", asset_id: "skl-b", asset_version: 1, consumer_user_id: "usr-b", call_id: "call-shared", recorded_at: "2026-09-06T00:00:00Z" }, "harness_verified")],
+  ]);
+  const r = checkAssessment({ competence: "medium", claims: [] }, rows, { authorId: "usr-a" });
+  // Both count: one success on skl-a, one failure on skl-b. Keyed by call
+  // alone, the later row won and the success vanished.
+  assert.deepEqual(r.execution_claims.ledgers.others_on_assets, { success: 1, failure: 1 });
+  assert.equal(r.execution_claims.superseded_by_a_later_row, 0);
+});

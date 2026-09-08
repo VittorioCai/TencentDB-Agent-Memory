@@ -921,6 +921,37 @@ describe("the gate on the asset record", () => {
     expect(after.decision.evidence_refs.every((x) => usable.includes(x.outcome_id))).toBe(true);
   });
 
+  it("REPRO cutoff: `final` must be the last word AS OF the listing's cutoff, not of all history", async () => {
+    await candidateSkill("skl-cut", a, "team");
+    const early = await trusted("skl-cut", b, { state: "validated", call_id: "call-1", occurred_at: "2026-09-01T00:00:00.000Z" });
+    const late = await trusted("skl-cut", b, { state: "corrected", corrected_reason: "wrong", call_id: "call-1", occurred_at: "2026-09-10T00:00:00.000Z" });
+    // As of 2026-09-05 the call's last word is the validated row: the
+    // correction had not happened yet. A listing filtered to that window must
+    // not mark it superseded by a row the same listing excludes.
+    const asOf = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-cut", occurred_before: "2026-09-05T00:00:00.000Z" }, ctx(admin));
+    expect(asOf.items.map((o) => o.id)).toEqual([early.outcome.id]);
+    expect(asOf.items[0].gate_validity).toMatchObject({ final: true, usable: true, superseded_by: null });
+    // With no cutoff, the correction is the last word and the earlier row is history.
+    const all = await svc.listAssetOutcomesForCaller({ team_id: team, asset_id: "skl-cut" }, ctx(admin));
+    const by = new Map(all.items.map((o) => [o.id, o.gate_validity]));
+    expect(by.get(early.outcome.id)).toMatchObject({ final: false, superseded_by: late.outcome.id });
+    expect(by.get(late.outcome.id)).toMatchObject({ final: true });
+  });
+
+  it("REPRO atomicity: an outcome row and the evidence counter land together or not at all", async () => {
+    await candidateSkill("skl-atom", a, "team");
+    const before = (await store.getAssetById("skl-atom"))!;
+    const realBump = store.bumpAssetEvidence.bind(store);
+    (store as unknown as { bumpAssetEvidence: typeof realBump }).bumpAssetEvidence = (() => { throw new Error("disk full"); }) as typeof realBump;
+    expect(() => store.appendAssetOutcome({ team_id: team, asset_id: "skl-atom", asset_version: 1, state: "corrected",
+      corrected_reason: "wrong", relation: "cross_user", consumer_user_id: b, trusted: true, call_id: "c-atom" })).toThrow();
+    (store as unknown as { bumpAssetEvidence: typeof realBump }).bumpAssetEvidence = realBump;
+    // The row must not be on file while the counter says nothing changed: a
+    // decision read before it would then be written over evidence that exists.
+    expect((await store.listAssetOutcomes({ team_id: team, asset_id: "skl-atom" })).total).toBe(0);
+    expect((await store.getAssetById("skl-atom"))?.evidence_revision ?? 0).toBe(before.evidence_revision ?? 0);
+  });
+
   it("a team admin who is not the owner may set status (the management act) and nothing else", async () => {
     await candidateSkill("skl-adm2", a, "team");
     const res = await svc.updateAssetForCaller("skl-adm2", { status: "approved" }, ctx(admin));

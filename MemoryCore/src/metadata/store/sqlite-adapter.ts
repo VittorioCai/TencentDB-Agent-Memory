@@ -1377,23 +1377,29 @@ export class SqliteMetadataStore implements IMetadataStore {
       occurred_at: input.occurred_at ?? now,
       created_at: now,
     };
-    this.run(
-      `INSERT INTO meta_asset_outcomes
-        (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
-         consumer_agent_id, task_id, run_id, source, evidence_json, call_id, event_id, trusted,
-         untrusted_reason, submitted_by_user_id, submitted_role, content_hash, occurred_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
-      entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
-      entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
-      entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.content_hash, entity.occurred_at, entity.created_at,
-    );
-    // The evidence about the asset just changed, and the counter rises with
-    // it, in the store (2026-09-08f). Putting this in the service left it
-    // bypassable: anything writing straight to the store — a migration, a
-    // test, a script — added evidence a decision could then be written over.
-    this.bumpAssetEvidence(entity.asset_id);
-    return entity;
+    return this.tx(() => {
+      this.run(
+        `INSERT INTO meta_asset_outcomes
+          (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
+           consumer_agent_id, task_id, run_id, source, evidence_json, call_id, event_id, trusted,
+           untrusted_reason, submitted_by_user_id, submitted_role, content_hash, occurred_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
+        entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
+        entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
+        entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.content_hash, entity.occurred_at, entity.created_at,
+      );
+      // The evidence about the asset just changed, and the counter rises with
+      // it, in the store (2026-09-08f). Putting this in the service left it
+      // bypassable: anything writing straight to the store — a migration, a
+      // test, a script — added evidence a decision could then be written over.
+      // Row and counter go together or not at all (2026-09-08h): a crash
+      // between them would leave evidence on file that the counter does not
+      // know about, and a decision read before it could then be written over
+      // that evidence for good.
+      this.bumpAssetEvidence(entity.asset_id);
+      return entity;
+    });
   }
 
   getAssetOutcomeByEvent(teamId: string, eventId: string): AssetOutcomeEntity | null {
@@ -1410,11 +1416,14 @@ export class SqliteMetadataStore implements IMetadataStore {
     for (const k of allowed) if (patch[k] !== undefined) p[k] = k === "trusted" ? (patch[k] ? 1 : 0) : patch[k];
     if (Object.keys(p).length === 0) return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
     const sets = Object.keys(p).map((k) => `${k} = ?`).join(", ");
-    this.run(`UPDATE meta_asset_outcomes SET ${sets} WHERE id = ?`, ...(Object.values(p) as SQLInputValue[]), id);
-    const row = this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
-    // Confirming a row in place, or retracting it, changes the evidence too.
-    if (row) this.bumpAssetEvidence(row.asset_id);
-    return row;
+    return this.tx(() => {
+      this.run(`UPDATE meta_asset_outcomes SET ${sets} WHERE id = ?`, ...(Object.values(p) as SQLInputValue[]), id);
+      const row = this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+      // Confirming a row in place, or retracting it, changes the evidence too,
+      // and lands with it (2026-09-08h).
+      if (row) this.bumpAssetEvidence(row.asset_id);
+      return row;
+    });
   }
 
   listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {

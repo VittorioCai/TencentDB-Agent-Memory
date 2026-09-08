@@ -1041,6 +1041,15 @@ export class MongoMetadataStore implements IMetadataStore {
     await this.col("meta_asset_outcomes").insertOne(entity);
     // After the row lands, so a reader that saw it cannot also have seen the
     // old counter (2026-09-08f).
+    //
+    // NOT atomic with the insert, and it cannot be made so here: the row and
+    // the counter are in different collections, which needs a session
+    // transaction and therefore a replica set. SQLite wraps the pair in one
+    // transaction (2026-09-08h); on MongoDB a crash between these two awaits
+    // leaves evidence on file that `evidence_revision` does not know about,
+    // and a decision read before it could be written over that evidence. The
+    // deployed stack is SQLite; a MongoDB deployment must run this pair
+    // inside `withTransaction` before it can be trusted the same way.
     await this.bumpAssetEvidence(entity.asset_id);
     return entity;
   }
@@ -1064,6 +1073,8 @@ export class MongoMetadataStore implements IMetadataStore {
     if (!d) return null;
     const row = this.mapAssetOutcomeDoc(d);
     // Confirming a row in place, or retracting it, changes the evidence.
+    // Same caveat as appendAssetOutcome: not atomic with the update on
+    // MongoDB without a session transaction (2026-09-08h).
     if (Object.keys($set).length) await this.bumpAssetEvidence(row.asset_id);
     return row;
   }
