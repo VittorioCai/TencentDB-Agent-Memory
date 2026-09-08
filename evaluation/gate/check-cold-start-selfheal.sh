@@ -32,7 +32,10 @@ echo "created $SK"
 python3 -c "
 import json;print(json.dumps({'team_id':'$TEAM','user_id':'$A','agent_id':'$AG','skill_id':'$SK','expected_version':1,'content':'---\nname: $N\ndescription: throwaway\n---\n# v2 body\n'}))" > /tmp/u.json
 call $ENV/.topic4-user-key /v3/skill/update "@/tmp/u.json" | python3 -c "import json,sys;d=json.load(sys.stdin);print('  skill/update code',d.get('code'),'→ v'+str((d.get('data') or {}).get('version')))"
-HEAD=$(call $ENV/.admin-key /v3/skill/get "{\"team_id\":\"$TEAM\",\"user_id\":\"$A\",\"agent_id\":\"$AG\",\"skill_id\":\"$SK\",\"include_content\":false}" 'x-tdai-read-purpose: manage' | python3 -c "import json,sys;print((json.load(sys.stdin).get('data') or {}).get('version'))")
+# The owner's own key: reading someone else's skill on the manage path needs
+# the reader's key to be theirs, so the admin key returned nothing here and
+# the cleanup at the end silently failed, leaking three assets the first time.
+HEAD=$(call $ENV/.topic4-user-key /v3/skill/get "{\"team_id\":\"$TEAM\",\"user_id\":\"$A\",\"agent_id\":\"$AG\",\"skill_id\":\"$SK\",\"include_content\":false}" 'x-tdai-read-purpose: manage' | python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get('data') or {}).get('version') or 2)")
 echo "  skill head = v$HEAD"
 
 # the state a container recreate leaves: registry behind the head, and approved
@@ -51,5 +54,5 @@ for n in 1 2 3; do
     | python3 -c "import json,sys;d=json.load(sys.stdin);print('code',d.get('code'),'|',(d.get('message') or ('served v%s'%(d.get('data') or {}).get('version')))[:90])"
   reg "$SK"
 done
-call $ENV/.topic4-user-key /v3/skill/delete "{\"team_id\":\"$TEAM\",\"user_id\":\"$A\",\"agent_id\":\"$AG\",\"skill_id\":\"$SK\",\"expected_version\":$HEAD}" >/dev/null 2>&1
-echo "deleted $SK"
+call $ENV/.topic4-user-key /v3/skill/delete "{\"team_id\":\"$TEAM\",\"user_id\":\"$A\",\"agent_id\":\"$AG\",\"skill_id\":\"$SK\",\"expected_version\":$HEAD}" \
+  | python3 -c "import json,sys;d=json.load(sys.stdin);print('deleted $SK' if d.get('code')==0 else 'CLEANUP FAILED for $SK: '+str(d.get('message'))[:70])"
