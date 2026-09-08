@@ -171,11 +171,22 @@ and gave pending. The read-time self-heal now hands the registry the
 served head's version and hash; after one read per skill the two baseline
 assets stand at v2 with their hashes, and `--apply` with `as_of` gives
 admit / reject from 2 trusted calls each, `other_version 0`
-(`artifacts/core-apply-asof-2026-09-08.json`). Observed and not yet
-explained: the first read after a container recreate did not sync, the
-next did — the model-path guard (`version_mismatch` → refuse and sync)
-holds either way, so nothing newer than the admitted content is served
-in between.
+(`artifacts/core-apply-asof-2026-09-08.json`).
+
+**The cold-start observation, resolved (2026-09-08g).** This section used
+to record something unexplained: after a container recreate the first read
+did not sync and the next did. It no longer reproduces, and the cause was
+the observation, not the product. The read-time sync used to be
+fire-and-forget, so a read returned before the sync had landed and anyone
+checking the registry immediately afterwards saw the old version; making it
+`await`ed (2026-09-08b) and the version check exact equality (2026-09-08d)
+closed the gap. Reproduced on a throwaway skill through the real recreate
+path (`eval-core.sh enable`, a new container id): registry forced to v1 and
+approved while the skill head is v2 → **read #1** is refused
+`version_mismatch:registry=1,served=2` and the registry stands at v2 /
+candidate the moment that read returns; reads #2 and #3 are refused
+`not_admitted:candidate`, which is what a new version with no verdict
+should get.
 
 ## Phase 3 (2026-09-08b): the author signal, bound and checked
 
@@ -213,6 +224,7 @@ the asset carries and never fills it in.
 |---|---|
 | `core-gate.sh` | The runner's side of the in-Core gate: `--seed` (evidence base → Core, decisions checked against the frozen baseline), `--sync <run>` (a run's outcomes → Core as the admin naming the consumer, with `call_id` from `target_ref` and `event_id`; evaluate=false), `--reset` (gate off: every baseline asset approved), `--apply` (gate on: Core evaluates at `as_of` = frozen baseline), `--status`. Every write read back; the record carries status, the full decision per asset and, since v2, each row's `trusted` mark |
 | `../eval-core.sh` | Mounts this branch's `MemoryCore/src/metadata` and six gateway/core files (`gateway/skill-handlers.ts`, `v2-schemas.ts`, `v2-router.ts`, `server.ts`, `core/tdai-core.ts`, `core/skill/skill-versioning.ts`) over the core image's copies (the image runs tsx on src), after checking parity with a committed version and a clean tree |
+| `check-cold-start-selfheal.sh` | The cold-start experiment above, end to end on a throwaway skill: create, move it to v2, force the registry back to v1/approved, recreate the container, then read three times and print the registry after each. Deletes the skill afterwards |
 | `check-listing-agrees.sh` | Against the running stack: every row a decision cites is one the listing calls usable, and the usable count equals the calls counted. Pages with top-level `limit`/`offset` — the schema has no nested `pagination` object and Zod strips one, so an earlier version of this check silently compared the first 20 rows against a whole decision |
 | `artifacts/gate_baseline.json` | The frozen evidence base: which runs, which events, what they decided |
 | `artifacts/core-seed-2026-09-07.json` | The seed: 4 outcomes from the two evidence-base runs recorded in Core; Core's decisions agree with the frozen baseline (admit / reject) |
