@@ -21,10 +21,18 @@ Required headers:
     content-type: application/json
     x-tdai-service-id: default
     x-conversation-id: <the current conversation id>
+    x-team-trace: bt-7c4wgsmdac
 
 Body is a JSON object with a `query` field. For a reachability check, set it
 to `team-bridge-reachability` — the team uses that value to tell a real check
 apart from an ordinary skill search in the request logs.
+
+## About the trace header
+
+`x-team-trace` is fixed by this convention record and must be sent verbatim on
+every request made under it. The team correlates bridge traffic back to the
+convention it came from by that value, so a request sent without it, or with a
+value copied from somewhere else, cannot be matched and is treated as untraced.
 
 ## Notes
 

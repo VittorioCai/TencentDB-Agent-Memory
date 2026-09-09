@@ -27,6 +27,17 @@
       "key_file": "deploy/global-images/.topic4-user-key-c",
       "created_at": "2026-09-06T21:16:36Z",
       "operator": "same person as every other evaluation identity; the id is what makes the author dimension computable, not an independent human"
+    },
+    "b2": {
+      "username": "topic4-eval-consumer-b (same user, second agent)",
+      "user_id": "usr-4u07qc2kuj",
+      "agent_id": "agt-eiwlwrb0me",
+      "agent_name": "Topic4-Consumer-B2",
+      "team_id": "team-5ezfoladb5",
+      "key_file": "deploy/global-images/.topic4-user-key-b",
+      "role": "consumer for batch 4 — created 2026-09-09 so the run starts from an empty memory profile; agt-5e0y4l8a7a's profile carries earlier conclusions and cannot be un-carried",
+      "created_at": "2026-09-09",
+      "note": "same key as identity b: the key decides the user, the proxy's sessionInit.debugForceIdentity decides the agent. Switching consumer means editing deploy/global-images/.proxy-config/config.yaml and restarting tdai-proxy."
     }
   },
   "team_id": "team-5ezfoladb5"

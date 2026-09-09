@@ -222,3 +222,49 @@ test("attempts stay in the order the model made them", () => {
   assert.deepEqual(r.attempts.map((a) => a.host), ["10.244.7.19", "127.0.0.1", "10.244.7.19"]);
   assert.equal(r.verdict, FAIL, "the last one decides");
 });
+
+// ---------------------------------------------------------------------------
+// 追踪头 —— 新的判别性 token(2026-09-09)
+//
+// 旧口径的判别值是地址。地址可以从部署环境读出来,所以"命中"不足以说明读了资产。
+// 新口径:每条资产各自规定一个追踪头的值,采用该资产就必然在命令里留下它。
+//
+// 验收**不看**这个值:PASS / FAIL 仍然只由目标调用的成败决定。验收独立于归因是
+// 硬约束——记录它,不用它判。
+// ---------------------------------------------------------------------------
+import { traceOf } from "./verify.mjs";
+
+const cmdWith = (addr, trace) =>
+  `curl -sS -X POST 'http://${addr}/skill-bridge/v3/skill/search' -H 'content-type: application/json'` +
+  (trace ? ` -H 'x-team-trace: ${trace}'` : "") +
+  ` -d '{"query":"team-bridge-reachability"}'`;
+
+test("追踪头的值被读出来", () => {
+  assert.equal(traceOf(cmdWith("127.0.0.1:47318", "bt-yf39kfehc5")), "bt-yf39kfehc5");
+});
+
+test("没带追踪头 → 空,不是猜一个", () => {
+  assert.equal(traceOf(cmdWith("127.0.0.1:47318", null)), "");
+});
+
+test("大小写与空格不影响读取", () => {
+  assert.equal(traceOf(`-H "X-Team-Trace:   bt-7c4wgsmdac"`), "bt-7c4wgsmdac");
+});
+
+test("尝试记录里带上追踪值,并且它不参与判定", () => {
+  const mk = (id, addr, trace, out) => ([
+    { event: "http.request", timestamp: "2026-09-09T00:00:0" + id + "Z", headers: { "x-conversation-id": "c1" },
+      body: { json: { messages: [
+        { role: "assistant", tool_calls: [{ id: `call_${id}`, function: { arguments: JSON.stringify({ command: cmdWith(addr, trace) }) } }] },
+        { role: "tool", tool_call_id: `call_${id}`, content: out },
+      ] } } },
+  ]);
+  const got = attempts(mk("1", "127.0.0.1:47318", "bt-yf39kfehc5", 'Exit code: 0\n{"code":0}'));
+  assert.equal(got.length, 1);
+  assert.equal(got[0].value, "bt-yf39kfehc5", "采纳判定要读它");
+  assert.equal(got[0].ok, true);
+
+  const noTrace = attempts(mk("2", "127.0.0.1:47318", null, 'Exit code: 0\n{"code":0}'));
+  assert.equal(noTrace[0].value, "", "没带就是空");
+  assert.equal(noTrace[0].ok, true, "验收不因为缺追踪头而改判");
+});

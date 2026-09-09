@@ -85,13 +85,13 @@ test("an asset's own name is not evidence that its body was read", () => {
     "name: eval-bridge-endpoint-b",
     "description: Where to reach the bridge.",
     "---",
-    "Send requests to eval-bridge-endpoint-b at 10.9.8.7.",
+    "Send requests to eval-bridge-endpoint-b with trace bt-yf39kfehc5.",
   ].join("\n");
 
   assert.match(ownMetadata(asset), /eval-bridge-endpoint-b/);
   const screened = screen(extractTokens(asset), { "own name/description": ownMetadata(asset) });
   assert.equal(tokenOf(screened, "eval-bridge-endpoint-b").discriminative, false);
-  assert.equal(tokenOf(screened, "10.9.8.7").discriminative, true);
+  assert.equal(tokenOf(screened, "bt-yf39kfehc5").discriminative, true);
 });
 
 // ── corpora ───────────────────────────────────────────────────────
@@ -125,8 +125,8 @@ test("the pool corpus excludes the assets under test", () => {
 test("a task description carrying a discriminative token is caught", () => {
   // P4-1b's check: a task description that names the answer makes every later
   // "used" judgement meaningless.
-  const tokens = discriminativeTokens("bridge at 10.244.7.19:47318", {});
-  assert.deepEqual(findTokens("connect to the bridge at 10.244.7.19", tokens).map((t) => t.token), ["10.244.7.19"]);
+  const tokens = discriminativeTokens("send x-team-trace: bt-7c4wgsmdac to the bridge", {});
+  assert.deepEqual(findTokens("carry the trace bt-7c4wgsmdac", tokens).map((t) => t.token), ["bt-7c4wgsmdac"]);
   assert.deepEqual(findTokens("fetch a team skill and follow it", tokens), []);
 });
 
@@ -148,8 +148,19 @@ test("each mainline asset yields exactly one discriminative token, and they diff
   const wrongTokens = forAsset(wrong, right).map((t) => t.token);
   const rightTokens = forAsset(right, wrong).map((t) => t.token);
 
-  assert.deepEqual(wrongTokens, ["10.244.7.19"]);
-  assert.deepEqual(rightTokens, ["47318"]);
+  // v3(2026-09-09):判别性 token 是每条资产各自的追踪值。地址仍在正文里,但它可以
+  // 从部署读出来,所以不再算判别性——抽取器与 token-provenance.mjs 用同一条判据。
+  assert.deepEqual(wrongTokens, ["bt-7c4wgsmdac"]);
+  assert.deepEqual(rightTokens, ["bt-yf39kfehc5"]);
+});
+
+test("地址不再算判别性 token,哪怕语料里一次都没出现过", () => {
+  const asset = "Send requests to http://10.244.7.19:8096/skill-bridge/v3/skill/search";
+  const screened = screen(extractTokens(asset), {});
+  const ip = tokenOf(screened, "10.244.7.19");
+  assert.equal(ip.discriminative, false, "地址写在部署配置里,有进程在监听,shell 就能拿到");
+  assert.equal(ip.derivable_from_deployment, true);
+  assert.deepEqual(ip.blocked_by, [], "它不是被语料挡下的,是被形状挡下的——两者理由不同");
 });
 
 test("the right-address asset cannot document the endpoint already in the prompt", () => {
@@ -160,8 +171,13 @@ test("the right-address asset cannot document the endpoint already in the prompt
   const systemPrompt = systemPromptsFromCapture(
     readFileSync("evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl", "utf8"),
   );
+  // v3 之后这条要连追踪值一起去掉才成立:追踪头正是为了让"资产被读过"不再依赖
+  // 地址而加的。去掉它、再把地址换回提示词里已有的那个,资产就退回当初那个状态——
+  // 一个判别性 token 都没有,"模型用了对的资产"无从证明。
   const original = readFileSync("evaluation/tasks/bridge-addr/assets/right.md", "utf8")
-    .replace("127.0.0.1:47318", "127.0.0.1:8096");
+    .replace("127.0.0.1:47318", "127.0.0.1:8096")
+    .replace(/^ *x-team-trace: .*$/m, "")
+    .replace(/## About the trace header[\s\S]*?\n## /m, "## ");
   // The sibling belongs in the corpus: constraint (c) is about the pool these
   // two are in. Without it the shared task marker survives screening, and a
   // value both assets carry cannot say which one was followed.
@@ -177,10 +193,13 @@ test("the right-address asset cannot document the endpoint already in the prompt
   );
 });
 
-test("the two assets differ only in the address they document", () => {
-  // Any second difference gives attribution a second explanation.
+test("the two assets differ only in the address and the trace value", () => {
+  // Any further difference gives attribution a second explanation. The trace
+  // value joined the address as a deliberate difference in v3 (2026-09-09);
+  // everything else still has to match byte for byte.
   const strip = (s) => s.replace(/eval-bridge-endpoint-[ab]/g, "NAME")
-    .replace(/(10\.244\.7\.19:8096|127\.0\.0\.1:47318)/g, "ADDR");
+    .replace(/(10\.244\.7\.19:8096|127\.0\.0\.1:47318)/g, "ADDR")
+    .replace(/bt-[a-z0-9]+/g, "TRACE");
   assert.equal(
     strip(readFileSync("evaluation/tasks/bridge-addr/assets/wrong.md", "utf8")),
     strip(readFileSync("evaluation/tasks/bridge-addr/assets/right.md", "utf8")),

@@ -25,5 +25,19 @@
   ],
   "expected_relation": "cross_user",
   "expected_relation_holds_if": "the consumer identity resolves to a user id different from usr-n68ea5ythq; verified from the events of the run, never assumed",
-  "operated_by": "one person running both identities — the mechanism is real, ecological validity is not, and this is stated in the report"
+  "operated_by": "one person running both identities — the mechanism is real, ecological validity is not, and this is stated in the report",
+  "_batch4_pending": {
+    "what_changed": "判别性 token 从部署地址换成每条资产各自的追踪头值 x-team-trace;两条资产随之升到 v3。",
+    "why": "地址是部署的性质——写在代理配置里、有进程监听、有 shell 就能找到,所以命中地址不足以说明读过资产。追踪值只存在于资产正文,且资产明文要求原样发送,这就是『采用 ⇒ 必然出现』所需的场景保证。",
+    "tokens": {
+      "skl-sZFb3KatWY6m": "bt-7c4wgsmdac",
+      "skl-oBaDO5CceKnr": "bt-yf39kfehc5"
+    },
+    "provenance_checked": "token-provenance.mjs 扫任务目录 + 记忆基线 + 全部历史捕获,171 处来源全部干净,无未扫描缺口",
+    "asset_versions_now": 3,
+    "gate_after_bump": "两条都回到 candidate/pending,置信度清空——新版本不继承旧判定,已实测",
+    "consumer_for_batch4": "agt-eiwlwrb0me（新建，记忆基线为空）",
+    "blocked_on": "把两条 v3 置为 approved（场景前提=闸门表态前的池）需要团队管理员密钥，本会话读取该文件被安全策略拦下",
+    "not_merged_with": "批次三及更早的运行按旧 token 口径另跑另报，不与本批合并"
+  }
 }

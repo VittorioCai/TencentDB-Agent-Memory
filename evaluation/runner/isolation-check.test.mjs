@@ -17,7 +17,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { baselineFindings, batchIsolation, isolationVerdict } from "./isolation-check.mjs";
+import { baselineFindings, batchIsolation, isolationVerdict, onlyAgent } from "./isolation-check.mjs";
 
 const file = (path, text) => ({ path, text });
 
@@ -150,4 +150,15 @@ test("baseline_clean 未知时,总判决不通过,也不谎称失败", () => {
   assert.equal(v.ok, false);
   assert.ok(!v.failed.includes("baseline_clean"), "未知不是未过");
   assert.ok(v.unknown.some((u) => String(u).includes("baseline_clean")), "未知要单列出来");
+});
+
+test("基线按 agent 限定范围:别人的记忆到不了本次运行的模型", () => {
+  const files = [
+    file("team%3At1%7Cagent%3Aagt-old/persona.md", "上次 47318 成功"),
+    file("team%3At1%7Cagent%3Aagt-new/persona.md", "空白"),
+  ];
+  assert.equal(onlyAgent(files, "agt-new").length, 1);
+  assert.equal(baselineFindings(onlyAgent(files, "agt-new"), ["47318"], []).clean, true);
+  assert.equal(baselineFindings(onlyAgent(files, "agt-old"), ["47318"], []).clean, false);
+  assert.equal(onlyAgent(files, "").length, 2, "不指定 agent 时不过滤");
 });

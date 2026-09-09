@@ -100,6 +100,27 @@ for role in wrong right; do
   [[ -n "$name" ]] || die "$file has no name in its frontmatter"
 
   # Already there from an earlier run? Creating again would only collide.
+  #
+  # `get-by-name` runs through the admission gate, so an asset the gate has put
+  # out of the pool (candidate / failed) answers "not found" — the same answer
+  # as an asset that was never created. Measured 2026-09-09: with A at `failed`
+  # this script reported "not in the pool" for an asset whose id is right there
+  # in pair.json, and without --check it would have created a **second** skill
+  # under the same name. So the id recorded in pair.json is consulted first,
+  # and a known id is never re-created.
+  known_id="$(python3 - "$PAIR_JSON" "$role" <<'PYID'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print(""); raise SystemExit
+print(next((a.get("asset_id", "") for a in d.get("assets", []) if a.get("role") == sys.argv[2]), ""))
+PYID
+)"
+  if [[ -n "$known_id" ]]; then
+    info "$role: pair.json records $known_id — skipping the name lookup, which the gate can hide"
+  fi
+
   call "/v3/skill/get-by-name" \
     "$(python3 -c 'import json,sys; print(json.dumps({"team_id":sys.argv[1],"agent_id":sys.argv[2],"skill_name":sys.argv[3],"include_content":True}))' "$TEAM_ID" "$AUTHOR_AGENT" "$name")" \
     "$TMP/get.json" || true
@@ -133,6 +154,10 @@ PYX
       envelope_ok "$TMP/upd-skill.json" || die "update $name failed: $(envelope_msg "$TMP/upd-skill.json")"
       ok "$role: updated to v$(python3 -c "import json;print(json.load(open('$TMP/upd-skill.json'))['data'].get('version','?'))")"
     fi
+  elif [[ -n "$known_id" ]]; then
+    # Not visible by name, but pair.json says it exists. Creating would duplicate.
+    id="$known_id"
+    warn "$role: not visible by name (the gate may have it out of the pool); using the recorded id $id, not creating a second one"
   elif (( CHECK_ONLY )); then
     warn "$role ($name): not in the pool"
     id=""

@@ -64,6 +64,37 @@ export const TASK_MARKER = "team-bridge-reachability";
 /** The endpoint the assets document. */
 export const TARGET_URL = /https?:\/\/(?:([\d.]+|localhost))(?::(\d+))?\/skill-bridge\/v3\/skill\/search\b/;
 
+/**
+ * The per-asset trace header, and why the discriminative token moved onto it.
+ *
+ * The address used to be the discriminative value: whichever host and port the
+ * model dialled said which asset it had followed. That reading has a hole. The
+ * address is a property of the **deployment** — it sits in the proxy config,
+ * something is listening on it, and a model with a shell can find it without
+ * reading any asset. So a hit did not establish that the asset was read.
+ *
+ * Each asset now also records a trace value that exists nowhere else: not in
+ * the task description, not in the pool, not in the system prompt, not in the
+ * memory baseline, not in any captured run. Checked with
+ * `evaluation/runner/token-provenance.mjs` before the values were written in.
+ * Following the asset means sending it, because the asset says to send it —
+ * which is the guarantee "used ⇒ this token appears" needs, and a guarantee
+ * about strings alone can never give.
+ *
+ * **Acceptance does not read it.** PASS and FAIL are decided by the outcome of
+ * the target call and nothing else; the trace value is recorded and handed to
+ * attribution. Acceptance staying independent of attribution is a standing
+ * constraint — a run that reaches the address correctly without the header has
+ * done the task, and it is attribution's problem that it cannot then say which
+ * asset was followed.
+ */
+export const TRACE_HEADER = /x-team-trace\s*:\s*([A-Za-z0-9._-]+)/i;
+
+/** The trace value this command carried, or "" when it carried none. */
+export function traceOf(command) {
+  return (TRACE_HEADER.exec(String(command ?? "")) ?? [, ""])[1] ?? "";
+}
+
 /** Was this command the task's request, rather than a search for the asset? */
 export function isTargetCommand(command) {
   const cmd = String(command ?? "");
@@ -148,6 +179,7 @@ export function attempts(captureEvents) {
         calls.set(id, {
           session_key: sessionKey, call_id: id, message_index: index,
           host: m?.[1] ?? "", port: m?.[2] ?? "80",
+          value: traceOf(args),
           endpoint: commandEndpoint(args),
         });
       }
@@ -163,6 +195,7 @@ export function attempts(captureEvents) {
           calls.set(id, {
             session_key: sessionKey, call_id: id, message_index: index,
             host: m?.[1] ?? "", port: m?.[2] ?? "80",
+            value: traceOf(args),
             endpoint: commandEndpoint(args),
           });
         } else if (block?.type === "tool_result") {

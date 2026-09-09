@@ -42,6 +42,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { isDerivableFromDeployment } from "../runner/token-provenance.mjs";
 
 // ── token shapes ──────────────────────────────────────────────────
 
@@ -175,10 +176,18 @@ export function screen(tokens, corpora) {
   const entries = Object.entries(corpora ?? {}).map(([name, text]) => [name, String(text ?? "")]);
   return tokens.map((t) => {
     const blockedBy = entries.filter(([, text]) => text.includes(t.token)).map(([name]) => name);
+    // A value that can be read off the deployment is not discriminative however
+    // clean the corpora are (2026-09-09). An address, a port, a hostname: it is
+    // in the proxy config, something is listening on it, and a shell can find
+    // it — so its appearance in the work does not establish that the asset was
+    // read. This is the same predicate `token-provenance.mjs` applies, imported
+    // rather than restated so the extractor and the checker cannot drift apart.
+    const fromDeployment = isDerivableFromDeployment(t.token);
     return {
       ...t,
       blocked_by: blockedBy,
-      discriminative: blockedBy.length === 0 && !t.derivable,
+      derivable_from_deployment: fromDeployment,
+      discriminative: blockedBy.length === 0 && !t.derivable && !fromDeployment,
     };
   });
 }
@@ -266,7 +275,9 @@ function render(assetName, screened) {
   if (rejected.length > 0) {
     lines.push("", "  rejected:");
     for (const t of rejected.sort((a, b) => a.token.localeCompare(b.token))) {
-      const why = t.blocked_by.length > 0 ? `already in ${t.blocked_by.join(", ")}` : "derivable by shape";
+      const why = t.blocked_by.length > 0 ? `already in ${t.blocked_by.join(", ")}`
+        : t.derivable_from_deployment ? "readable off the deployment (address / port / host / too short)"
+        : "derivable by shape";
       lines.push(`    ${t.token.padEnd(28)} ${t.kind.padEnd(15)} ${why}`);
     }
   }

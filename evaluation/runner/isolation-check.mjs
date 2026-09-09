@@ -30,6 +30,19 @@ import { readdirSync, statSync } from "node:fs";
  * 基线内容检查。token 是答案的一种形态,**结论行是另一种**:
  * "probe every documented candidate" 里没有任何 token,却把上一轮的发现讲全了。
  */
+/**
+ * 只留下属于这个 agent 的文件。
+ *
+ * 快照取的是整棵 `profiles/`,里面还有别的 agent。别人的记忆到不了本次运行的模型,
+ * 把它算进基线会得到一个永远不干净的结论,而真正该看的那一份被淹没。目录名是
+ * `team%3A<team>%7Cagent%3A<agent>`,按 `agent%3A<id>` 前缀过滤。
+ */
+export function onlyAgent(files, agentId) {
+  if (!agentId) return files ?? [];
+  const needle = `agent%3A${agentId}`;
+  return (files ?? []).filter((f) => String(f?.path ?? "").includes(needle));
+}
+
 export function baselineFindings(files, tokens, watchPatterns) {
   const hits = [], invalid = [], unscanned = [];
 
@@ -132,6 +145,7 @@ function filesInTar(tarPath) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const watchPath = (args.find((a) => a.startsWith("--watch=")) ?? "").slice(8);
+  const agentId = (args.find((a) => a.startsWith("--agent=")) ?? "").slice(8);
   const dirs = args.filter((a) => !a.startsWith("--"));
   if (!dirs.length) { console.error("usage: isolation-check.mjs <run dirs…> [--watch=<confounders.watch>]"); process.exit(2); }
 
@@ -151,7 +165,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (withTar) {
     const tj = existsSync(`${withTar.dir}/tokens.json`) ? JSON.parse(readFileSync(`${withTar.dir}/tokens.json`, "utf8")) : {};
     tokens = Object.values(tj).flatMap((s) => s?.tokens ?? []);
-    baseline = baselineFindings(filesInTar(`${withTar.dir}/agent-memory-before.tar.gz`), tokens, watchPatterns);
+    const all = filesInTar(`${withTar.dir}/agent-memory-before.tar.gz`);
+    const scoped = onlyAgent(all, agentId);
+    baseline = baselineFindings(scoped, tokens, watchPatterns);
+    baseline.files_scanned = scoped.length;
+    baseline.files_in_snapshot = all.length;
   }
 
   const batch = batchIsolation(runs);
@@ -163,6 +181,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   } else {
     const mark = baseline.clean === null ? "未知" : baseline.clean ? "通过" : "未过";
     console.log(`baseline_clean  ${mark}    基线来自 ${withTar.run_id};token ${tokens.length} 个,观察模式 ${watchPatterns.length} 条`);
+    console.log(`                       扫了 ${baseline.files_scanned} 个文件${agentId ? `(限 agent ${agentId})` : ""},快照共 ${baseline.files_in_snapshot} 个`);
     for (const h of baseline.hits.slice(0, 12)) console.log(`                       [${h.kind}] ${JSON.stringify(h.needle)} ← ${h.path}`);
     if (baseline.hits.length > 12) console.log(`                       …另有 ${baseline.hits.length - 12} 处`);
     for (const p of baseline.invalid_patterns) console.log(`                       [未扫] 观察模式 ${JSON.stringify(p)} 编译失败,这条根本没查`);
