@@ -1,0 +1,396 @@
+{
+  "what": "由原始捕获复算得到的他源送达证据。原始记录未改动;本文件是派生产物,可用同一条命令重算。",
+  "generated_at": "2026-09-09T21:06:09.601Z",
+  "analysis_code": {
+    "delivery-audit.mjs": "f1c69943b123",
+    "adoption.mjs": "33507ad18f08",
+    "calibrate-runs.mjs": "06d3b7fdbb11",
+    "derive-isolation-findings.mjs": "1edc02f433e8"
+  },
+  "runs": [
+    {
+      "run_id": "20260905T153518Z-gate-off",
+      "started_at": "2026-09-05T15:35:18Z",
+      "capture_sha256": "e4dfcb32f63ac4b31e381be3654d092e4f939c299f499c980fb436ca38c70eb9",
+      "verdict_sha256": "4e039b7ca4d29902e9ba78a57a1ad43fb285cbdeabaa464adc83f0fc9519b618",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260905T214807Z-gate-off",
+      "started_at": "2026-09-05T21:48:07Z",
+      "capture_sha256": "6596ad0d436f8011e13c3dd585d9fdfccd96fd203d14d4874b5031c71ff7beaf",
+      "verdict_sha256": "4e039b7ca4d29902e9ba78a57a1ad43fb285cbdeabaa464adc83f0fc9519b618",
+      "capture_complete": false,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260905T220020Z-gate-off",
+      "started_at": "2026-09-05T22:00:20Z",
+      "capture_sha256": "1325e9db325597e68b0190c93a88462fcedb419224986a3a90bf0e8307f31a86",
+      "verdict_sha256": "10fae214e76ee68ecf438a7a8e65f3e9441226f29c328836aafc3ae3450fcf55",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260905T223401Z-gate-off",
+      "started_at": "2026-09-05T22:34:01Z",
+      "capture_sha256": "04610edbcf53797540f91976b361066430c42ce10ecf6af7798ae01164a7be1d",
+      "verdict_sha256": "e4e071dc1a7b498fb4fe27c7ea6749667f9e5658a048c755c5dd46d7ec685285",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T092114Z-gate-off",
+      "started_at": "2026-09-06T09:21:14Z",
+      "capture_sha256": "fc9ebbe4397598dfd663250a0db59dbf1df9aaa2e9922f465f8279976fdea997",
+      "verdict_sha256": "46f443f6ed082ab75e1b05bfd5d38f8df2784c3680b54b307898e6f0a256fb86",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T093110Z-gate-off",
+      "started_at": "2026-09-06T09:31:10Z",
+      "capture_sha256": "8edceb3defb38080f9108bd4c9fe0241ca0b3b52af4ccda1b276f32eeea44069",
+      "verdict_sha256": "9fbc76804b75b92b1a926ef7a1f61861a55a544c87f89f414adac301dfcf0793",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T111638Z-gate-off",
+      "started_at": "2026-09-06T11:16:38Z",
+      "capture_sha256": "455bec46ba1e6fc8e8c6e8b66952fafeddb6131698739ba23c21ebdbdf5d7818",
+      "verdict_sha256": "a63f22e2530800f6d1db5e5137510be6e202ff76f0e146be4c7d731ec57d8b36",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T112924Z-gate-on",
+      "started_at": "2026-09-06T11:29:24Z",
+      "capture_sha256": "a6a898c4cea998fbdb4670485fc1350b63cb62f8ac69a9f7580cb8f67a217467",
+      "verdict_sha256": "d80b1f7e7232f314c95b97f807766c73b2ccca1e34421faf930a40a0000a130a",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T112957Z-gate-on",
+      "started_at": "2026-09-06T11:29:57Z",
+      "capture_sha256": "913064dcca16ffc0d69d854e0589d6aa18b53b04c8a496f58832a7e4463ad34e",
+      "verdict_sha256": "030185612a8061d161e832e2ee4cf1cd8996f1b38b3258bc0af4ef74cebc3208",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260906T113049Z-gate-on",
+      "started_at": "2026-09-06T11:30:49Z",
+      "capture_sha256": "6d052e3e193e68b0811663709c77c369a1b34f4bccb2a260895e5b1c6c7c56d0",
+      "verdict_sha256": "146e79dd75eede35883054aa97eac79635dda3bb754d00f9cecfd6bc451a90ef",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T094429Z-gate-off-core",
+      "started_at": "2026-09-07T09:44:29Z",
+      "capture_sha256": "fde336d97fcdc508d3018363199b4df29c4a5674307f8a4bf82553c3ed5c3a46",
+      "verdict_sha256": "e4491db8d9917e2d0728e5c68d638ffe8531133f67ea10da6446b18c4c33ec84",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T094558Z-gate-off-core",
+      "started_at": "2026-09-07T09:45:58Z",
+      "capture_sha256": "2962a0ded50cc8837930ea59430958aea5c32ecbffb7370af2b80a4b67882eb0",
+      "verdict_sha256": "a5fb15d023a218565b8b1defc563adaf50f568571b6f5578e91d4e47c45d0477",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T094700Z-gate-off-core",
+      "started_at": "2026-09-07T09:47:00Z",
+      "capture_sha256": "92deb9f5b8e53c90d57305517e8f573260a7d5ef0ee87639997d1dccf0df4dd5",
+      "verdict_sha256": "37fdbbf829eb1aa342f27935d38dcab218d1a404f3034a58b31569c0ce25684e",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T094823Z-gate-off-core",
+      "started_at": "2026-09-07T09:48:23Z",
+      "capture_sha256": "bfb92bbad494aa4f7342de77b61bf9e275fc4ad9c5cd74db8c68408daed4736b",
+      "verdict_sha256": "729077f413b4d83db4f07175f145791852e6a0c26c8add1a88738931a61b23e7",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T094930Z-gate-off-core",
+      "started_at": "2026-09-07T09:49:30Z",
+      "capture_sha256": "46abe3d4c1f79e323edea51e10610bacdd0f4089ea12a929621d7f52613ad722",
+      "verdict_sha256": "a251cd25d71cb855e126085fd128b2dc51b7efc98c61e78f7119451a30ecb75e",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T095021Z-gate-on-core",
+      "started_at": "2026-09-07T09:50:21Z",
+      "capture_sha256": "dee74ae73dbb3dbadf26e4d8ae44cf14a5b3d77c70336089caf1b0527f434e46",
+      "verdict_sha256": "b6ce0ca0782d2f260a9e926ca785bb076ffcf4bff795fa7732d05af2a82581e1",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T095050Z-gate-on-core",
+      "started_at": "2026-09-07T09:50:50Z",
+      "capture_sha256": "ee2daa7c987cd6ba68bf91ae8bf24c325344149b992a0c43fbfa665df6e62186",
+      "verdict_sha256": "6dbbf9e0409415e00cbc871077ebca8e5f4854685fbda309af009f05603d8999",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T095122Z-gate-on-core",
+      "started_at": "2026-09-07T09:51:22Z",
+      "capture_sha256": "5a539cc1ebbe4837dced97b5c0d3a266d3aaa28106a007f378b5f10b73d69b7d",
+      "verdict_sha256": "c2cd1484ccb5e17d9c60e098e15088df0e897c393667253eea22f96ddf4139e6",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T095146Z-gate-on-core",
+      "started_at": "2026-09-07T09:51:46Z",
+      "capture_sha256": "7b6def35ff8980c698e56a6d84ad02f6ed3bf80b06d08419082d57724064af9e",
+      "verdict_sha256": "4f8dd565370eb533c76d42de380ff4621f26ed7b799839734cbc88126780d534",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260907T095207Z-gate-on-core",
+      "started_at": "2026-09-07T09:52:07Z",
+      "capture_sha256": "cbf8d53c71f38d703c2861cc17060ab72d85d80c8a99cee114624a95fa56f6e5",
+      "verdict_sha256": "87d69e79657a636809d14e2bc20ba9bc3a5e45987e8da52921c8cb8f945510ef",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075149Z-gate-off-core",
+      "started_at": "2026-09-08T07:51:49Z",
+      "capture_sha256": "2da186dd639bf38b57175b9bb58071141408704cb7a54985258f9b709a90691e",
+      "verdict_sha256": "da76b543d72bf5a972090f7b07a02b499117d7fed705bc1586330293fc4cc260",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075239Z-gate-off-core",
+      "started_at": "2026-09-08T07:52:39Z",
+      "capture_sha256": "323763c71181a6c7d8521bb413ce78d662611cf4a02d6ffde25fee2451b07d27",
+      "verdict_sha256": "80dc6ea4421f8d36a6e3c00c7c1efab06db2b0f1dd92b29ee4039008f758b944",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075324Z-gate-off-core",
+      "started_at": "2026-09-08T07:53:24Z",
+      "capture_sha256": "17d4bc6d588cfd9fe3134d9e9d9d556ffb7b418c4a1b62d1cf151939adadee67",
+      "verdict_sha256": "00d0f91fff32ebe27d2433cd57086f4dac01b708d2011db5331e2bf5b9c7629b",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075410Z-gate-off-core",
+      "started_at": "2026-09-08T07:54:10Z",
+      "capture_sha256": "b682de0d857c80f0d38d7ac6f47a03983fe694e40ba931f5820abefb2abb61c8",
+      "verdict_sha256": "bfb135c73f005f3043aa652ef00b9142549ea5b0cfed547fb9dcff5e85433265",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075500Z-gate-off-core",
+      "started_at": "2026-09-08T07:55:00Z",
+      "capture_sha256": "da437184d1c6d7c9c10c392a29f788a7dbb74629c74267f197bd5e7078746440",
+      "verdict_sha256": "19bc0918c1860103528084de8a658cc457fabc7b9c7623d37e2e0679af5bf5b4",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075544Z-gate-on-core",
+      "started_at": "2026-09-08T07:55:44Z",
+      "capture_sha256": "49d7e817853194d0578af4b9ec87e6f4469fa6dfae1a6ec9e45ef0506500ad49",
+      "verdict_sha256": "f06901a4dc25e9536fd8c86c08ad19a5e22745f5afbf9fb5093fb0de089edfb9",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075604Z-gate-on-core",
+      "started_at": "2026-09-08T07:56:04Z",
+      "capture_sha256": "4ee3e72930a7d3698db7b3b6ddbdb35ad991a750d500908cebb3fc50e900caa7",
+      "verdict_sha256": "e6e12bdf0fb7e6ea65f20d97752881e64aaa917fb1a691cf8eaa17035e08745c",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075620Z-gate-on-core",
+      "started_at": "2026-09-08T07:56:20Z",
+      "capture_sha256": "80d36904206457f01bd2a557ad6de8cd67f9373747d376f939ff881fc3478872",
+      "verdict_sha256": "5a4659dd4bed03be9c50f444049cd72d4e3f50c3668253c1e0f43e55922ead76",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T075637Z-gate-on-core",
+      "started_at": "2026-09-08T07:56:37Z",
+      "capture_sha256": "2308a4c8d1f8fbf530b5d8f25f9384cb03ca5747ff6ead19213010128ff05e92",
+      "verdict_sha256": "460276cbeeaf7d75f21913d958e8f69410d9ed8230a79ebc32d97b1fdd2d12e7",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": true,
+      "leaks": [
+        {
+          "asset_id": "skl-sZFb3KatWY6m",
+          "asset_version": 2,
+          "verdict": "delivered_from_other_source",
+          "at": "request 6 message 14",
+          "from": "not a pool asset",
+          "where": "/tmp/sop_scene.md",
+          "why": "came from something that is not a pool asset (/tmp/sop_scene.md) at request 6 message 14; the content reached the model, and no arrival before the operation came from this asset",
+          "arrivals": [
+            {
+              "at": "request 6 message 14",
+              "kind": "other",
+              "from": null,
+              "match": "exact",
+              "why": "came from something that is not a pool asset (/tmp/sop_scene.md)"
+            },
+            {
+              "at": "request 7 message 14",
+              "kind": "other",
+              "from": null,
+              "match": "exact",
+              "why": "came from something that is not a pool asset (/tmp/sop_scene.md)"
+            },
+            {
+              "at": "request 8 message 14",
+              "kind": "other",
+              "from": null,
+              "match": "exact",
+              "why": "came from something that is not a pool asset (/tmp/sop_scene.md)"
+            }
+          ],
+          "hidden_at_start": true
+        }
+      ]
+    },
+    {
+      "run_id": "20260908T075749Z-gate-on-core",
+      "started_at": "2026-09-08T07:57:49Z",
+      "capture_sha256": "ee955c2d4e9e7f1b1ad12431c31ee00ddc588c11492010547660b0ef41140336",
+      "verdict_sha256": "902029eb77b47d59cea1d6852c6f338bb683b1737425bf72e4ed722d53db42c2",
+      "capture_complete": true,
+      "isolation_recorded": "未记录",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T220623Z-gate-on-iso",
+      "started_at": "2026-09-08T22:06:23Z",
+      "capture_sha256": "433cc3eb0e5eafb8db2ce57503bab264f11f62fee017ac3cee5722de8b0ae64e",
+      "verdict_sha256": "bfddbd5dd758dfede8b0671594c350fc084aaea7eb88262cb16d0e295e0505f3",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T220645Z-gate-on-iso",
+      "started_at": "2026-09-08T22:06:45Z",
+      "capture_sha256": "31e951e8dd6c4e1b247e9c81627eaff334f98a47a9ecdfe0d276ac26a671be07",
+      "verdict_sha256": "846e9eb708ddbd3b9a5f82a80d50b5e6b2b81199fdf5b7656ea1bfeedb02cf4e",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T220717Z-gate-on-iso",
+      "started_at": "2026-09-08T22:07:17Z",
+      "capture_sha256": "2feddb2811cc8e8c58cbc55e3f4c89f5917389b41be0421f3cbb57b0fd3a3861",
+      "verdict_sha256": "9569a5bda50bdc76b0a59d64d8357f58ae21e37d1bba4b75a557089b5ef575c5",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T220734Z-gate-on-iso",
+      "started_at": "2026-09-08T22:07:34Z",
+      "capture_sha256": "7de8e3c639bec3b7512a7b2fa6e3116fda807b02b6e105af4d793d33fc6a1180",
+      "verdict_sha256": "d34de2ef6904d4ff95d099d0ea1eb90ba4413d351b3094e453ee86f0c63cc400",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260908T220755Z-gate-on-iso",
+      "started_at": "2026-09-08T22:07:55Z",
+      "capture_sha256": "305675fa5012076c38ec1c67c08a6c31648649dc84a1fc5f91562560ffcc886b",
+      "verdict_sha256": "09289de5314830e10e02dabdc3551b786e77525a2db116142b5f27124f4e5e1c",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    }
+  ]
+}

@@ -164,7 +164,7 @@ test("token 落在尝试记录不覆盖的面上 → 未知,并说明是哪一�
   const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "47318", true)] };
   const a = adoptionFromAcceptance(v, { "skl-c": { tokens: ["qz7-checklist-marker-9f31"] } });
   assert.equal(a["skl-c"].adopted, null, "地址字段里查不到请求体里的标记,不能因此说没采纳");
-  assert.match(a["skl-c"].why, /覆盖/);
+  assert.match(a["skl-c"].why, /缺席不能读成未采纳/);
 });
 
 test("扩展场景的 token 记在 attempt.value 上,同样算采纳", () => {
@@ -172,4 +172,80 @@ test("扩展场景的 token 记在 attempt.value 上,同样算采纳", () => {
   const a = adoptionFromAcceptance(v, { "skl-K": { tokens: ["skl-Bwuta6kNQ6wq"] }, "skl-e": { tokens: ["skl-MyrdnecjeYSb"] } });
   assert.equal(a["skl-K"].adopted, true, "请求体里的值也是操作用了什么的证据");
   assert.equal(a["skl-e"].adopted, false, "同一面上,另一个资产的值没被用到");
+});
+
+// ---------------------------------------------------------------------------
+// 覆盖要精确到字段,归属要唯一,收益里的未知要留着
+// —— 2026-09-09 第二轮审阅
+//
+// 上一轮把"缺席即未采纳"的前提写成了"该面的某个候选字段非空",太松:token 应写在
+// 请求体、而记录只有 URL 没有请求体值时,仍然判 false。判 false 的前提是**如果用了
+// 就一定会看见**,所以要求的是那个 token 该出现的字段被逐次完整记录,不是家族里
+// 随便哪个字段出现过一次。
+// ---------------------------------------------------------------------------
+
+test("token 该出现在请求体、记录只有 URL → 未知,不是未采纳", () => {
+  const v = { verdict: "PASS", attempts: [{ url: "http://127.0.0.1:47318/skill-bridge/v3/skill/get", endpoint: "skill:get", ok: true }] };
+  const a = adoptionFromAcceptance(v, { "skl-c": { tokens: ["qz7-checklist-marker-9f31"] } });
+  assert.equal(a["skl-c"].adopted, null, "URL 不承载请求体的值,看不见不等于没用");
+});
+
+test("有一次尝试缺了必需字段 → 整体未知:那一次可能正好用了它", () => {
+  const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "47318", true), { endpoint: "skill:search", ok: false }] };
+  const a = adoptionFromAcceptance(v, { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.equal(a["skl-a"].adopted, null, "缺字段的那次尝试用了什么无从判断");
+});
+
+test("每一次尝试都记全了、token 一次没出现 → 才判未采纳", () => {
+  const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "47318", true), attempt("127.0.0.1", "47318", false)] };
+  const a = adoptionFromAcceptance(v, { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.equal(a["skl-a"].adopted, false);
+});
+
+test("场景可以直接声明 token 该出现在哪个字段,声明优先于按形状猜", () => {
+  const v = { verdict: "PASS", attempts: [{ host: "127.0.0.1", port: "47318", value: "skl-other", ok: true }] };
+  const declared = { "skl-x": { tokens: ["47318"], adoption_fields: ["value"] } };
+  const a = adoptionFromAcceptance(v, declared);
+  assert.equal(a["skl-x"].adopted, false, "声明了看 value,value 里没有它");
+  const noValue = adoptionFromAcceptance({ verdict: "PASS", attempts: [attempt("127.0.0.1", "47318", true)] }, declared);
+  assert.equal(noValue["skl-x"].adopted, null, "声明的字段没被记录 → 未知,哪怕地址正好命中");
+});
+
+test("两个资产共享同一 token、没有独有证据 → 归属未知,不是两个都采用", () => {
+  const v = { verdict: "PASS", attempts: [attempt("10.244.7.19", "8096", true)] };
+  const a = adoptionFromAcceptance(v, {
+    "skl-p": { tokens: ["10.244.7.19"] },
+    "skl-q": { tokens: ["10.244.7.19"] },
+  });
+  assert.equal(a["skl-p"].adopted, null);
+  assert.equal(a["skl-q"].adopted, null);
+  assert.match(a["skl-p"].why, /共享|归属/);
+});
+
+test("共享 token 之外还有独有 token 命中 → 该资产仍然是采用", () => {
+  const v = { verdict: "PASS", attempts: [{ host: "10.244.7.19", port: "8096", value: "rk-only-p-9f31", ok: true }] };
+  const a = adoptionFromAcceptance(v, {
+    "skl-p": { tokens: ["10.244.7.19", "rk-only-p-9f31"] },
+    "skl-q": { tokens: ["10.244.7.19"] },
+  });
+  assert.equal(a["skl-p"].adopted, true, "独有 token 命中,归属没有歧义");
+  assert.equal(a["skl-q"].adopted, null, "它只有共享的那一个");
+});
+
+test("收益:一次失败加一次结果未知 → 未知,不是失败", () => {
+  const v = { verdict: "PASS", attempts: [attempt("10.244.7.19", "8096", false), { host: "10.244.7.19", port: "8096", ok: null }] };
+  const a = adoptionFromAcceptance(v, { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.equal(a["skl-a"].adopted, true);
+  assert.equal(a["skl-a"].benefited, null, "读不出结果的那次可能是成功的");
+});
+
+test("收益:全部失败才是失败;有一次成功就是成功", () => {
+  const bad = adoptionFromAcceptance(
+    { verdict: "FAIL", attempts: [attempt("10.244.7.19", "8096", false), attempt("10.244.7.19", "8096", false)] },
+    { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.equal(bad["skl-a"].benefited, false);
+  const good = adoptionFromAcceptance(
+    { verdict: "PASS", attempts: [attempt("10.244.7.19", "8096", false), { host: "10.244.7.19", port: "8096", ok: true }] },
+    { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.equal(good["skl-a"].benefited, true);
 });

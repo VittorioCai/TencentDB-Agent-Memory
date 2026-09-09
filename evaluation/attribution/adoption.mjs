@@ -59,84 +59,152 @@ export function surfaceOf(token) {
   return "opaque";
 }
 
-/** 每一面由 attempt 的哪些字段承载。 */
-const FIELDS_FOR = { address: ["host", "port", "url"], opaque: ["value", "url"] };
+/**
+ * 一个 token 若被采用,**必然会出现在哪个字段**。
+ *
+ * 判 `adopted:false` 的前提是"用了就一定看得见",所以这里要精确到字段,不能是
+ * "这一族里随便哪个字段出现过一次"。上一轮就松在这里:token 该写在请求体、而记录
+ * 只有 URL 时,仍然判了未采纳——URL 根本不承载请求体的值。
+ *
+ * 每一项是一组**可替代**的字段:组内字段要全有,组间满足一个即可。
+ *   address  地址写在 host+port,或者写在一个完整 url 里
+ *   opaque   不透明标记只认 value(请求体里的那个值);url 不算,它不承载请求体
+ *
+ * 场景可以用 tokens.json 的 `adoption_fields` 直接声明,声明优先于按形状猜——
+ * "判别性强"不等于"采用必然原样出现",那是场景的性质,不是字符串的性质。
+ */
+export function fieldGroupsFor(token, spec) {
+  const declared = spec?.adoption_fields;
+  if (Array.isArray(declared) && declared.length) return [declared.map(String)];
+  return surfaceOf(token) === "address" ? [["host", "port"], ["url"]] : [["value"]];
+}
+
 /** 命中时查的字段(比覆盖面宽:命中是宽的,缺席才要求严)。 */
 const MATCH_FIELDS = ["host", "port", "url", "value", "endpoint"];
 
-/** 一次尝试里,任何字段边界命中这个 token。 */
-export function attemptCarries(attempt, token) {
+const nonEmpty = (v) => String(v ?? "").trim() !== "";
+
+/**
+ * 一次尝试里是否命中这个 token。
+ *
+ * 场景声明了 `adoption_fields` 时**只查声明的字段**:声明的含义是"采用这项内容
+ * 必然在这个字段留下这个 token",那么别处出现就不是采用的证据。没有声明时按宽口径
+ * 查所有字段——宁可多命中,也不要把一次真的采用漏掉。
+ */
+export function attemptCarries(attempt, token, declaredFields = null) {
+  if (Array.isArray(declaredFields) && declaredFields.length) {
+    return declaredFields.some((f) => boundaryHit(attempt?.[f], token));
+  }
   for (const f of MATCH_FIELDS) if (boundaryHit(attempt?.[f], token)) return true;
   const h = attempt?.host, p = attempt?.port;
   if (h && p && boundaryHit(`${h}:${p}`, token)) return true;
   return false;
 }
 
-/** 这批尝试记录有没有覆盖某一面 —— 该面的字段至少有一次是非空的。 */
-export function surfaceCovered(attempts, surface) {
-  const fields = FIELDS_FOR[surface] ?? [];
-  return (attempts ?? []).some((a) => fields.some((f) => String(a?.[f] ?? "").trim() !== ""));
+/** 这一次尝试有没有把该 token 该出现的字段记全。 */
+export function attemptReadableFor(attempt, groups) {
+  return (groups ?? []).some((g) => g.every((f) => nonEmpty(attempt?.[f])));
+}
+
+/**
+ * 缺席能不能算数:**每一次**尝试都要记全,不是某一次记全。
+ * 有一次尝试缺字段,那一次就可能正好用了它,整体只能是未知。
+ */
+export function absenceReadable(attempts, groups) {
+  const list = attempts ?? [];
+  if (!list.length) return false;
+  return list.every((a) => attemptReadableFor(a, groups));
 }
 
 /** 记录里实际出现过的字段,用来把"覆盖不到"讲具体。 */
 function recordedFields(attempts) {
   const s = new Set();
-  for (const a of attempts ?? []) for (const f of MATCH_FIELDS) if (String(a?.[f] ?? "").trim() !== "") s.add(f);
+  for (const a of attempts ?? []) for (const f of MATCH_FIELDS) if (nonEmpty(a?.[f])) s.add(f);
   return [...s];
+}
+
+/** 收益:任何一次成功就是成功;全部失败才是失败;有读不出的就是未知。 */
+export function benefitOf(attempts) {
+  const oks = (attempts ?? []).map((a) => a?.ok);
+  if (oks.some((v) => v === true)) return true;
+  if (oks.some((v) => typeof v !== "boolean")) return null;
+  return oks.length ? false : null;
 }
 
 const unknown = (why, extra = {}) => ({ adopted: null, benefited: null, attempts: [], why, ...extra });
 
 /**
  * @param verdict  该次运行的 verdict.json(可为 null)
- * @param tokens   该次运行冻结的 tokens.json:{ asset_id: { tokens: [...] } }
+ * @param tokens   该次运行冻结的 tokens.json:
+ *                 { asset_id: { tokens: [...], adoption_fields?: [...] } }
  * @returns { [asset_id]: { adopted: true|false|null, benefited: true|false|null,
  *                          attempts: [...], surfaces, why } }
  */
 export function adoptionFromAcceptance(verdict, tokens) {
   const attempts = Array.isArray(verdict?.attempts) ? verdict.attempts : [];
   const ids = Object.keys(tokens ?? {});
-  const out = {};
 
+  // 哪些资产声明了同一个 token。共享的 token 命中时,归属是歧义的。
+  const owners = new Map();
   for (const id of ids) {
-    const toks = (tokens[id]?.tokens ?? []).filter(Boolean);
+    for (const t of tokens[id]?.tokens ?? []) {
+      if (!t) continue;
+      const k = String(t).toLowerCase();
+      if (!owners.has(k)) owners.set(k, new Set());
+      owners.get(k).add(id);
+    }
+  }
+  const sharedWith = (t, self) => [...(owners.get(String(t).toLowerCase()) ?? [])].filter((x) => x !== self);
+
+  const out = {};
+  for (const id of ids) {
+    const spec = tokens[id] ?? {};
+    const toks = (spec.tokens ?? []).filter(Boolean);
     const surfaces = [...new Set(toks.map(surfaceOf))];
 
-    if (!attempts.length) {
-      out[id] = unknown("验收记录里没有任何尝试,操作用了什么无从判断", { surfaces });
-      continue;
-    }
-    if (!toks.length) {
-      out[id] = unknown("这个资产没有判别性 token,采纳与否无从对照", { surfaces });
-      continue;
-    }
+    if (!attempts.length) { out[id] = unknown("验收记录里没有任何尝试,操作用了什么无从判断", { surfaces }); continue; }
+    if (!toks.length) { out[id] = unknown("这个资产没有判别性 token,采纳与否无从对照", { surfaces }); continue; }
 
-    const mine = attempts.filter((a) => toks.some((t) => attemptCarries(a, t)));
-    if (mine.length) {
-      // 用过这个值就是采用了它的内容;成不成功是收益,不是采纳。
-      const oks = mine.map((a) => a?.ok).filter((v) => typeof v === "boolean");
+    // 命中:逐 token 记下是哪一次尝试命中的,以及这个 token 是不是它独有的。
+    const declaredFields = Array.isArray(spec.adoption_fields) && spec.adoption_fields.length ? spec.adoption_fields.map(String) : null;
+    const hits = [];
+    for (const a of attempts) {
+      for (const t of toks) {
+        if (!attemptCarries(a, t, declaredFields)) continue;
+        hits.push({ attempt: a, token: t, shared: sharedWith(t, id) });
+      }
+    }
+    if (hits.length) {
+      const own = hits.filter((h) => !h.shared.length);
+      if (!own.length) {
+        const others = [...new Set(hits.flatMap((h) => h.shared))];
+        out[id] = unknown(
+          `命中的 token(${[...new Set(hits.map((h) => h.token))].join("、")})同时属于 ${others.join("、")},操作用了哪一个的内容无从区分,归属未知`,
+          { surfaces, shared_with: others },
+        );
+        continue;
+      }
+      const mine = [...new Set(own.map((h) => h.attempt))];
       out[id] = {
-        adopted: true,
-        benefited: oks.length ? oks.some(Boolean) : null,
-        attempts: mine,
-        surfaces,
-        why: `操作在 ${mine.map((a) => a.value ?? `${a.host}:${a.port}`).join("、")} 上尝试过,用的是这个资产记录的值`,
+        adopted: true, benefited: benefitOf(mine), attempts: mine, surfaces,
+        why: `操作在 ${mine.map((a) => a.value ?? `${a.host}:${a.port}`).join("、")} 上尝试过,用的是这个资产独有的值`,
       };
       continue;
     }
 
-    // 没命中。缺席能不能算"未采纳",取决于记录有没有覆盖这些 token 该出现的面。
-    const uncovered = surfaces.filter((s) => !surfaceCovered(attempts, s));
-    if (uncovered.length) {
+    // 没命中。缺席能不能算"未采纳",取决于每一次尝试都记全了这些 token 该出现的字段。
+    const unreadable = toks.filter((t) => !absenceReadable(attempts, fieldGroupsFor(t, spec)));
+    if (unreadable.length) {
+      const need = [...new Set(unreadable.flatMap((t) => fieldGroupsFor(t, spec).map((g) => g.join("+"))))];
       out[id] = unknown(
-        `尝试记录只有 ${recordedFields(attempts).join(" / ") || "(空)"},覆盖不到 ${uncovered.join(" / ")} 面的 token;缺席不能读成未采纳`,
+        `判未采纳需要每一次尝试都记下 ${need.join(" 或 ")};记录里只有 ${recordedFields(attempts).join(" / ") || "(空)"},缺席不能读成未采纳`,
         { surfaces },
       );
       continue;
     }
     out[id] = {
       adopted: false, benefited: null, attempts: [], surfaces,
-      why: `尝试记录覆盖了 ${surfaces.join(" / ")} 面,其中没有一次用到这个资产的值`,
+      why: `每一次尝试都记下了这些 token 该出现的字段,其中没有一次用到这个资产的值`,
     };
   }
   return out;

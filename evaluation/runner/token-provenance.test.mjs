@@ -126,3 +126,17 @@ test("超过大小上限的文件记为未扫描,不是不存在", () => {
   assert.equal(r.skipped.length, 1, "但必须报出来,不能当作扫过了");
   assert.ok(r.skipped[0].bytes > 100);
 });
+
+test("运行目录不存在 → 明确报缺输入,不是 0 来源 0 问题", () => {
+  const r = sourcesFromRun("/tmp/definitely-not-a-run-dir-9f31");
+  assert.equal(r.sources.length, 0);
+  assert.equal(r.problems.length, 1, "指定了却不存在,是缺输入,不是扫过了没有");
+  assert.match(r.problems[0].why, /不存在/);
+});
+
+test("捕获文件缺失 → 也是缺输入", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-"));
+  const r = sourcesFromRun(d);
+  assert.equal(r.problems.length, 1);
+  assert.match(r.problems[0].why, /capture\.jsonl/);
+});

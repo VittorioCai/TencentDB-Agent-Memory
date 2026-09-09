@@ -89,7 +89,16 @@ export function readTextFilesUnder(root, kind, limitBytes = 2_000_000) {
  */
 export function sourcesFromRun(dir) {
   const sources = [], problems = [];
+  // 指定了却不存在,是**缺输入**,不是"扫过了没有"。原来两者都给 0 来源 0 问题,
+  // 于是一个打错的路径会让整批扫描报"全部干净"。
+  if (!existsSync(dir)) {
+    problems.push({ where: dir, why: "运行目录不存在,这一份来源根本没被扫过" });
+    return { sources, problems };
+  }
   const cap = join(dir, "capture.jsonl");
+  if (!existsSync(cap)) {
+    problems.push({ where: cap, why: "capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过" });
+  }
   if (existsSync(cap)) {
     // 坏行不阻断后面的:逐条试,第一条能解析的请求才算数。原来只试第一条,
     // 解析失败就 `catch {}` 吞掉,于是"读不出来"和"里面没有"都是 0 处来源。

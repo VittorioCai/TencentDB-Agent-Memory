@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-09T20:40:30.370Z。
+生成于 2026-09-09T21:06:10.267Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 7659499a1a6d、`calibration.mjs` @ b59437e4fbe5、`calibrate-runs.mjs` @ f606c61bd5a4
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 33507ad18f08、`calibration.mjs` @ b59437e4fbe5、`calibrate-runs.mjs` @ 06d3b7fdbb11
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -99,40 +99,19 @@ unsettled: the content did reach the model.
 
 ## 独立性
 
-**受污染 0 次。**
+隔离**配置**(运行时有没有快照还原记忆)与内容**泄漏**(资产内容有没有从别处到达)是
+两件独立的事实。配置没记录,不能抹掉已经复算出来的泄漏证据;反过来也不行。
 
-**隔离状态未记录 30 次** —— 这些运行早于隔离改造,没有 `agent_memory` 字段。未记录不等于干净,它们既不能算独立样本,也没有证据说不是:
+**不是独立样本 1 次:**
 
-- `20260905T153518Z-gate-off`
-- `20260905T214807Z-gate-off`
-- `20260905T220020Z-gate-off`
-- `20260905T223401Z-gate-off`
-- `20260906T092114Z-gate-off`
-- `20260906T093110Z-gate-off`
-- `20260906T111638Z-gate-off`
-- `20260906T112924Z-gate-on`
-- `20260906T112957Z-gate-on`
-- `20260906T113049Z-gate-on`
-- `20260907T094429Z-gate-off-core`
-- `20260907T094558Z-gate-off-core`
-- `20260907T094700Z-gate-off-core`
-- `20260907T094823Z-gate-off-core`
-- `20260907T094930Z-gate-off-core`
-- `20260907T095021Z-gate-on-core`
-- `20260907T095050Z-gate-on-core`
-- `20260907T095122Z-gate-on-core`
-- `20260907T095146Z-gate-on-core`
-- `20260907T095207Z-gate-on-core`
-- `20260908T075149Z-gate-off-core`
-- `20260908T075239Z-gate-off-core`
-- `20260908T075324Z-gate-off-core`
-- `20260908T075410Z-gate-off-core`
-- `20260908T075500Z-gate-off-core`
-- `20260908T075544Z-gate-on-core`
-- `20260908T075604Z-gate-on-core`
-- `20260908T075620Z-gate-on-core`
-- `20260908T075637Z-gate-on-core`
-- `20260908T075749Z-gate-on-core`
+- `20260908T075637Z-gate-on-core` —— 原始捕获复算确认内容由他源送达;隔离配置未记录;来源 /tmp/sop_scene.md
+
+
+**隔离配置未记录 29 次** —— 这些运行早于隔离改造,没有 `agent_memory` 字段。未记录不等于干净:它们既不能算独立样本,也没有证据说不是。这 29 次的捕获都经过了同一套他源送达复算,没有再查出泄漏;查不出不等于没有。
+
+泄漏证据由 `derive-isolation-findings.mjs` 从原始捕获复算,写在
+`artifacts/isolation-findings.json`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
+`runs/` 下的原始记录未改动。
 
 ## 这份数字测的是什么,不是什么
 

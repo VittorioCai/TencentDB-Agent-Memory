@@ -46,6 +46,29 @@ export function contaminationOf(run) {
   return { contaminated: false, contaminated_by: null, by: null, why: "runner 记录 isolated=true 且运行期间没有写入" };
 }
 
+/**
+ * 把派生审计的结论合并进运行清单。
+ *
+ * 隔离配置未记录,和内容泄漏已确认,是两件**独立**的事实。缺前者不该抹掉后者:
+ * `20260908T075637Z-gate-on-core` 早于隔离改造,没有 `agent_memory`,但它的捕获里
+ * 泄漏是复算得到的确定结论。合并之后这次运行按**受污染**计(它不是独立样本),
+ * 同时保留"隔离配置未记录"这个事实,两句一起讲。
+ */
+export function mergeIsolationFindings(runs, findingsDoc) {
+  const byId = new Map((findingsDoc?.runs ?? []).map((r) => [r.run_id, r]));
+  return (runs ?? []).map((r) => {
+    const f = byId.get(r.run_id);
+    if (!f?.leak_confirmed) return r;
+    return {
+      ...r,
+      contaminated: true,
+      contamination_why: "原始捕获复算确认内容由他源送达",
+      isolation_recorded: f.isolation_recorded ?? null,
+      leaks: f.leaks ?? [],
+    };
+  });
+}
+
 export function runInput(dir) {
   const rows = readFileSync(`${dir}/capture.jsonl`, "utf8").split("\n").filter(Boolean)
     .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
@@ -103,6 +126,10 @@ export function runInput(dir) {
       // same as "not hidden" (2026-09-08m).
       hidden: hiddenOf(assetId),
       verdict: audit.assets[assetId]?.verdict ?? "not_seen_in_capture",
+      // 送达判定所依据的那条 finding 原样带出来,派生审计要引用它的证据位置与来源,
+      // 不重新叙述。见 derive-isolation-findings.mjs。
+      delivery_finding: (audit.assets[assetId]?.findings ?? [])
+        .find((f) => f.verdict === audit.assets[assetId]?.verdict) ?? null,
       coverageAsserted: coverage.complete,
       asset_version: spec?.version ?? null,
     };
@@ -165,7 +192,7 @@ function verdictSentences(name, t) {
 }
 
 export function report(result, { frozen, runs, usage, codeHashes } = {}) {
-  const contaminated = (runs ?? []).filter((r) => r.contaminated === true).map((r) => r.run_id);
+  const contaminatedRuns = (runs ?? []).filter((r) => r.contaminated === true);
   const isolationUnknown = (runs ?? []).filter((r) => r.contaminated === null).map((r) => r.run_id);
   const d = pickSet(result, frozen);
   const u = usage ? pickSet(usage, frozen) : null;
@@ -249,17 +276,22 @@ ${verdictSentences(u.name + " · 使用检测", ut).join("\n\n")}
 采纳且奏效 ${n(ut.adopted_and_worked)} 项,采纳但未奏效 ${n(ut.adopted_but_failed)} 项,采纳而收益未知 ${n(ut.adopted_benefit_unknown)} 项。
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 ` : ""}
-${contaminated.length || isolationUnknown.length ? `## 独立性
+${contaminatedRuns.length || isolationUnknown.length ? `## 独立性
 
-${contaminated.length ? `**受污染 ${contaminated.length} 次** —— 输入被同批次更早的运行改写过,不是独立样本:
+隔离**配置**(运行时有没有快照还原记忆)与内容**泄漏**(资产内容有没有从别处到达)是
+两件独立的事实。配置没记录,不能抹掉已经复算出来的泄漏证据;反过来也不行。
 
-${contaminated.map((r) => `- \`${r}\``).join("\n")}
-` : "**受污染 0 次。**"}
+${contaminatedRuns.length ? `**不是独立样本 ${contaminatedRuns.length} 次:**
+
+${contaminatedRuns.map((r) => `- \`${r.run_id}\` —— ${r.contamination_why ?? "运行记录标注了污染"}${r.isolation_recorded ? `;隔离配置${r.isolation_recorded}` : ""}${(r.leaks ?? []).length ? `;来源 ${r.leaks.map((l) => l.where ?? l.from ?? "见派生审计").join("、")}` : ""}`).join("\n")}
+` : "**没有一次运行被确认为非独立样本。**"}
 ${isolationUnknown.length ? `
-**隔离状态未记录 ${isolationUnknown.length} 次** —— 这些运行早于隔离改造,没有 \`agent_memory\` 字段。未记录不等于干净,它们既不能算独立样本,也没有证据说不是:
-
-${isolationUnknown.map((r) => `- \`${r}\``).join("\n")}
-` : ""}` : ""}
+**隔离配置未记录 ${isolationUnknown.length} 次** —— 这些运行早于隔离改造,没有 \`agent_memory\` 字段。未记录不等于干净:它们既不能算独立样本,也没有证据说不是。这 ${isolationUnknown.length} 次的捕获都经过了同一套他源送达复算,没有再查出泄漏;查不出不等于没有。
+` : ""}
+泄漏证据由 \`derive-isolation-findings.mjs\` 从原始捕获复算,写在
+\`artifacts/isolation-findings.json\`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
+\`runs/\` 下的原始记录未改动。
+` : ""}
 ## 这份数字测的是什么,不是什么
 
 **测的**:上面两件事——判定与送达是否一致,判定与采纳是否一致。
@@ -278,7 +310,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const mdOut = (args.find((a) => a.startsWith("--md=")) ?? "").slice(5) || null;
   const dirs = args.filter((a) => !a.startsWith("--"));
   if (!dirs.length) { console.error("usage: calibrate-runs.mjs [--frozen=<rules version>] [--md=<file>] <run dir> …"); process.exit(2); }
-  const runs = dirs.map(runInput);
+  let runs = dirs.map(runInput);
+  // 派生审计如果在,就把它的结论合并进来。它由原始捕获复算,不改原始记录。
+  const findingsDoc = readJson(new URL("artifacts/isolation-findings.json", import.meta.url).pathname, null);
+  runs = mergeIsolationFindings(runs, findingsDoc);
   const result = calibrate(runs);
   const usage = calibrateUsage(runs);
   const table = renderCalibration(result, { frozenRules: frozen });

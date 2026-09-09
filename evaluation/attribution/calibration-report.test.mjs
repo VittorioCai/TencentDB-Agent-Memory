@@ -143,3 +143,29 @@ test("旧字段 contaminated_by 仍然有效,并保留来源", () => {
   assert.equal(c.contaminated, true);
   assert.equal(c.by, "20260908T075620Z-gate-on-core");
 });
+
+// ---------------------------------------------------------------------------
+// 缺元数据不得抹掉已确认的泄漏 —— 2026-09-09 第二轮审阅
+// ---------------------------------------------------------------------------
+import { mergeIsolationFindings } from "./calibrate-runs.mjs";
+
+test("隔离配置未记录、但复算确认泄漏 → 按非独立样本计,两个事实都保留", () => {
+  const runs = [{ run_id: "r-a", contaminated: null }, { run_id: "r-b", contaminated: null }];
+  const doc = { runs: [{ run_id: "r-a", leak_confirmed: true, isolation_recorded: "未记录", leaks: [{ where: "/tmp/sop_scene.md" }] }] };
+  const merged = mergeIsolationFindings(runs, doc);
+  assert.equal(merged[0].contaminated, true, "泄漏已确认,不能因为缺字段就报未知");
+  assert.equal(merged[0].isolation_recorded, "未记录", "配置未记录这个事实要一起留着");
+  assert.equal(merged[1].contaminated, null, "没有泄漏证据的仍然是未知");
+});
+
+test("派生结论进入报告正文,并同时说出隔离配置的状态", () => {
+  const t = tally({ true_positive: 4, true_negative: 2, decisions_rated: 6, decisions_total: 6, accuracy: 1 });
+  const runs = mergeIsolationFindings(
+    [{ run_id: "r-a", contaminated: null }],
+    { runs: [{ run_id: "r-a", leak_confirmed: true, isolation_recorded: "未记录", leaks: [{ where: "/tmp/sop_scene.md" }] }] },
+  );
+  const text = report(deliveryWith(t), { frozen: "rules-x", runs, usage: usageWith(t) });
+  assert.ok(text.includes("r-a"), "点名是哪一次运行");
+  assert.ok(text.includes("/tmp/sop_scene.md"), "点名来源");
+  assert.ok(text.includes("未记录"), "隔离配置的状态一起讲");
+});
