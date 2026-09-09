@@ -144,10 +144,82 @@ export function renderCalibration(result, { frozenRules } = {}) {
   for (const [k, t] of Object.entries(result.by_rules_version)) L.push(line(`rules ${k}${frozenRules && k === frozenRules ? " (frozen)" : ""}`, t));
   L.push(line("**cumulative**", result.cumulative));
   L.push("");
+  // 这段是判据说明,不是数字断言;但它必须跟着判据走。"来源是别处"曾经算未定,
+  // 现在算到达(隐藏时即泄漏),所以那句话必须一起改,否则报告会自相矛盾。
   L.push("An isolation failure is not a judging error: the asset was hidden and its");
   L.push("content reached the model anyway, so calling it used was right and the");
-  L.push("setup was what failed. Unsettled rows — capture that does not cover the");
-  L.push("run, an alternative source, an arrival after the operation — count for");
-  L.push("neither side; `rated/total` is how much of the batch measured anything.");
+  L.push("setup was what failed. Unsettled rows — a capture that does not cover the");
+  L.push("run, a source the record cannot name, whether the asset was hidden not");
+  L.push("recorded — count for neither side; `rated/total` is how much of the batch");
+  L.push("measured anything. An arrival from an identified other source is NOT");
+  L.push("unsettled: the content did reach the model.");
+  return L.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// 使用检测的校准 —— 参考判定是**采纳**,不是送达
+// ---------------------------------------------------------------------------
+/**
+ * 上面那套用送达当真值,测的是"判定器有没有凭空说用了"。那不是使用准确率:
+ * 内容到了而操作没采用它,判定器说"没用"是**对的**,送达口径却会记成假阴性。
+ *
+ * 所以这一套的参考判定来自 `adoption.mjs` —— 独立的操作证据,既不来自 delivery,
+ * 也不来自待测的判定器。证据不足时是 `unknown_adoption`,单独一类,不进分母。
+ */
+export function classifyUsage({ judgedUsed, adopted }) {
+  if (adopted === null || adopted === undefined) {
+    return { bucket: "unknown_adoption", why: "没有独立证据说明操作是否采用了它,既不能算判对也不能算判错", counts_toward_rate: false };
+  }
+  if (adopted && judgedUsed) return { bucket: "true_positive", why: "操作确实采用了它,判定器也说用了", counts_toward_rate: true };
+  if (adopted && !judgedUsed) return { bucket: "false_negative", why: "操作确实采用了它,判定器没说用", counts_toward_rate: true };
+  if (!adopted && judgedUsed) return { bucket: "false_positive", why: "操作没有采用它,判定器却说用了", counts_toward_rate: true };
+  return { bucket: "true_negative", why: "操作没有采用它,判定器也没说用——这是判对,不是漏报", counts_toward_rate: true };
+}
+
+export function calibrateUsage(runs) {
+  const rows = [];
+  for (const r of runs ?? []) {
+    for (const [assetId, a] of Object.entries(r.assets ?? {})) {
+      const c = classifyUsage(a);
+      rows.push({
+        run_id: r.run_id, label: r.label ?? null, rules_version: r.rules_version ?? null,
+        model: r.model ?? null, run_verdict: r.run_verdict ?? null,
+        asset_id: assetId, asset_version: a.asset_version ?? null,
+        judged_used: !!a.judgedUsed, adopted: a.adopted ?? null, benefited: a.benefited ?? null,
+        adoption_why: a.adoption_why ?? null, delivery: a.verdict ?? null, ...c,
+      });
+    }
+  }
+  const tally = (subset) => {
+    const t = { true_positive: 0, false_positive: 0, true_negative: 0, false_negative: 0, unknown_adoption: 0 };
+    for (const x of subset) t[x.bucket] += 1;
+    const rated = subset.filter((x) => x.counts_toward_rate).length;
+    const correct = t.true_positive + t.true_negative;
+    // 采纳而未奏效的次数单独数:采用不等于有收益,这是第三个问题。
+    const adoptedRows = subset.filter((x) => x.adopted === true);
+    return {
+      ...t, decisions_rated: rated, decisions_total: subset.length,
+      accuracy: rated ? Math.round((correct / rated) * 1000) / 1000 : null,
+      adoption_coverage: subset.length ? Math.round((rated / subset.length) * 1000) / 1000 : null,
+      adopted_and_worked: adoptedRows.filter((x) => x.benefited === true).length,
+      adopted_but_failed: adoptedRows.filter((x) => x.benefited === false).length,
+      adopted_benefit_unknown: adoptedRows.filter((x) => x.benefited === null).length,
+    };
+  };
+  const byRules = {};
+  for (const x of rows) (byRules[x.rules_version ?? "unrecorded"] ??= []).push(x);
+  return {
+    rows, cumulative: tally(rows),
+    by_rules_version: Object.fromEntries(Object.entries(byRules).map(([k, v]) => [k, tally(v)])),
+  };
+}
+
+export function renderUsage(result, { frozenRules } = {}) {
+  const L = [];
+  const line = (name, t) => `| ${name} | ${t.true_positive} | ${t.false_positive} | ${t.true_negative} | ${t.false_negative} | ${t.unknown_adoption} | ${t.decisions_rated}/${t.decisions_total} | ${t.accuracy ?? "—"} | ${t.adoption_coverage ?? "—"} |`;
+  L.push("| set | TP | FP | TN | FN | 采纳未知 | rated/total | accuracy | 采纳证据覆盖率 |");
+  L.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+  for (const [k, t] of Object.entries(result.by_rules_version)) L.push(line(`rules ${k}${frozenRules && k === frozenRules ? " (frozen)" : ""}`, t));
+  L.push(line("**cumulative**", result.cumulative));
   return L.join("\n");
 }
