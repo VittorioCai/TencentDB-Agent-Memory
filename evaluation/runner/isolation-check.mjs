@@ -31,20 +31,33 @@ import { readdirSync, statSync } from "node:fs";
  * "probe every documented candidate" 里没有任何 token,却把上一轮的发现讲全了。
  */
 export function baselineFindings(files, tokens, watchPatterns) {
-  const hits = [];
+  const hits = [], invalid = [], unscanned = [];
+
+  // 模式先编译一次。编译失败的原来被 `catch { continue; }` 丢掉,于是"唯一的模式
+  // 没编译成功"和"扫过了什么也没有"给出同一个答案 clean=true。没扫成是**未知**。
+  const compiled = [];
+  for (const p of watchPatterns ?? []) {
+    if (!p) continue;
+    try { compiled.push([p, new RegExp(p, "i")]); } catch { invalid.push(p); }
+  }
+
   for (const f of files ?? []) {
-    const text = String(f?.text ?? "");
+    // text 为 null 表示这个文件根本没读(太大、二进制、读失败)。它不是"没有命中"。
+    if (f?.text === null || f?.text === undefined) {
+      unscanned.push({ path: f?.path ?? "(未命名)", bytes: f?.skipped_bytes ?? null, why: f?.why ?? "未读取" });
+      continue;
+    }
+    const text = String(f.text);
     for (const t of tokens ?? []) {
       if (!t) continue;
       if (text.toLowerCase().includes(String(t).toLowerCase())) hits.push({ path: f.path, needle: t, kind: "token" });
     }
-    for (const p of watchPatterns ?? []) {
-      if (!p) continue;
-      let re; try { re = new RegExp(p, "i"); } catch { continue; }
-      if (re.test(text)) hits.push({ path: f.path, needle: p, kind: "watch" });
-    }
+    for (const [p, re] of compiled) if (re.test(text)) hits.push({ path: f.path, needle: p, kind: "watch" });
   }
-  return { clean: hits.length === 0, hits };
+
+  // 已发现的污染是确定的,先于未知;都没有才是干净。
+  const clean = hits.length ? false : (invalid.length || unscanned.length ? null : true);
+  return { clean, hits, invalid_patterns: invalid, unscanned };
 }
 
 /**
@@ -71,14 +84,28 @@ export function batchIsolation(runs) {
 
 export function isolationVerdict({ baseline, batch }) {
   const failed = [];
+  const unknown = [...(batch?.unknown ?? [])];
+
   if (baseline && baseline.clean === false) failed.push("baseline_clean");
+  if (baseline && baseline.clean === null) {
+    // 没扫成不是"没过",也不是"过了"。把原因带上,否则未知会被读成噪音。
+    const why = [
+      ...(baseline.invalid_patterns ?? []).map((p) => `观察模式 ${JSON.stringify(p)} 编译失败`),
+      ...(baseline.unscanned ?? []).map((u) => `${u.path} 未扫描`),
+    ];
+    unknown.push(`baseline_clean:${why.join(";") || "原因未记录"}`);
+  }
+  // 一次基线内容都没查过,同样是未知——不查等于没发现,不等于干净。
+  if (!baseline) unknown.push("baseline_clean:没有任何一次运行保存了基线内容");
+
   if (batch?.same_baseline === false) failed.push("same_baseline");
   if (batch?.rolled_back === false) failed.push("rolled_back");
-  const unknown = batch?.unknown ?? [];
   return { ok: failed.length === 0 && unknown.length === 0, failed, unknown };
 }
 
 // --- CLI ------------------------------------------------------------------
+
+const MAX_SCAN_BYTES = 2_000_000;
 
 function filesInTar(tarPath) {
   const dir = mkdtempSync(join(tmpdir(), "isocheck-"));
@@ -90,8 +117,11 @@ function filesInTar(tarPath) {
         const p = join(d, e);
         let st; try { st = statSync(p); } catch { continue; }
         if (st.isDirectory()) { walk(p, `${rel}${e}/`); continue; }
-        if (st.size > 2_000_000) continue;
-        try { out.push({ path: `${rel}${e}`, text: readFileSync(p, "utf8") }); } catch { /* 二进制跳过 */ }
+        // 跳过的文件带 text: null 交出去,由 baselineFindings 记成未扫描。
+        // 直接 continue 会让"太大没看"和"看过没有"变成同一个结果。
+        if (st.size > MAX_SCAN_BYTES) { out.push({ path: `${rel}${e}`, text: null, skipped_bytes: st.size, why: "超过扫描上限" }); continue; }
+        try { out.push({ path: `${rel}${e}`, text: readFileSync(p, "utf8") }); }
+        catch (err) { out.push({ path: `${rel}${e}`, text: null, skipped_bytes: st.size, why: `读取失败:${err.code ?? err.message}` }); }
       }
     };
     walk(dir, "");
@@ -131,9 +161,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (!baseline) {
     console.log("baseline_clean  未知    没有任何一次运行保存了 agent-memory-before.tar.gz");
   } else {
-    console.log(`baseline_clean  ${baseline.clean ? "通过" : "未过"}    基线来自 ${withTar.run_id};token ${tokens.length} 个,观察模式 ${watchPatterns.length} 条`);
+    const mark = baseline.clean === null ? "未知" : baseline.clean ? "通过" : "未过";
+    console.log(`baseline_clean  ${mark}    基线来自 ${withTar.run_id};token ${tokens.length} 个,观察模式 ${watchPatterns.length} 条`);
     for (const h of baseline.hits.slice(0, 12)) console.log(`                       [${h.kind}] ${JSON.stringify(h.needle)} ← ${h.path}`);
     if (baseline.hits.length > 12) console.log(`                       …另有 ${baseline.hits.length - 12} 处`);
+    for (const p of baseline.invalid_patterns) console.log(`                       [未扫] 观察模式 ${JSON.stringify(p)} 编译失败,这条根本没查`);
+    for (const u of baseline.unscanned.slice(0, 8)) console.log(`                       [未扫] ${u.path}(${u.why}${u.bytes ? `,${u.bytes} 字节` : ""})`);
+    if (baseline.unscanned.length > 8) console.log(`                       …另有 ${baseline.unscanned.length - 8} 个文件未扫描`);
   }
   console.log(`same_baseline   ${batch.same_baseline === null ? "未知" : batch.same_baseline ? "通过" : "未过"}    起点哈希 ${batch.baselines.length} 种:${batch.baselines.map((b) => b.slice(0, 8)).join("、") || "(无)"}`);
   console.log(`rolled_back     ${batch.rolled_back ? "通过" : "未过"}    ${batch.not_rolled_back.length ? `未回滚:${batch.not_rolled_back.join("、")}` : "全部回滚"}`);

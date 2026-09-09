@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-09T13:33:19.067Z。
+生成于 2026-09-09T20:40:30.370Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 5a68bee4ce89、`calibration.mjs` @ b59437e4fbe5、`calibrate-runs.mjs` @ 5a2b61d28bff
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 7659499a1a6d、`calibration.mjs` @ b59437e4fbe5、`calibrate-runs.mjs` @ f606c61bd5a4
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -74,7 +74,7 @@ unsettled: the content did reach the model.
 
 这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。
 
-判据保守:说不清一律不计入分母,所以在**已可评的 29 项**里错误率不会被低估,代价是可评样本变小。
+说不清的 1 项不计入分母(共 30 项,可评 29 项)。上面的比率只描述这 29 项;被排除的 1 项既没有算判对也没有算判错,它们是否恰好富含错误,这批数据答不了。
 
 ## 实际使用(参考判定 = 采纳)
 
@@ -88,7 +88,7 @@ unsettled: the content did reach the model.
 
 这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。
 
-判据保守:说不清一律不计入分母,所以在**已可评的 30 项**里错误率不会被低估,代价是可评样本变小。
+这一组 30 项全部可评,没有项被排除在分母之外。
 
 **采纳证据的覆盖率是 1**,其中 0 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
 
@@ -97,6 +97,42 @@ unsettled: the content did reach the model.
 采纳且奏效 15 项,采纳但未奏效 4 项,采纳而收益未知 1 项。
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 
+## 独立性
+
+**受污染 0 次。**
+
+**隔离状态未记录 30 次** —— 这些运行早于隔离改造,没有 `agent_memory` 字段。未记录不等于干净,它们既不能算独立样本,也没有证据说不是:
+
+- `20260905T153518Z-gate-off`
+- `20260905T214807Z-gate-off`
+- `20260905T220020Z-gate-off`
+- `20260905T223401Z-gate-off`
+- `20260906T092114Z-gate-off`
+- `20260906T093110Z-gate-off`
+- `20260906T111638Z-gate-off`
+- `20260906T112924Z-gate-on`
+- `20260906T112957Z-gate-on`
+- `20260906T113049Z-gate-on`
+- `20260907T094429Z-gate-off-core`
+- `20260907T094558Z-gate-off-core`
+- `20260907T094700Z-gate-off-core`
+- `20260907T094823Z-gate-off-core`
+- `20260907T094930Z-gate-off-core`
+- `20260907T095021Z-gate-on-core`
+- `20260907T095050Z-gate-on-core`
+- `20260907T095122Z-gate-on-core`
+- `20260907T095146Z-gate-on-core`
+- `20260907T095207Z-gate-on-core`
+- `20260908T075149Z-gate-off-core`
+- `20260908T075239Z-gate-off-core`
+- `20260908T075324Z-gate-off-core`
+- `20260908T075410Z-gate-off-core`
+- `20260908T075500Z-gate-off-core`
+- `20260908T075544Z-gate-on-core`
+- `20260908T075604Z-gate-on-core`
+- `20260908T075620Z-gate-on-core`
+- `20260908T075637Z-gate-on-core`
+- `20260908T075749Z-gate-on-core`
 
 ## 这份数字测的是什么,不是什么
 

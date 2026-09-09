@@ -83,3 +83,46 @@ test("scanSources 逐个来源返回命中次数", () => {
   assert.equal(hits[0].name, "a");
   assert.equal(hits[0].count, 2);
 });
+
+// ---------------------------------------------------------------------------
+// 扫不到 ≠ 没有 —— 2026-09-09 独立审阅 D3 / D4
+// ---------------------------------------------------------------------------
+import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { sourcesFromRun, readTextFilesUnder } from "./token-provenance.mjs";
+
+test("捕获首行解析不出来 → 记为问题,不静默算 0 来源", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-"));
+  writeFileSync(join(d, "capture.jsonl"), '{"event":"http.request","body":{BROKEN');
+  const r = sourcesFromRun(d);
+  assert.equal(r.sources.length, 0);
+  assert.equal(r.problems.length, 1, "读不出来必须说出来,否则 0 处来源会被当成扫过了");
+  assert.match(r.problems[0].why, /解析/);
+});
+
+test("坏行不阻断后面的:第一条能解析的请求才算数", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-"));
+  const good = JSON.stringify({ event: "http.request", body: { messages: [{ role: "system", content: "港口 47318" }] } });
+  writeFileSync(join(d, "capture.jsonl"), `{"event":"http.request","body":{BROKEN\n${good}\n`);
+  const r = sourcesFromRun(d);
+  assert.equal(r.sources.length, 1, "后面那条是好的,应该被读到");
+  assert.equal(r.problems.length, 0, "有能解析的行就不算问题");
+});
+
+test("捕获文件存在但一条请求都读不出 → 也是问题", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-"));
+  writeFileSync(join(d, "capture.jsonl"), '{"event":"http.response","body":{}}\n');
+  const r = sourcesFromRun(d);
+  assert.equal(r.problems.length, 1);
+});
+
+test("超过大小上限的文件记为未扫描,不是不存在", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-"));
+  mkdirSync(join(d, "sub"), { recursive: true });
+  writeFileSync(join(d, "sub", "huge.md"), "x".repeat(500) + " 47318");
+  const r = readTextFilesUnder(d, "memory", 100);
+  assert.equal(r.files.length, 0, "确实没读");
+  assert.equal(r.skipped.length, 1, "但必须报出来,不能当作扫过了");
+  assert.ok(r.skipped[0].bytes > 100);
+});

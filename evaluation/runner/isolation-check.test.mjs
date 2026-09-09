@@ -109,3 +109,45 @@ test("有未知项时总判决不通过,也不谎称失败", () => {
   assert.ok(v.unknown.includes("r2"));
   assert.ok(!v.failed.includes("same_baseline"), "未知不是失败,要单列");
 });
+
+// ---------------------------------------------------------------------------
+// 扫不到 ≠ 干净 —— 2026-09-09 独立审阅 D2 / D4
+//
+// 这两条是同一族:检查本身没跑成,结果却渲染成"通过"。本项目已经犯过四次。
+// ---------------------------------------------------------------------------
+
+test("watch 模式编译失败 → 不得报干净,要报未知并点名", () => {
+  const r = baselineFindings([file("p.md", "任意内容")], [], ["(unclosed["]);
+  assert.notEqual(r.clean, true, "唯一的模式根本没编译成功,却报了基线干净");
+  assert.equal(r.clean, null, "没扫成是未知,不是扫过了没发现");
+  assert.deepEqual(r.invalid_patterns, ["(unclosed["]);
+});
+
+test("合法模式仍然照常工作,不受非法模式牵连", () => {
+  const r = baselineFindings([file("p.md", "probe every documented candidate")], [], ["(unclosed[", "probe every documented candidate"]);
+  assert.equal(r.clean, false, "有确定的命中就是不干净");
+  assert.equal(r.hits.length, 1);
+  assert.equal(r.invalid_patterns.length, 1);
+});
+
+test("有文件没被扫到 → 同样是未知,不是干净", () => {
+  const r = baselineFindings([{ path: "huge.md", text: null, skipped_bytes: 2_100_000 }], ["47318"], []);
+  assert.equal(r.clean, null, "跳过的文件里可能正好写着答案");
+  assert.equal(r.unscanned.length, 1);
+  assert.equal(r.unscanned[0].path, "huge.md");
+});
+
+test("既有命中又有没扫到的 → 判不干净:已发现的污染是确定的", () => {
+  const r = baselineFindings([file("p.md", "47318"), { path: "huge.md", text: null, skipped_bytes: 3_000_000 }], ["47318"], []);
+  assert.equal(r.clean, false);
+});
+
+test("baseline_clean 未知时,总判决不通过,也不谎称失败", () => {
+  const v = isolationVerdict({
+    baseline: { clean: null, hits: [], invalid_patterns: ["(x["], unscanned: [] },
+    batch: { same_baseline: true, rolled_back: true, unknown: [] },
+  });
+  assert.equal(v.ok, false);
+  assert.ok(!v.failed.includes("baseline_clean"), "未知不是未过");
+  assert.ok(v.unknown.some((u) => String(u).includes("baseline_clean")), "未知要单列出来");
+});

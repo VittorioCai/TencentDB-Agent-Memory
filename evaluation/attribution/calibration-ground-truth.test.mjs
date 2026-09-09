@@ -57,11 +57,14 @@ test("没有尝试记录 → 采纳未知,不能当作未采纳", () => {
   }
 });
 
-test("有尝试但一个池内资产都对不上 → 未知,不是未采纳", () => {
+test("地址面已被记录、两个资产的地址都没用到 → 两个都判未采纳", () => {
+  // 原来这里判 unknown,理由是"没有区分力"。那混淆了两件事:分不清用的是哪个资产,
+  // 与看得出两个都没用到。判别性 token 的前提是"用了就会出现";记录覆盖了它该出现的
+  // 那一面而它不在,就是未采纳的正面证据。
   const v = { verdict: "PASS", attempts: [attempt("192.0.2.1", "9999", true)] };
   const a = adoptionFromAcceptance(v, TOKENS);
-  assert.equal(a["skl-a"].adopted, null, "证据没有区分力时不得下判断");
-  assert.equal(a["skl-b"].adopted, null);
+  assert.equal(a["skl-a"].adopted, false, "操作用的地址不是它记录的那个");
+  assert.equal(a["skl-b"].adopted, false);
 });
 
 // ---------------------------------------------------------------------------
@@ -121,4 +124,52 @@ test("没有任何可评样本时不产出准确率", () => {
   ]);
   assert.equal(r.cumulative.decisions_rated, 0);
   assert.equal(r.cumulative.accuracy, null, "分母为 0 时不得给出准确率");
+});
+
+// ---------------------------------------------------------------------------
+// 匹配的边界与匹配面 —— 2026-09-09 独立审阅 D1 / D5 / D6
+//
+// 采纳判定拿 token 去比对尝试记录。比对有两个前提,原来都没验:
+//   1. 命中要看**边界**。把字段拼成一段文本再 includes,端口 147318 会命中 47318。
+//   2. 缺席要看**匹配面**。尝试记录只有 host/port/endpoint/url/value;一个只会出现在
+//      请求体里的标记,在地址字段里查不到是理所当然的,不能读成"没采纳"。
+// ---------------------------------------------------------------------------
+
+test("端口 147318 不是 token 47318 的命中 —— 数字相邻不算边界", () => {
+  const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "147318", true)] };
+  const a = adoptionFromAcceptance(v, { "skl-b": { tokens: ["47318"] } });
+  assert.notEqual(a["skl-b"].adopted, true, "子串命中会把一次没采纳的操作记成采纳");
+});
+
+test("IPv4 也要看边界:10.244.7.190 不是 10.244.7.19", () => {
+  const v = { verdict: "PASS", attempts: [attempt("10.244.7.190", "8096", true)] };
+  const a = adoptionFromAcceptance(v, { "skl-a": { tokens: ["10.244.7.19"] } });
+  assert.notEqual(a["skl-a"].adopted, true);
+});
+
+test("边界修好之后,真正的命中仍然是命中", () => {
+  const v = { verdict: "PASS", attempts: [attempt("10.244.7.19", "8096", false), attempt("127.0.0.1", "47318", true)] };
+  const a = adoptionFromAcceptance(v, TOKENS);
+  assert.equal(a["skl-a"].adopted, true);
+  assert.equal(a["skl-b"].adopted, true);
+});
+
+test("单资产池也能判未采纳:记录覆盖了该 token 该出现的面,而它不在", () => {
+  const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "147318", true)] };
+  const a = adoptionFromAcceptance(v, { "skl-only": { tokens: ["47318"] } });
+  assert.equal(a["skl-only"].adopted, false, "判未采纳不该依赖池里恰好还有另一个资产");
+});
+
+test("token 落在尝试记录不覆盖的面上 → 未知,并说明是哪一面", () => {
+  const v = { verdict: "PASS", attempts: [attempt("127.0.0.1", "47318", true)] };
+  const a = adoptionFromAcceptance(v, { "skl-c": { tokens: ["qz7-checklist-marker-9f31"] } });
+  assert.equal(a["skl-c"].adopted, null, "地址字段里查不到请求体里的标记,不能因此说没采纳");
+  assert.match(a["skl-c"].why, /覆盖/);
+});
+
+test("扩展场景的 token 记在 attempt.value 上,同样算采纳", () => {
+  const v = { verdict: "PASS", attempts: [{ host: "127.0.0.1", port: "47318", endpoint: "skill:get", value: "skl-Bwuta6kNQ6wq", ok: true }] };
+  const a = adoptionFromAcceptance(v, { "skl-K": { tokens: ["skl-Bwuta6kNQ6wq"] }, "skl-e": { tokens: ["skl-MyrdnecjeYSb"] } });
+  assert.equal(a["skl-K"].adopted, true, "请求体里的值也是操作用了什么的证据");
+  assert.equal(a["skl-e"].adopted, false, "同一面上,另一个资产的值没被用到");
 });

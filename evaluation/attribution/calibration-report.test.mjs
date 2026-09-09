@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { report } from "./calibrate-runs.mjs";
+import { report, contaminationOf } from "./calibrate-runs.mjs";
 
 /** 一个最小的送达汇总,数字可控。 */
 const tally = (o = {}) => ({
@@ -84,4 +84,62 @@ test("三件事在正文里各自命名,不互相顶替", () => {
   for (const word of ["送达", "采纳", "收益"]) {
     assert.ok(text.includes(word), `正文缺少「${word}」这一项`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// 2026-09-09 独立审阅 D7 —— 正文里最后一句写死的结论
+//
+// "判据保守……所以错误率不会被低估"由 rated>0 控制,但这句话本身没有被计算过。
+// 它也不成立:被排除的那些项是否恰好富含错误,这批数据答不了;而"已可评的项里
+// 不会低估"还依赖采纳判定本身没有出错——D1 正好是它出错的例子。
+// 改为给出被排除的实际数量,不作保证。
+// ---------------------------------------------------------------------------
+
+test("正文不得给出错误率保证,要给出被排除的实际数量", () => {
+  const t = tally({ true_positive: 8, true_negative: 2, unsettled: 4, decisions_rated: 10, decisions_total: 14, accuracy: 1 });
+  const text = report(deliveryWith(t), { frozen: "rules-x", runs: [], usage: usageWith(t) });
+  assert.ok(!/不会被低估|不会低估/.test(text), "这是一句没有被计算过的保证");
+  assert.ok(/4\s*项|排除|不计入分母/.test(text), "要说出被排除的数量,而不是保证结论");
+});
+
+test("被排除为零时也要说出是零,而不是省略", () => {
+  const t = tally({ true_positive: 6, true_negative: 4, unsettled: 0, decisions_rated: 10, decisions_total: 10, accuracy: 1 });
+  const text = report(deliveryWith(t), { frozen: "rules-x", runs: [], usage: usageWith(t) });
+  assert.ok(!/不会被低估|不会低估/.test(text));
+});
+
+// ---------------------------------------------------------------------------
+// 污染判定这条路是断的 —— 2026-09-09 独立审阅「已验证事实 4」
+//
+// runInput 读的是 run.contaminated_by,而 runs/ 下 0/42 次运行写过这个字段;
+// runner 写的是 agent_memory.isolated。于是 `contaminated: !!undefined` 对每一次
+// 运行都是 false,"受污染的运行"一节永远不会出现。而 `isolated` 有三种取值:
+// 改造之前的运行根本没有这个字段,那是**未知**,不是 false。
+// ---------------------------------------------------------------------------
+
+test("agent_memory.isolated 为 false → 该次运行受污染", () => {
+  const c = contaminationOf({ agent_memory: { isolated: false, hash_before: "a", hash_after: "b" } });
+  assert.equal(c.contaminated, true);
+});
+
+test("agent_memory.isolated 为 true → 未受污染", () => {
+  const c = contaminationOf({ agent_memory: { isolated: true, hash_before: "a", hash_after: "a" } });
+  assert.equal(c.contaminated, false);
+});
+
+test("没有 agent_memory 字段 → 未知,既不是受污染也不是干净", () => {
+  const c = contaminationOf({});
+  assert.equal(c.contaminated, null, "隔离改造之前的运行没有这个字段");
+  assert.match(c.why, /未记录|不知道|未知/);
+});
+
+test("运行期间被写过 → 受污染,哪怕 isolated 说 true", () => {
+  const c = contaminationOf({ agent_memory: { isolated: true, written_during_run: true, hash_before: "a", hash_after: "a" } });
+  assert.equal(c.contaminated, true, "运行期间有写入,后面的运行就不是独立样本");
+});
+
+test("旧字段 contaminated_by 仍然有效,并保留来源", () => {
+  const c = contaminationOf({ contaminated_by: "20260908T075620Z-gate-on-core" });
+  assert.equal(c.contaminated, true);
+  assert.equal(c.by, "20260908T075620Z-gate-on-core");
 });

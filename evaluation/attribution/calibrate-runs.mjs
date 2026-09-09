@@ -19,6 +19,33 @@ import { adoptionFromAcceptance } from "./adoption.mjs";
 const readJson = (p, fallback = null) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback);
 const readLines = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
 
+/**
+ * 这次运行是不是独立样本。
+ *
+ * 三种取值,不是两种:runner 在隔离改造之后才开始写 `agent_memory`,更早的运行
+ * 根本没有这个字段——那是**未知**,不是 `isolated: false`,也不是 true。把未知
+ * 折叠成"干净"正是本项目反复犯的那个错。
+ *
+ * `written_during_run` 为真同样算受污染:这次运行往记忆里写了东西,它之后的运行
+ * 就不是从同一状态出发的。
+ */
+export function contaminationOf(run) {
+  if (run?.contaminated_by) {
+    return { contaminated: true, contaminated_by: run.contaminated_by, by: run.contaminated_by, why: "运行记录直接标注了污染来源" };
+  }
+  const m = run?.agent_memory;
+  if (!m || typeof m.isolated !== "boolean") {
+    return { contaminated: null, contaminated_by: null, by: null, why: "这次运行没有记录 agent_memory,隔离与否未知" };
+  }
+  if (m.written_during_run === true) {
+    return { contaminated: true, contaminated_by: null, by: null, why: "运行期间写过记忆,之后的运行不再是同一起点" };
+  }
+  if (m.isolated === false) {
+    return { contaminated: true, contaminated_by: null, by: null, why: "runner 记录 isolated=false" };
+  }
+  return { contaminated: false, contaminated_by: null, by: null, why: "runner 记录 isolated=true 且运行期间没有写入" };
+}
+
 export function runInput(dir) {
   const rows = readFileSync(`${dir}/capture.jsonl`, "utf8").split("\n").filter(Boolean)
     .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
@@ -86,10 +113,10 @@ export function runInput(dir) {
     started_at: run.started_at ?? null,
     baseline_frozen_at: run.gate?.baseline_frozen_at ?? baseline.frozen_at ?? null,
     model, run_verdict: (readJson(`${dir}/verdict.json`, {}) ?? {}).verdict ?? null, capture_complete: coverage.complete, coverage_reasons: coverage.reasons,
-    // Marked by the runner when a source outside the frozen pool was written
-    // during the batch this run belongs to; such a run is not an independent
-    // sample and must not be counted as one.
-    contaminated: !!run.contaminated_by, contaminated_by: run.contaminated_by ?? null,
+    // 隔离状态。原来读的是 `run.contaminated_by`,而 runner 从没写过这个字段
+    // (runs/ 下 0/42),写的是 `agent_memory`。于是 `!!undefined` 对每一次运行
+    // 都是 false,"受污染的运行"一节永远不会出现。见 contaminationOf。
+    ...contaminationOf(run),
     assets,
   };
 }
@@ -126,12 +153,20 @@ function verdictSentences(name, t) {
   } else {
     L.push(`这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。`);
   }
-  L.push(`判据保守:说不清一律不计入分母,所以在**已可评的 ${rated} 项**里错误率不会被低估,代价是可评样本变小。`);
+  // 原来这里写着"所以错误率不会被低估"。那句话由 rated>0 控制,但它本身没有被
+  // 计算过,也不成立:被排除的项是否恰好富含错误,这批数据答不了;而"已可评的项里
+  // 不会低估"还依赖参考判定本身没出错——采纳判定的子串误命中(2026-09-09 D1)正是
+  // 它出错的例子。改成给出被排除的实际数量,不作保证。
+  const excluded = Math.max(0, total - rated);
+  L.push(excluded
+    ? `说不清的 ${excluded} 项不计入分母(共 ${total} 项,可评 ${rated} 项)。上面的比率只描述这 ${rated} 项;被排除的 ${excluded} 项既没有算判对也没有算判错,它们是否恰好富含错误,这批数据答不了。`
+    : `这一组 ${total} 项全部可评,没有项被排除在分母之外。`);
   return L;
 }
 
 export function report(result, { frozen, runs, usage, codeHashes } = {}) {
-  const contaminated = (runs ?? []).filter((r) => r.contaminated).map((r) => r.run_id);
+  const contaminated = (runs ?? []).filter((r) => r.contaminated === true).map((r) => r.run_id);
+  const isolationUnknown = (runs ?? []).filter((r) => r.contaminated === null).map((r) => r.run_id);
   const d = pickSet(result, frozen);
   const u = usage ? pickSet(usage, frozen) : null;
   const ut = u?.t ?? {};
@@ -214,12 +249,17 @@ ${verdictSentences(u.name + " · 使用检测", ut).join("\n\n")}
 采纳且奏效 ${n(ut.adopted_and_worked)} 项,采纳但未奏效 ${n(ut.adopted_but_failed)} 项,采纳而收益未知 ${n(ut.adopted_benefit_unknown)} 项。
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 ` : ""}
-${contaminated.length ? `## 受污染的运行
+${contaminated.length || isolationUnknown.length ? `## 独立性
+
+${contaminated.length ? `**受污染 ${contaminated.length} 次** —— 输入被同批次更早的运行改写过,不是独立样本:
 
 ${contaminated.map((r) => `- \`${r}\``).join("\n")}
+` : "**受污染 0 次。**"}
+${isolationUnknown.length ? `
+**隔离状态未记录 ${isolationUnknown.length} 次** —— 这些运行早于隔离改造,没有 \`agent_memory\` 字段。未记录不等于干净,它们既不能算独立样本,也没有证据说不是:
 
-这些运行的输入被同批次更早的运行改写过,不是独立样本。
-` : ""}
+${isolationUnknown.map((r) => `- \`${r}\``).join("\n")}
+` : ""}` : ""}
 ## 这份数字测的是什么,不是什么
 
 **测的**:上面两件事——判定与送达是否一致,判定与采纳是否一致。
