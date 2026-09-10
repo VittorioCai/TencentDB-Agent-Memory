@@ -565,6 +565,37 @@ function trialCheckpoints(runDir, c) {
   const nAssets = Object.keys(taskTokens ?? {}).length;
   add("实际采用", "采纳判定对每条资产可判(非 unknown)", nAssets ? decided === nAssets : null, `${decided}/${nAssets} 可判`);
 
+  // —— 隐藏、模型名、目录隔离(2026-09-10 三条新检查点)——
+  const arm2 = run.gate?.mode ?? null;
+  if (arm2 === "on") {
+    const st = run.gate?.status_at_start ?? {};
+    const rejected = Object.entries(c.assets).filter(([, a]) => a.gate_decision_at_freeze === "reject").map(([id]) => id);
+    const allHidden = rejected.length > 0 && rejected.every((id) => st[id] === "failed");
+    add("隐藏(gate-on)", "被藏资产开跑时 hidden=true(status=failed),不得 unknown", Object.keys(st).length ? allHidden : null,
+      `rejected=${rejected.join(",") || "(none)"} status=${JSON.stringify(st)}`);
+  } else {
+    add("隐藏(gate-on)", "被藏资产 hidden=true", "note", `本次是 ${arm2 ?? "无 gate"} 臂,不适用`);
+  }
+
+  // 响应 chunk 里的实际服务模型名:全部一致,且等于冻结值。
+  let models = new Set(), modelReason = "";
+  try {
+    for (const o of readLines(join(dir, "capture.jsonl"))) {
+      if (o?.event !== "http.response") continue;
+      // 响应体是流式 SSE,真正的 chunk 在 body.text 里(转义过);解析出来再扫 model。
+      const text = typeof o.body === "string" ? o.body : (o.body?.text ?? JSON.stringify(o.body ?? ""));
+      for (const m of String(text).matchAll(/"model"\s*:\s*"([^"]+)"/g)) models.add(m[1]);
+    }
+  } catch (e) { modelReason = e.message; }
+  const wantModel = c.model?.id ?? null;
+  add("模型一致", "响应里的服务模型名全部一致且等于冻结值", models.size === 1 && (!wantModel || [...models][0] === wantModel),
+    modelReason || `models=${[...models].join(",") || "(none)"} want=${wantModel}`);
+
+  // 目录隔离:会话 cwd 无兄弟目录,探针 cwd 不在仓库。
+  add("目录隔离", "会话 cwd 无兄弟目录", run.session?.sibling_dirs === 0, `sibling_dirs=${run.session?.sibling_dirs}`);
+  add("目录隔离", "探针 cwd 不在仓库", run.session?.probe_cwd ? run.session?.probe_cwd_in_repository === false : null,
+    `probe_cwd=${run.session?.probe_cwd ?? "(未记录)"}`);
+
   return rows;
 }
 
@@ -574,13 +605,13 @@ async function trial(args) {
   const runDir = args.trial === true ? null : args.trial;
   if (!runDir) throw new Error("usage: --trial <run dir> --conditions=<file>");
   const rows = trialCheckpoints(runDir, c);
-  const mark = (ok) => (ok === true ? "PASS" : ok === null ? "UNKN" : "FAIL");
+  const mark = (ok) => (ok === true ? "PASS" : ok === "note" ? "NOTE" : ok === null ? "UNKN" : "FAIL");
   console.log(`试跑检查点 — ${runDir}\n(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)\n`);
   let area = "";
   for (const r of rows) {
     if (r.area !== area) { area = r.area; console.log(`【${area}】`); }
     console.log(`  ${mark(r.ok)}  ${r.name}`);
-    if (r.ok !== true) console.log(`        ${r.detail}`);
+    if (r.ok !== true && r.ok !== "note") console.log(`        ${r.detail}`);
   }
   const fails = rows.filter((r) => r.ok === false).length, unknown = rows.filter((r) => r.ok === null).length;
   console.log(`\n通过 ${rows.length - fails - unknown}  未过 ${fails}  未知 ${unknown}  / 共 ${rows.length}`);

@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-10T21:11:05.628Z。
+生成于 2026-09-10T21:54:34.894Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 33507ad18f08、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 922fb2b42d3a
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 6d762ba3e915
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -94,6 +94,8 @@ unsettled: the content did reach the model.
 
 **采纳证据的覆盖率是 1**,其中 0 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
 
+**其中 0 个 TP 来自隔离失败的运行**(资产被藏起、内容经别的通道到达后被采用):(无)。这类 TP 说明"泄漏进来的东西被用了",不说明"闸门放行的东西被用了",不能与干净的 TP 混算。
+
 ### 收益不等于采纳
 
 采纳且奏效 15 项,采纳但未奏效 4 项,采纳而收益未知 1 项。
@@ -124,3 +126,20 @@ unsettled: the content did reach the model.
 **规则版本未记录的批次**只能描述旧规则下的历史,不能验证冻结的规则。
 
 **未知项不是零**:上面"这次分析的口径"里列出的每一类未知,都是这批数据没能测到的部分,不能读作"没有问题"。
+
+## 威胁模型
+
+评测的模型与 harness 同主机、同用户运行,模型手里有 shell。判别值的隔离靠"找不到"
+而不是"打不开":判别值明文只放在 Core 的资产正文里,仓库里只有 sha256,运行记录写在
+仓库外,harness 进程的 cwd 不落在仓库——但这些都是同一用户下的文件,一句 `chmod` 或
+一次 `lsof` 枚举进程就能回退。一个刻意枚举进程、读 harness 文件的模型**可以**突破这层
+隔离;能挡住的是不对抗、只是"资产被藏起后去别处找答案"的模型。
+
+关键在于:**突破会被记下来**。闸门本身没有旁路——2026-09-10 的冒烟运行里,两条资产都被
+闸门挡在池外,模型仍然拿到了判别值,不是因为闸门漏了,而是因为它 `lsof` 到探针进程的
+cwd 是仓库,`cd` 进去读了评测自己的记录文件。送达审计把这次判成隔离失败(他源送达),
+来源精确到第 24 轮那条 `cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json`。
+所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路,且任何绕过都会在审计里显形并
+定位",不是"模型在同主机同用户下无法物理接触到答案"。要后者,需要把会话放进只通代理的
+沙箱(见 REMAINING 的方案 3 spike:真实 CLI 是 npm 包 `@tencent-ai/codebuddy-code`,可进
+Linux 容器;宿主上另有 `sandbox-exec` 可用)。

@@ -100,7 +100,17 @@ if [[ -d "$RUNS_DIR/$RUN_ID" ]]; then
   while [[ -d "$RUNS_DIR/$RUN_ID-$n" ]]; do n=$((n + 1)); done
   RUN_ID="$RUN_ID-$n"
 fi
-RUN_DIR="$RUNS_DIR/$RUN_ID"
+# Records are staged OUTSIDE the repository during the run, in their own unique
+# parent so `ls ..` from the run dir shows no sibling runs, and moved into
+# runs/ only after the session and analysis finish (2026-09-10, 方案 2 补充二).
+# A model with a shell reached the repo through a harness process's cwd; no run
+# record — verdict.json's attempts[].value, receipts, tool-call logs — sits in
+# the repo tree while a session that could read it is alive.
+FINAL_RUN_DIR="$RUNS_DIR/$RUN_ID"
+RECORDS_ROOT="${RUN_RECORDS_ROOT:-/private/tmp/topic4-runs}"
+mkdir -p "$RECORDS_ROOT"
+STAGE_PARENT="$(mktemp -d "$RECORDS_ROOT/$RUN_ID.XXXX")"
+RUN_DIR="$STAGE_PARENT/$RUN_ID"
 mkdir -p "$RUN_DIR"
 STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
@@ -238,12 +248,15 @@ else
     # was the same for every run, so every run could see every earlier run's
     # tool output. A new empty directory per run gives a new slug and an empty
     # cache, and puts the repository out of reach. Both are recorded in run.json.
-    # mktemp with a template needs the parent to exist, or it fails and the
-    # fallback lands the session somewhere unintended; create the root first.
+    # Each session gets its own unique PARENT, and its cwd sits inside it — so
+    # `ls ..` from the session shows no sibling runs (2026-09-10, 补充二: 无兄弟目录).
+    # A shared parent would let the model enumerate every other run's session dir.
     SESSION_ROOT="${SESSION_ROOT:-/private/tmp/topic4-sessions}"
     mkdir -p "$SESSION_ROOT"
-    SESSION_CWD="${SESSION_CWD:-$(mktemp -d "$SESSION_ROOT/${RUN_ID}.XXXX")}"
+    SESSION_PARENT="$(mktemp -d "$SESSION_ROOT/${RUN_ID}.XXXX")"
+    SESSION_CWD="${SESSION_CWD:-$SESSION_PARENT/session}"
     mkdir -p "$SESSION_CWD"
+    SESSION_SIBLINGS="$(( $(ls -1A "$(dirname "$SESSION_CWD")" 2>/dev/null | wc -l | tr -d ' ') - 1 ))"
     # CodeBuddy's slug: leading slash dropped, every "/" becomes "-", dots kept
     # (checked against ~/.codebuddy/projects on 2026-09-10).
     SESSION_SLUG="$(printf '%s' "$SESSION_CWD" | sed -E 's#^/##; s#/#-#g')"
@@ -580,6 +593,7 @@ REPO_ROOT_REPORT="$REPO_ROOT" MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM
 MEM_AGENT="${MEM_AGENT:-}" MEM_SCOPE_BEFORE="${MEM_SCOPE_BEFORE:-}" MEM_SCOPE_AFTER="${MEM_SCOPE_AFTER:-}" \
 MEM_HASH_RESTORED="${MEM_HASH_RESTORED:-}" MEM_SCOPE_RESTORED="${MEM_SCOPE_RESTORED:-}" \
 SESSION_CWD="${SESSION_CWD:-}" SESSION_PROJECT_DIR="${SESSION_PROJECT_DIR:-}" SESSION_CACHE_BEFORE="${SESSION_CACHE_BEFORE:-}" \
+SESSION_SIBLINGS="${SESSION_SIBLINGS:-}" PROBE_CWD="$( p="$(pgrep -f proxy-observability-probe 2>/dev/null | head -1)"; [[ -n "$p" ]] && lsof -a -p "$p" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || echo "" )" REPO_ROOT_REPORT="$REPO_ROOT" \
 MEM_SCOPE_FILES_BEFORE="${MEM_SCOPE_FILES_BEFORE:-}" MEM_SCOPE_FILES_AFTER="${MEM_SCOPE_FILES_AFTER:-}" \
 MEM_ISOLATED="$([[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" && "${MEM_HASH_RESTORED:-}" == "${MEM_HASH_BEFORE:-}" ]] && echo 1 || echo 0)" \
 python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
@@ -678,6 +692,11 @@ manifest = {
         "codebuddy_project_dir": os.environ.get("SESSION_PROJECT_DIR") or None,
         "project_cache_files_before": int(os.environ.get("SESSION_CACHE_BEFORE") or 0),
         "cwd_is_repository": os.environ.get("SESSION_CWD", "").startswith(os.environ.get("REPO_ROOT_REPORT", "\x00")),
+        # 无兄弟目录:会话 cwd 的父目录里除它自己外还有几个条目(应为 0)。
+        "sibling_dirs": (int(os.environ["SESSION_SIBLINGS"]) if os.environ.get("SESSION_SIBLINGS") not in (None, "") else None),
+        # 探针进程的 cwd,以及它是否落在仓库里(应为 False)——模型正是顺着它找到仓库的。
+        "probe_cwd": os.environ.get("PROBE_CWD") or None,
+        "probe_cwd_in_repository": bool(os.environ.get("PROBE_CWD")) and os.environ.get("PROBE_CWD", "").startswith(os.environ.get("REPO_ROOT_REPORT", "\x00")),
     } if os.environ.get("SESSION_CWD") else None),
     "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
@@ -742,5 +761,16 @@ case "$VERDICT" in
   *)     echo "${C_Y}ERROR${C_0} $RUN_ID  — the run could not be judged; it still counts in the total" ;;
 esac
 python3 -c "import json;print('      ' + json.load(open('$RUN_DIR/verdict.json'))['reason'])" 2>/dev/null || :
+
+# Session and analysis are done; nothing more will be written. Move the staged
+# records into the repo now, so they are preserved, and drop the staging parent.
+mkdir -p "$RUNS_DIR"
+if mv "$RUN_DIR" "$FINAL_RUN_DIR" 2>/dev/null; then
+  rmdir "$STAGE_PARENT" 2>/dev/null || :
+  RUN_DIR="$FINAL_RUN_DIR"
+  info "records moved into the repo → $RUN_DIR"
+else
+  warn "could not move records into $FINAL_RUN_DIR; they remain at $RUN_DIR"
+fi
 echo "      $RUN_DIR"
 exit "$VERDICT_CODE"

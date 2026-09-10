@@ -64,3 +64,22 @@ isolation-check 却报 rolled_back 未过。现在 run.json 另记 `hash_restore
 往 tokens.json 加了 `_why`、`_provenance_checked` 两个说明键,calibrate-runs 的表里就多出
 两行"资产"。说明放 README 或 pair.json;各处遍历 tokens.json 的代码也加了 `_` 前缀过滤。
 
+
+**判别值明文只能在 Core;仓库存 sha256;分析时用作者密钥取回。**(2026-09-10,方案 2)
+冒烟运行证明有 shell 的模型能从进程表找到仓库并 cat 评测文件,所以任何明文写在仓库
+(tokens.json、pair.json、README、测试、assets/*.md)都让 gate-on 臂形同虚设。做法:
+adoption 加哈希模式(把 attempts[].value 哈希后与 token_sha256 比,不需要明文);
+resolve-tokens 分析时从 Core 取回明文(资产须 approved,读不到就报错不静默);
+fill-traces 入池生成全新 trace 填进 Core、只写 sha256。附带铁律:**一旦某个判别值进过
+git 历史就算烧掉**——换批次必须换全新值,否则历史里的旧值让"来源唯一"永远不成立。
+
+**harness 进程的 cwd 不能落在仓库;运行记录写仓库外、结束后再搬进来。**(2026-09-10,补充二)
+模型是顺着探针进程(proxy-observability-probe.mjs,cwd=仓库)用 lsof 找到仓库的。探针改到
+仓库外的空目录启动(绝对路径调脚本);run-once 的记录先写 RUN_RECORDS_ROOT 下每次独立、
+无兄弟的临时目录,会话与分析结束后 mv 进 runs/;会话 cwd 也放进各自独立父目录,`ls ..`
+看不到别的运行。这些都记进 run.json.session,由试跑检查点核对。
+
+**版本一升,闸门回到 candidate,读路径随之关闭。**(2026-09-10)
+fill-traces 把资产更新到 v4 后,读回校验立刻 SKILL_NOT_ADMITTED——这是设计(新版不继承
+判定),但意味着"填明文 → 校验 → 冻结"跨越一次管理员准入:填由作者做,准入由管理员做,
+校验和冻结在准入之后。工具因此把"读不回"记为"待准入后再验",不当失败。

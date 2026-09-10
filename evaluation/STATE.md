@@ -136,30 +136,58 @@ v2 正文在 git 历史(`4801803` 之前的 `assets/*.md`)。
 **新 agent** `agt-eiwlwrb0me`(owner usr-4u07qc2kuj,名 Topic4-Consumer-B2):记忆 profile 尚未
 生成,即空基线。不删。
 
-## 下一步(第 2 件)
+## token 明文放哪 —— 已决定并实现(方案 2)
 
-0. 用户对"token 明文放哪"作出决定;执行会话据此改造并重新冻结条件,验收命令得到全部通过。
-1. (已完成)资产准入。
-2. 一对试跑(off 一次、on 一次),逐条过条件清单 `trial_checkpoints`;**不能只看 PASS**。
-3. 试跑过检查点后,准备运行建立 v3 证据(gate-on 臂没有证据只能 pending),重新冻结
-   `gate_baseline_batch4.json` 的 decisions,再交错跑 off/on 各五次。
-4. 旧批次按旧口径单独报告,不合并。
+用户定:方案 2(明文出仓库)。已实现,见提交 `9cfe802`:仓库只存 sha256;明文只在 Core
+的资产正文里;`fill-traces.mjs` 生成全新 trace 填进 Core(v4)、只把 sha256 写进
+`tokens.json`;`resolve-tokens.mjs` 分析时用作者密钥从 Core 取回校验;`adoption.mjs` 新增
+哈希模式;资产源文件是占位符。旧 bt- 值已进 git 历史即烧掉,换了全新值。方案 3 spike
+(见下)非阻塞。
 
-## 需决策事项
+## 到 60/60 的确切步骤(全部完成才进第 2 件)
 
-**token 明文放哪。** 冒烟运行证明:只要追踪值以明文写在这台机器上模型可读的文件里
-(`tokens.json`、`pair.json`、`assets/*.md`、README、测试),被闸门藏起的资产就能从这些文件
-"读回来",gate-on 臂形同虚设。三个方向,代价递增:
+当前 `--check` 55/60,7 个 FAIL 全指向同一根:资产是 v4 **candidate**,且消费者被冒烟运行
+污染。按序:
 
-1. **缓解**:会话期间把任务目录里含明文的文件 `chmod 000`,会话结束恢复;探针等 harness 进程
-   不以仓库为 cwd。挡得住不对抗的模型,挡不住 `chmod +r`;报告里只能写"缓解",不能写"隔离"。
-2. **明文出仓库**:仓库里只放 token 的 sha256;明文只在 Core 的资产正文里。采纳判定按哈希比
-   `attempts[].value`;送达审计在分析时用作者密钥从 Core 管理路径读正文取出明文。资产源文件
-   改为占位符,`enter-pool.sh` 入池时填入。改动:enter-pool、tokens.json 格式、adoption、
-   delivery-audit、conditions、若干测试。约 4–6 小时。磁盘上仍有 Core 的数据卷,但模型没有
-   现成指针。
-3. **沙箱**:CodeBuddy 会话在容器里跑,只开到代理的网络。真正的隔离;改动最大,CodeBuddy 能否
-   容器化未验证。
+1. **(用户,管理员密钥)批准 v4**:
+   ```
+   bash evaluation/gate/core-gate.sh --reset --baseline evaluation/gate/artifacts/gate_baseline_batch4.json
+   ```
+   两条资产 → approved。这一步开了资产正文的读路径,resolve-tokens 才能取回明文校验。
+2. **(执行会话)清出空消费者**:`agt-eiwlwrb0me` 被冒烟运行的记忆流水线污染成 4 个文件
+   (含"endpoint-b 可达"的结论,虽无 trace 明文)。新建一个全新消费者(空 profile),
+   改 proxy `debugForceIdentity.agent_id` 指向它并重启,`--consumer=` 用新 id 重新冻结。
+   (清空旧 profile 是破坏性操作,不做;新建是既定路径。)
+3. **(执行会话)重新冻结 + 核对**:
+   ```
+   node evaluation/runner/batch-conditions.mjs --freeze --batch=4 --consumer=<新消费者> ...
+   node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json
+   ```
+   期望 60/60、退出 0。此时 resolve-tokens 从 Core 取回明文,来源扫描(含仓库外运行记录根)
+   零命中、零缺口。
+4. **来源唯一独立验证**:
+   ```
+   node evaluation/attribution/resolve-tokens.mjs evaluation/tasks/bridge-addr   # 两条都 verified
+   ```
 
-我的建议是 2,配合 1 里"harness 进程不以仓库为 cwd"。在你定之前,批次四不开试跑。
-已批准的不变:换 token、新消费者、两臂同条件重跑。
+## 第 2 件(60/60 之后)
+
+1. 一对试跑(off 一次、on 一次):`run-once.sh --auto --gate off/on`(会话在仓库外空目录、
+   记录写仓库外、探针 cwd 已移出仓库——补充二,见提交本次)。
+2. 逐条过试跑检查点(**不能只看 PASS**):
+   ```
+   node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=…/batch4-conditions.json
+   ```
+   含新增三条:gate-on 被藏资产 hidden=true;响应模型名一致且等于冻结值;会话 cwd 无兄弟
+   目录且探针 cwd 不在仓库。
+3. 检查点全过后,准备运行建立 v4 证据,重新冻结 `gate_baseline_batch4.json` 的 decisions,
+   交错跑 off/on 各五次。
+4. 报告按 (rules_version, 实验标识) 分组,批次四单独一行,旧批次不合并。
+
+## 方案 3 spike 结论(2026-09-10,≤1h,非阻塞)
+
+- 宿主装的 `codebuddy` 是 macOS 原生二进制(Mach-O arm64),进不了 Linux 容器。
+- 真实 CLI 是 npm 包 **`@tencent-ai/codebuddy-code` 2.148.0**,node 实现,**可以**进 Linux
+  容器;宿主上另有 **`sandbox-exec`** 可用(macOS 原生沙箱)。
+- 结论:方案 3 原则上可行,但本轮没有搭起来验证(容器内强制身份 + 经探针抓包未验)。
+  按约定带**威胁模型**上批次(见 `CALIBRATION.md` 的"威胁模型"节),方案 3 留作后续。

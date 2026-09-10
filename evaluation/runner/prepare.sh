@@ -228,9 +228,16 @@ PY
       # Bound to 0.0.0.0 so the container reaches it via host.docker.internal.
       # stdin closed and both streams redirected, so the probe does not hold the
       # calling terminal open — otherwise this script never returns.
-      ( cd "$REPO_ROOT" && PROBE_HOST=0.0.0.0 PROBE_PORT="$PROBE_PORT" \
+      #
+      # The probe runs from an empty dir OUTSIDE the repository, invoked by an
+      # absolute path (2026-09-10). Its cwd used to be the repo, and a model with
+      # a shell ran `lsof` on this process, read its cwd, and cd'd into the repo
+      # to read the evaluation files (smoke run 20260910T154648Z). No harness
+      # process may hand the model the repository path through its cwd.
+      PROBE_RUN_DIR="${PROBE_RUN_DIR:-/private/tmp/topic4-probe}"; mkdir -p "$PROBE_RUN_DIR"
+      ( cd "$PROBE_RUN_DIR" && PROBE_HOST=0.0.0.0 PROBE_PORT="$PROBE_PORT" \
           PROBE_TARGET_URL="$MODEL_UPSTREAM" PROBE_OUTPUT_FILE="$PROBE_OUT" \
-          nohup node evaluation/gate0/proxy-observability-probe.mjs \
+          nohup node "$REPO_ROOT/evaluation/gate0/proxy-observability-probe.mjs" \
             </dev/null >"$PROBE_LOG" 2>&1 & echo $! > "$PROBE_PID"; disown )
       sleep 2
       probe_running || { warn "probe did not stay up:"; tail -5 "$PROBE_LOG"; die "probe failed to start"; }
