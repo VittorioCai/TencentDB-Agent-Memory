@@ -60,7 +60,7 @@ export function loadRun(dir, tokensByAsset) {
   const attempts = readJson(join(dir, "verdict.json"), {})?.attempts ?? [];
   const used = readJsonl(join(dir, "used-events.jsonl"));
   const tokens = readJson(join(dir, "tokens.json"), tokensByAsset) ?? {};
-  const acted = new Set(Object.keys(tokens).filter((id) => actedOn({ operations, attempts }, tokens[id]?.tokens ?? [])));
+  const acted = new Set(Object.keys(tokens).filter((id) => !id.startsWith("_") && actedOn({ operations, attempts }, tokens[id]?.tokens ?? [])));
   return {
     run_id: run.run_id,
     label: run.label ?? null,

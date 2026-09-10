@@ -207,3 +207,46 @@ test("没有任何运行记 consumer_scope → 仍按整树比,行为不变", ()
   assert.equal(r.same_baseline, true);
   assert.equal(r.scope, "tree");
 });
+
+// ---------------------------------------------------------------------------
+// "运行期间写过" ≠ "没回滚" —— 2026-09-10 冒烟运行
+//
+// run.json 的 hash_after 是**还原之前**量的:它回答"这次运行写了什么"。还原成功与否
+// 是另一个问题,由还原之后再量一次的 hash_restored 回答。冒烟运行里记忆流水线在
+// 会话内就写了 4 个文件,还原成功(profile 目录已不存在),isolation-check 却报
+// rolled_back 未过——它拿 hash_after 当还原结果。有 hash_restored 就按它比;
+// 没有的老运行仍按 hash_after,并说明比的是哪个。
+// ---------------------------------------------------------------------------
+
+test("记了 hash_restored 的运行:还原后等于起点就是已回滚,哪怕运行期间写过", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "A", hash_after: "B", hash_restored: "A", written_during_run: true } },
+  ]);
+  assert.equal(r.rolled_back, true, "写过、但还原回了 A");
+  assert.equal(r.rolled_back_by, "hash_restored");
+});
+
+test("hash_restored 不等于起点 → 没回滚", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "A", hash_after: "B", hash_restored: "C" } },
+  ]);
+  assert.equal(r.rolled_back, false);
+  assert.deepEqual(r.not_rolled_back, ["r1"]);
+});
+
+test("没记 hash_restored 的老运行仍按 hash_after 比,并说明", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "A", hash_after: "A" } },
+  ]);
+  assert.equal(r.rolled_back, true);
+  assert.equal(r.rolled_back_by, "hash_after");
+});
+
+test("consumer_scope 也一样:有 hash_restored 按它比", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "T1", hash_after: "T2", hash_restored: "T1",
+      consumer_scope: { agent_id: "agt-new", hash_before: "S1", hash_after: "S2", hash_restored: "S1" } } },
+  ]);
+  assert.equal(r.scope, "consumer");
+  assert.equal(r.rolled_back, true);
+});

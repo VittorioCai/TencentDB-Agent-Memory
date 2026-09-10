@@ -21,15 +21,16 @@ import { join, relative } from "node:path";
 
 /**
  * 来源分三类。self:资产正文,token 的家,出现是应该的。record:评测自己的记录——
- * tokens.json、pair.json、测试、README、条件清单——写着 token 但不交给会话。
- * 其余是 task:会交给会话的东西,命中即污染。
+ * tokens.json、pair.json、测试、README、条件清单。其余是 task:交给会话的东西。
  *
- * record 不算污染有一个前提:会话在**空目录**里跑,仓库不在它能读到的地方。
- * 2026-09-10 核实:此前每次会话的工作目录就是仓库本身(系统提示里
- * "Working directory: …/topic4-gate0"),模型可以 cat 到任何评测文件;run-once.sh
- * 自此改为每次运行新建空目录。这条前提由 batch-conditions 的试跑检查点核对。
+ * record **也算污染**。2026-09-10 上午曾把它排除,前提是"会话在空目录里跑,仓库
+ * 不在它能读到的地方";同日下午的冒烟运行(20260910T154648Z-harness-smoke-v3)推翻了
+ * 这个前提:两条资产都被闸门藏起,模型用 lsof 从探针进程的 cwd 找到仓库,cd 过去
+ * cat pair.json 和 tokens.json,拿到两条资产各自的追踪值,两个地址都拨对了。同一台
+ * 机器上有 shell 的模型,能顺着任何运行中的进程找到仓库。所以:只要 token 的明文写在
+ * 磁盘上模型可读的地方,它就不是唯一来源;分类只用于报告里说明命中的是什么文件。
  */
-const POLLUTING = (kind) => kind !== "self" && kind !== "record";
+const POLLUTING = (kind) => kind !== "self";
 
 export function taskFileKind(name) {
   const n = String(name ?? "").replace(/\\/g, "/");
@@ -181,6 +182,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let bad = 0;
   console.log(`扫描来源 ${sources.length} 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)\n`);
   for (const [assetId, spec] of Object.entries(tokens)) {
+    if (assetId.startsWith("_")) continue;
     for (const t of spec?.tokens ?? []) {
       const derivable = isDerivableFromDeployment(t);
       const v = provenanceOf(t, sources);

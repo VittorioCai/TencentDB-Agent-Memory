@@ -238,7 +238,11 @@ else
     # was the same for every run, so every run could see every earlier run's
     # tool output. A new empty directory per run gives a new slug and an empty
     # cache, and puts the repository out of reach. Both are recorded in run.json.
-    SESSION_CWD="${SESSION_CWD:-$(mktemp -d "${SESSION_ROOT:-/private/tmp/topic4-sessions}/${RUN_ID}.XXXX" 2>/dev/null || mktemp -d)}"
+    # mktemp with a template needs the parent to exist, or it fails and the
+    # fallback lands the session somewhere unintended; create the root first.
+    SESSION_ROOT="${SESSION_ROOT:-/private/tmp/topic4-sessions}"
+    mkdir -p "$SESSION_ROOT"
+    SESSION_CWD="${SESSION_CWD:-$(mktemp -d "$SESSION_ROOT/${RUN_ID}.XXXX")}"
     mkdir -p "$SESSION_CWD"
     # CodeBuddy's slug: leading slash dropped, every "/" becomes "-", dots kept
     # (checked against ~/.codebuddy/projects on 2026-09-10).
@@ -287,6 +291,7 @@ if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" ]]; then
   docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$RUN_DIR/agent-memory-after.tar.gz" 2>/dev/null || :
   if docker exec -i "${CORE_CONTAINER:-tdai-memory-core}" sh -c "rm -rf '$MEM_ROOT'/* && tar xzf - -C '$MEM_ROOT'" < "$MEM_SNAP" 2>/dev/null; then
     MEM_HASH_RESTORED="$(mem_hash)"
+    MEM_SCOPE_RESTORED="$(mem_hash_scoped)"
     if [[ "$MEM_HASH_RESTORED" == "$MEM_HASH_BEFORE" ]]; then
       [[ "$MEM_HASH_AFTER" == "$MEM_HASH_BEFORE" ]] \
         && info "agent memory unchanged by this run" \
@@ -573,6 +578,7 @@ node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
 RUN_TASK_NAME="$TASK_NAME" \
 REPO_ROOT_REPORT="$REPO_ROOT" MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM_HASH_BEFORE:-}" MEM_HASH_AFTER="${MEM_HASH_AFTER:-}" \
 MEM_AGENT="${MEM_AGENT:-}" MEM_SCOPE_BEFORE="${MEM_SCOPE_BEFORE:-}" MEM_SCOPE_AFTER="${MEM_SCOPE_AFTER:-}" \
+MEM_HASH_RESTORED="${MEM_HASH_RESTORED:-}" MEM_SCOPE_RESTORED="${MEM_SCOPE_RESTORED:-}" \
 SESSION_CWD="${SESSION_CWD:-}" SESSION_PROJECT_DIR="${SESSION_PROJECT_DIR:-}" SESSION_CACHE_BEFORE="${SESSION_CACHE_BEFORE:-}" \
 MEM_SCOPE_FILES_BEFORE="${MEM_SCOPE_FILES_BEFORE:-}" MEM_SCOPE_FILES_AFTER="${MEM_SCOPE_FILES_AFTER:-}" \
 MEM_ISOLATED="$([[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" && "${MEM_HASH_RESTORED:-}" == "${MEM_HASH_BEFORE:-}" ]] && echo 1 || echo 0)" \
@@ -645,6 +651,11 @@ manifest = {
         "root": os.environ.get("MEM_ROOT_REPORT", "/data/tdai-memory/profiles"),
         "hash_before": os.environ.get("MEM_HASH_BEFORE") or None,
         "hash_after": os.environ.get("MEM_HASH_AFTER") or None,
+        # hash_after answers "what did the run write"; hash_restored, taken
+        # after the rollback, answers "did the rollback succeed". They are
+        # different questions — a run that wrote and was restored has
+        # hash_after != hash_before and hash_restored == hash_before.
+        "hash_restored": os.environ.get("MEM_HASH_RESTORED") or None,
         "written_during_run": bool(os.environ.get("MEM_HASH_BEFORE")) and os.environ.get("MEM_HASH_BEFORE") != os.environ.get("MEM_HASH_AFTER"),
         "isolated": os.environ.get("MEM_ISOLATED") == "1",
         # The consumer's own share, hashed apart: this is what "same start
@@ -654,6 +665,7 @@ manifest = {
             "agent_id": os.environ.get("MEM_AGENT"),
             "hash_before": os.environ.get("MEM_SCOPE_BEFORE") or None,
             "hash_after": os.environ.get("MEM_SCOPE_AFTER") or None,
+            "hash_restored": os.environ.get("MEM_SCOPE_RESTORED") or None,
             "files_before": int(os.environ.get("MEM_SCOPE_FILES_BEFORE") or 0),
             "files_after": int(os.environ.get("MEM_SCOPE_FILES_AFTER") or 0),
         } if os.environ.get("MEM_AGENT") else None),

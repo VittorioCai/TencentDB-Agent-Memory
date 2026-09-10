@@ -163,12 +163,19 @@ test("资产正文是 self,任务说明是 task,评测记录是 record", () => {
   assert.equal(taskFileKind("verify.mjs"), "record");
 });
 
-test("record 不算污染,task 算", () => {
+test("record 也算污染:冒烟运行里模型 cat 到了 tokens.json", () => {
+  // 2026-09-10 上午的版本把 record 排除在污染之外,前提是仓库不可及;同日下午的
+  // 冒烟运行证明模型能从进程表找到仓库并读这些文件。分类只用于报告,不用于豁免。
   const sources = [
     { name: "task:tokens.json", kind: "record", text: '{"tokens":["bt-abc123xyz9"]}' },
     { name: "task:task.md", kind: "task", text: "无关内容" },
   ];
+  const v = provenanceOf("bt-abc123xyz9", sources);
+  assert.equal(v.clean, false, "写在磁盘上模型可读的地方,就不是唯一来源");
+  assert.deepEqual(v.found_in.map((f) => f.kind), ["record"], "报告里要说明命中的是评测记录");
+});
+
+test("只有资产正文自己(self)不算污染", () => {
+  const sources = [{ name: "task:assets/right.md", kind: "self", text: "x-team-trace: bt-abc123xyz9" }];
   assert.equal(provenanceOf("bt-abc123xyz9", sources).clean, true);
-  sources[1].text = "请发送 bt-abc123xyz9";
-  assert.equal(provenanceOf("bt-abc123xyz9", sources).clean, false);
 });

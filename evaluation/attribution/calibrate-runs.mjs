@@ -114,7 +114,10 @@ export function runInput(dir) {
   const adoption = adoptionFromAcceptance(verdictJson, tokens);
 
   const assets = {};
+  // tokens.json 里以 "_" 开头的键是说明,不是资产(2026-09-10 冒烟运行的表里冒出过
+  // `_why` 一行)。资产 id 从不以 "_" 开头。
   for (const [assetId, spec] of Object.entries(tokens)) {
+    if (assetId.startsWith("_")) continue;
     assets[assetId] = {
       judgedUsed: used.has(assetId),
       // 采纳与收益:证据不足时保持 null,不折叠成 false。

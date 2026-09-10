@@ -91,16 +91,21 @@ export function batchIsolation(runs) {
   for (const r of list) {
     const m = pick(r?.agent_memory);
     if (!m || !m.hash_before) unknown.push(r?.run_id ?? "(无 run_id)");
-    else known.push({ run_id: r.run_id, before: m.hash_before, after: m.hash_after ?? null });
+    else known.push({ run_id: r.run_id, before: m.hash_before, after: m.hash_after ?? null, restored: m.hash_restored ?? null });
   }
   const baselines = [...new Set(known.map((k) => k.before))];
-  const notRolledBack = known.filter((k) => k.after !== k.before).map((k) => k.run_id);
+  // 回滚按**还原之后**量的哈希判。hash_after 是还原之前量的,回答"这次运行写了什么";
+  // 把它当还原结果,会把"写过且已还原"读成"没回滚"(2026-09-10 冒烟运行:流水线在
+  // 会话内写了 4 个文件,还原成功,却报未过)。没记 hash_restored 的老运行仍按
+  // hash_after,并说明比的是哪个。
+  const rolledBackBy = known.length && known.every((k) => k.restored) ? "hash_restored" : "hash_after";
+  const notRolledBack = known.filter((k) => (rolledBackBy === "hash_restored" ? k.restored : k.after) !== k.before).map((k) => k.run_id);
   return {
     baseline_clean: null,
     scope,
     // 有未知项时不得断言起点一致:没看到的那几次可能来自别的基线。
     same_baseline: unknown.length ? null : baselines.length === 1,
-    baselines, rolled_back: notRolledBack.length === 0, not_rolled_back: notRolledBack,
+    baselines, rolled_back: notRolledBack.length === 0, not_rolled_back: notRolledBack, rolled_back_by: rolledBackBy,
     unknown, runs_checked: known.length,
   };
 }
@@ -214,7 +219,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log("rolled_back     不适用");
   } else {
     console.log(`same_baseline   ${batch.same_baseline === null ? "未知" : batch.same_baseline ? "通过" : "未过"}    起点哈希 ${batch.baselines.length} 种:${batch.baselines.map((b) => b.slice(0, 8)).join("、") || "(无)"}(按${batch.scope === "consumer" ? "消费者范围" : "整树"}比)`);
-    console.log(`rolled_back     ${batch.rolled_back ? "通过" : "未过"}    ${batch.not_rolled_back.length ? `未回滚:${batch.not_rolled_back.join("、")}` : "全部回滚"}`);
+    console.log(`rolled_back     ${batch.rolled_back ? "通过" : "未过"}    ${batch.not_rolled_back.length ? `未回滚:${batch.not_rolled_back.join("、")}` : "全部回滚"}(按 ${batch.rolled_back_by} 比)`);
   }
   if (batch.unknown.length) console.log(`未知            ${batch.unknown.length} 次运行没有记录 agent_memory:${batch.unknown.join("、")}`);
   console.log(`\n结论:${v.ok ? "隔离成立" : `不成立 — 未过 [${v.failed.join(", ") || "无"}]${v.unknown.length ? `,未知 ${v.unknown.length} 次` : ""}`}`);

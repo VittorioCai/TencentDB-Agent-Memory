@@ -1,8 +1,8 @@
 {
   "schema": "batch-conditions-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T15:02:50.267Z",
-  "frozen_on_top_of": "380bdd4",
+  "frozen_at": "2026-09-10T15:56:01.964Z",
+  "frozen_on_top_of": "8a25bb6",
   "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
   "spec": {
     "task_dir": "evaluation/tasks/bridge-addr",
@@ -23,7 +23,7 @@
       "content_hash": "0c0f62eb7fd16797ab0144d73c6065ba",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "candidate",
+      "status_at_freeze": "approved",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
@@ -44,7 +44,7 @@
       "content_hash": "8832fffba2e4d48ae87fbcb3ba23f4ae",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "candidate",
+      "status_at_freeze": "approved",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
@@ -93,7 +93,7 @@
       "projects_dir": "/Users/vittoriocai/.codebuddy/projects",
       "repository_slug": "Users-vittoriocai-Desktop-Tecent_agentmemory-project4-.claude-worktrees-topic4-gate0",
       "sessions_under_repository_slug": 51,
-      "files_scanned": 83,
+      "files_scanned": 85,
       "files_skipped": 0
     },
     "unit_for_same_start": "consumer_scope — the whole-tree hash drifts when the pipeline writes to another agent (measured 2026-09-08T23:20Z, 73 min after the isolated batch)",
@@ -115,18 +115,80 @@
     }
   },
   "token_provenance": {
-    "sources_scanned": 283,
+    "sources_scanned": 289,
     "gaps": 0,
     "gap_list": [],
     "tokens": {
       "bt-7c4wgsmdac": {
-        "clean": true,
-        "found_in": [],
+        "clean": false,
+        "found_in": [
+          {
+            "name": "task:README.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:pair.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:tokens.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:verify.test.mjs",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T154648Z-harness-smoke-v3.z5aM/87eebf9d-26f7-4983-b993-15bc6e3e78f3.jsonl",
+            "kind": "cache",
+            "count": 32
+          },
+          {
+            "name": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T154648Z-harness-smoke-v3/tool-call-logs.jsonl",
+            "kind": "cache",
+            "count": 2
+          }
+        ],
         "derivable_from_deployment": false
       },
       "bt-yf39kfehc5": {
-        "clean": true,
-        "found_in": [],
+        "clean": false,
+        "found_in": [
+          {
+            "name": "task:README.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:pair.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:tokens.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "task:verify.test.mjs",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T154648Z-harness-smoke-v3.z5aM/87eebf9d-26f7-4983-b993-15bc6e3e78f3.jsonl",
+            "kind": "cache",
+            "count": 32
+          },
+          {
+            "name": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T154648Z-harness-smoke-v3/tool-call-logs.jsonl",
+            "kind": "cache",
+            "count": 2
+          }
+        ],
         "derivable_from_deployment": false
       }
     }
@@ -134,20 +196,20 @@
   "files": {
     "evaluation/tasks/bridge-addr/task.md": "a2453587db67c44aa168d2dfbaf77a2be525805014609c5361bfa77c3eac09b6",
     "evaluation/tasks/bridge-addr/verify.mjs": "29fe156257a107bb800f873c6c5765db48fe2a24fa794005e77c39575669a3af",
-    "evaluation/tasks/bridge-addr/tokens.json": "f7c08669833c0b9408026f48dc1b80da09310f2a4da2e19f0bf5825e199bc7c2",
+    "evaluation/tasks/bridge-addr/tokens.json": "7d7dc7ed79f4536e1b77b2bbad6cda240738f4cf130dd3a4eef57ea4caa65ef3",
     "evaluation/tasks/bridge-addr/confounders.watch": "f0984ab8d6870bb27cce3c71a619de3e9492329ca629ba09b0945b581a03b3d3",
     "evaluation/tasks/bridge-addr/assets/wrong.md": "f041dafc0e5564611e5e82e399d8c9e7122975b844a75adc7d429bf02c3144dc",
     "evaluation/tasks/bridge-addr/assets/right.md": "a13d209bc46b28c2b9c527b4f9519240e4ff9090ef05708754c7839d07cae187",
     "evaluation/attribution/delivery-audit.mjs": "f1c69943b123fa11a21c2ce0dea4029f83eb5745ae2262f42debdd834612ff38",
     "evaluation/attribution/adoption.mjs": "33507ad18f08d1e0320f98e0fac0d8c1f8ca2dcdd73683633e8923d9e0a5cd46",
     "evaluation/attribution/calibration.mjs": "b59437e4fbe5674407ee6d7d28f992aaf35c741edbe7962924acda4c7e9969d3",
-    "evaluation/attribution/calibrate-runs.mjs": "06d3b7fdbb1169455e9c60c2cac06606d3382ed4f4cdd8f8b34c37b1f7cfc96f",
+    "evaluation/attribution/calibrate-runs.mjs": "d56d8a370f7361c7fed3cd609a63cfb5f33931718fe714bb95159b24c5d5b390",
     "evaluation/attribution/judge-hard.mjs": "2455b4e521f8f550bb9a4f41d549981c1433c880e167822eafbe50f727472c12",
     "evaluation/attribution/judge-outcome.mjs": "df72231b13038ae4da64bad91b100f1767f6aac36efc67192634db01bee1f769",
     "evaluation/attribution/extract-tokens.mjs": "f2ea4b2645941418fc3dc99dd98e88a87c92bb199a68b6db4e845935aa588490",
-    "evaluation/runner/run-once.sh": "9da36a98a8269fe03356e1b2e1680d5e91cc24f3f9dfb1b9ba4aa022a9496296",
-    "evaluation/runner/isolation-check.mjs": "b4bfee420f49c73c7368be1888611aea559827489454a9308bc6416efeb6fd1c",
-    "evaluation/runner/token-provenance.mjs": "b3da2c97145e430863ac6f82ee9a026a9d1cdd6e0160f6d41416dc8c71d4deb1",
+    "evaluation/runner/run-once.sh": "300d7153587f32b00a689152c05eccfc9efc8457189de4946922f69c6fd5c585",
+    "evaluation/runner/isolation-check.mjs": "b5d8b45e8537d06783484cb0f66c8248c2fadf8fd88a255f20a125fbb1f780ec",
+    "evaluation/runner/token-provenance.mjs": "ae63bd1dd5fdce049a9d1fe1c69d5e918f51eab3740939ae43533a299254ee8f",
     "evaluation/gate/core-gate.sh": "1d6f0c465bdd08a9d889f448ce401ff673cb9aa2c7eb65e1264217532cabcfac",
     "MemoryCore/src/metadata/service/asset-gate.ts": "72cc7cc6efb66121f9a660e8079fbca087c3883f48f4b70f7c68149f17d75672"
   },
