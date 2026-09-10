@@ -1,13 +1,13 @@
 {
   "schema": "batch-conditions-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T22:45:57.725Z",
-  "frozen_on_top_of": "4eff022",
+  "frozen_at": "2026-09-10T23:03:10.938Z",
+  "frozen_on_top_of": "3f56d7f",
   "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
   "spec": {
     "task_dir": "evaluation/tasks/bridge-addr",
     "reader_key_file": "deploy/global-images/.topic4-user-key",
-    "consumer_agent_id": "agt-eiwlwrb0me",
+    "consumer_agent_id": "agt-giawngxum4",
     "author_agent_id": "agt-5e4hna56j9",
     "proxy_config": "deploy/global-images/.proxy-config/config.yaml"
   },
@@ -23,7 +23,7 @@
       "content_hash": "c0566d8595d65ddaaa5add8ff1ef69de",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "candidate",
+      "status_at_freeze": "approved",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
@@ -42,7 +42,7 @@
       "content_hash": "91d3869cc76132508cc02169f5187c49",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "candidate",
+      "status_at_freeze": "approved",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
@@ -56,9 +56,9 @@
     }
   },
   "consumer": {
-    "agent_id": "agt-eiwlwrb0me",
+    "agent_id": "agt-giawngxum4",
     "user_id": "usr-4u07qc2kuj",
-    "agent_name": "Topic4-Consumer-B2"
+    "agent_name": "Topic4-Consumer-B3"
   },
   "author": {
     "agent_id": "agt-5e4hna56j9",
@@ -72,14 +72,14 @@
   },
   "proxy": {
     "config_path": "deploy/global-images/.proxy-config/config.yaml",
-    "config_sha256": "4b6309b4b33e4fe01b4a66e2c5efd6937b8fc6d9e53f464cc4e23636fcc9e7d5",
-    "config_mtime": "2026-09-09T21:23:05.321Z",
+    "config_sha256": "76428b8b89ba57161c33a62cec9e955ddd974a30e4257f2381cc6d31dde55092",
+    "config_mtime": "2026-09-10T23:03:02.462Z",
     "forced_identity": {
       "team_id": "team-5ezfoladb5",
-      "agent_id": "agt-eiwlwrb0me",
+      "agent_id": "agt-giawngxum4",
       "task_id": "task-5e6xp4mrrw"
     },
-    "container_started_at": "2026-09-09T21:23:05.776165968Z"
+    "container_started_at": "2026-09-10T23:03:02.900701802Z"
   },
   "isolation": {
     "require_empty_consumer": true,
@@ -99,9 +99,9 @@
       "root": "/data/tdai-memory/profiles",
       "tree_sha256": "3912716affb6df6f3e88dc62ff64e8b7642ffa59cf61b2bca06fd630b4756e14",
       "consumer_scope": {
-        "agent_id": "agt-eiwlwrb0me",
-        "sha256": "bc94f2520f444686975312eecbf98e28b82c5e1053cd5bcd1e1eb540d0f1f23c",
-        "files": 4
+        "agent_id": "agt-giawngxum4",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "files": 0
       },
       "snapshot_files": 18,
       "token_plaintext_resolved": 2,
@@ -176,14 +176,14 @@
   ],
   "rollback": {
     "proxy_config": {
-      "changed": "sessionInit.debugForceIdentity.agent_id: agt-5e0y4l8a7a → agt-eiwlwrb0me",
+      "changed": "sessionInit.debugForceIdentity.agent_id: agt-5e0y4l8a7a → agt-giawngxum4",
       "backup": "deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch",
       "backup_sha256": "4453c5fd4e0e50feb27b109b7961cfedf641cfff98f3c81de3485bf7578175cc",
-      "current_sha256": "4b6309b4b33e4fe01b4a66e2c5efd6937b8fc6d9e53f464cc4e23636fcc9e7d5",
+      "current_sha256": "76428b8b89ba57161c33a62cec9e955ddd974a30e4257f2381cc6d31dde55092",
       "restore": "cp deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
       "verify": "docker logs tdai-proxy 2>&1 | grep -F '→ initialized' | tail -1   # 下一次会话应显示 agent=agt-5e0y4l8a7a",
       "note": "备份在受 .gitignore 保护的持久目录里,含密钥,不进 Git(CLAUDE.md §10)"
     }
   },
-  "gate_baseline_sha256": "799b109574ae7574fb0cf8afb70142c671bab45b36202d3e7e9409e14fb2ff4a"
+  "gate_baseline_sha256": "ce130e7c8c68cccb5d8661cf132ee63ef00af5154c2bbcc0bbc0c25e80301ca4"
 }

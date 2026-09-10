@@ -1,11 +1,11 @@
 {
   "schema_version": "gate-baseline-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T22:45:57.725Z",
+  "frozen_at": "2026-09-10T23:03:10.938Z",
   "pool_snapshot_at": "2026-09-10T14:57:47Z",
   "team_id": "team-5ezfoladb5",
   "rules_version": "gate-rules-2026-09-08f",
-  "code_commit": "4eff022",
+  "code_commit": "3f56d7f",
   "source_runs": [],
   "event_count": 0,
   "by_state": {},
@@ -33,14 +33,14 @@
   },
   "decisions_at_freeze": {
     "skl-sZFb3KatWY6m": {
-      "status": "candidate",
+      "status": "approved",
       "decision": "pending",
       "confidence": null,
       "rules_version": "gate-rules-2026-09-08f",
       "evidence": []
     },
     "skl-oBaDO5CceKnr": {
-      "status": "candidate",
+      "status": "approved",
       "decision": "pending",
       "confidence": null,
       "rules_version": "gate-rules-2026-09-08f",
