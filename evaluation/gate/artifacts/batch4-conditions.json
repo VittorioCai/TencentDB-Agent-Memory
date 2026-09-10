@@ -1,0 +1,190 @@
+{
+  "schema": "batch-conditions-v1",
+  "batch": 4,
+  "frozen_at": "2026-09-10T15:02:50.267Z",
+  "frozen_on_top_of": "380bdd4",
+  "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
+  "spec": {
+    "task_dir": "evaluation/tasks/bridge-addr",
+    "reader_key_file": "deploy/global-images/.topic4-user-key",
+    "consumer_agent_id": "agt-eiwlwrb0me",
+    "author_agent_id": "agt-5e4hna56j9",
+    "proxy_config": "deploy/global-images/.proxy-config/config.yaml"
+  },
+  "rules_version": "gate-rules-2026-09-08f",
+  "rules_note": "只有判据变化才更新 rules_version(CLAUDE.md §12)。换 token、换消费者、升资产版本都不是判据变化,所以沿用。",
+  "team_id": "team-5ezfoladb5",
+  "task_id": "task-5e6xp4mrrw",
+  "assets": {
+    "skl-sZFb3KatWY6m": {
+      "role": "wrong",
+      "name": "eval-bridge-endpoint-a",
+      "version": 3,
+      "content_hash": "0c0f62eb7fd16797ab0144d73c6065ba",
+      "owner_user_id": "usr-n68ea5ythq",
+      "visibility": "team",
+      "status_at_freeze": "candidate",
+      "gate_decision_at_freeze": "pending",
+      "confidence_at_freeze": null,
+      "required_status_before_run": "approved",
+      "required_status_why": "场景前提是闸门表态前的池:两臂都从两条资产可读出发,gate-on 臂再由 Core 按冻结证据判定。",
+      "tokens": [
+        "bt-7c4wgsmdac"
+      ],
+      "adoption_fields": [
+        "value"
+      ],
+      "body_file": "evaluation/tasks/bridge-addr/assets/wrong.md",
+      "body_md5": "0c0f62eb7fd16797ab0144d73c6065ba"
+    },
+    "skl-oBaDO5CceKnr": {
+      "role": "right",
+      "name": "eval-bridge-endpoint-b",
+      "version": 3,
+      "content_hash": "8832fffba2e4d48ae87fbcb3ba23f4ae",
+      "owner_user_id": "usr-n68ea5ythq",
+      "visibility": "team",
+      "status_at_freeze": "candidate",
+      "gate_decision_at_freeze": "pending",
+      "confidence_at_freeze": null,
+      "required_status_before_run": "approved",
+      "required_status_why": "场景前提是闸门表态前的池:两臂都从两条资产可读出发,gate-on 臂再由 Core 按冻结证据判定。",
+      "tokens": [
+        "bt-yf39kfehc5"
+      ],
+      "adoption_fields": [
+        "value"
+      ],
+      "body_file": "evaluation/tasks/bridge-addr/assets/right.md",
+      "body_md5": "8832fffba2e4d48ae87fbcb3ba23f4ae"
+    }
+  },
+  "consumer": {
+    "agent_id": "agt-eiwlwrb0me",
+    "user_id": "usr-4u07qc2kuj",
+    "agent_name": "Topic4-Consumer-B2"
+  },
+  "author": {
+    "agent_id": "agt-5e4hna56j9",
+    "user_id": "usr-n68ea5ythq"
+  },
+  "cross_user": true,
+  "model": {
+    "id": "deepseek-v4-flash",
+    "source": "batch-3 captures; the trial run's capture must show the same id",
+    "invocation": "run-once.sh --auto — a fresh CodeBuddy process per run"
+  },
+  "proxy": {
+    "config_path": "deploy/global-images/.proxy-config/config.yaml",
+    "config_sha256": "4b6309b4b33e4fe01b4a66e2c5efd6937b8fc6d9e53f464cc4e23636fcc9e7d5",
+    "config_mtime": "2026-09-09T21:23:05.321Z",
+    "forced_identity": {
+      "team_id": "team-5ezfoladb5",
+      "agent_id": "agt-eiwlwrb0me",
+      "task_id": "task-5e6xp4mrrw"
+    },
+    "container_started_at": "2026-09-09T21:23:05.776165968Z"
+  },
+  "isolation": {
+    "method": "run-once.sh snapshots profiles/ before each session and restores it after; hashes recorded in run.json.agent_memory (whole tree) and .consumer_scope (the consumer's share)",
+    "session_cwd_policy": "run-once.sh --auto runs each session in a fresh empty directory (mktemp under /private/tmp/topic4-sessions), never in the repository; run.json.session records cwd, CodeBuddy project dir, and cached files before the run",
+    "session_cwd_why": "every earlier session's system prompt read 'Working directory: <the repository>' — the model could read tokens.json, pair.json and the run records; and CodeBuddy keeps each session's tool results under ~/.codebuddy/projects/<slug of cwd>/, so one slug for all runs let any run read any earlier run's tool output (51 sessions under the repository slug at freeze). Measured 2026-09-10; in 20260908T075637Z the file read was the run's own, so no cross-run read is on record — the channel existed, unused.",
+    "codebuddy_cache": {
+      "projects_dir": "/Users/vittoriocai/.codebuddy/projects",
+      "repository_slug": "Users-vittoriocai-Desktop-Tecent_agentmemory-project4-.claude-worktrees-topic4-gate0",
+      "sessions_under_repository_slug": 51,
+      "files_scanned": 83,
+      "files_skipped": 0
+    },
+    "unit_for_same_start": "consumer_scope — the whole-tree hash drifts when the pipeline writes to another agent (measured 2026-09-08T23:20Z, 73 min after the isolated batch)",
+    "late_write_risk": "the memory pipeline can write to a profile long after its session; a write landing between two runs shows up as same_baseline=false in isolation-check, which is the guard",
+    "memory": {
+      "root": "/data/tdai-memory/profiles",
+      "tree_sha256": "637768bf556e2a0384fb0723e1a50a1ff5ade951bfad1fc542900bf9edbf719c",
+      "consumer_scope": {
+        "agent_id": "agt-eiwlwrb0me",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "files": 0
+      },
+      "snapshot_files": 14,
+      "consumer_baseline_clean": true,
+      "consumer_baseline_hits": 0,
+      "consumer_baseline_unscanned": 0,
+      "watch_patterns": 5,
+      "invalid_watch_patterns": 0
+    }
+  },
+  "token_provenance": {
+    "sources_scanned": 283,
+    "gaps": 0,
+    "gap_list": [],
+    "tokens": {
+      "bt-7c4wgsmdac": {
+        "clean": true,
+        "found_in": [],
+        "derivable_from_deployment": false
+      },
+      "bt-yf39kfehc5": {
+        "clean": true,
+        "found_in": [],
+        "derivable_from_deployment": false
+      }
+    }
+  },
+  "files": {
+    "evaluation/tasks/bridge-addr/task.md": "a2453587db67c44aa168d2dfbaf77a2be525805014609c5361bfa77c3eac09b6",
+    "evaluation/tasks/bridge-addr/verify.mjs": "29fe156257a107bb800f873c6c5765db48fe2a24fa794005e77c39575669a3af",
+    "evaluation/tasks/bridge-addr/tokens.json": "f7c08669833c0b9408026f48dc1b80da09310f2a4da2e19f0bf5825e199bc7c2",
+    "evaluation/tasks/bridge-addr/confounders.watch": "f0984ab8d6870bb27cce3c71a619de3e9492329ca629ba09b0945b581a03b3d3",
+    "evaluation/tasks/bridge-addr/assets/wrong.md": "f041dafc0e5564611e5e82e399d8c9e7122975b844a75adc7d429bf02c3144dc",
+    "evaluation/tasks/bridge-addr/assets/right.md": "a13d209bc46b28c2b9c527b4f9519240e4ff9090ef05708754c7839d07cae187",
+    "evaluation/attribution/delivery-audit.mjs": "f1c69943b123fa11a21c2ce0dea4029f83eb5745ae2262f42debdd834612ff38",
+    "evaluation/attribution/adoption.mjs": "33507ad18f08d1e0320f98e0fac0d8c1f8ca2dcdd73683633e8923d9e0a5cd46",
+    "evaluation/attribution/calibration.mjs": "b59437e4fbe5674407ee6d7d28f992aaf35c741edbe7962924acda4c7e9969d3",
+    "evaluation/attribution/calibrate-runs.mjs": "06d3b7fdbb1169455e9c60c2cac06606d3382ed4f4cdd8f8b34c37b1f7cfc96f",
+    "evaluation/attribution/judge-hard.mjs": "2455b4e521f8f550bb9a4f41d549981c1433c880e167822eafbe50f727472c12",
+    "evaluation/attribution/judge-outcome.mjs": "df72231b13038ae4da64bad91b100f1767f6aac36efc67192634db01bee1f769",
+    "evaluation/attribution/extract-tokens.mjs": "f2ea4b2645941418fc3dc99dd98e88a87c92bb199a68b6db4e845935aa588490",
+    "evaluation/runner/run-once.sh": "9da36a98a8269fe03356e1b2e1680d5e91cc24f3f9dfb1b9ba4aa022a9496296",
+    "evaluation/runner/isolation-check.mjs": "b4bfee420f49c73c7368be1888611aea559827489454a9308bc6416efeb6fd1c",
+    "evaluation/runner/token-provenance.mjs": "b3da2c97145e430863ac6f82ee9a026a9d1cdd6e0160f6d41416dc8c71d4deb1",
+    "evaluation/gate/core-gate.sh": "1d6f0c465bdd08a9d889f448ce401ff673cb9aa2c7eb65e1264217532cabcfac",
+    "MemoryCore/src/metadata/service/asset-gate.ts": "72cc7cc6efb66121f9a660e8079fbca087c3883f48f4b70f7c68149f17d75672"
+  },
+  "arms": {
+    "vary": [
+      "gate"
+    ],
+    "values": [
+      "off",
+      "on"
+    ],
+    "order": "interleaved: off, on, off, on, …",
+    "held_constant": "everything else in this file — task, verifier, tokens, asset versions, consumer, model, proxy config, memory baseline, rules",
+    "gate_baseline": "evaluation/gate/artifacts/gate_baseline_batch4.json"
+  },
+  "trial_checkpoints": [
+    "run.json.session.cwd is not the repository and run.json.session.project_cache_files_before == 0; the capture's first system message says 'Working directory: <that cwd>'",
+    "run.json.agent_memory.consumer_scope.agent_id == consumer.agent_id;first trial: files_before == memory.consumer_scope.files and hash_before == memory.consumer_scope.sha256",
+    "resolved-identity.txt names agent=consumer.agent_id and user=consumer.user_id",
+    "capture complete: calibrate-runs per-run table shows capture=complete (verifyCoverage)",
+    "verdict.json attempts[].value carries a trace value on every attempt at the target (adoption field present)",
+    "calibrate-runs per-run: adopted is true or false for both assets — not unknown — in a run that reached the target",
+    "isolation-check over the trial pair: baseline_clean 通过, same_baseline 通过 (按消费者范围), rolled_back 通过",
+    "run dir tokens.json equals the task's tokens.json (sha256)",
+    "gate-apply.json status_at_start matches the arm: off = both approved; on = per gate_baseline decisions",
+    "the model id in the trial capture equals model.id",
+    "PASS/FAIL is not a checkpoint: it is the task outcome, not the thing under test"
+  ],
+  "rollback": {
+    "proxy_config": {
+      "changed": "sessionInit.debugForceIdentity.agent_id: agt-5e0y4l8a7a → agt-eiwlwrb0me",
+      "backup": "deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch",
+      "backup_sha256": "4453c5fd4e0e50feb27b109b7961cfedf641cfff98f3c81de3485bf7578175cc",
+      "current_sha256": "4b6309b4b33e4fe01b4a66e2c5efd6937b8fc6d9e53f464cc4e23636fcc9e7d5",
+      "restore": "cp deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
+      "verify": "docker logs tdai-proxy 2>&1 | grep -F '→ initialized' | tail -1   # 下一次会话应显示 agent=agt-5e0y4l8a7a",
+      "note": "备份在受 .gitignore 保护的持久目录里,含密钥,不进 Git(CLAUDE.md §10)"
+    }
+  }
+}

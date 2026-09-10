@@ -19,8 +19,28 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
-/** 资产正文里出现自己的 token 是应该的,所以 kind=self 的来源不算污染。 */
-const POLLUTING = (kind) => kind !== "self";
+/**
+ * 来源分三类。self:资产正文,token 的家,出现是应该的。record:评测自己的记录——
+ * tokens.json、pair.json、测试、README、条件清单——写着 token 但不交给会话。
+ * 其余是 task:会交给会话的东西,命中即污染。
+ *
+ * record 不算污染有一个前提:会话在**空目录**里跑,仓库不在它能读到的地方。
+ * 2026-09-10 核实:此前每次会话的工作目录就是仓库本身(系统提示里
+ * "Working directory: …/topic4-gate0"),模型可以 cat 到任何评测文件;run-once.sh
+ * 自此改为每次运行新建空目录。这条前提由 batch-conditions 的试跑检查点核对。
+ */
+const POLLUTING = (kind) => kind !== "self" && kind !== "record";
+
+export function taskFileKind(name) {
+  const n = String(name ?? "").replace(/\\/g, "/");
+  const base = n.split("/").pop() ?? n;
+  if (n.startsWith("assets/")) return "self";
+  if (/\.test\.mjs$/.test(base)) return "record";
+  if (/^(tokens|pair|gate_baseline|asset-pool-snapshot|.*-conditions)\.json$/.test(base)) return "record";
+  if (/^(README\.md|confounders\.watch|verify\.mjs|enter-pool\.sh|use-identity\.sh|revise-consumer-skill\.sh|probe-reachability\.mjs)$/.test(base)) return "record";
+  if (/\.(json|mjs|sh)$/.test(base)) return "record";
+  return "task";
+}
 
 /**
  * 被切开的写法也要算命中:SQLite FTS5 的 snippet 在标点处切分并补空格,
@@ -144,7 +164,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (taskDir) {
     // 场景目录里,资产正文是 token 自己的家;其余(任务说明等)都是污染源。
     const r = readTextFilesUnder(taskDir, "task");
-    for (const f of r.files) sources.push({ ...f, name: `task:${f.name}`, kind: f.name.startsWith("assets/") ? "self" : "task" });
+    for (const f of r.files) sources.push({ ...f, name: `task:${f.name}`, kind: taskFileKind(f.name) });
     gaps.push(...r.skipped.map((x) => ({ where: `task:${x.name}`, why: x.why })));
   }
   if (memDir) {

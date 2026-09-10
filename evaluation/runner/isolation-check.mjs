@@ -78,9 +78,18 @@ export function baselineFindings(files, tokens, watchPatterns) {
  * 它不替内容检查作答,免得"哈希都对"又一次被读成"隔离成立"。
  */
 export function batchIsolation(runs) {
+  // 起点一致按哪一层比:记了 consumer_scope(只算消费者那一份记忆的哈希)就按它,
+  // 否则按整树。实测整树哈希会被别的 agent 的迟到写入带漂(批次三隔离重跑之后
+  // 73 分钟,旧消费者的四个文件被记忆流水线改写),而那些文件到不了新消费者的模型。
+  // 两种口径不可混比:一部分运行记了、一部分没记,起点一致只能是未知。
+  const list = runs ?? [];
+  const scoped = list.filter((r) => r?.agent_memory?.consumer_scope?.hash_before);
+  const scope = scoped.length ? "consumer" : "tree";
+  const pick = (m) => (scope === "consumer" ? m?.consumer_scope : m);
+
   const known = [], unknown = [];
-  for (const r of runs ?? []) {
-    const m = r?.agent_memory;
+  for (const r of list) {
+    const m = pick(r?.agent_memory);
     if (!m || !m.hash_before) unknown.push(r?.run_id ?? "(无 run_id)");
     else known.push({ run_id: r.run_id, before: m.hash_before, after: m.hash_after ?? null });
   }
@@ -88,6 +97,7 @@ export function batchIsolation(runs) {
   const notRolledBack = known.filter((k) => k.after !== k.before).map((k) => k.run_id);
   return {
     baseline_clean: null,
+    scope,
     // 有未知项时不得断言起点一致:没看到的那几次可能来自别的基线。
     same_baseline: unknown.length ? null : baselines.length === 1,
     baselines, rolled_back: notRolledBack.length === 0, not_rolled_back: notRolledBack,
@@ -120,7 +130,8 @@ export function isolationVerdict({ baseline, batch }) {
 
 const MAX_SCAN_BYTES = 2_000_000;
 
-function filesInTar(tarPath) {
+/** 解开一份记忆快照,逐文件交出文本;太大或读不出的带 text:null。 */
+export function filesInTar(tarPath) {
   const dir = mkdtempSync(join(tmpdir(), "isocheck-"));
   try {
     execFileSync("tar", ["xzf", tarPath, "-C", dir], { stdio: "ignore" });
@@ -146,8 +157,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const watchPath = (args.find((a) => a.startsWith("--watch=")) ?? "").slice(8);
   const agentId = (args.find((a) => a.startsWith("--agent=")) ?? "").slice(8);
+  // --tar=<快照> --tokens=<tokens.json>:不经 run 目录,直接查一份记忆快照是否干净。
+  // 开批次前的基线检查用这个:那时还没有任何一次运行。
+  const tarPath = (args.find((a) => a.startsWith("--tar=")) ?? "").slice(6);
+  const tokensPath = (args.find((a) => a.startsWith("--tokens=")) ?? "").slice(9);
   const dirs = args.filter((a) => !a.startsWith("--"));
-  if (!dirs.length) { console.error("usage: isolation-check.mjs <run dirs…> [--watch=<confounders.watch>]"); process.exit(2); }
+  if (!dirs.length && !tarPath) { console.error("usage: isolation-check.mjs <run dirs…> [--watch=F] [--agent=ID]   |   --tar=<snapshot.tar.gz> --tokens=<tokens.json> [--watch=F] [--agent=ID]"); process.exit(2); }
 
   const runs = dirs.map((d) => {
     const rj = existsSync(`${d}/run.json`) ? JSON.parse(readFileSync(`${d}/run.json`, "utf8")) : {};
@@ -160,20 +175,26 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   // 基线内容:取第一份存在的 agent-memory-before.tar.gz。批次内起点一致由
   // same_baseline 保证,所以查一份就够;起点不一致时那一条会先报出来。
-  const withTar = runs.find((r) => existsSync(`${r.dir}/agent-memory-before.tar.gz`));
+  const withTar = tarPath
+    ? { dir: null, run_id: `快照 ${tarPath}`, tar: tarPath, tokensPath }
+    : (() => { const r = runs.find((x) => existsSync(`${x.dir}/agent-memory-before.tar.gz`)); return r ? { ...r, tar: `${r.dir}/agent-memory-before.tar.gz`, tokensPath: `${r.dir}/tokens.json` } : null; })();
   let baseline = null, tokens = [];
   if (withTar) {
-    const tj = existsSync(`${withTar.dir}/tokens.json`) ? JSON.parse(readFileSync(`${withTar.dir}/tokens.json`, "utf8")) : {};
-    tokens = Object.values(tj).flatMap((s) => s?.tokens ?? []);
-    const all = filesInTar(`${withTar.dir}/agent-memory-before.tar.gz`);
+    const tj = withTar.tokensPath && existsSync(withTar.tokensPath) ? JSON.parse(readFileSync(withTar.tokensPath, "utf8")) : {};
+    tokens = Object.entries(tj).filter(([k]) => !k.startsWith("_")).flatMap(([, s]) => s?.tokens ?? []);
+    const all = filesInTar(withTar.tar);
     const scoped = onlyAgent(all, agentId);
     baseline = baselineFindings(scoped, tokens, watchPatterns);
     baseline.files_scanned = scoped.length;
     baseline.files_in_snapshot = all.length;
   }
 
-  const batch = batchIsolation(runs);
-  const v = isolationVerdict({ baseline, batch });
+  const batch = tarPath && !runs.length
+    ? { same_baseline: null, baselines: [], rolled_back: true, not_rolled_back: [], unknown: [], runs_checked: 0, scope: "snapshot", snapshot_only: true }
+    : batchIsolation(runs);
+  const v = tarPath && !runs.length
+    ? (() => { const x = isolationVerdict({ baseline, batch: { ...batch, unknown: [] } }); return { ...x, unknown: x.unknown.filter((u) => String(u).startsWith("baseline_clean")) , ok: x.failed.length === 0 && !x.unknown.some((u) => String(u).startsWith("baseline_clean")) }; })()
+    : isolationVerdict({ baseline, batch });
 
   console.log(`隔离验收 — ${runs.length} 次运行\n`);
   if (!baseline) {
@@ -188,8 +209,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const u of baseline.unscanned.slice(0, 8)) console.log(`                       [未扫] ${u.path}(${u.why}${u.bytes ? `,${u.bytes} 字节` : ""})`);
     if (baseline.unscanned.length > 8) console.log(`                       …另有 ${baseline.unscanned.length - 8} 个文件未扫描`);
   }
-  console.log(`same_baseline   ${batch.same_baseline === null ? "未知" : batch.same_baseline ? "通过" : "未过"}    起点哈希 ${batch.baselines.length} 种:${batch.baselines.map((b) => b.slice(0, 8)).join("、") || "(无)"}`);
-  console.log(`rolled_back     ${batch.rolled_back ? "通过" : "未过"}    ${batch.not_rolled_back.length ? `未回滚:${batch.not_rolled_back.join("、")}` : "全部回滚"}`);
+  if (batch.snapshot_only) {
+    console.log("same_baseline   不适用  只查了一份快照,没有运行可比");
+    console.log("rolled_back     不适用");
+  } else {
+    console.log(`same_baseline   ${batch.same_baseline === null ? "未知" : batch.same_baseline ? "通过" : "未过"}    起点哈希 ${batch.baselines.length} 种:${batch.baselines.map((b) => b.slice(0, 8)).join("、") || "(无)"}(按${batch.scope === "consumer" ? "消费者范围" : "整树"}比)`);
+    console.log(`rolled_back     ${batch.rolled_back ? "通过" : "未过"}    ${batch.not_rolled_back.length ? `未回滚:${batch.not_rolled_back.join("、")}` : "全部回滚"}`);
+  }
   if (batch.unknown.length) console.log(`未知            ${batch.unknown.length} 次运行没有记录 agent_memory:${batch.unknown.join("、")}`);
   console.log(`\n结论:${v.ok ? "隔离成立" : `不成立 — 未过 [${v.failed.join(", ") || "无"}]${v.unknown.length ? `,未知 ${v.unknown.length} 次` : ""}`}`);
   if (!v.ok && v.failed.includes("baseline_clean")) {

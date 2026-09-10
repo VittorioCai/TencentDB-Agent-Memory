@@ -158,3 +158,48 @@ Within one attempt three signals are read separately, because they disagree
 often enough to matter: the exit code, the HTTP status, and the envelope's own
 `code`. A 200 carrying `{"code":40101}` is a refusal that curl calls success.
 And an unreadable outcome is neither pass nor fail — it is reported as unreadable.
+
+## v3 (2026-09-09/10): the discriminative token is a trace header, and batch 4's conditions are frozen
+
+The address stopped being the discriminative token. It is a property of the
+deployment — in the proxy config, listened on, findable from a shell — so a
+model writing `47318` had not necessarily read anything. Each asset now also
+records an `x-team-trace` value and says it must be sent verbatim; following
+the asset therefore leaves that value in the command, which is the guarantee
+"used ⇒ this token appears" needs and no string property can give.
+
+| asset | role | v3 trace value |
+|---|---|---|
+| `skl-sZFb3KatWY6m` | wrong | `bt-7c4wgsmdac` |
+| `skl-oBaDO5CceKnr` | right | `bt-yf39kfehc5` |
+
+Both values were checked against every source before being written in: the
+task directory, the memory baseline, CodeBuddy's project cache, every captured
+run — 283 sources, no hit, no unscanned gap. `tokens.json` here declares
+`adoption_fields: ["value"]`; `verify.mjs` records the value on each attempt
+and **does not** use it for PASS/FAIL.
+
+The version bump was itself a measurement: after `/v3/skill/update` both
+assets returned to `candidate` / `pending` with confidence cleared — the gate
+does not inherit a decision across versions.
+
+**Batch 4 runs under a frozen condition list**, produced and checked by the
+same code:
+
+```bash
+node evaluation/runner/batch-conditions.mjs --freeze --batch=4 --consumer=agt-eiwlwrb0me
+node evaluation/runner/batch-conditions.mjs --check  --conditions=evaluation/gate/artifacts/batch4-conditions.json
+```
+
+The list is everything the two arms must share — assets, versions, content
+hashes, tokens, consumer, proxy identity and config hash, memory baseline
+(consumer-scoped), analysis file hashes, rules version — and the only variable
+allowed to differ (`gate`). It also records the session policy: each run now
+starts in a fresh empty directory, never in the repository, because earlier
+sessions ran with the repository as their working directory and CodeBuddy
+caches tool results per working directory. Trial checkpoints are listed in the
+file; PASS/FAIL is not one of them.
+
+The consumer for this batch is `agt-eiwlwrb0me`, a second agent of the same
+user, created with no memory profile so the baseline is empty by construction
+rather than by cleaning.

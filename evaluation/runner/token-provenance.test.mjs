@@ -140,3 +140,35 @@ test("捕获文件缺失 → 也是缺输入", () => {
   assert.equal(r.problems.length, 1);
   assert.match(r.problems[0].why, /capture\.jsonl/);
 });
+
+// ---------------------------------------------------------------------------
+// 任务目录里哪些文件是模型看得到的 —— 2026-09-10
+//
+// tokens.json、pair.json、测试文件、条件清单都写着 token,但它们是评测的记录,
+// 不会交给会话。把它们当污染源,新 token 永远通不过来源检查;把它们静默跳过,
+// 又会掩盖真正的泄漏。所以分三类并写明:self(资产正文,token 的家)、record
+// (评测记录,不交给会话——前提是会话在空目录里跑,由 run-once.sh 保证)、task
+// (任务说明等,会交给会话,命中即污染)。
+// ---------------------------------------------------------------------------
+import { taskFileKind } from "./token-provenance.mjs";
+
+test("资产正文是 self,任务说明是 task,评测记录是 record", () => {
+  assert.equal(taskFileKind("assets/right.md"), "self");
+  assert.equal(taskFileKind("task.md"), "task");
+  assert.equal(taskFileKind("tokens.json"), "record");
+  assert.equal(taskFileKind("pair.json"), "record");
+  assert.equal(taskFileKind("verify.test.mjs"), "record");
+  assert.equal(taskFileKind("README.md"), "record");
+  assert.equal(taskFileKind("confounders.watch"), "record");
+  assert.equal(taskFileKind("verify.mjs"), "record");
+});
+
+test("record 不算污染,task 算", () => {
+  const sources = [
+    { name: "task:tokens.json", kind: "record", text: '{"tokens":["bt-abc123xyz9"]}' },
+    { name: "task:task.md", kind: "task", text: "无关内容" },
+  ];
+  assert.equal(provenanceOf("bt-abc123xyz9", sources).clean, true);
+  sources[1].text = "请发送 bt-abc123xyz9";
+  assert.equal(provenanceOf("bt-abc123xyz9", sources).clean, false);
+});

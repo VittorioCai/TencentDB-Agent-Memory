@@ -169,6 +169,24 @@ mem_hash() {  # prints a stable hash of the agent memory tree, or "absent"
   docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
     "cd '$MEM_ROOT' 2>/dev/null && find . -type f | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1" 2>/dev/null || echo absent
 }
+# The consumer's own share of that tree. The whole-tree hash drifts when the
+# memory pipeline writes to *another* agent's profile — measured 2026-09-08
+# 23:20Z, 73 minutes after the isolated batch, four files of the old consumer
+# rewritten — and those files never reach this run's model. Comparing start
+# points across a batch therefore uses this hash when it is recorded; the
+# whole-tree hash stays as the rollback check. The agent comes from MEM_AGENT,
+# else from the proxy's forced identity, which is what decides the session.
+MEM_AGENT="${MEM_AGENT:-$(sed -n '/debugForceIdentity:/,/task_id/p' "$REPO_ROOT/deploy/global-images/.proxy-config/config.yaml" 2>/dev/null | sed -n 's/^ *agent_id: *"\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' | head -1)}"
+mem_hash_scoped() {  # hash of the files under the consumer's profile dir(s), "absent" if none
+  [[ -n "$MEM_AGENT" ]] || { echo absent; return; }
+  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
+    "cd '$MEM_ROOT' 2>/dev/null && find . -type f -path '*agent%3A$MEM_AGENT*' | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1" 2>/dev/null || echo absent
+}
+mem_files_scoped() {
+  [[ -n "$MEM_AGENT" ]] || { echo 0; return; }
+  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
+    "cd '$MEM_ROOT' 2>/dev/null && find . -type f -path '*agent%3A$MEM_AGENT*' | wc -l | tr -d ' '" 2>/dev/null || echo 0
+}
 if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" ]]; then
   if docker exec "${CORE_CONTAINER:-tdai-memory-core}" test -d "$MEM_ROOT" 2>/dev/null; then
     docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$MEM_SNAP" 2>/dev/null \
@@ -179,6 +197,8 @@ if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" ]]; then
   fi
 fi
 MEM_HASH_BEFORE="$(mem_hash)"
+MEM_SCOPE_BEFORE="$(mem_hash_scoped)"; MEM_SCOPE_FILES_BEFORE="$(mem_files_scoped)"
+[[ -n "$MEM_AGENT" ]] && info "consumer $MEM_AGENT memory: $MEM_SCOPE_FILES_BEFORE file(s), $(cut -c1-12 <<<"$MEM_SCOPE_BEFORE")…"
 
 # ── 1. the session ───────────────────────────────────────────────
 # The capture is produced by the observability probe sitting between proxy and
@@ -208,11 +228,33 @@ else
 
   TASK_FILE="$TASK_DIR/task.md"
   if (( AUTO )); then
+    # The session runs in a fresh, empty directory — never in the repository.
+    # Two reasons, both measured 2026-09-10. First, every earlier session's
+    # system prompt read "Working directory: …/topic4-gate0": the model could
+    # cat tokens.json, pair.json, the run records, anything. Second, CodeBuddy
+    # keeps each session's tool results on disk under
+    # ~/.codebuddy/projects/<slug of the working directory>/<session>/tool-results/,
+    # and run 20260908T075637Z read one of those files back — the project slug
+    # was the same for every run, so every run could see every earlier run's
+    # tool output. A new empty directory per run gives a new slug and an empty
+    # cache, and puts the repository out of reach. Both are recorded in run.json.
+    SESSION_CWD="${SESSION_CWD:-$(mktemp -d "${SESSION_ROOT:-/private/tmp/topic4-sessions}/${RUN_ID}.XXXX" 2>/dev/null || mktemp -d)}"
+    mkdir -p "$SESSION_CWD"
+    # CodeBuddy's slug: leading slash dropped, every "/" becomes "-", dots kept
+    # (checked against ~/.codebuddy/projects on 2026-09-10).
+    SESSION_SLUG="$(printf '%s' "$SESSION_CWD" | sed -E 's#^/##; s#/#-#g')"
+    SESSION_PROJECT_DIR="$HOME/.codebuddy/projects/$SESSION_SLUG"
+    SESSION_CACHE_BEFORE="$(find "$SESSION_PROJECT_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    if [[ -n "$(ls -A "$SESSION_CWD" 2>/dev/null)" ]]; then
+      warn "session directory $SESSION_CWD is not empty; the session can read what is in it"
+    fi
+    (( SESSION_CACHE_BEFORE > 0 )) && warn "CodeBuddy already holds $SESSION_CACHE_BEFORE file(s) for this directory's project slug; the session can read earlier tool results"
+    info "session working directory: $SESSION_CWD (project cache files before: $SESSION_CACHE_BEFORE)"
     info "launching a fresh single-prompt CodeBuddy session (run-codebuddy.sh -p)"
     # -p spawns a new process, runs one prompt to completion (the agent still
     # loops through its own tool calls inside that turn), and exits. Its stdout
     # is the model's transcript; keep it for the record.
-    if bash "$EVAL/gate0/run-codebuddy.sh" "$(cat "$TASK_FILE")" >"$RUN_DIR/codebuddy-stdout.txt" 2>&1; then
+    if (cd "$SESSION_CWD" && bash "$EVAL/gate0/run-codebuddy.sh" "$(cat "$TASK_FILE")") >"$RUN_DIR/codebuddy-stdout.txt" 2>&1; then
       info "session finished; transcript → codebuddy-stdout.txt"
     else
       warn "run-codebuddy.sh exited non-zero; see $RUN_DIR/codebuddy-stdout.txt (continuing to judge whatever was captured)"
@@ -240,6 +282,7 @@ fi
 # one did. Both hashes go into run.json: equal means the run changed nothing,
 # different means it did and the rollback is what keeps the arm comparable.
 MEM_HASH_AFTER="$(mem_hash)"
+MEM_SCOPE_AFTER="$(mem_hash_scoped)"; MEM_SCOPE_FILES_AFTER="$(mem_files_scoped)"
 if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" ]]; then
   docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$RUN_DIR/agent-memory-after.tar.gz" 2>/dev/null || :
   if docker exec -i "${CORE_CONTAINER:-tdai-memory-core}" sh -c "rm -rf '$MEM_ROOT'/* && tar xzf - -C '$MEM_ROOT'" < "$MEM_SNAP" 2>/dev/null; then
@@ -528,7 +571,10 @@ node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
 
 # ── 6. manifest ──────────────────────────────────────────────────
 RUN_TASK_NAME="$TASK_NAME" \
-MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM_HASH_BEFORE:-}" MEM_HASH_AFTER="${MEM_HASH_AFTER:-}" \
+REPO_ROOT_REPORT="$REPO_ROOT" MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM_HASH_BEFORE:-}" MEM_HASH_AFTER="${MEM_HASH_AFTER:-}" \
+MEM_AGENT="${MEM_AGENT:-}" MEM_SCOPE_BEFORE="${MEM_SCOPE_BEFORE:-}" MEM_SCOPE_AFTER="${MEM_SCOPE_AFTER:-}" \
+SESSION_CWD="${SESSION_CWD:-}" SESSION_PROJECT_DIR="${SESSION_PROJECT_DIR:-}" SESSION_CACHE_BEFORE="${SESSION_CACHE_BEFORE:-}" \
+MEM_SCOPE_FILES_BEFORE="${MEM_SCOPE_FILES_BEFORE:-}" MEM_SCOPE_FILES_AFTER="${MEM_SCOPE_FILES_AFTER:-}" \
 MEM_ISOLATED="$([[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" && "${MEM_HASH_RESTORED:-}" == "${MEM_HASH_BEFORE:-}" ]] && echo 1 || echo 0)" \
 python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
 import json, os, re, sys
@@ -601,7 +647,26 @@ manifest = {
         "hash_after": os.environ.get("MEM_HASH_AFTER") or None,
         "written_during_run": bool(os.environ.get("MEM_HASH_BEFORE")) and os.environ.get("MEM_HASH_BEFORE") != os.environ.get("MEM_HASH_AFTER"),
         "isolated": os.environ.get("MEM_ISOLATED") == "1",
+        # The consumer's own share, hashed apart: this is what "same start
+        # point" is judged on across a batch (isolation-check.mjs), because
+        # the whole tree drifts when the pipeline writes to another agent.
+        "consumer_scope": ({
+            "agent_id": os.environ.get("MEM_AGENT"),
+            "hash_before": os.environ.get("MEM_SCOPE_BEFORE") or None,
+            "hash_after": os.environ.get("MEM_SCOPE_AFTER") or None,
+            "files_before": int(os.environ.get("MEM_SCOPE_FILES_BEFORE") or 0),
+            "files_after": int(os.environ.get("MEM_SCOPE_FILES_AFTER") or 0),
+        } if os.environ.get("MEM_AGENT") else None),
     },
+    # Where the session ran and what CodeBuddy could already see for that
+    # directory. Empty cwd + zero cached files is the isolation claim; a run
+    # started in the repository would carry the repository path here.
+    "session": ({
+        "cwd": os.environ.get("SESSION_CWD"),
+        "codebuddy_project_dir": os.environ.get("SESSION_PROJECT_DIR") or None,
+        "project_cache_files_before": int(os.environ.get("SESSION_CACHE_BEFORE") or 0),
+        "cwd_is_repository": os.environ.get("SESSION_CWD", "").startswith(os.environ.get("REPO_ROOT_REPORT", "\x00")),
+    } if os.environ.get("SESSION_CWD") else None),
     "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
     "started_at": started,
     "gate": gate_block,

@@ -162,3 +162,48 @@ test("基线按 agent 限定范围:别人的记忆到不了本次运行的模型
   assert.equal(baselineFindings(onlyAgent(files, "agt-old"), ["47318"], []).clean, false);
   assert.equal(onlyAgent(files, "").length, 2, "不指定 agent 时不过滤");
 });
+
+// ---------------------------------------------------------------------------
+// 起点一致要按消费者自己的那份记忆比 —— 2026-09-10
+//
+// 快照的是整棵 profiles/,里面还有别的 agent。实测:批次三隔离重跑之后 73 分钟,
+// 记忆流水线又往旧消费者的 profile 里写了四个文件(2026-09-08T23:20:56–59Z),
+// 整树哈希从 7d7f4b44 变成 637768bf,而那些文件到不了新消费者的模型。整树哈希
+// 一漂,same_baseline 就会把一批本来独立的运行判成不独立。所以 run.json 里若记了
+// consumer_scope(只算消费者那一份的哈希),起点一致就按它比;没记的仍按整树。
+// ---------------------------------------------------------------------------
+
+test("记了 consumer_scope 的运行,起点一致按消费者范围的哈希比", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "tree-A", hash_after: "tree-A", consumer_scope: { agent_id: "agt-new", hash_before: "scope-X", hash_after: "scope-X" } } },
+    { run_id: "r2", agent_memory: { hash_before: "tree-B", hash_after: "tree-B", consumer_scope: { agent_id: "agt-new", hash_before: "scope-X", hash_after: "scope-X" } } },
+  ]);
+  assert.equal(r.same_baseline, true, "整树漂了,消费者那份没变——起点一致");
+  assert.equal(r.scope, "consumer", "要说明比的是哪一层");
+});
+
+test("消费者范围的哈希不同 → 起点不一致,哪怕整树相同", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "tree-A", hash_after: "tree-A", consumer_scope: { agent_id: "agt-new", hash_before: "scope-X", hash_after: "scope-X" } } },
+    { run_id: "r2", agent_memory: { hash_before: "tree-A", hash_after: "tree-A", consumer_scope: { agent_id: "agt-new", hash_before: "scope-Y", hash_after: "scope-Y" } } },
+  ]);
+  assert.equal(r.same_baseline, false);
+});
+
+test("一部分运行记了 consumer_scope、一部分没记 → 不能混比,起点一致为未知", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "tree-A", hash_after: "tree-A", consumer_scope: { agent_id: "agt-new", hash_before: "scope-X", hash_after: "scope-X" } } },
+    { run_id: "r2", agent_memory: { hash_before: "tree-A", hash_after: "tree-A" } },
+  ]);
+  assert.equal(r.same_baseline, null, "两种口径的哈希不可比");
+  assert.ok(r.unknown.includes("r2"));
+});
+
+test("没有任何运行记 consumer_scope → 仍按整树比,行为不变", () => {
+  const r = batchIsolation([
+    { run_id: "r1", agent_memory: { hash_before: "tree-A", hash_after: "tree-A" } },
+    { run_id: "r2", agent_memory: { hash_before: "tree-A", hash_after: "tree-A" } },
+  ]);
+  assert.equal(r.same_baseline, true);
+  assert.equal(r.scope, "tree");
+});

@@ -65,6 +65,41 @@ info "fetching skill assets …"
 curl_json "$CORE_URL/v3/skill/list" "{\"team_id\":\"$TEAM_ID\",\"limit\":500}" "$SKILLS_RAW" \
   || die "skill/list failed: $(head -c 200 "$SKILLS_RAW")"
 
+# `skill/list` runs through the admission gate, so an asset the gate has put
+# out of the pool (candidate / failed) is simply absent from it — and absent is
+# the same answer as never created. Measured 2026-09-10: with both mainline
+# assets at `candidate` this script wrote a snapshot with **0 assets**, which
+# every later run would have read as "the pool is empty" rather than "the pool
+# is gated". The asset registry (`/v3/meta/asset/list`, management path) lists
+# every asset in the team with its status; the two are joined below and each
+# row says which listing(s) it came from.
+ASSETS_RAW="$(mktemp)"; trap 'rm -f "$SKILLS_RAW" "$WIKIS_RAW" "$ASSETS_RAW"' EXIT
+info "fetching the asset registry (management path; includes gated assets) …"
+# The registry caps `limit` at 100 and pages by top-level `offset` (the schema
+# merges them at the top level — a nested `pagination` object is stripped by
+# Zod and silently gives page one). Pages are joined into one items array.
+PAGE="$(mktemp)"; trap 'rm -f "$SKILLS_RAW" "$WIKIS_RAW" "$ASSETS_RAW" "$PAGE" "${PREV_SNAPSHOT:-}"' EXIT
+echo '{"data":{"items":[]}}' > "$ASSETS_RAW"
+offset=0
+while :; do
+  printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$USER_KEY" "$USER_KEY" \
+    | curl -sS -K - --max-time 20 --fail-with-body \
+        -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" \
+        -X POST "$CORE_URL/v3/meta/asset/list" -d "{\"team_id\":\"$TEAM_ID\",\"limit\":100,\"offset\":$offset}" -o "$PAGE" \
+    || die "meta/asset/list failed at offset $offset: $(head -c 200 "$PAGE")"
+  got="$(python3 - "$ASSETS_RAW" "$PAGE" <<'PYP'
+import json, sys
+acc = json.load(open(sys.argv[1])); page = json.load(open(sys.argv[2]))
+items = (page.get("data") or {}).get("items") or []
+acc["data"]["items"].extend(items)
+json.dump(acc, open(sys.argv[1], "w"))
+print(len(items))
+PYP
+)"
+  (( got < 100 )) && break
+  offset=$((offset + 100))
+done
+
 # Knowledge runs as its own service and authenticates differently (no Bearer).
 info "fetching knowledge assets …"
 curl -sS --max-time 20 -X POST "$KNOWLEDGE_URL/v3/wiki/list" \
@@ -73,8 +108,14 @@ curl -sS --max-time 20 -X POST "$KNOWLEDGE_URL/v3/wiki/list" \
   -H "x-conversation-id: provenance-snapshot" \
   -d "{\"team_id\":\"$TEAM_ID\"}" -o "$WIKIS_RAW" || true
 
-SNAPSHOT_AT="$SNAPSHOT_AT" TEAM_ID="$TEAM_ID" OUT="$OUT" \
-SKILLS_RAW="$SKILLS_RAW" WIKIS_RAW="$WIKIS_RAW" python3 <<'PY'
+# The registry row has no agent field. For a skill the gate hid from
+# skill/list, the owner agent is carried over from the snapshot being replaced
+# (an asset's owner agent does not change with its version) and the row says
+# so; with no earlier snapshot it stays empty, which provenance reads as
+# relation=unknown — never as self.
+PREV_SNAPSHOT="$(mktemp)"; [[ -f "$OUT" ]] && cp "$OUT" "$PREV_SNAPSHOT" || echo '{}' > "$PREV_SNAPSHOT"
+SNAPSHOT_AT="$SNAPSHOT_AT" TEAM_ID="$TEAM_ID" OUT="$OUT" PREV_SNAPSHOT="$PREV_SNAPSHOT" \
+SKILLS_RAW="$SKILLS_RAW" WIKIS_RAW="$WIKIS_RAW" ASSETS_RAW="$ASSETS_RAW" python3 <<'PY'
 import json, os
 
 def load(path):
@@ -112,6 +153,42 @@ for row in items_of(load(os.environ["SKILLS_RAW"])):
         "asset_created_at":  ms_to_iso(row.get("created_at_ms")),
         "asset_updated_at":  ms_to_iso(row.get("updated_at_ms")),
     })
+
+# Registry rows: every skill asset the management path lists, gated or not.
+# A skill already seen via skill/list keeps that row and gains the registry's
+# status; one the gate hid is added from the registry alone and says so.
+prev_agents = {a.get("asset_id"): a.get("producer_agent_id", "") for a in (load(os.environ["PREV_SNAPSHOT"]).get("assets") or []) if a.get("producer_agent_id")}
+seen = {a["asset_id"] for a in assets}
+for row in items_of(load(os.environ["ASSETS_RAW"])):
+    if row.get("asset_type") != "skill":
+        continue
+    aid = row.get("asset_id", "")
+    if aid in seen:
+        for a in assets:
+            if a["asset_id"] == aid:
+                a["status"] = row.get("status", a.get("status", ""))
+                a["visibility"] = row.get("visibility", "")
+                a["listing"] = "skill/list + meta/asset/list"
+        continue
+    prev = prev_agents.get(aid, "")
+    assets.append({
+        "asset_id":          aid,
+        "asset_type":        "skill",
+        "name":              row.get("name", ""),
+        "producer_user_id":  row.get("owner_user_id", ""),
+        "producer_agent_id": prev,
+        "producer_agent_source": "previous snapshot" if prev else "unknown (registry rows carry no agent; no earlier snapshot to carry it from)",
+        "team_id":           row.get("team_id", ""),
+        "version":           row.get("version"),
+        "is_head":           None,
+        "status":            row.get("status", ""),
+        "visibility":        row.get("visibility", ""),
+        "listing":           "meta/asset/list only (hidden from skill/list by the gate)",
+        "asset_created_at":  (row.get("created_at") or "")[:19] + ("Z" if row.get("created_at") else ""),
+        "asset_updated_at":  (row.get("updated_at") or "")[:19] + ("Z" if row.get("updated_at") else ""),
+    })
+for a in assets:
+    a.setdefault("listing", "skill/list")
 
 for row in items_of(load(os.environ["WIKIS_RAW"])):
     assets.append({
