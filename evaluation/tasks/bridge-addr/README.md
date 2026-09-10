@@ -203,3 +203,23 @@ file; PASS/FAIL is not one of them.
 The consumer for this batch is `agt-eiwlwrb0me`, a second agent of the same
 user, created with no memory profile so the baseline is empty by construction
 rather than by cleaning.
+
+### Trial checkpoints and report grouping (2026-09-10)
+
+Before the real batch, a trial pair (one off, one on) must clear the checkpoints
+— and PASS/FAIL of the task is not one of them:
+
+```bash
+node evaluation/runner/batch-conditions.mjs --trial <run dir> --conditions=evaluation/gate/artifacts/batch4-conditions.json
+```
+
+Eleven checks in four groups: condition consistency (tokens, rules, arm,
+start status), isolation (consumer identity, start baseline, rollback by the
+post-restore hash, session cwd not the repo), capture completeness
+(`verifyCoverage`), and actual adoption (target attempts exist, every attempt
+carries a trace value, adoption is decidable for each asset).
+
+The calibration report groups by `(rules_version, experiment)` with older
+batches on their own rows, so batch 4 never merges into batch 3's numbers under
+the shared rules version. `cumulative` spans rule sets and experiments and
+verifies nothing on its own.

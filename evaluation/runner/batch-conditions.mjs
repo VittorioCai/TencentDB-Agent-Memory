@@ -31,6 +31,8 @@ import { tmpdir } from "node:os";
 import { join, resolve, relative } from "node:path";
 import { filesInTar, onlyAgent, baselineFindings } from "./isolation-check.mjs";
 import { provenanceOf, isDerivableFromDeployment, readTextFilesUnder, sourcesFromRun, taskFileKind } from "./token-provenance.mjs";
+import { verifyCoverage } from "../attribution/delivery-audit.mjs";
+import { adoptionFromAcceptance } from "../attribution/adoption.mjs";
 import { homedir } from "node:os";
 
 const REPO = resolve(new URL("../..", import.meta.url).pathname);
@@ -39,6 +41,7 @@ const sha256 = (buf) => createHash("sha256").update(buf).digest("hex");
 const md5 = (buf) => createHash("md5").update(buf).digest("hex");
 const fileSha = (p) => (existsSync(p) ? sha256(readFileSync(p)) : null);
 const readJson = (p, fb = null) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fb);
+const readLines = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
 
 // --- Core -----------------------------------------------------------------
 
@@ -445,16 +448,111 @@ async function check(args) {
 
 // --- CLI ---------------------------------------------------------------------
 
+// --- trial checkpoints (§13) ------------------------------------------------
+
+/**
+ * 试跑检查点:一对试跑(off 一次、on 一次)在正式批次前必须过的关。**不能只看 PASS**
+ * ——PASS/FAIL 是任务结果,不是被测的东西。每一条都从运行留下的产物核对,给出通过、
+ * 未过或未知,不设默认兜底。检查点提前写在条件清单的 `trial_checkpoints` 里(供人读),
+ * 这里是可执行的版本(供机器判)。至少覆盖:条件一致性、隔离、采集完整性、
+ * 实际采用字段(verdict.json 的 attempts[].value 是否带回 trace 值)。
+ *
+ * 用法:node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=<清单>
+ * 退出:0 全过且无未知 · 1 有未过或未知 · 2 参数错
+ */
+function trialCheckpoints(runDir, c) {
+  const dir = resolve(REPO, runDir);
+  const run = readJson(join(dir, "run.json"), {}) ?? {};
+  const verdict = readJson(join(dir, "verdict.json"), {}) ?? {};
+  const rows = [];
+  const add = (area, name, ok, detail) => rows.push({ area, name, ok, detail });
+
+  // —— 条件一致性 ——
+  const runTokens = readJson(join(dir, "tokens.json"), null);
+  const taskTokens = readJson(resolve(REPO, c.spec.task_dir, "tokens.json"), null);
+  add("条件一致性", "run 目录 tokens.json 与任务目录一致",
+    runTokens && taskTokens ? sha256(Buffer.from(JSON.stringify(runTokens))) === sha256(Buffer.from(JSON.stringify(taskTokens))) : null,
+    "两份 tokens.json 的内容哈希");
+  const runRules = run.gate?.rules_version ?? readJson(join(dir, "gate_baseline.json"), {})?.rules_version ?? null;
+  add("条件一致性", "规则版本与清单一致", runRules ? runRules === c.rules_version : null, `${runRules} vs ${c.rules_version}`);
+  const arm = run.gate?.mode ?? null;
+  add("条件一致性", "闸门臂已记录(off/on)", arm === "off" || arm === "on", `gate.mode=${arm}`);
+  if (arm) {
+    const st = run.gate?.status_at_start ?? {};
+    const ids = Object.keys(c.assets);
+    const asExpected = arm === "off"
+      ? ids.every((id) => st[id] === "approved")
+      : ids.every((id) => st[id] === (c.assets[id].gate_decision_at_freeze === "reject" ? "failed" : "approved"));
+    add("条件一致性", `开跑状态符合 ${arm} 臂`, Object.keys(st).length ? asExpected : null, JSON.stringify(st));
+  }
+
+  // —— 隔离 ——
+  const am = run.agent_memory ?? {};
+  const cs = am.consumer_scope ?? {};
+  add("隔离", "消费者身份 == 清单消费者", cs.agent_id ? cs.agent_id === c.consumer.agent_id : null, `${cs.agent_id} vs ${c.consumer.agent_id}`);
+  const frozenScope = c.isolation?.memory?.consumer_scope?.sha256 ?? null;
+  add("隔离", "起点 == 冻结的消费者基线", cs.hash_before && frozenScope ? cs.hash_before === frozenScope : null, `${String(cs.hash_before).slice(0, 12)} vs ${String(frozenScope).slice(0, 12)}`);
+  const restored = cs.hash_restored ?? am.hash_restored ?? null;
+  const base = cs.hash_before ?? am.hash_before ?? null;
+  add("隔离", "运行后已回滚(还原后哈希==起点)", restored && base ? restored === base : null, `restored ${String(restored).slice(0, 12)} vs before ${String(base).slice(0, 12)}`);
+  add("隔离", "会话工作目录不是仓库、缓存为空", run.session ? run.session.cwd_is_repository === false && (run.session.project_cache_files_before ?? 0) === 0 : null, JSON.stringify(run.session ?? null));
+
+  // —— 采集完整性 ——
+  let coverage = null, capReason = "";
+  try {
+    // verifyCoverage 自己筛 http.request 并按 tool_call_id 配对响应,所以要喂全部行,
+    // 不能只喂 request(只喂 request 会让它以为每一轮都缺响应)。
+    const cov = verifyCoverage(readLines(join(dir, "capture.jsonl")));
+    coverage = cov.complete; capReason = (cov.reasons ?? []).slice(0, 3).join("; ");
+  } catch (e) { capReason = e.message; }
+  add("采集完整性", "捕获覆盖整段会话(verifyCoverage)", coverage, capReason || "complete");
+
+  // —— 实际采用字段 ——
+  const attempts = Array.isArray(verdict.attempts) ? verdict.attempts : [];
+  add("实际采用", "验收记录有目标尝试", attempts.length > 0, `${attempts.length} 次尝试`);
+  const withVal = attempts.filter((a) => String(a?.value ?? "").trim() !== "");
+  add("实际采用", "每次尝试都带回 trace 值(attempts[].value)", attempts.length ? withVal.length === attempts.length : null, `${withVal.length}/${attempts.length} 带 value`);
+  // 采纳判定能对每条资产得出 true/false(不是 unknown),证明匹配面被覆盖
+  const adoption = adoptionFromAcceptance(verdict, taskTokens ?? {});
+  const decided = Object.values(adoption).filter((x) => x.adopted === true || x.adopted === false).length;
+  const nAssets = Object.keys(taskTokens ?? {}).length;
+  add("实际采用", "采纳判定对每条资产可判(非 unknown)", nAssets ? decided === nAssets : null, `${decided}/${nAssets} 可判`);
+
+  return rows;
+}
+
+async function trial(args) {
+  const c = readJson(resolve(REPO, args.conditions ?? ""), null);
+  if (!c) throw new Error(`--conditions=<file> missing: ${args.conditions}`);
+  const runDir = args.trial === true ? null : args.trial;
+  if (!runDir) throw new Error("usage: --trial <run dir> --conditions=<file>");
+  const rows = trialCheckpoints(runDir, c);
+  const mark = (ok) => (ok === true ? "PASS" : ok === null ? "UNKN" : "FAIL");
+  console.log(`试跑检查点 — ${runDir}\n(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)\n`);
+  let area = "";
+  for (const r of rows) {
+    if (r.area !== area) { area = r.area; console.log(`【${area}】`); }
+    console.log(`  ${mark(r.ok)}  ${r.name}`);
+    if (r.ok !== true) console.log(`        ${r.detail}`);
+  }
+  const fails = rows.filter((r) => r.ok === false).length, unknown = rows.filter((r) => r.ok === null).length;
+  console.log(`\n通过 ${rows.length - fails - unknown}  未过 ${fails}  未知 ${unknown}  / 共 ${rows.length}`);
+  console.log(fails === 0 && unknown === 0 ? "结论:检查点全过,这一对可作为批次的凭据" : "结论:检查点未全过,不开正式批次");
+  return fails === 0 && unknown === 0 ? 0 : 1;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = {};
   for (const a of process.argv.slice(2)) {
     const m = /^--([^=]+)(?:=(.*))?$/.exec(a);
     if (m) args[m[1]] = m[2] ?? true;
+    else if (!a.startsWith("--") && args.trial === true) args.trial = a;
   }
   try {
     if (args.freeze) { await freeze(args); process.exit(0); }
     if (args.check) { process.exit(await check(args)); }
-    console.error("usage: batch-conditions.mjs --freeze --batch=N --consumer=AGENT [--task=DIR] [--out=F] | --check --conditions=F");
+    if (args.trial) { process.exit(await trial(args)); }
+    console.error("usage: batch-conditions.mjs --freeze --batch=N --consumer=AGENT [--task=DIR] [--out=F] | --check --conditions=F | --trial <run dir> --conditions=F");
     process.exit(2);
   } catch (err) {
     console.error(`error: ${err.message}`);

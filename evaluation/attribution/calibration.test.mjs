@@ -128,3 +128,45 @@ test("REPRO: an unknown isolation condition must not be rendered as `not hidden`
   // Known-not-hidden is unaffected.
   assert.equal(classify({ judgedUsed: false, hidden: false, verdict: "delivered", coverageAsserted: true }).bucket, "false_negative");
 });
+
+// ---------------------------------------------------------------------------
+// 按 (rules_version, 实验标识) 分组 —— 2026-09-10
+//
+// 只按 rules_version 分组,会把同一规则下的不同实验(不同 token、消费者、资产版本)
+// 混成一行。批次四换了 token 和消费者,规则仍是 08f,若和批次三合成一行,读者会
+// 以为反例问题在一个更大的样本上解决了——没有。所以再按实验标识分一层,旧批次
+// 各自单独一行。
+// ---------------------------------------------------------------------------
+
+test("calibrate 同时按 (rules_version, experiment) 分组;旧批次各自成行", () => {
+  const runs = [
+    { run_id: "r1", rules_version: "08f", experiment: "batch3", assets: {
+      a: { judgedUsed: true, hidden: false, verdict: "delivered" } } },              // TP
+    { run_id: "r2", rules_version: "08f", experiment: "batch4", assets: {
+      a: { judgedUsed: true, hidden: true, verdict: "not_delivered" } } },           // FP
+    { run_id: "r3", rules_version: "unrecorded", experiment: "pre-batch (2026-09-05)", assets: {
+      a: { judgedUsed: true, hidden: false, verdict: "delivered" } } },              // TP
+  ];
+  const r = calibrate(runs);
+  // 同规则下,batch3 与 batch4 不并成一行
+  assert.equal(r.by_experiment["08f · batch3"].true_positive, 1);
+  assert.equal(r.by_experiment["08f · batch3"].false_positive, 0);
+  assert.equal(r.by_experiment["08f · batch4"].false_positive, 1);
+  assert.equal(r.by_experiment["08f · batch3"].accuracy, 1);
+  assert.equal(r.by_experiment["08f · batch4"].accuracy, 0);
+  // 旧批次单独一行
+  assert.ok(r.by_experiment["unrecorded · pre-batch (2026-09-05)"]);
+  // by_rules_version 仍在(向后兼容)
+  assert.equal(r.by_rules_version["08f"].true_positive, 1);
+  assert.equal(r.by_rules_version["08f"].false_positive, 1);
+});
+
+test("renderCalibration 打出实验分组表,每行标 rules 与实验", () => {
+  const runs = [
+    { run_id: "r1", rules_version: "08f", experiment: "batch3", assets: { a: { judgedUsed: true, hidden: false, verdict: "delivered" } } },
+    { run_id: "r2", rules_version: "08f", experiment: "batch4", assets: { a: { judgedUsed: true, hidden: true, verdict: "not_delivered" } } },
+  ];
+  const md = renderCalibration(calibrate(runs), { frozenRules: "08f", byExperiment: true });
+  assert.match(md, /batch3/);
+  assert.match(md, /batch4/);
+});

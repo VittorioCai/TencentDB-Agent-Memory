@@ -100,7 +100,7 @@ export function calibrate(runs) {
     for (const [assetId, a] of Object.entries(r.assets ?? {})) {
       const c = classify(a);
       rows.push({
-        run_id: r.run_id, label: r.label, rules_version: r.rules_version ?? null,
+        run_id: r.run_id, label: r.label, rules_version: r.rules_version ?? null, experiment: r.experiment ?? null,
         started_at: r.started_at ?? null, baseline_frozen_at: r.baseline_frozen_at ?? null,
         model: r.model ?? null, asset_id: assetId, asset_version: a.asset_version ?? null,
         judged_used: !!a.judgedUsed, hidden: a.hidden ?? null, delivery: a.verdict,
@@ -126,22 +126,31 @@ export function calibrate(runs) {
     const k = x.rules_version ?? "unrecorded";
     (byRules[k] ??= []).push(x);
   }
+  // 再分一层:(rules_version, 实验标识)。同一规则下的不同实验(换 token / 消费者 /
+  // 资产版本)不并成一行,旧批次各自成行(2026-09-10)。
+  const byExp = {};
+  for (const x of rows) (byExp[`${x.rules_version ?? "unrecorded"} · ${x.experiment ?? "unknown"}`] ??= []).push(x);
   return {
     rows,
     cumulative: tally(rows),
     // Cumulative and per-rule-set are both reported; the second is the one
     // that verifies a given rule set, the first only describes the history.
     by_rules_version: Object.fromEntries(Object.entries(byRules).map(([k, v]) => [k, tally(v)])),
+    by_experiment: Object.fromEntries(Object.entries(byExp).map(([k, v]) => [k, tally(v)])),
   };
 }
 
 /** A short report; the caller decides where it goes. */
-export function renderCalibration(result, { frozenRules } = {}) {
+export function renderCalibration(result, { frozenRules, byExperiment } = {}) {
   const L = [];
   const line = (name, t) => `| ${name} | ${t.true_positive} | ${t.false_positive} | ${t.true_negative} | ${t.false_negative} | ${t.isolation_failure} | ${t.unsettled} | ${t.decisions_rated}/${t.decisions_total} | ${t.accuracy ?? "—"} |`;
   L.push("| set | TP | FP | TN | FN | isolation failure | unsettled | rated/total | accuracy |");
   L.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
-  for (const [k, t] of Object.entries(result.by_rules_version)) L.push(line(`rules ${k}${frozenRules && k === frozenRules ? " (frozen)" : ""}`, t));
+  const groups = byExperiment && result.by_experiment ? Object.entries(result.by_experiment) : Object.entries(result.by_rules_version);
+  for (const [k, t] of groups) {
+    const frozenMark = frozenRules && (k === frozenRules || k.startsWith(`${frozenRules} · `)) ? " (frozen)" : "";
+    L.push(line(`${byExperiment && result.by_experiment ? "" : "rules "}${k}${frozenMark}`, t));
+  }
   L.push(line("**cumulative**", result.cumulative));
   L.push("");
   // 这段是判据说明,不是数字断言;但它必须跟着判据走。"来源是别处"曾经算未定,
@@ -182,7 +191,7 @@ export function calibrateUsage(runs) {
     for (const [assetId, a] of Object.entries(r.assets ?? {})) {
       const c = classifyUsage(a);
       rows.push({
-        run_id: r.run_id, label: r.label ?? null, rules_version: r.rules_version ?? null,
+        run_id: r.run_id, label: r.label ?? null, rules_version: r.rules_version ?? null, experiment: r.experiment ?? null,
         model: r.model ?? null, run_verdict: r.run_verdict ?? null,
         asset_id: assetId, asset_version: a.asset_version ?? null,
         judged_used: !!a.judgedUsed, adopted: a.adopted ?? null, benefited: a.benefited ?? null,
@@ -208,18 +217,25 @@ export function calibrateUsage(runs) {
   };
   const byRules = {};
   for (const x of rows) (byRules[x.rules_version ?? "unrecorded"] ??= []).push(x);
+  const byExp = {};
+  for (const x of rows) (byExp[`${x.rules_version ?? "unrecorded"} · ${x.experiment ?? "unknown"}`] ??= []).push(x);
   return {
     rows, cumulative: tally(rows),
     by_rules_version: Object.fromEntries(Object.entries(byRules).map(([k, v]) => [k, tally(v)])),
+    by_experiment: Object.fromEntries(Object.entries(byExp).map(([k, v]) => [k, tally(v)])),
   };
 }
 
-export function renderUsage(result, { frozenRules } = {}) {
+export function renderUsage(result, { frozenRules, byExperiment } = {}) {
   const L = [];
   const line = (name, t) => `| ${name} | ${t.true_positive} | ${t.false_positive} | ${t.true_negative} | ${t.false_negative} | ${t.unknown_adoption} | ${t.decisions_rated}/${t.decisions_total} | ${t.accuracy ?? "—"} | ${t.adoption_coverage ?? "—"} |`;
   L.push("| set | TP | FP | TN | FN | 采纳未知 | rated/total | accuracy | 采纳证据覆盖率 |");
   L.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
-  for (const [k, t] of Object.entries(result.by_rules_version)) L.push(line(`rules ${k}${frozenRules && k === frozenRules ? " (frozen)" : ""}`, t));
+  const groups = byExperiment && result.by_experiment ? Object.entries(result.by_experiment) : Object.entries(result.by_rules_version);
+  for (const [k, t] of groups) {
+    const frozenMark = frozenRules && (k === frozenRules || k.startsWith(`${frozenRules} · `)) ? " (frozen)" : "";
+    L.push(line(`${byExperiment && result.by_experiment ? "" : "rules "}${k}${frozenMark}`, t));
+  }
   L.push(line("**cumulative**", result.cumulative));
   return L.join("\n");
 }

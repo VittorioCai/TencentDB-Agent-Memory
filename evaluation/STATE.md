@@ -8,8 +8,8 @@
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交的父提交 `380bdd4`;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-10T15:56Z(重新冻结与核对;冒烟运行 15:46–15:50Z) |
-| 测试 | evaluation 469;Core 122;proxy 24(2026-09-10,全 0 失败) |
+| 验证时间 | 2026-09-10(重新冻结、冒烟运行、报告分组与试跑检查点均已落地) |
+| 测试 | evaluation 471;Core 122;proxy 24(2026-09-10,全 0 失败) |
 
 ## 待验收成果:第 1 件"新实验条件准备齐"
 
@@ -38,6 +38,42 @@ FAIL  token bt-yf39kfehc5 来源唯一且不可从部署推导
 **已关闭的阻塞**:资产准入。两条 v3 资产已是 `approved`,闸门判定未动(decided_at 仍为
 2026-09-09T21:19:51Z、decision pending),每条 revision 各 +2——与 `core-gate.sh --reset` 的
 两次写入(status、visibility)一致;由用户执行,执行会话未读取管理员密钥。
+
+## 两条新要求已落地(2026-09-10)
+
+**试跑检查点是可运行的,不只是清单(§13)。**
+
+```bash
+node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=evaluation/gate/artifacts/batch4-conditions.json
+```
+
+11 条,按四组打分,每条给 PASS / FAIL / UNKN,不设兜底:
+
+- 条件一致性:run 目录 tokens.json 与任务目录一致;规则版本与清单一致;闸门臂已记录;
+  开跑状态符合该臂(off=两条 approved;on=按基线判定)。
+- 隔离:消费者身份==清单;起点==冻结的消费者基线哈希;运行后已回滚(还原后哈希==起点);
+  会话工作目录不是仓库且缓存为空。
+- 采集完整性:verifyCoverage 覆盖整段会话。
+- 实际采用:验收记录有目标尝试;**每次尝试都带回 trace 值(attempts[].value)**;
+  采纳判定对每条资产可判(非 unknown)。
+
+已在冒烟运行上跑过一次证明它工作:它正确判冒烟运行不合格(没有闸门臂、用的是旧
+tokens.json、早于 hash_restored),隔离与采用各项 PASS。"不能只看 PASS":末行结论与
+PASS/FAIL 无关,只看这 11 条。
+
+**报告按 (rules_version, 实验标识) 分组,旧批次单独一行(用实际输出证明)。**
+`calibrate-runs.mjs` 的主表现在是实验分组表:
+
+```
+| unrecorded · pre-batch (2026-09-05)        | 0/0/0/0 | ... | 0/6   |
+| unrecorded · pre-batch (frozen 2026-09-06) | 24/0/8/0 | ... | 32/32 |
+| gate-rules-2026-09-08f · batch3 (frozen)   | 20/0/9/0 | ... | 29/30 |
+| **cumulative**                             | 44/0/17/0 | ... | 61/68 |
+```
+
+批次四跑出来会是同一表里新的一行(`gate-rules-2026-09-08f · batch4`),不与 batch3
+合并。cumulative 跨规则跨实验,只描述历史,不替任何一行作证。全文见
+`evaluation/attribution/CALIBRATION.md`。
 
 ## 阻塞
 

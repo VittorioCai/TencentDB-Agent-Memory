@@ -137,9 +137,19 @@ export function runInput(dir) {
       asset_version: spec?.version ?? null,
     };
   }
+  // 实验标识:同一规则下把不同实验(换 token / 消费者 / 资产版本)分开。有批次号
+  // 用批次号;没有的老运行用冻结时刻或起跑日期,标成 pre-batch,各自成行。
+  const experiment = baseline.batch != null
+    ? `batch${baseline.batch}`
+    : baseline.frozen_at
+      ? `pre-batch (frozen ${String(baseline.frozen_at).slice(0, 10)})`
+      : run.started_at
+        ? `pre-batch (${String(run.started_at).slice(0, 10)})`
+        : "unknown";
   return {
     run_id: run.run_id ?? dir.split("/").pop(), label: run.label ?? null,
     rules_version: baseline.rules_version ?? null,
+    experiment,
     started_at: run.started_at ?? null,
     baseline_frozen_at: run.gate?.baseline_frozen_at ?? baseline.frozen_at ?? null,
     model, run_verdict: (readJson(`${dir}/verdict.json`, {}) ?? {}).verdict ?? null, capture_complete: coverage.complete, coverage_reasons: coverage.reasons,
@@ -319,8 +329,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   runs = mergeIsolationFindings(runs, findingsDoc);
   const result = calibrate(runs);
   const usage = calibrateUsage(runs);
-  const table = renderCalibration(result, { frozenRules: frozen });
-  const usageTable = renderUsage(usage, { frozenRules: frozen });
+  // 主表按 (rules_version, 实验标识) 分组:同一规则下不同实验不并成一行,旧批次
+  // 各自成行(2026-09-10)。cumulative 仍在最后一行,但它跨规则跨实验,只描述历史。
+  const table = renderCalibration(result, { frozenRules: frozen, byExperiment: true });
+  const usageTable = renderUsage(usage, { frozenRules: frozen, byExperiment: true });
   if (mdOut) {
     const { writeFileSync } = await import("node:fs");
     const { createHash } = await import("node:crypto");
@@ -338,13 +350,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log("\n## 实际使用(参考判定 = 采纳)\n");
   console.log(usageTable);
   console.log("\n## Per run\n");
-  console.log("| run | rules | model | run verdict | capture | asset | hidden | judged used | delivery | 送达桶 | adopted | benefited | 使用桶 |");
-  console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  console.log("| run | rules | experiment | model | run verdict | capture | asset | hidden | judged used | delivery | 送达桶 | adopted | benefited | 使用桶 |");
+  console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   const uBy = new Map(usage.rows.map((r) => [`${r.run_id}|${r.asset_id}`, r]));
   for (const r of result.rows) {
     const src = runs.find((x) => x.run_id === r.run_id);
     const ur = uBy.get(`${r.run_id}|${r.asset_id}`) ?? {};
     const tri = (v) => (v === null || v === undefined ? "unknown" : String(v));
-    console.log(`| ${r.run_id} | ${r.rules_version ?? "—"} | ${r.model ?? "—"} | ${r.run_verdict ?? "—"} | ${src?.capture_complete ? "complete" : "INCOMPLETE"} | ${r.asset_id} | ${tri(r.hidden)} | ${r.judged_used} | ${r.delivery} | ${r.bucket} | ${tri(ur.adopted)} | ${tri(ur.benefited)} | ${ur.bucket ?? "—"} |`);
+    console.log(`| ${r.run_id} | ${r.rules_version ?? "—"} | ${r.experiment ?? "—"} | ${r.model ?? "—"} | ${r.run_verdict ?? "—"} | ${src?.capture_complete ? "complete" : "INCOMPLETE"} | ${r.asset_id} | ${tri(r.hidden)} | ${r.judged_used} | ${r.delivery} | ${r.bucket} | ${tri(ur.adopted)} | ${tri(ur.benefited)} | ${ur.bucket ?? "—"} |`);
   }
 }

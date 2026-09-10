@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-09T21:06:10.267Z。
+生成于 2026-09-10T21:11:05.628Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 33507ad18f08、`calibration.mjs` @ b59437e4fbe5、`calibrate-runs.mjs` @ 06d3b7fdbb11
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 33507ad18f08、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 922fb2b42d3a
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -58,8 +58,9 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 
 | set | TP | FP | TN | FN | isolation failure | unsettled | rated/total | accuracy |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| rules unrecorded | 24 | 0 | 8 | 0 | 0 | 6 | 32/38 | 1 |
-| rules gate-rules-2026-09-08f (frozen) | 20 | 0 | 9 | 0 | 1 | 0 | 29/30 | 1 |
+| unrecorded · pre-batch (2026-09-05) | 0 | 0 | 0 | 0 | 0 | 6 | 0/6 | — |
+| unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 0 | 32/32 | 1 |
+| gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 9 | 0 | 1 | 0 | 29/30 | 1 |
 | **cumulative** | 44 | 0 | 17 | 0 | 1 | 6 | 61/68 | 1 |
 
 An isolation failure is not a judging error: the asset was hidden and its
@@ -80,8 +81,9 @@ unsettled: the content did reach the model.
 
 | set | TP | FP | TN | FN | 采纳未知 | rated/total | accuracy | 采纳证据覆盖率 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| rules unrecorded | 28 | 0 | 8 | 0 | 2 | 36/38 | 1 | 0.947 |
-| rules gate-rules-2026-09-08f (frozen) | 20 | 0 | 10 | 0 | 0 | 30/30 | 1 | 1 |
+| unrecorded · pre-batch (2026-09-05) | 4 | 0 | 0 | 0 | 2 | 4/6 | 1 | 0.667 |
+| unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 32/32 | 1 | 1 |
+| gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 10 | 0 | 0 | 30/30 | 1 | 1 |
 | **cumulative** | 48 | 0 | 18 | 0 | 2 | 66/68 | 1 | 0.971 |
 
 **规则 gate-rules-2026-09-08f · 使用检测**:可评 30/30,假阳性 0 个,假阴性 0 个,准确率 1。
