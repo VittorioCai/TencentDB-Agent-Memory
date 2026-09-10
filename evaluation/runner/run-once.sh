@@ -206,6 +206,22 @@ if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" ]]; then
     warn "no agent memory tree at $MEM_ROOT — nothing to isolate"
   fi
 fi
+# An empty-baseline batch (MEM_EXPECT_EMPTY=1): the consumer's profile must not
+# exist when the session starts. The memory pipeline writes the previous
+# session's consolidation minutes later — measured 13 min after the smoke run —
+# so it can land between two runs, after the earlier run's rollback. If it did,
+# clear the consumer's profile (its designed baseline is empty) and record how
+# many files were cleared; the trial checkpoint then judges hash_before against
+# the frozen empty baseline honestly instead of silently starting polluted.
+MEM_PRE_RUN_CLEARED=0
+if [[ "${MEM_EXPECT_EMPTY:-0}" == "1" && -n "$MEM_AGENT" ]]; then
+  n_before="$(mem_files_scoped)"
+  if (( n_before > 0 )); then
+    warn "consumer $MEM_AGENT has $n_before file(s) before the run (late pipeline write); clearing to the frozen empty baseline"
+    docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c "cd '$MEM_ROOT' && rm -rf ./*agent%3A$MEM_AGENT*" 2>/dev/null || warn "could not clear the consumer profile"
+    MEM_PRE_RUN_CLEARED="$n_before"
+  fi
+fi
 MEM_HASH_BEFORE="$(mem_hash)"
 MEM_SCOPE_BEFORE="$(mem_hash_scoped)"; MEM_SCOPE_FILES_BEFORE="$(mem_files_scoped)"
 [[ -n "$MEM_AGENT" ]] && info "consumer $MEM_AGENT memory: $MEM_SCOPE_FILES_BEFORE file(s), $(cut -c1-12 <<<"$MEM_SCOPE_BEFORE")…"
@@ -606,9 +622,9 @@ node "$EVAL/runner/context-confounders.mjs" --run="$RUN_DIR" \
 RUN_TASK_NAME="$TASK_NAME" \
 REPO_ROOT_REPORT="$REPO_ROOT" MEM_ROOT_REPORT="$MEM_ROOT" MEM_HASH_BEFORE="${MEM_HASH_BEFORE:-}" MEM_HASH_AFTER="${MEM_HASH_AFTER:-}" \
 MEM_AGENT="${MEM_AGENT:-}" MEM_SCOPE_BEFORE="${MEM_SCOPE_BEFORE:-}" MEM_SCOPE_AFTER="${MEM_SCOPE_AFTER:-}" \
-MEM_HASH_RESTORED="${MEM_HASH_RESTORED:-}" MEM_SCOPE_RESTORED="${MEM_SCOPE_RESTORED:-}" \
+MEM_HASH_RESTORED="${MEM_HASH_RESTORED:-}" MEM_SCOPE_RESTORED="${MEM_SCOPE_RESTORED:-}" MEM_PRE_RUN_CLEARED="${MEM_PRE_RUN_CLEARED:-0}" \
 SESSION_CWD="${SESSION_CWD:-}" SESSION_PROJECT_DIR="${SESSION_PROJECT_DIR:-}" SESSION_CACHE_BEFORE="${SESSION_CACHE_BEFORE:-}" \
-SESSION_SIBLINGS="${SESSION_SIBLINGS:-}" PROBE_CWD="$( p="$(pgrep -f proxy-observability-probe 2>/dev/null | head -1)"; [[ -n "$p" ]] && lsof -a -p "$p" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || echo "" )" REPO_ROOT_REPORT="$REPO_ROOT" \
+SESSION_SIBLINGS="${SESSION_SIBLINGS:-}" PROBE_CWD="$( p="$(pgrep -f "node .*proxy-observability-probe\.mjs" 2>/dev/null | head -1)"; [[ -n "$p" ]] && lsof -a -p "$p" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1 || echo "" )" REPO_ROOT_REPORT="$REPO_ROOT" \
 MEM_SCOPE_FILES_BEFORE="${MEM_SCOPE_FILES_BEFORE:-}" MEM_SCOPE_FILES_AFTER="${MEM_SCOPE_FILES_AFTER:-}" \
 MEM_ISOLATED="$([[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" && "${MEM_HASH_RESTORED:-}" == "${MEM_HASH_BEFORE:-}" ]] && echo 1 || echo 0)" \
 python3 - "$RUN_DIR" "$RUN_ID" "$LABEL" "$IDENTITY" "$STARTED_AT" "$VERDICT" "$CONV_ID" "$RESOLVED_LINE" "$EXTRACTION_ENABLED" "$GATE" "$ABLATE" <<'PY'
@@ -696,6 +712,8 @@ manifest = {
             "hash_after": os.environ.get("MEM_SCOPE_AFTER") or None,
             "hash_restored": os.environ.get("MEM_SCOPE_RESTORED") or None,
             "files_before": int(os.environ.get("MEM_SCOPE_FILES_BEFORE") or 0),
+            # >0 means a late pipeline write was found and cleared before the snapshot.
+            "pre_run_cleared_files": int(os.environ.get("MEM_PRE_RUN_CLEARED") or 0),
             "files_after": int(os.environ.get("MEM_SCOPE_FILES_AFTER") or 0),
         } if os.environ.get("MEM_AGENT") else None),
     },

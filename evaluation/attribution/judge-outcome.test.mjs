@@ -236,3 +236,28 @@ test("corrected cites the probe that reproduced the failure", () => {
   assert.equal(wrong.state, "corrected");
   assert.match(wrong.proof_refs[0].detail, /an independent probe also failed to reach it \(timed out, harness probe at run time/);
 });
+
+// ---------------------------------------------------------------------------
+// 判别值在 attempts[].value 里(追踪头),不在地址里 —— 2026-09-11 准备运行 #1
+//
+// 批次四的判别值是每条资产各自的 x-team-trace 值,验收把它记在 attempt.value;地址
+// 仍是两条资产各自的 host:port,但不再是判别值。dialledToken 只看 host/port,于是拨错
+// 地址超时的那次判成 needs_review("地址不是资产的值"),错资产永远拿不到 corrected,
+// 证据基础缺一半。
+// ---------------------------------------------------------------------------
+import { dialledToken as _dt } from "./judge-outcome.mjs";
+
+test("attempt.value 等于资产判别值 → 算这次尝试拨的是该资产的值", () => {
+  const a = { host: "10.244.7.19", port: "8096", value: "bt-tracewrong9", ok: false, why: "timed out" };
+  assert.equal(_dt(a, ["bt-tracewrong9"]), "bt-tracewrong9");
+});
+
+test("value 不等于判别值、地址也不含 → 仍然 null", () => {
+  const a = { host: "10.244.7.19", port: "8096", value: "bt-other", ok: false, why: "timed out" };
+  assert.equal(_dt(a, ["bt-tracewrong9"]), null);
+});
+
+test("value 只按整值比,不按子串:bt-trace 不能命中 bt-tracewrong9", () => {
+  const a = { host: "1.2.3.4", port: "9", value: "bt-tracewrong9", ok: false, why: "timed out" };
+  assert.equal(_dt(a, ["bt-trace"]), null);
+});

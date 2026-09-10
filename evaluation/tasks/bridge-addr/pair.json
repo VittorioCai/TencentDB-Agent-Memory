@@ -3,7 +3,7 @@
   "author_agent_id": "agt-5e4hna56j9",
   "consumer_agent_id": "agt-giawngxum4",
   "task_id": "task-5e6xp4mrrw",
-  "pool_snapshot_at": "2026-09-10T14:57:47Z",
+  "pool_snapshot_at": "2026-09-10T23:16:01Z",
   "pool_asset_count": 2,
   "assets": [
     {
@@ -31,7 +31,7 @@
   "batch4": {
     "conditions": "evaluation/gate/artifacts/batch4-conditions.json",
     "gate_baseline": "evaluation/gate/artifacts/gate_baseline_batch4.json",
-    "frozen_at": "2026-09-10T23:03:10.938Z",
+    "frozen_at": "2026-09-10T23:21:51.384Z",
     "consumer_agent_id": "agt-giawngxum4",
     "tokens": {}
   }

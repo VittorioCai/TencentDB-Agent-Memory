@@ -1,4 +1,6 @@
-批次 4 条件核对 — 清单 evaluation/gate/artifacts/batch4-conditions.json,冻结于 2026-09-10T23:03:10.938Z
+(clear-consumer-residue) 消费者 agt-giawngxum4 清理了 0 个残留文件(记忆流水线在上一次会话后的迟到写入)
+
+批次 4 条件核对 — 清单 evaluation/gate/artifacts/batch4-conditions.json,冻结于 2026-09-10T23:21:51.384Z
 
 PASS  asset wrong skl-sZFb3KatWY6m 可读
 PASS  asset wrong 版本
@@ -38,6 +40,8 @@ PASS  整树记忆哈希 == 冻结值(仅提示:整树会被别的 agent 的迟�
 PASS  asset wrong 判别值来源唯一且不可从部署推导
 PASS  asset right 判别值来源唯一且不可从部署推导
 PASS  来源扫描无缺口
+NOTE  运行记录根里的 trace(批次内预期;靠目录隔离不可达,单列)
+      期望 "0 before the batch"  实际 "62 处"
 PASS  CodeBuddy 项目缓存已纳入扫描
 PASS  run-once.sh 会话目录策略已记录
 PASS  文件未变 evaluation/tasks/bridge-addr/task.md
@@ -58,9 +62,11 @@ PASS  文件未变 evaluation/runner/isolation-check.mjs
 PASS  文件未变 evaluation/runner/token-provenance.mjs
 PASS  文件未变 evaluation/gate/core-gate.sh
 PASS  文件未变 MemoryCore/src/metadata/service/asset-gate.ts
+NOTE  准备运行 ≠ 对照样本:正式 run id 与 source_runs 零交集且准备运行全标 b4-prep
+      期望 "disjoint, all prep-labelled"  实际 "没有正式对照清单(批次未开)"
 PASS  闸门基线文件存在且 rules/版本一致
 PASS  pair.json 顶层消费者 == 冻结消费者
 PASS  pair.json 资产版本 == 线上版本
 
-通过 61  未过 0  未知 0  提示 0  / 共 61
+通过 61  未过 0  未知 0  提示 2  / 共 63
 结论:条件一致,可以开试跑

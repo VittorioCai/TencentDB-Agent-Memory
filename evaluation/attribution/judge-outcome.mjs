@@ -61,7 +61,14 @@ export function dialledToken(attempt, tokens) {
     attempt.host ?? null,
     attempt.port ?? null,
   ].filter(Boolean).map(String);
-  return tokens.find((t) => dialled.some((d) => d === t || d.includes(t))) ?? null;
+  // 地址类判别值:整值或子串命中 host / port / host:port。
+  const byAddress = tokens.find((t) => dialled.some((d) => d === t || d.includes(t))) ?? null;
+  if (byAddress) return byAddress;
+  // 请求体里的判别值(x-team-trace 等,验收记在 attempt.value):**只按整值**比——
+  // 它是资产要求原样发送的值,子串没有意义(2026-09-11:批次四的判别值全在这里,
+  // 只看地址会把拨错地址超时的那次判成"地址不是资产的值",错资产拿不到 corrected)。
+  const value = attempt.value == null ? "" : String(attempt.value);
+  return value ? (tokens.find((t) => String(t) === value) ?? null) : null;
 }
 
 /**

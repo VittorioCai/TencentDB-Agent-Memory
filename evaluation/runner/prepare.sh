@@ -59,7 +59,7 @@ die()  { echo "${C_R}[error]${C_0} $*" >&2; exit 1; }
 probe_running() {
   if [[ -f "$PROBE_PID" ]] && kill -0 "$(cat "$PROBE_PID")" 2>/dev/null; then return 0; fi
   local pid
-  pid="$(pgrep -f "proxy-observability-probe" 2>/dev/null | head -1)"
+  pid="$(pgrep -f "node .*proxy-observability-probe\.mjs" 2>/dev/null | head -1)"
   if [[ -n "$pid" ]]; then echo "$pid" > "$PROBE_PID"; return 0; fi
   rm -f "$PROBE_PID"
   return 1

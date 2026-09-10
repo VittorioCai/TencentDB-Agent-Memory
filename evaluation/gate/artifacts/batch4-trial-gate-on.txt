@@ -1,0 +1,29 @@
+试跑检查点 — /private/tmp/topic4-runs/20260910T232305Z-trial-gate-on.8kCn/20260910T232305Z-trial-gate-on
+(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)
+
+【条件一致性】
+  PASS  run 目录 tokens.json 与任务目录一致
+  PASS  规则版本与清单一致
+  PASS  闸门臂已记录(off/on)
+  PASS  开跑状态符合 on 臂
+【隔离】
+  PASS  消费者身份 == 清单消费者
+  PASS  起点 == 冻结的消费者基线
+  PASS  运行后已回滚(还原后哈希==起点)
+  PASS  会话工作目录不是仓库、缓存为空
+【采集完整性】
+  PASS  捕获覆盖整段会话(verifyCoverage)
+【实际采用】
+  PASS  验收记录有目标尝试
+  PASS  每次尝试都带回 trace 值(attempts[].value)
+  PASS  采纳判定对每条资产可判(非 unknown)
+【隐藏(gate-on)】
+  PASS  被藏资产开跑时 hidden=true(status=failed),不得 unknown
+【模型一致】
+  PASS  响应里的服务模型名全部一致且等于冻结值
+【目录隔离】
+  PASS  会话 cwd 无兄弟目录
+  PASS  探针 cwd 不在仓库
+
+通过 16  未过 0  未知 0  / 共 16
+结论:检查点全过,这一对可作为批次的凭据

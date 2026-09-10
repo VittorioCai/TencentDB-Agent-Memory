@@ -77,6 +77,9 @@ const sh = (args) => execFileSync("docker", args, { encoding: "utf8", stdio: ["i
 function memTreeHash() {
   try { return sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && find . -type f | LC_ALL=C sort | xargs -r sha256sum | sha256sum | cut -d' ' -f1`]); } catch { return "absent"; }
 }
+function memScopedFiles(agentId) {
+  try { return sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && find . -type f -path '*agent%3A${agentId}*' | wc -l | tr -d ' '`]); } catch { return "0"; }
+}
 function memScopedHash(agentId) {
   try { return sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && find . -type f -path '*agent%3A${agentId}*' | LC_ALL=C sort | xargs -r sha256sum | sha256sum | cut -d' ' -f1`]); } catch { return "absent"; }
 }
@@ -225,14 +228,13 @@ async function readLive(spec) {
       continue;
     }
     const found = [], derivs = [];
-    let clean = true;
     for (const t of plain) {
       const v = provenanceOf(t, sources);
-      if (!v.clean) clean = false;
       found.push(...v.found_in.map((f) => ({ name: f.name, kind: f.kind, count: f.count })));
       derivs.push(isDerivableFromDeployment(t));
     }
-    provenance[id] = { clean, derivable_from_deployment: derivs.some(Boolean), found_in: found };
+    const split = splitProvenanceHits(found);
+    provenance[id] = { clean: split.elsewhere.length === 0, derivable_from_deployment: derivs.some(Boolean), found_in: split.elsewhere, in_records: split.in_records };
   }
   const provenanceGapList = [
     ...td.skipped.map((x) => `task:${x.name}: ${x.why}`),
@@ -291,6 +293,53 @@ export function gateBaselineToWrite(existing, fresh) {
   return { write: true, doc: fresh, why: existing ? "已有基线没有证据,覆盖" : "没有已有基线,新写" };
 }
 
+/**
+ * 准备运行不得兼作对照样本(2026-09-11 硬约束)。
+ *
+ * 准备运行产生闸门判定的证据(gate baseline 的 source_runs);正式对照衡量闸门的效果。
+ * 同一批运行兼两职就是用 A 证明 A。判据:正式清单里的 run id 与 source_runs 零交集,
+ * 且 source_runs 每一条的标签都是准备标签。证据未建 / 批次未开 → 未知,不是通过。
+ */
+export function prepFormalDisjoint(baseline, manifest, labelsById, prepLabel = "b4-prep") {
+  // build-baseline 的 source_runs 是对象({run_id, verdict, event_ids…}),手写的可能是字符串。
+  const src = Array.isArray(baseline?.source_runs) ? baseline.source_runs.map((r) => String(r?.run_id ?? r)) : [];
+  if (!src.length) return { ok: null, overlap: [], why: "闸门基线还没有 source_runs(证据未建立)" };
+  const formal = Array.isArray(manifest?.runs) ? manifest.runs.map((r) => String(r.run_id ?? r)) : null;
+  if (!formal) return { ok: null, overlap: [], why: "没有正式对照清单(批次未开)" };
+  const overlap = src.filter((id) => formal.includes(id));
+  const mislabeled = src.filter((id) => !String(labelsById?.[id] ?? "").startsWith(prepLabel));
+  if (overlap.length) return { ok: false, overlap, why: `正式对照里含 source_runs:${overlap.join("、")}——证据与样本必须是不同的运行` };
+  if (mislabeled.length) return { ok: false, overlap, why: `source_runs 里有不带准备标签(${prepLabel})的运行:${mislabeled.join("、")}` };
+  return { ok: true, overlap, why: `正式 ${formal.length} 次与准备 ${src.length} 次零交集,准备运行全部标 ${prepLabel}` };
+}
+
+/** 到 runs/ 与仓库外记录根里找一次运行的 run.json,读它的标签。 */
+function labelOfRun(runId) {
+  const cands = [resolve(REPO, "evaluation/runner/runs", runId, "run.json")];
+  if (existsSync(RUN_RECORDS_ROOT)) {
+    for (const d of readdirSync(RUN_RECORDS_ROOT)) {
+      const p = join(RUN_RECORDS_ROOT, d, runId, "run.json");
+      cands.push(p);
+    }
+  }
+  for (const p of cands) if (existsSync(p)) return readJson(p, {})?.label ?? null;
+  return null;
+}
+
+/**
+ * 来源命中分两类:仓库外运行记录根(name 以 records: 开头)里的命中,是模型自己发出
+ * 的 trace 落在记录里——批次内必然如此,靠"记录在仓库外、无兄弟目录、harness cwd 不在
+ * 仓库"让它不可达,单列为提示;其余来源(仓库、记忆、CodeBuddy 缓存、旧 runs/)的命中
+ * 才是"来源不唯一"。
+ */
+export function splitProvenanceHits(found) {
+  const list = Array.isArray(found) ? found : [];
+  // 批次自己的痕迹:仓库外记录根,以及本批次会话(cwd 在 /private/tmp/topic4-sessions/…)
+  // 的 CodeBuddy 项目缓存——每次会话独立 slug,后一次会话的 cwd 看不到前一次的。
+  const isBatchResidue = (n) => n.startsWith("records:") || n.startsWith("codebuddy:private-tmp-topic4-sessions-");
+  return { in_records: list.filter((f) => isBatchResidue(String(f?.name ?? ""))), elsewhere: list.filter((f) => !isBatchResidue(String(f?.name ?? ""))) };
+}
+
 async function freeze(args) {
   const batch = Number(args.batch);
   if (!batch) throw new Error("--batch=<n> is required");
@@ -301,6 +350,17 @@ async function freeze(args) {
   // 那份记忆(8 处命中)——正是 CLAUDE.md §11 的事故。描述"现在是什么"的文件不能
   // 当作"应该是什么"的来源;应该是什么,由发起这次冻结的人说。
   if (!args.consumer) throw new Error("--consumer=<agent_id> is required: the consumer is the intended condition, not something to read off pair.json");
+  // 空基线批次:冻结前先清掉流水线的迟到残留(与 --check 同一个动作),否则会把残留
+  // 冻成"基线"(2026-09-11:prep1 结束 30 秒后写入的 4 个文件被冻进了清单)。不带
+  // --clear-consumer-residue 而消费者非空 → 拒绝冻结,不静默。
+  {
+    const n = Number(memScopedFiles(String(args.consumer)));
+    if (n > 0) {
+      if (!args["clear-consumer-residue"]) throw new Error(`consumer ${args.consumer} has ${n} file(s); an empty-baseline batch cannot be frozen on a polluted consumer — pass --clear-consumer-residue to clear the late pipeline write first`);
+      sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && rm -rf ./*agent%3A${args.consumer}*`]);
+      console.log(`(clear-consumer-residue) 冻结前清理了消费者 ${args.consumer} 的 ${n} 个残留文件`);
+    }
+  }
   const spec = {
     task_dir: taskDir,
     reader_key_file: args["reader-key"] ?? "deploy/global-images/.topic4-user-key",
@@ -336,7 +396,16 @@ async function freeze(args) {
     consumer: { agent_id: spec.consumer_agent_id, user_id: live.consumer.owner_user_id, agent_name: live.consumer.name },
     author: { agent_id: spec.author_agent_id, user_id: live.author.owner_user_id },
     cross_user: live.consumer.owner_user_id && live.author.owner_user_id ? live.consumer.owner_user_id !== live.author.owner_user_id : null,
-    model: { id: args.model ?? "deepseek-v4-flash", source: "batch-3 captures; the trial run's capture must show the same id", invocation: "run-once.sh --auto — a fresh CodeBuddy process per run" },
+    // 两栏:请求里写的模型名,与响应 chunk 里服务实际报的模型名。2026-09-11 准备运行 #1
+    // 发现服务端报 deepseek-flash,而批次三的捕获里服务端报 deepseek-v4-flash(请求名两批
+    // 都是 deepseek-v4-flash)——共享条件变了,必须冻结实际服务名并在报告里点明差异。
+    model: {
+      requested: args["model-requested"] ?? "deepseek-v4-flash",
+      id: args.model ?? "deepseek-flash",
+      source: args.model ? "response chunks of the run named in --model-source" : "response chunks of prep run 20260910T231329Z-b4-prep",
+      differs_from_batch3: "batch 3 captures served deepseek-v4-flash; batch 4 serves deepseek-flash under the same requested name",
+      invocation: "run-once.sh --auto — a fresh CodeBuddy process per run",
+    },
     proxy: live.proxy,
     isolation: {
       require_empty_consumer: true,
@@ -350,6 +419,11 @@ async function freeze(args) {
     },
     token_provenance: { sources_scanned: live.provenance_sources, gaps: live.provenance_gaps, gap_list: live.provenance_gap_list, by_asset: live.provenance },
     files: live.files,
+    prep: {
+      label: "b4-prep",
+      rule: "准备运行(gate-off,产生闸门证据)单独标 b4-prep;build-baseline 的 source_runs 记它们;正式对照运行 id 与 source_runs 零交集。报告里准备运行单列一行,是证据基础不是样本。",
+      formal_manifest: `evaluation/gate/artifacts/batch${batch}-runs.json`,
+    },
     arms: {
       vary: ["gate"], values: ["off", "on"], order: "interleaved: off, on, off, on, …",
       held_constant: "everything else in this file — task, verifier, tokens, asset versions, consumer, model, proxy config, memory baseline, rules",
@@ -435,7 +509,20 @@ async function check(args) {
   const cpath = resolve(REPO, args.conditions ?? "");
   const c = readJson(cpath, null);
   if (!c) throw new Error(`--conditions=<file> missing or unreadable: ${args.conditions}`);
+  // --clear-consumer-residue:空基线批次里,记忆流水线在每次会话结束后约 30 秒才写入
+  // 消费者 profile,晚于 run-once 的还原;两次运行之间它就留在那里。run-once 开跑时的
+  // 守卫会清掉并记录;核对在运行之前跑,所以这里提供同一个动作,显式、打印、可审计。
+  // 只清本批次消费者的 profile,且只在清单声明 require_empty_consumer 时。
+  let cleared = null;
+  if (args["clear-consumer-residue"] && c.isolation?.require_empty_consumer && c.consumer?.agent_id) {
+    const n = Number(memScopedFiles(c.consumer.agent_id));
+    if (n > 0) {
+      sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && rm -rf ./*agent%3A${c.consumer.agent_id}*`]);
+      cleared = n;
+    } else cleared = 0;
+  }
   const live = await readLive(c.spec);
+  if (cleared !== null) console.log(`(clear-consumer-residue) 消费者 ${c.consumer.agent_id} 清理了 ${cleared} 个残留文件(记忆流水线在上一次会话后的迟到写入)\n`);
   const rows = [];
   const row = (name, ok, expected, actual, fix) => rows.push({ name, ok, expected, actual, fix });
   const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -491,11 +578,24 @@ async function check(args) {
       lp.clean === null ? `资产须 approved 才能取回明文扫描;先 core-gate.sh --reset --baseline ${c.arms.gate_baseline}` : "");
   }
   row("来源扫描无缺口", live.provenance_gaps === 0, 0, live.provenance_gaps === 0 ? 0 : `${live.provenance_gaps}: ${live.provenance_gap_list.slice(0, 4).join(" | ")}`);
+  {
+    const inRec = Object.values(live.provenance).flatMap((p) => p.in_records ?? []);
+    rows.push({ name: "运行记录根里的 trace(批次内预期;靠目录隔离不可达,单列)", ok: inRec.length ? "note" : true, expected: "0 before the batch", actual: `${inRec.length} 处` });
+  }
   row("CodeBuddy 项目缓存已纳入扫描", live.codebuddy_cache.files_scanned > 0 || live.codebuddy_cache.sessions_under_repository_slug === 0, ">0 files scanned", `${live.codebuddy_cache.files_scanned} files, ${live.codebuddy_cache.sessions_under_repository_slug} sessions under the repository slug`);
   row("run-once.sh 会话目录策略已记录", typeof c.isolation.session_cwd_policy === "string" && /fresh empty directory/.test(c.isolation.session_cwd_policy), "recorded", c.isolation.session_cwd_policy ? "recorded" : "missing");
 
   for (const [f, h] of Object.entries(c.files)) row(`文件未变 ${f}`, live.files[f] === h, h?.slice(0, 12), live.files[f]?.slice(0, 12), "代码变了:要么重新冻结,要么在报告里说明差异");
 
+  {
+    const gb = readJson(resolve(REPO, c.arms.gate_baseline), null);
+    const manifest = readJson(resolve(REPO, c.prep?.formal_manifest ?? `evaluation/gate/artifacts/batch${c.batch}-runs.json`), null);
+    const labels = Object.fromEntries((gb?.source_runs ?? []).map((r) => String(r?.run_id ?? r)).map((id) => [id, labelOfRun(id)]));
+    const d = prepFormalDisjoint(gb, manifest, labels, c.prep?.label ?? "b4-prep");
+    // 证据未建 / 批次未开时是 NOTE(还轮不到它),不是 UNKN——否则准备运行之前的核对
+    // 永远过不了,而准备运行本来就在证据之前。有了正式清单后它才有 PASS/FAIL。
+    rows.push({ name: "准备运行 ≠ 对照样本:正式 run id 与 source_runs 零交集且准备运行全标 b4-prep", ok: d.ok === null ? "note" : d.ok, expected: "disjoint, all prep-labelled", actual: d.why });
+  }
   row("闸门基线文件存在且 rules/版本一致", (() => { const gb = readJson(resolve(REPO, c.arms.gate_baseline), null); return !!gb && gb.rules_version === c.rules_version && Object.entries(c.assets).every(([id, a]) => gb.assets?.[id]?.version === a.version); })(), "exists, same rules, same versions", existsSync(resolve(REPO, c.arms.gate_baseline)) ? "exists" : "missing");
   const pair = readJson(resolve(REPO, c.spec.task_dir, "pair.json"), {});
   row("pair.json 顶层消费者 == 冻结消费者", pair.consumer_agent_id === c.consumer.agent_id, c.consumer.agent_id, pair.consumer_agent_id);
@@ -549,13 +649,16 @@ function trialCheckpoints(runDir, c) {
   add("条件一致性", "规则版本与清单一致", runRules ? runRules === c.rules_version : null, `${runRules} vs ${c.rules_version}`);
   const arm = run.gate?.mode ?? null;
   add("条件一致性", "闸门臂已记录(off/on)", arm === "off" || arm === "on", `gate.mode=${arm}`);
+  // on 臂的期望状态来自**闸门基线的判定**(build-baseline 从准备运行冻结的 decisions),
+  // 不是条件清单里冻结时 Core 的上一次判定——那是 --apply 之前的 pending。
+  const gbForTrial = readJson(resolve(REPO, c.arms.gate_baseline), null);
+  const frozenDecision = (id) => (gbForTrial?.decisions ?? []).find((d) => d.asset_id === id)?.decision ?? gbForTrial?.decisions_at_freeze?.[id]?.decision ?? null;
+  const expectedOn = (id) => ({ reject: "failed", admit: "approved" }[frozenDecision(id)] ?? "candidate");
   if (arm) {
     const st = run.gate?.status_at_start ?? {};
     const ids = Object.keys(c.assets);
-    const asExpected = arm === "off"
-      ? ids.every((id) => st[id] === "approved")
-      : ids.every((id) => st[id] === (c.assets[id].gate_decision_at_freeze === "reject" ? "failed" : "approved"));
-    add("条件一致性", `开跑状态符合 ${arm} 臂`, Object.keys(st).length ? asExpected : null, JSON.stringify(st));
+    const asExpected = arm === "off" ? ids.every((id) => st[id] === "approved") : ids.every((id) => st[id] === expectedOn(id));
+    add("条件一致性", `开跑状态符合 ${arm} 臂`, Object.keys(st).length ? asExpected : null, `${JSON.stringify(st)}${arm === "on" ? ` 期望 ${JSON.stringify(Object.fromEntries(ids.map((id) => [id, expectedOn(id)])))}` : ""}`);
   }
 
   // —— 隔离 ——
@@ -594,7 +697,7 @@ function trialCheckpoints(runDir, c) {
   const arm2 = run.gate?.mode ?? null;
   if (arm2 === "on") {
     const st = run.gate?.status_at_start ?? {};
-    const rejected = Object.entries(c.assets).filter(([, a]) => a.gate_decision_at_freeze === "reject").map(([id]) => id);
+    const rejected = Object.keys(c.assets).filter((id) => frozenDecision(id) === "reject");
     const allHidden = rejected.length > 0 && rejected.every((id) => st[id] === "failed");
     add("隐藏(gate-on)", "被藏资产开跑时 hidden=true(status=failed),不得 unknown", Object.keys(st).length ? allHidden : null,
       `rejected=${rejected.join(",") || "(none)"} status=${JSON.stringify(st)}`);

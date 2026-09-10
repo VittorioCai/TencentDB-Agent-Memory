@@ -1,8 +1,8 @@
 {
   "schema": "batch-conditions-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T23:03:10.938Z",
-  "frozen_on_top_of": "3f56d7f",
+  "frozen_at": "2026-09-10T23:21:51.384Z",
+  "frozen_on_top_of": "7b9c3f4",
   "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
   "spec": {
     "task_dir": "evaluation/tasks/bridge-addr",
@@ -66,20 +66,22 @@
   },
   "cross_user": true,
   "model": {
-    "id": "deepseek-v4-flash",
-    "source": "batch-3 captures; the trial run's capture must show the same id",
+    "requested": "deepseek-v4-flash",
+    "id": "deepseek-flash",
+    "source": "response chunks of the run named in --model-source",
+    "differs_from_batch3": "batch 3 captures served deepseek-v4-flash; batch 4 serves deepseek-flash under the same requested name",
     "invocation": "run-once.sh --auto — a fresh CodeBuddy process per run"
   },
   "proxy": {
     "config_path": "deploy/global-images/.proxy-config/config.yaml",
     "config_sha256": "76428b8b89ba57161c33a62cec9e955ddd974a30e4257f2381cc6d31dde55092",
-    "config_mtime": "2026-09-10T23:03:02.462Z",
+    "config_mtime": "2026-09-10T23:07:37.610Z",
     "forced_identity": {
       "team_id": "team-5ezfoladb5",
       "agent_id": "agt-giawngxum4",
       "task_id": "task-5e6xp4mrrw"
     },
-    "container_started_at": "2026-09-10T23:03:02.900701802Z"
+    "container_started_at": "2026-09-10T23:07:37.87325393Z"
   },
   "isolation": {
     "require_empty_consumer": true,
@@ -90,7 +92,7 @@
       "projects_dir": "/Users/vittoriocai/.codebuddy/projects",
       "repository_slug": "Users-vittoriocai-Desktop-Tecent_agentmemory-project4-.claude-worktrees-topic4-gate0",
       "sessions_under_repository_slug": 51,
-      "files_scanned": 85,
+      "files_scanned": 87,
       "files_skipped": 0
     },
     "unit_for_same_start": "consumer_scope — the whole-tree hash drifts when the pipeline writes to another agent (measured 2026-09-08T23:20Z, 73 min after the isolated batch)",
@@ -113,19 +115,333 @@
     }
   },
   "token_provenance": {
-    "sources_scanned": 1829,
+    "sources_scanned": 1919,
     "gaps": 0,
     "gap_list": [],
     "by_asset": {
       "skl-sZFb3KatWY6m": {
         "clean": true,
         "derivable_from_deployment": false,
-        "found_in": []
+        "found_in": [],
+        "in_records": [
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T231329Z-b4-prep.EgyY-session/8698690a-455e-41e9-9cc9-479909393086.jsonl",
+            "kind": "cache",
+            "count": 50
+          },
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T231900Z-b4-prep.4fQ8-session/f7a731fd-6b92-402e-a2be-eac7f0beb63e.jsonl",
+            "kind": "cache",
+            "count": 21
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/capture.jsonl",
+            "kind": "record",
+            "count": 59
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/codebuddy-stdout.txt",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/judgement.md",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/outcome-events.before-fix.jsonl",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/outcome-events.jsonl",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/outcome.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.json",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.txt",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.zh.txt",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/run-artifacts.json",
+            "kind": "record",
+            "count": 40
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/tool-call-logs-all.jsonl",
+            "kind": "record",
+            "count": 6
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/tool-call-logs.jsonl",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/used-events.jsonl",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/verdict.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/capture-before.jsonl",
+            "kind": "record",
+            "count": 59
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/capture.jsonl",
+            "kind": "record",
+            "count": 21
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/codebuddy-stdout.txt",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/gate-decisions.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/gate-decisions.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/judgement.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/outcome-events.jsonl",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/outcome.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.json",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.txt",
+            "kind": "record",
+            "count": 6
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.zh.txt",
+            "kind": "record",
+            "count": 6
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/run-artifacts.json",
+            "kind": "record",
+            "count": 13
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/tool-call-logs-all.jsonl",
+            "kind": "record",
+            "count": 8
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/tool-call-logs.jsonl",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/used-events.jsonl",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/verdict.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:probe-capture.jsonl",
+            "kind": "record",
+            "count": 21
+          }
+        ]
       },
       "skl-oBaDO5CceKnr": {
         "clean": true,
         "derivable_from_deployment": false,
-        "found_in": []
+        "found_in": [],
+        "in_records": [
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T231329Z-b4-prep.EgyY-session/8698690a-455e-41e9-9cc9-479909393086.jsonl",
+            "kind": "cache",
+            "count": 69
+          },
+          {
+            "name": "codebuddy:private-tmp-topic4-sessions-20260910T231900Z-b4-prep.4fQ8-session/f7a731fd-6b92-402e-a2be-eac7f0beb63e.jsonl",
+            "kind": "cache",
+            "count": 22
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/capture.jsonl",
+            "kind": "record",
+            "count": 83
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/codebuddy-stdout.txt",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/judgement.md",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/outcome-events.before-fix.jsonl",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/outcome-events.jsonl",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.json",
+            "kind": "record",
+            "count": 4
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.txt",
+            "kind": "record",
+            "count": 5
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/receipt.zh.txt",
+            "kind": "record",
+            "count": 5
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/run-artifacts.json",
+            "kind": "record",
+            "count": 58
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/tool-call-logs-all.jsonl",
+            "kind": "record",
+            "count": 8
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/tool-call-logs.jsonl",
+            "kind": "record",
+            "count": 6
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/used-events.jsonl",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/verdict.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/capture-before.jsonl",
+            "kind": "record",
+            "count": 83
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/capture.jsonl",
+            "kind": "record",
+            "count": 21
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/codebuddy-stdout.txt",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/judgement.md",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/outcome-events.jsonl",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.json",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.txt",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/receipt.zh.txt",
+            "kind": "record",
+            "count": 3
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/run-artifacts.json",
+            "kind": "record",
+            "count": 13
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/tool-call-logs-all.jsonl",
+            "kind": "record",
+            "count": 10
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/tool-call-logs.jsonl",
+            "kind": "record",
+            "count": 2
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/used-events.jsonl",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:20260910T231900Z-b4-prep.fQeA/20260910T231900Z-b4-prep/verdict.json",
+            "kind": "record",
+            "count": 1
+          },
+          {
+            "name": "records:probe-capture.jsonl",
+            "kind": "record",
+            "count": 21
+          }
+        ]
       }
     }
   },
@@ -139,15 +455,20 @@
     "evaluation/attribution/delivery-audit.mjs": "f1c69943b123fa11a21c2ce0dea4029f83eb5745ae2262f42debdd834612ff38",
     "evaluation/attribution/adoption.mjs": "76b4788be935fe6c5551e7e3c7a150db2c9d9d6cc78dd4e8a8f4e4126f39ff81",
     "evaluation/attribution/calibration.mjs": "2b9844bef1262e2f287f3474a634cfb5fbb56c0453987bcbea4440e0aa57a384",
-    "evaluation/attribution/calibrate-runs.mjs": "61c36ab19a9f7dfd8ebb39794f197a09482235accdf339818419a67cc587505c",
+    "evaluation/attribution/calibrate-runs.mjs": "5055eff4ef8f3bc2c064b5e2432ae8e1f4ed6167bea45dbfaa1baf6313447496",
     "evaluation/attribution/judge-hard.mjs": "2455b4e521f8f550bb9a4f41d549981c1433c880e167822eafbe50f727472c12",
-    "evaluation/attribution/judge-outcome.mjs": "df72231b13038ae4da64bad91b100f1767f6aac36efc67192634db01bee1f769",
+    "evaluation/attribution/judge-outcome.mjs": "4ed4b47f33c573a645bce94fefdea17661ca0fd588051fa90add152f56622970",
     "evaluation/attribution/extract-tokens.mjs": "f2ea4b2645941418fc3dc99dd98e88a87c92bb199a68b6db4e845935aa588490",
-    "evaluation/runner/run-once.sh": "8d0b9092a8b6d33ce47984f5fcbeddf556711d2dcc9342b5a2cb1b63edc47ee7",
+    "evaluation/runner/run-once.sh": "7770bfdb97110c78703dfd50076a6c0b438750a999f8474fee2d10904f8143d1",
     "evaluation/runner/isolation-check.mjs": "b5d8b45e8537d06783484cb0f66c8248c2fadf8fd88a255f20a125fbb1f780ec",
     "evaluation/runner/token-provenance.mjs": "670d9ce9010de56f79f34fa0ba2f499be3ead4415e734fdec59478544c19bf18",
     "evaluation/gate/core-gate.sh": "1d6f0c465bdd08a9d889f448ce401ff673cb9aa2c7eb65e1264217532cabcfac",
     "MemoryCore/src/metadata/service/asset-gate.ts": "72cc7cc6efb66121f9a660e8079fbca087c3883f48f4b70f7c68149f17d75672"
+  },
+  "prep": {
+    "label": "b4-prep",
+    "rule": "准备运行(gate-off,产生闸门证据)单独标 b4-prep;build-baseline 的 source_runs 记它们;正式对照运行 id 与 source_runs 零交集。报告里准备运行单列一行,是证据基础不是样本。",
+    "formal_manifest": "evaluation/gate/artifacts/batch4-runs.json"
   },
   "arms": {
     "vary": [
@@ -185,5 +506,5 @@
       "note": "备份在受 .gitignore 保护的持久目录里,含密钥,不进 Git(CLAUDE.md §10)"
     }
   },
-  "gate_baseline_sha256": "ce130e7c8c68cccb5d8661cf132ee63ef00af5154c2bbcc0bbc0c25e80301ca4"
+  "gate_baseline_sha256": "f0351540a01684e57e8ff25473fed75dc748cc96e28e407c66fd82b9d81fe4f8"
 }

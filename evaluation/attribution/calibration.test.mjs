@@ -170,3 +170,14 @@ test("renderCalibration 打出实验分组表,每行标 rules 与实验", () => 
   assert.match(md, /batch3/);
   assert.match(md, /batch4/);
 });
+
+test("准备运行(标签 *-prep)单独成行:是证据基础,不是样本", () => {
+  const runs = [
+    { run_id: "p1", rules_version: "08f", experiment: "batch4-prep (evidence base, not a sample)", assets: { a: { judgedUsed: true, hidden: false, verdict: "delivered" } } },
+    { run_id: "f1", rules_version: "08f", experiment: "batch4", assets: { a: { judgedUsed: true, hidden: false, verdict: "delivered" } } },
+  ];
+  const r = calibrate(runs);
+  assert.ok(r.by_experiment["08f · batch4-prep (evidence base, not a sample)"]);
+  assert.ok(r.by_experiment["08f · batch4"]);
+  assert.equal(r.by_experiment["08f · batch4"].decisions_total, 1, "准备运行不进正式行");
+});

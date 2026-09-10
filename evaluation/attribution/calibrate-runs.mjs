@@ -163,13 +163,16 @@ export function runInput(dir, opts = {}) {
   }
   // 实验标识:同一规则下把不同实验(换 token / 消费者 / 资产版本)分开。有批次号
   // 用批次号;没有的老运行用冻结时刻或起跑日期,标成 pre-batch,各自成行。
-  const experiment = baseline.batch != null
+  const experimentBase = baseline.batch != null
     ? `batch${baseline.batch}`
     : baseline.frozen_at
       ? `pre-batch (frozen ${String(baseline.frozen_at).slice(0, 10)})`
       : run.started_at
         ? `pre-batch (${String(run.started_at).slice(0, 10)})`
         : "unknown";
+  // 准备运行(标签 *-prep)是闸门证据的来源,不是对照样本:单独成行,名字里写明
+  // (2026-09-11 硬约束:证据与样本必须是不同的运行)。
+  const experiment = /(^|-)prep$/.test(String(run.label ?? "")) ? `${experimentBase}-prep (evidence base, not a sample)` : experimentBase;
   return {
     run_id: run.run_id ?? dir.split("/").pop(), label: run.label ?? null,
     rules_version: baseline.rules_version ?? null,
