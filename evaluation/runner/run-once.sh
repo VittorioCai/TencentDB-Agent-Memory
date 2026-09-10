@@ -220,7 +220,7 @@ if [[ -n "${CAPTURE_FROM:-}" ]]; then
   cp "$CAPTURE_FROM" "$CAPTURE"
   info "capture supplied from $CAPTURE_FROM"
 else
-  PROBE_OUT="${PROBE_OUT:-$EVAL/gate0/artifacts/gate0-proxy-capture.jsonl}"
+  PROBE_OUT="${PROBE_OUT:-${RUN_RECORDS_ROOT:-/private/tmp/topic4-runs}/probe-capture.jsonl}"  # outside the repo (2026-09-11)
 
   # The probe appends, so without truncating, run N's capture contains runs
   # 1..N as well — and every count, cost figure and attribution in this run
@@ -476,12 +476,27 @@ cp "$EVAL/provenance/artifacts/early-events.jsonl" "$RUN_DIR/early-events.jsonl"
   --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null) || warn "could not stamp run/task ids on the events"
 
 info "judgement …"
+# 判别值明文只在 Core(方案 2)。判定前经解析契约按冻结的(id、版本、内容哈希、token
+# 哈希)走管理路径取回,写到仓库外的暂存父目录,判定用完即删;run 目录里只留哈希形态
+# 的 tokens.json。解析失败就中止——哈希清单直接喂给判定器会静默丢掉归因(2026-09-11)。
+TOKENS_SRC="$( [[ -f "$TASK_DIR/tokens.json" ]] && echo "$TASK_DIR/tokens.json" || echo "$EVAL/attribution/artifacts/tokens.json" )"
+TOKENS_FOR_JUDGE="$TOKENS_SRC"
+if python3 -c "import json,sys;d=json.load(open('$TOKENS_SRC'));sys.exit(0 if any(isinstance(v,dict) and v.get('token_sha256') for k,v in d.items() if not k.startswith('_')) else 1)" 2>/dev/null; then
+  TOKENS_PLAIN="$STAGE_PARENT/tokens-plain.json"
+  if (cd "$REPO_ROOT" && node "$EVAL/attribution/resolve-tokens.mjs" --task="$TASK_DIR" --out="$TOKENS_PLAIN" > "$RUN_DIR/resolve-tokens.log" 2>&1); then
+    TOKENS_FOR_JUDGE="$TOKENS_PLAIN"
+    info "discriminative values resolved from Core by the frozen quadruple (see resolve-tokens.log); plaintext kept outside the run dir"
+  else
+    cat "$RUN_DIR/resolve-tokens.log" >&2
+    die "could not resolve the discriminative values from Core by the frozen (id, version, content_hash, token_sha256); judging a hash-only manifest would silently drop attribution"
+  fi
+fi
 (cd "$REPO_ROOT" && node "$EVAL/attribution/collect-artifacts.mjs" "$CAPTURE" \
   --task="$TASK_DIR/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null 2>&1) || warn "collect-artifacts failed"
 cp "$EVAL/attribution/artifacts/run-artifacts.json" "$RUN_DIR/run-artifacts.json" 2>/dev/null \
   || { warn "no artifacts collected"; echo "[]" > "$RUN_DIR/run-artifacts.json"; }
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-hard.mjs" \
-  "$RUN_DIR/events.jsonl" "$RUN_DIR/run-artifacts.json" "$( [[ -f "$TASK_DIR/tokens.json" ]] && echo "$TASK_DIR/tokens.json" || echo "$EVAL/attribution/artifacts/tokens.json" )" \
+  "$RUN_DIR/events.jsonl" "$RUN_DIR/run-artifacts.json" "$TOKENS_FOR_JUDGE" \
   > "$RUN_DIR/judgement.md" 2>&1) || warn "judge failed; see $RUN_DIR/judgement.md"
 cp "$EVAL/attribution/artifacts/used-events.jsonl" "$RUN_DIR/used-events.jsonl" 2>/dev/null || : > "$RUN_DIR/used-events.jsonl"
 # The tokens the judgement was made with, kept beside it: versioned, and the
@@ -499,7 +514,7 @@ info "outcomes …"
 REACH_ARG=""
 [[ -f "$RUN_DIR/reachability.json" ]] && REACH_ARG="--reachability=$RUN_DIR/reachability.json"
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-outcome.mjs" \
-  "$RUN_DIR/used-events.jsonl" "$RUN_DIR/verdict.json" "$RUN_DIR/tokens.json" \
+  "$RUN_DIR/used-events.jsonl" "$RUN_DIR/verdict.json" "$TOKENS_FOR_JUDGE" \
   ${REACH_ARG:+"$REACH_ARG"} \
   --out="$RUN_DIR/outcome-events.jsonl" > "$RUN_DIR/outcome.md" 2>&1) \
   || { warn "judge-outcome failed; see $RUN_DIR/outcome.md"; : > "$RUN_DIR/outcome-events.jsonl"; }
@@ -516,7 +531,7 @@ if [[ -z "${CAPTURE_FROM:-}" && -s "$RUN_DIR/outcome-events.jsonl" && "${GATE_ME
 fi
 (cd "$REPO_ROOT" && node "$EVAL/gate/decide.mjs" \
   --events="$RUN_DIR/events.jsonl,$RUN_DIR/used-events.jsonl,$RUN_DIR/outcome-events.jsonl" \
-  --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$RUN_DIR/tokens.json" \
+  --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$TOKENS_FOR_JUDGE" \
   --out="$RUN_DIR/gate-decisions.json" > "$RUN_DIR/gate-decisions.md" 2>&1) \
   || warn "decide failed; see $RUN_DIR/gate-decisions.md"
 
@@ -762,15 +777,12 @@ case "$VERDICT" in
 esac
 python3 -c "import json;print('      ' + json.load(open('$RUN_DIR/verdict.json'))['reason'])" 2>/dev/null || :
 
-# Session and analysis are done; nothing more will be written. Move the staged
-# records into the repo now, so they are preserved, and drop the staging parent.
-mkdir -p "$RUNS_DIR"
-if mv "$RUN_DIR" "$FINAL_RUN_DIR" 2>/dev/null; then
-  rmdir "$STAGE_PARENT" 2>/dev/null || :
-  RUN_DIR="$FINAL_RUN_DIR"
-  info "records moved into the repo → $RUN_DIR"
-else
-  warn "could not move records into $FINAL_RUN_DIR; they remain at $RUN_DIR"
-fi
+# The plaintext manifest was only ever in the staging parent; it goes now.
+rm -f "${TOKENS_PLAIN:-}" 2>/dev/null || :
+# Records STAY outside the repository until the batch is over (2026-09-11
+# 审阅:搬回仓库后,下一次运行的模型若找到仓库就能读到上一次的 trace)。Moving them
+# in is a separate, deliberate step once no session will run under this trace:
+#   bash evaluation/runner/collect-runs.sh
+info "records kept outside the repo → $RUN_DIR (collect after the batch: collect-runs.sh)"
 echo "      $RUN_DIR"
 exit "$VERDICT_CODE"

@@ -1,8 +1,8 @@
 {
   "schema": "batch-conditions-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T21:44:24.389Z",
-  "frozen_on_top_of": "6c3849c",
+  "frozen_at": "2026-09-10T22:45:57.725Z",
+  "frozen_on_top_of": "4eff022",
   "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
   "spec": {
     "task_dir": "evaluation/tasks/bridge-addr",
@@ -104,7 +104,7 @@
         "files": 4
       },
       "snapshot_files": 18,
-      "token_plaintext_resolved": 0,
+      "token_plaintext_resolved": 2,
       "consumer_baseline_clean": true,
       "consumer_baseline_hits": 0,
       "consumer_baseline_unscanned": 0,
@@ -113,44 +113,39 @@
     }
   },
   "token_provenance": {
-    "sources_scanned": 294,
-    "gaps": 2,
-    "gap_list": [
-      "resolve:skl-sZFb3KatWY6m: Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-sZFb3KatWY6m is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有",
-      "resolve:skl-oBaDO5CceKnr: Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-oBaDO5CceKnr is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
-    ],
+    "sources_scanned": 1829,
+    "gaps": 0,
+    "gap_list": [],
     "by_asset": {
       "skl-sZFb3KatWY6m": {
-        "clean": null,
-        "derivable_from_deployment": null,
-        "found_in": [],
-        "why": "Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-sZFb3KatWY6m is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
+        "clean": true,
+        "derivable_from_deployment": false,
+        "found_in": []
       },
       "skl-oBaDO5CceKnr": {
-        "clean": null,
-        "derivable_from_deployment": null,
-        "found_in": [],
-        "why": "Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-oBaDO5CceKnr is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
+        "clean": true,
+        "derivable_from_deployment": false,
+        "found_in": []
       }
     }
   },
   "files": {
     "evaluation/tasks/bridge-addr/task.md": "a2453587db67c44aa168d2dfbaf77a2be525805014609c5361bfa77c3eac09b6",
     "evaluation/tasks/bridge-addr/verify.mjs": "29fe156257a107bb800f873c6c5765db48fe2a24fa794005e77c39575669a3af",
-    "evaluation/tasks/bridge-addr/tokens.json": "0aaf50bf95a43316ee781da5049b50a929f2ae3a966fa1cc10b3ed1be5500456",
+    "evaluation/tasks/bridge-addr/tokens.json": "6286f876128a70f412cfb8ed86c1858264215be49753d1add064c75020e0cfc4",
     "evaluation/tasks/bridge-addr/confounders.watch": "f0984ab8d6870bb27cce3c71a619de3e9492329ca629ba09b0945b581a03b3d3",
     "evaluation/tasks/bridge-addr/assets/wrong.md": "8a1b81d4834f3dc3ab1ca7a84b92556e6c926a535e57782a031be1a4f6ac969f",
     "evaluation/tasks/bridge-addr/assets/right.md": "23def1d4a531cfedafc67e623578890e3abca76160451a4e952485fcccc22ca0",
     "evaluation/attribution/delivery-audit.mjs": "f1c69943b123fa11a21c2ce0dea4029f83eb5745ae2262f42debdd834612ff38",
     "evaluation/attribution/adoption.mjs": "76b4788be935fe6c5551e7e3c7a150db2c9d9d6cc78dd4e8a8f4e4126f39ff81",
     "evaluation/attribution/calibration.mjs": "2b9844bef1262e2f287f3474a634cfb5fbb56c0453987bcbea4440e0aa57a384",
-    "evaluation/attribution/calibrate-runs.mjs": "1ef0eb14b2ec15a363f1ddd00d68909e1fa9cc515a78488d38782c6988f74253",
+    "evaluation/attribution/calibrate-runs.mjs": "61c36ab19a9f7dfd8ebb39794f197a09482235accdf339818419a67cc587505c",
     "evaluation/attribution/judge-hard.mjs": "2455b4e521f8f550bb9a4f41d549981c1433c880e167822eafbe50f727472c12",
     "evaluation/attribution/judge-outcome.mjs": "df72231b13038ae4da64bad91b100f1767f6aac36efc67192634db01bee1f769",
     "evaluation/attribution/extract-tokens.mjs": "f2ea4b2645941418fc3dc99dd98e88a87c92bb199a68b6db4e845935aa588490",
-    "evaluation/runner/run-once.sh": "300d7153587f32b00a689152c05eccfc9efc8457189de4946922f69c6fd5c585",
+    "evaluation/runner/run-once.sh": "8d0b9092a8b6d33ce47984f5fcbeddf556711d2dcc9342b5a2cb1b63edc47ee7",
     "evaluation/runner/isolation-check.mjs": "b5d8b45e8537d06783484cb0f66c8248c2fadf8fd88a255f20a125fbb1f780ec",
-    "evaluation/runner/token-provenance.mjs": "ae63bd1dd5fdce049a9d1fe1c69d5e918f51eab3740939ae43533a299254ee8f",
+    "evaluation/runner/token-provenance.mjs": "670d9ce9010de56f79f34fa0ba2f499be3ead4415e734fdec59478544c19bf18",
     "evaluation/gate/core-gate.sh": "1d6f0c465bdd08a9d889f448ce401ff673cb9aa2c7eb65e1264217532cabcfac",
     "MemoryCore/src/metadata/service/asset-gate.ts": "72cc7cc6efb66121f9a660e8079fbca087c3883f48f4b70f7c68149f17d75672"
   },
@@ -189,5 +184,6 @@
       "verify": "docker logs tdai-proxy 2>&1 | grep -F '→ initialized' | tail -1   # 下一次会话应显示 agent=agt-5e0y4l8a7a",
       "note": "备份在受 .gitignore 保护的持久目录里,含密钥,不进 Git(CLAUDE.md §10)"
     }
-  }
+  },
+  "gate_baseline_sha256": "799b109574ae7574fb0cf8afb70142c671bab45b36202d3e7e9409e14fb2ff4a"
 }

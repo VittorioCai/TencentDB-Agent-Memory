@@ -8,8 +8,8 @@
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交的父提交 `380bdd4`;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-10(重新冻结、冒烟运行、报告分组与试跑检查点均已落地) |
-| 测试 | evaluation 471;Core 122;proxy 24(2026-09-10,全 0 失败) |
+| 验证时间 | 2026-09-11(审阅四项修复、重新冻结与核对) |
+| 测试 | evaluation 491;Core 122;proxy 24(2026-09-11,全 0 失败) |
 
 ## 待验收成果:第 1 件"新实验条件准备齐"
 
@@ -144,45 +144,55 @@ v2 正文在 git 历史(`4801803` 之前的 `assets/*.md`)。
 哈希模式;资产源文件是占位符。旧 bt- 值已进 git 历史即烧掉,换了全新值。方案 3 spike
 (见下)非阻塞。
 
-## 到 60/60 的确切步骤(全部完成才进第 2 件)
+## 到 60/60 的确切步骤(2026-09-11 更新)
 
-当前 `--check` 55/60,7 个 FAIL 全指向同一根:资产是 v4 **candidate**,且消费者被冒烟运行
-污染。按序:
+审阅四项已修(见提交):解析契约钉住(id、版本、内容哈希、token 哈希),走**管理读取**
+(`x-tdai-read-purpose: manage`),所以来源唯一、Core 正文校验、基线扫描在资产 candidate
+时也能做——`--check` 里这些项现在已 PASS。剩下三件:
 
-1. **(用户,管理员密钥)批准 v4**:
+1. **(用户,管理员密钥)恢复 approved**——这是 gate-off 的实验干预(模型路径要能读到
+   两条资产),不是证据:
    ```
    bash evaluation/gate/core-gate.sh --reset --baseline evaluation/gate/artifacts/gate_baseline_batch4.json
    ```
-   两条资产 → approved。这一步开了资产正文的读路径,resolve-tokens 才能取回明文校验。
-2. **(执行会话)清出空消费者**:`agt-eiwlwrb0me` 被冒烟运行的记忆流水线污染成 4 个文件
-   (含"endpoint-b 可达"的结论,虽无 trace 明文)。新建一个全新消费者(空 profile),
-   改 proxy `debugForceIdentity.agent_id` 指向它并重启,`--consumer=` 用新 id 重新冻结。
-   (清空旧 profile 是破坏性操作,不做;新建是既定路径。)
+2. **(执行会话)清出空消费者**:`agt-eiwlwrb0me` 被冒烟运行的记忆流水线污染成 4 个文件。
+   新建一个全新消费者,改 proxy `debugForceIdentity.agent_id` 指向它并重启,`--consumer=`
+   用新 id 重新冻结。检查项"消费者基线为空(files==0)"是硬要求,污染的消费者过不了。
 3. **(执行会话)重新冻结 + 核对**:
    ```
-   node evaluation/runner/batch-conditions.mjs --freeze --batch=4 --consumer=<新消费者> ...
+   node evaluation/runner/batch-conditions.mjs --freeze --batch=4 --consumer=<新消费者> --task=evaluation/tasks/bridge-addr
    node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json
    ```
-   期望 60/60、退出 0。此时 resolve-tokens 从 Core 取回明文,来源扫描(含仓库外运行记录根)
-   零命中、零缺口。
-4. **来源唯一独立验证**:
-   ```
-   node evaluation/attribution/resolve-tokens.mjs evaluation/tasks/bridge-addr   # 两条都 verified
-   ```
+   期望 61/61、退出 0。
 
-## 第 2 件(60/60 之后)
+当前实际(2026-09-11,全文 `evaluation/gate/artifacts/batch4-conditions-check.txt`):
+58/61,三项 FAIL 全对应上面 1、2:两条资产开跑前状态 candidate;消费者 4 个文件。
 
-1. 一对试跑(off 一次、on 一次):`run-once.sh --auto --gate off/on`(会话在仓库外空目录、
-   记录写仓库外、探针 cwd 已移出仓库——补充二,见提交本次)。
-2. 逐条过试跑检查点(**不能只看 PASS**):
+## 第 2 件的顺序(2026-09-11 审阅纠正:证据在试跑之前)
+
+v4 基线现在没有结果证据,两条都是 pending;gate-on 一试跑就重判回 candidate,"错资产
+failed"的检查点不可能满足。所以顺序是:
+
+1. **修通分析链**(本轮已做):哈希清单经解析契约取明文;运行时 judge-hard/judge-outcome/
+   receipt 与分析时 runInput 同一契约;失败中止。
+2. **条件核对** `--check` 全过(见上节步骤)。
+3. **v4 准备运行**(gate-off,消费者读到两条资产,产生 validated / corrected 结果):
+   `run-once.sh --auto --gate off` 若干次;记录留在仓库外。
+4. **冻结真实证据与判定**:用 `build-baseline.mjs --runs=<准备运行> …` 生成
+   `gate_baseline_batch4.json` 的 events/decisions(`--freeze` 不再覆盖带证据的基线)。
+   此时 gate-on 臂才有"错资产 → failed"可判。
+5. **off/on 一对试跑**,逐条过检查点(**不能只看 PASS**):
    ```
    node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=…/batch4-conditions.json
    ```
-   含新增三条:gate-on 被藏资产 hidden=true;响应模型名一致且等于冻结值;会话 cwd 无兄弟
-   目录且探针 cwd 不在仓库。
-3. 检查点全过后,准备运行建立 v4 证据,重新冻结 `gate_baseline_batch4.json` 的 decisions,
-   交错跑 off/on 各五次。
-4. 报告按 (rules_version, 实验标识) 分组,批次四单独一行,旧批次不合并。
+   含:gate-on 被藏资产 hidden=true;响应模型名一致且等于冻结值;会话 cwd 无兄弟目录且
+   探针 cwd 不在仓库。
+6. **正式对照**:交错跑 off/on 各五次。批次结束、下次换 trace 之前,
+   `bash evaluation/runner/collect-runs.sh` 把记录搬进 runs/。
+7. 报告按 (rules_version, 实验标识) 分组,批次四单独一行,旧批次不合并。
+
+那条 `core-gate.sh --reset` 是已设计的 gate-off 干预(恢复 approved),不等于 v4 已有验证
+证据;证据只能来自第 3 步。
 
 ## 方案 3 spike 结论(2026-09-10,≤1h,非阻塞)
 

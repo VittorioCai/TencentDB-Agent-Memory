@@ -199,3 +199,38 @@ test("all six buckets are reachable through the real reader, not just through cl
   ]) seen.add(bucketOf(make(spec), asset).bucket);
   assert.deepEqual([...seen].sort(), ["false_negative", "true_negative", "true_positive"]);
 });
+
+// ---------------------------------------------------------------------------
+// 哈希形态的 tokens.json 必须经解析契约喂给 runInput —— 2026-09-11 审阅点 1
+//
+// 反例:同一条"已取回并实际采用"的正例,明文清单判 delivered,哈希清单判
+// not_delivered——前置检查过了,正式分析静默丢归因。runInput 接受解析后的明文
+// (opts.tokens),哈希形态而未解析时必须抛错,不得静默按空 tokens 分析。
+// ---------------------------------------------------------------------------
+import { createHash as _ch2 } from "node:crypto";
+import { readFileSync as _rf2, writeFileSync as _wf2 } from "node:fs";
+
+test("runInput:哈希清单 + 解析后的明文 → 与明文清单同一结果", () => {
+  const dir = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, operationAt: [4, "c2"] });
+  const plainVerdict = runInput(dir).assets[OK].verdict;
+  // 把 run 目录的 tokens.json 换成哈希形态
+  const plain = JSON.parse(_rf2(`${dir}/tokens.json`, "utf8"));
+  const hashed = Object.fromEntries(Object.entries(plain).map(([id, s]) => [id, {
+    version: s.version ?? 1, content_hash: "0".repeat(32),
+    token_sha256: (s.tokens ?? []).map((t) => _ch2("sha256").update(t).digest("hex")), adoption_fields: ["host"],
+  }]));
+  _wf2(`${dir}/tokens.json`, JSON.stringify(hashed));
+  const withResolved = runInput(dir, { tokens: plain }).assets[OK].verdict;
+  assert.equal(withResolved, plainVerdict, "解析后的明文喂进去,结果要和明文清单一致");
+  assert.equal(plainVerdict, "delivered");
+});
+
+test("runInput:哈希清单而没有解析明文 → 抛错,不静默按空 tokens 分析", () => {
+  const dir = make({ messages: readsThenActs(OK, "127.0.0.1:47318"), used: [OK], hidden: false, operationAt: [4, "c2"] });
+  const plain = JSON.parse(_rf2(`${dir}/tokens.json`, "utf8"));
+  const hashed = Object.fromEntries(Object.entries(plain).map(([id, s]) => [id, {
+    version: 1, content_hash: "0".repeat(32), token_sha256: (s.tokens ?? []).map((t) => _ch2("sha256").update(t).digest("hex")),
+  }]));
+  _wf2(`${dir}/tokens.json`, JSON.stringify(hashed));
+  assert.throws(() => runInput(dir), /解析|resolve|哈希/);
+});

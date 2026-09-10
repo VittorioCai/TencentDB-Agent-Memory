@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-10T21:54:34.894Z。
+生成于 2026-09-10T22:45:14.653Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 6d762ba3e915
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 61c36ab19a9f
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -139,7 +139,9 @@ unsettled: the content did reach the model.
 闸门挡在池外,模型仍然拿到了判别值,不是因为闸门漏了,而是因为它 `lsof` 到探针进程的
 cwd 是仓库,`cd` 进去读了评测自己的记录文件。送达审计把这次判成隔离失败(他源送达),
 来源精确到第 24 轮那条 `cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json`。
-所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路,且任何绕过都会在审计里显形并
-定位",不是"模型在同主机同用户下无法物理接触到答案"。要后者,需要把会话放进只通代理的
+所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路;**已覆盖的通道**(捕获里的
+工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy 项目缓存)上的绕过可以
+检测并定位;来源无法识别的到达**单列为未知**,不计入任一侧",不是"模型在同主机同用户下
+无法物理接触到答案",也不是"所有通道都已覆盖"。要后者,需要把会话放进只通代理的
 沙箱(见 REMAINING 的方案 3 spike:真实 CLI 是 npm 包 `@tencent-ai/codebuddy-code`,可进
 Linux 容器;宿主上另有 `sandbox-exec` 可用)。

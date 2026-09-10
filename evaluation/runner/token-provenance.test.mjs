@@ -96,8 +96,9 @@ test("捕获首行解析不出来 → 记为问题,不静默算 0 来源", () =>
   const d = mkdtempSync(join(tmpdir(), "prov-"));
   writeFileSync(join(d, "capture.jsonl"), '{"event":"http.request","body":{BROKEN');
   const r = sourcesFromRun(d);
-  assert.equal(r.sources.length, 0);
-  assert.equal(r.problems.length, 1, "读不出来必须说出来,否则 0 处来源会被当成扫过了");
+  // 整目录扫描会把 capture.jsonl 本身按 record 算一处来源;要害是解析失败被说出来。
+  assert.ok(!r.sources.some((s) => s.kind === "system" || s.kind === "memory"), "首个请求没解析出来,就不该有 system/memory 来源");
+  assert.equal(r.problems.length, 1, "读不出来必须说出来,否则会被当成扫过了");
   assert.match(r.problems[0].why, /解析/);
 });
 
@@ -106,7 +107,7 @@ test("坏行不阻断后面的:第一条能解析的请求才算数", () => {
   const good = JSON.stringify({ event: "http.request", body: { messages: [{ role: "system", content: "港口 47318" }] } });
   writeFileSync(join(d, "capture.jsonl"), `{"event":"http.request","body":{BROKEN\n${good}\n`);
   const r = sourcesFromRun(d);
-  assert.equal(r.sources.length, 1, "后面那条是好的,应该被读到");
+  assert.equal(r.sources.filter((s) => s.kind === "system").length, 1, "后面那条是好的,应该被读到");
   assert.equal(r.problems.length, 0, "有能解析的行就不算问题");
 });
 
@@ -178,4 +179,41 @@ test("record 也算污染:冒烟运行里模型 cat 到了 tokens.json", () => {
 test("只有资产正文自己(self)不算污染", () => {
   const sources = [{ name: "task:assets/right.md", kind: "self", text: "x-team-trace: bt-abc123xyz9" }];
   assert.equal(provenanceOf("bt-abc123xyz9", sources).clean, true);
+});
+
+// ---------------------------------------------------------------------------
+// 运行记录要整目录扫,不只首个请求 —— 2026-09-11 审阅
+//
+// 反例:trace 只出现在后续工具结果里、或只在 verdict.json 里,sourcesFromRun 仍报
+// clean。暂存目录还多一层父目录,按直接子目录找抓包会漏。
+// ---------------------------------------------------------------------------
+import { sourcesFromRecordsRoot } from "./token-provenance.mjs";
+
+const reqLine = (msgs) => JSON.stringify({ event: "http.request", body: { json: { messages: msgs } } });
+const mkRun = (dir, { later, verdict } = {}) => {
+  mkdirSync(dir, { recursive: true });
+  const lines = [reqLine([{ role: "system", content: "无关" }])];
+  if (later) lines.push(reqLine([{ role: "system", content: "无关" }, { role: "tool", content: `Stdout: trace ${later}` }]));
+  writeFileSync(join(dir, "capture.jsonl"), lines.join("\n") + "\n");
+  if (verdict) writeFileSync(join(dir, "verdict.json"), JSON.stringify({ attempts: [{ value: verdict }] }));
+};
+
+test("trace 只在后续请求的工具结果里 → 也要命中", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-")); mkRun(d, { later: "bt-laterval99" });
+  const r = sourcesFromRun(d);
+  assert.equal(provenanceOf("bt-laterval99", r.sources).clean, false);
+});
+
+test("trace 只在 verdict.json 里 → 也要命中", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-")); mkRun(d, { verdict: "bt-verdictval9" });
+  const r = sourcesFromRun(d);
+  assert.equal(provenanceOf("bt-verdictval9", r.sources).clean, false);
+});
+
+test("记录根下多一层暂存父目录,整棵树都要扫到", () => {
+  const root = mkdtempSync(join(tmpdir(), "prov-root-"));
+  mkRun(join(root, "20260911T000000Z-x.AbCd", "20260911T000000Z-x"), { verdict: "bt-nestedval99" });
+  const r = sourcesFromRecordsRoot(root);
+  assert.equal(provenanceOf("bt-nestedval99", r.sources).clean, false);
+  assert.equal(r.problems.length, 0);
 });

@@ -24,15 +24,16 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
-import { runInput } from "./calibrate-runs.mjs";
+import { runInput, loadRunTokens } from "./calibrate-runs.mjs";
 
 const sha256 = (p) => (existsSync(p) ? createHash("sha256").update(readFileSync(p)).digest("hex") : null);
 
 /** 这些判定说明"内容确实到了,但不是从这个资产来的"——即他源送达。 */
 const LEAK_VERDICTS = new Set(["delivered_from_other_source"]);
 
-export function findingsForRun(dir) {
-  const r = runInput(dir);
+export async function findingsForRun(dir, { taskDir = "evaluation/tasks/bridge-addr" } = {}) {
+  const tokens = await loadRunTokens(dir, { taskDir });
+  const r = runInput(dir, { tokens });
   const leaks = [];
   for (const [assetId, a] of Object.entries(r.assets ?? {})) {
     if (!LEAK_VERDICTS.has(a.verdict)) continue;
@@ -72,7 +73,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const f of ["delivery-audit.mjs", "adoption.mjs", "calibrate-runs.mjs", "derive-isolation-findings.mjs"]) {
     code[f] = createHash("sha256").update(readFileSync(new URL(f, import.meta.url))).digest("hex").slice(0, 12);
   }
-  const runs = dirs.map(findingsForRun);
+  const runs = [];
+  for (const d of dirs) runs.push(await findingsForRun(d));
   const doc = {
     what: "由原始捕获复算得到的他源送达证据。原始记录未改动;本文件是派生产物,可用同一条命令重算。",
     generated_at: new Date().toISOString(),

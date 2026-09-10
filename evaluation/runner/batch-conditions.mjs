@@ -30,7 +30,7 @@ import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve, relative } from "node:path";
 import { filesInTar, onlyAgent, baselineFindings } from "./isolation-check.mjs";
-import { provenanceOf, isDerivableFromDeployment, readTextFilesUnder, sourcesFromRun, taskFileKind } from "./token-provenance.mjs";
+import { provenanceOf, isDerivableFromDeployment, readTextFilesUnder, sourcesFromRun, sourcesFromRecordsRoot, taskFileKind } from "./token-provenance.mjs";
 import { verifyCoverage } from "../attribution/delivery-audit.mjs";
 import { adoptionFromAcceptance } from "../attribution/adoption.mjs";
 import { resolveTokens } from "../attribution/resolve-tokens.mjs";
@@ -194,10 +194,11 @@ async function readLive(spec) {
     sessions_under_repository_slug: existsSync(join(cbProjects, repoSlug)) ? readdirSync(join(cbProjects, repoSlug)).filter((d) => { try { return statSync(join(cbProjects, repoSlug, d)).isDirectory(); } catch { return false; } }).length : 0,
     files_scanned: cb.files.length, files_skipped: cb.skipped.length,
   };
-  // 运行记录:仓库内的旧 runs/,加上仓库外的批次运行记录根(补充二)。两处都扫。
+  // 运行记录:仓库内的旧 runs/(逐个运行目录整目录扫),加上仓库外的批次运行记录根
+  // (整棵树递归扫——暂存布局多一层父目录,不能按直接子目录找)。
   const runProblems = [];
-  for (const runsDir of [resolve(REPO, "evaluation/runner/runs"), RUN_RECORDS_ROOT]) {
-    if (!existsSync(runsDir)) continue;
+  const runsDir = resolve(REPO, "evaluation/runner/runs");
+  if (existsSync(runsDir)) {
     for (const d of readdirSync(runsDir)) {
       const p = join(runsDir, d);
       try { if (!statSync(p).isDirectory()) continue; } catch { continue; }
@@ -205,6 +206,12 @@ async function readLive(spec) {
       sources.push(...r.sources);
       runProblems.push(...r.problems);
     }
+  }
+  {
+    const r = sourcesFromRecordsRoot(RUN_RECORDS_ROOT);
+    sources.push(...r.sources);
+    // 记录根不存在不算缺口(批次还没跑);存在但有读不了的文件才算。
+    runProblems.push(...r.problems.filter((x) => !/不存在/.test(x.why)));
   }
 
   // 来源唯一性按**资产 id** 汇总,绝不用明文当键——这份结果会写进仓库里的条件清单。
@@ -269,6 +276,20 @@ async function readLive(spec) {
 }
 
 // --- freeze ----------------------------------------------------------------
+
+/**
+ * 冻结条件 ≠ 冻结证据。闸门基线的 events/decisions 由 build-baseline.mjs 从准备运行
+ * 生成;--freeze 只在基线不存在或没有证据时写一份"空证据"的基线。已有证据的基线一律
+ * 保留(2026-09-11 审阅:原来每次 --freeze 都把 events/decisions 写空,准备运行之后再
+ * 冻结条件就把证据抹了)。
+ */
+export function gateBaselineToWrite(existing, fresh) {
+  const hasEvidence = (b) => (Array.isArray(b?.decisions) && b.decisions.length > 0) || (Array.isArray(b?.events) && b.events.length > 0);
+  if (existing && hasEvidence(existing)) {
+    return { write: false, doc: existing, why: `已有基线带 ${existing.decisions?.length ?? 0} 条 decisions / ${existing.events?.length ?? 0} 条 events(证据来自准备运行),不覆盖` };
+  }
+  return { write: true, doc: fresh, why: existing ? "已有基线没有证据,覆盖" : "没有已有基线,新写" };
+}
 
 async function freeze(args) {
   const batch = Number(args.batch);
@@ -385,7 +406,11 @@ async function freeze(args) {
     note: `Batch ${batch} baseline. Same rules as batch 3 (${conditions.rules_version}); new tokens (trace header), new consumer, assets at v${Object.values(live.assets)[0]?.version}. Frozen by batch-conditions.mjs --freeze; conditions in ${rel(out)}.`,
   };
   const gbOut = resolve(REPO, conditions.arms.gate_baseline);
-  writeFileSync(gbOut, JSON.stringify(gb, null, 2) + "\n");
+  const gbDecision = gateBaselineToWrite(readJson(gbOut, null), gb);
+  if (gbDecision.write) writeFileSync(gbOut, JSON.stringify(gb, null, 2) + "\n");
+  console.log(`gate baseline: ${gbDecision.why}`);
+  conditions.gate_baseline_sha256 = fileSha(gbOut);
+  writeFileSync(out, JSON.stringify(conditions, null, 2) + "\n");
 
   // pair.json 顶层对齐到线上:版本、哈希、消费者、快照时间。旧的 _batch4_pending 并入 batchN。
   const p = resolve(REPO, taskDir, "pair.json");

@@ -105,13 +105,16 @@ export function readTextFilesUnder(root, kind, limitBytes = 2_000_000) {
 }
 
 /**
- * 把一次运行里能承载 token 的东西都算作来源:注入的系统提示与记忆块在捕获的
- * 首个请求里,服务侧记录在 tool-call-logs,缓存在工具结果里。
+ * 一次运行的**整个记录目录**都是来源:不只首个请求里注入的系统提示与记忆块,还有
+ * 后续每个请求里的工具结果、verdict.json 的 attempts[].value、回执、服务侧日志——
+ * 判别值一旦被模型发出,就会落在这些文件里(2026-09-11 审阅反例:trace 只在后续
+ * 工具结果或 verdict.json 里,原来只读首个请求的扫描仍报 clean)。
+ *
+ * 首个请求单独解析一次只是为了给 system / memory 打上更准确的 kind;其余文件一律
+ * 按 record 扫,整目录递归,超限与读失败记为 problems,不静默。
  */
 export function sourcesFromRun(dir) {
   const sources = [], problems = [];
-  // 指定了却不存在,是**缺输入**,不是"扫过了没有"。原来两者都给 0 来源 0 问题,
-  // 于是一个打错的路径会让整批扫描报"全部干净"。
   if (!existsSync(dir)) {
     problems.push({ where: dir, why: "运行目录不存在,这一份来源根本没被扫过" });
     return { sources, problems };
@@ -119,10 +122,7 @@ export function sourcesFromRun(dir) {
   const cap = join(dir, "capture.jsonl");
   if (!existsSync(cap)) {
     problems.push({ where: cap, why: "capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过" });
-  }
-  if (existsSync(cap)) {
-    // 坏行不阻断后面的:逐条试,第一条能解析的请求才算数。原来只试第一条,
-    // 解析失败就 `catch {}` 吞掉,于是"读不出来"和"里面没有"都是 0 处来源。
+  } else {
     const candidates = readFileSync(cap, "utf8").split("\n").filter((l) => l.includes('"http.request"'));
     let parsed = null, lastErr = null;
     for (const line of candidates) {
@@ -136,20 +136,29 @@ export function sourcesFromRun(dir) {
         sources.push({ name: `${dir}#msg[${i}](${m.role})`, kind: i === 0 ? "system" : "memory", text: t });
       }
     } else {
-      problems.push({
-        where: cap,
-        why: candidates.length
-          ? `${candidates.length} 条 http.request 行都解析不出来(${lastErr?.message ?? "未知"})——注入的系统提示与记忆块没有被扫过`
-          : "捕获里没有任何 http.request 行——注入的系统提示与记忆块没有被扫过",
-      });
+      problems.push({ where: cap, why: candidates.length
+        ? `${candidates.length} 条 http.request 行都解析不出来(${lastErr?.message ?? "未知"})——注入的系统提示与记忆块没有被分类扫过`
+        : "捕获里没有任何 http.request 行——注入的系统提示与记忆块没有被分类扫过" });
     }
   }
-  for (const f of ["tool-call-logs.jsonl", "candidate-log.jsonl"]) {
-    const p = join(dir, f);
-    if (!existsSync(p)) continue;
-    try { sources.push({ name: `${dir}/${f}`, kind: "cache", text: readFileSync(p, "utf8") }); }
-    catch (err) { problems.push({ where: p, why: `读取失败:${err.code ?? err.message}` }); }
-  }
+  // 整目录递归:capture 全文(含后续请求与工具结果)、verdict、回执、日志、快照……
+  const all = readTextFilesUnder(dir, "record", 64 * 1024 * 1024);
+  for (const f of all.files) sources.push({ name: `${dir}/${f.name}`, kind: "record", text: f.text });
+  for (const x of all.skipped) problems.push({ where: `${dir}/${x.name}`, why: x.why });
+  return { sources, problems };
+}
+
+/**
+ * 批次运行记录根(仓库外)整棵树:暂存布局是 <root>/<run>.XXXX/<run>/…,多一层父目录,
+ * 按直接子目录找会漏。这里不假设层级,递归扫到每个文件。
+ */
+export function sourcesFromRecordsRoot(root) {
+  const sources = [], problems = [];
+  if (!root) return { sources, problems };
+  if (!existsSync(root)) return { sources, problems: [{ where: root, why: "运行记录根不存在" }] };
+  const all = readTextFilesUnder(root, "record", 64 * 1024 * 1024);
+  for (const f of all.files) sources.push({ name: `records:${f.name}`, kind: "record", text: f.text });
+  for (const x of all.skipped) problems.push({ where: `records:${x.name}`, why: x.why });
   return { sources, problems };
 }
 

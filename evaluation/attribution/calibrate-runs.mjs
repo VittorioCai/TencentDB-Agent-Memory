@@ -15,6 +15,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { auditDelivery, attributionFromCapture, operationFromTargetRef, operationFromAcceptance, verifyCoverage } from "./delivery-audit.mjs";
 import { calibrate, renderCalibration, calibrateUsage, renderUsage } from "./calibration.mjs";
 import { adoptionFromAcceptance } from "./adoption.mjs";
+import { resolveTokens, plainTokensOrThrow } from "./resolve-tokens.mjs";
 
 const readJson = (p, fallback = null) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback);
 const readLines = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
@@ -69,12 +70,35 @@ export function mergeIsolationFindings(runs, findingsDoc) {
   });
 }
 
-export function runInput(dir) {
+/** 哈希形态的清单(方案 2):有 token_sha256 而没有明文 tokens。 */
+export function isHashManifest(tokens) {
+  return Object.entries(tokens ?? {}).some(([k, v]) => !k.startsWith("_") && v && Array.isArray(v.token_sha256) && v.token_sha256.length && !(Array.isArray(v.tokens) && v.tokens.length));
+}
+
+/**
+ * 一次运行的判别值明文。run 目录里只有哈希形态的清单(方案 2),分析前必须经解析契约
+ * 按该运行冻结的(id、版本、内容哈希、token 哈希)从 Core 取回;失败即抛,不静默按空
+ * tokens 分析(2026-09-11 审阅点 1:哈希清单直接喂给送达审计,正例静默变 not_delivered)。
+ * 作者身份从 --task 目录的 pair.json 取;明文形态的老运行原样返回。
+ */
+export async function loadRunTokens(dir, { taskDir = null, keyFile } = {}) {
+  const manifest = readJson(`${dir}/tokens.json`, {}) ?? {};
+  if (!isHashManifest(manifest)) return manifest;
+  const pair = taskDir ? (readJson(`${taskDir}/pair.json`, {}) ?? {}) : {};
+  const resolved = await resolveTokens({ tokens: manifest, pair }, { keyFile });
+  return plainTokensOrThrow(resolved);
+}
+
+export function runInput(dir, opts = {}) {
   const rows = readFileSync(`${dir}/capture.jsonl`, "utf8").split("\n").filter(Boolean)
     .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const coverage = verifyCoverage(rows);
   const requests = rows.filter((o) => o.event === "http.request");
-  const tokens = readJson(`${dir}/tokens.json`, {}) ?? {};
+  const manifest = readJson(`${dir}/tokens.json`, {}) ?? {};
+  const tokens = opts.tokens ?? manifest;
+  if (isHashManifest(tokens)) {
+    throw new Error(`${dir}: tokens.json 是哈希形态,分析前必须经解析契约取回明文(loadRunTokens / resolve-tokens.mjs);直接分析会静默丢掉归因`);
+  }
   const run = readJson(`${dir}/run.json`, {}) ?? {};
   const baseline = readJson(`${dir}/gate_baseline.json`, {}) ?? {};
 
@@ -336,8 +360,10 @@ ${isolationUnknown.length ? `
 闸门挡在池外,模型仍然拿到了判别值,不是因为闸门漏了,而是因为它 \`lsof\` 到探针进程的
 cwd 是仓库,\`cd\` 进去读了评测自己的记录文件。送达审计把这次判成隔离失败(他源送达),
 来源精确到第 24 轮那条 \`cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json\`。
-所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路,且任何绕过都会在审计里显形并
-定位",不是"模型在同主机同用户下无法物理接触到答案"。要后者,需要把会话放进只通代理的
+所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路;**已覆盖的通道**(捕获里的
+工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy 项目缓存)上的绕过可以
+检测并定位;来源无法识别的到达**单列为未知**,不计入任一侧",不是"模型在同主机同用户下
+无法物理接触到答案",也不是"所有通道都已覆盖"。要后者,需要把会话放进只通代理的
 沙箱(见 REMAINING 的方案 3 spike:真实 CLI 是 npm 包 \`@tencent-ai/codebuddy-code\`,可进
 Linux 容器;宿主上另有 \`sandbox-exec\` 可用)。
 `;
@@ -349,7 +375,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const mdOut = (args.find((a) => a.startsWith("--md=")) ?? "").slice(5) || null;
   const dirs = args.filter((a) => !a.startsWith("--"));
   if (!dirs.length) { console.error("usage: calibrate-runs.mjs [--frozen=<rules version>] [--md=<file>] <run dir> …"); process.exit(2); }
-  let runs = dirs.map(runInput);
+  const taskDir = (process.argv.slice(2).find((a) => a.startsWith("--task=")) ?? "").slice(7) || "evaluation/tasks/bridge-addr";
+  const runs0 = [];
+  for (const d of dirs) {
+    // 哈希形态的运行先按冻结四元组取明文;解析失败就中止整份报告——报告不能在
+    // 读错版本或读不到明文的情况下"照常"生成。
+    const tokens = await loadRunTokens(d, { taskDir });
+    runs0.push(runInput(d, { tokens }));
+  }
+  let runs = runs0;
   // 派生审计如果在,就把它的结论合并进来。它由原始捕获复算,不改原始记录。
   const findingsDoc = readJson(new URL("artifacts/isolation-findings.json", import.meta.url).pathname, null);
   runs = mergeIsolationFindings(runs, findingsDoc);

@@ -31,7 +31,7 @@
   "batch4": {
     "conditions": "evaluation/gate/artifacts/batch4-conditions.json",
     "gate_baseline": "evaluation/gate/artifacts/gate_baseline_batch4.json",
-    "frozen_at": "2026-09-10T21:44:24.389Z",
+    "frozen_at": "2026-09-10T22:45:57.725Z",
     "consumer_agent_id": "agt-eiwlwrb0me",
     "tokens": {}
   }

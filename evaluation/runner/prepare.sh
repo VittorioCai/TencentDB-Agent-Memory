@@ -33,7 +33,9 @@ EVAL="$REPO_ROOT/evaluation"
 CONFIG="$REPO_ROOT/deploy/global-images/.proxy-config/config.yaml"
 PROBE_LOG="$EVAL/gate0/artifacts/probe.log"
 PROBE_PID="$EVAL/gate0/artifacts/probe.pid"
-PROBE_OUT="$EVAL/gate0/artifacts/gate0-proxy-capture.jsonl"
+# The raw capture lives OUTSIDE the repository (2026-09-11): it carries every
+# trace the model sends, and a later session that finds the repo would read it.
+PROBE_OUT="${PROBE_OUT:-${RUN_RECORDS_ROOT:-/private/tmp/topic4-runs}/probe-capture.jsonl}"
 PROBE_PORT="${PROBE_PORT:-18097}"
 MODEL_UPSTREAM="${MODEL_UPSTREAM:-https://api.deepseek.com}"
 PROBE_UPSTREAM="http://host.docker.internal:${PROBE_PORT}"

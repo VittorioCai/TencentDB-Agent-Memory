@@ -12,6 +12,8 @@
  * resolve-tokens.mjs 以作者密钥取回。
  *
  * 用法:node evaluation/tasks/bridge-addr/fill-traces.mjs [--key=<作者密钥文件>]
+ *       node evaluation/tasks/bridge-addr/fill-traces.mjs --sync   # 不生成新值,只把当前 head 的
+ *                                                                  # version/content_hash 钉进 tokens.json
  * 退出:0 全部更新并校验 · 1 失败
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -41,7 +43,13 @@ async function core(path, body, k) {
 }
 
 const keyFile = (process.argv.find((a) => a.startsWith("--key=")) ?? "").slice(6) || undefined;
+const SYNC = process.argv.includes("--sync");
 const k = key(keyFile);
+const manageGet = (body) => fetch(`${CORE_URL}/v3/skill/get`, {
+  method: "POST",
+  headers: { "content-type": "application/json", "x-tdai-service-id": SERVICE_ID, authorization: `Bearer ${k}`, "x-tdai-user-key": k, "x-tdai-read-purpose": "manage" },
+  body: JSON.stringify(body),
+}).then((r) => r.json()).catch(() => ({ code: -1, message: "non-JSON" }));
 const pair = JSON.parse(readFileSync(join(DIR, "pair.json"), "utf8"));
 const tokensPath = join(DIR, "tokens.json");
 const tokens = JSON.parse(readFileSync(tokensPath, "utf8"));
@@ -54,6 +62,25 @@ let bad = 0;
 for (const id of Object.keys(tokens).filter((x) => !x.startsWith("_"))) {
   const spec = tokens[id];
   const role = spec.role;
+
+  if (SYNC) {
+    // --sync:不生成新值。用管理读取取当前 head,校验其判别值哈希等于 tokens.json,
+    // 然后把 version 与 content_hash(md5,与 Core 同算法)钉进 tokens.json。
+    // 解析契约要求四元组齐全;fill 之后忘了钉版本就会让分析端读 head 而非冻结版。
+    const head = await core("/v3/meta/asset/get", { asset_id: id }, k);
+    const version = head?.data?.version;
+    if (!version) { console.error(`${role}: cannot read head (${head?.message})`); bad++; continue; }
+    const back = await manageGet({ team_id, user_id: authorUser, agent_id: authorAgent, skill_id: id, version, include_content: true });
+    if (back?.code !== 0) { console.error(`${role}: manage read failed (${back?.message})`); bad++; continue; }
+    const content = String(back.data?.content ?? "");
+    const got = (content.match(new RegExp(spec.token_pattern ?? "x-team-trace:\\s*(bt-[a-z0-9]+)")) ?? [])[1];
+    const want = (spec.token_sha256 ?? [])[0];
+    if (!got || sha256(got) !== want) { console.error(`${role}: Core v${version} 的判别值哈希与 tokens.json 不一致`); bad++; continue; }
+    spec.version = version;
+    spec.content_hash = createHash("md5").update(content, "utf-8").digest("hex");
+    console.log(`OK  ${role} ${id}  pinned v${version}  content_hash ${spec.content_hash.slice(0, 12)}…  token hash verified from Core (manage read)`);
+    continue;
+  }
   const file = join(DIR, "assets", `${role}.md`);
   if (!existsSync(file)) { console.error(`missing ${file}`); bad++; continue; }
   const placeholder = readFileSync(file, "utf8");
@@ -71,18 +98,20 @@ for (const id of Object.keys(tokens).filter((x) => !x.startsWith("_"))) {
 
   spec.token_sha256 = [sha256(trace)];
   spec.token_pattern = spec.token_pattern ?? "x-team-trace:\\s*(bt-[a-z0-9]+)";
+  spec.version = upd.data?.version ?? null;
+  spec.content_hash = createHash("md5").update(content, "utf-8").digest("hex");
   delete spec.tokens;
-  // 更新成功即写入。读回校验需要资产 approved,而版本一升就回到 candidate,所以这里
-  // 只在能读回时校验;读不回(SKILL_NOT_ADMITTED)是"待管理员准入后再验",不算失败——
-  // sha256 是我们刚发出去的那个值算的,构造上正确,准入后 resolve-tokens 会确认。
-  const back = await core("/v3/skill/get", { team_id, user_id: authorUser, agent_id: authorAgent, skill_id: id, include_content: true }, k);
+  // 读回校验走**管理路径**(x-tdai-read-purpose: manage),钉住刚写入的版本:版本一升
+  // 闸门就回到 candidate,模型路径读不到,但作者的管理读取不受闸门影响——所以这里能
+  // 立即校验,不必等准入(2026-09-11)。
+  const back = await manageGet({ team_id, user_id: authorUser, agent_id: authorAgent, skill_id: id, version: spec.version, include_content: true });
   if (back?.code === 0) {
     const got = (String(back?.data?.content ?? "").match(/x-team-trace:\s*(bt-[a-z0-9]+)/) ?? [])[1];
     const verified = got && sha256(got) === spec.token_sha256[0];
     console.log(`${verified ? "OK  " : "BAD "} ${role} ${id} → v${upd.data?.version ?? "?"}  sha256 ${spec.token_sha256[0].slice(0, 12)}…  ${verified ? "verified from Core" : "MISMATCH"}`);
     if (!verified) bad++;
   } else {
-    console.log(`OK  ${role} ${id} → v${upd.data?.version ?? "?"}  sha256 ${spec.token_sha256[0].slice(0, 12)}…  filled; verify deferred until approved (${back?.message?.split(":")[0] ?? "gated"})`);
+    console.error(`BAD ${role} ${id} → v${upd.data?.version ?? "?"}  写入成功但管理读取校验失败(${back?.message ?? back?.code})`); bad++;
   }
 }
 writeFileSync(tokensPath, JSON.stringify(tokens, null, 2) + "\n");

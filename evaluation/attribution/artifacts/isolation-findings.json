@@ -1,11 +1,11 @@
 {
   "what": "由原始捕获复算得到的他源送达证据。原始记录未改动;本文件是派生产物,可用同一条命令重算。",
-  "generated_at": "2026-09-09T21:06:09.601Z",
+  "generated_at": "2026-09-10T22:45:15.187Z",
   "analysis_code": {
     "delivery-audit.mjs": "f1c69943b123",
-    "adoption.mjs": "33507ad18f08",
-    "calibrate-runs.mjs": "06d3b7fdbb11",
-    "derive-isolation-findings.mjs": "1edc02f433e8"
+    "adoption.mjs": "76b4788be935",
+    "calibrate-runs.mjs": "61c36ab19a9f",
+    "derive-isolation-findings.mjs": "d47923b988c2"
   },
   "runs": [
     {
