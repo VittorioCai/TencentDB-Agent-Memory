@@ -249,3 +249,45 @@ test("收益:全部失败才是失败;有一次成功就是成功", () => {
     { "skl-a": { tokens: ["10.244.7.19"] } });
   assert.equal(good["skl-a"].benefited, true);
 });
+
+// ---------------------------------------------------------------------------
+// 哈希模式的采纳 —— 2026-09-10(方案 2:明文出仓库)
+//
+// tokens.json 只放 sha256,不放明文。采纳判定不需要明文:把观察到的 attempts[].value
+// 哈希一下,和存的 sha256 比。声明了 adoption_fields 就只哈希那些字段的值。
+// ---------------------------------------------------------------------------
+import { createHash as _ch } from "node:crypto";
+const sha = (s) => _ch("sha256").update(String(s)).digest("hex");
+
+test("哈希模式:attempts[].value 的哈希命中 token_sha256 就是采纳", () => {
+  const tokens = { "skl-b": { token_sha256: [sha("bt-fixtureval-right")], adoption_fields: ["value"] } };
+  const v = { verdict: "PASS", attempts: [{ host: "127.0.0.1", port: "47318", value: "bt-fixtureval-right", endpoint: "skill:search", ok: true }] };
+  const a = adoptionFromAcceptance(v, tokens);
+  assert.equal(a["skl-b"].adopted, true);
+  assert.equal(a["skl-b"].benefited, true);
+});
+
+test("哈希模式:value 不匹配、但字段被记录 → 未采纳", () => {
+  const tokens = {
+    "skl-a": { token_sha256: [sha("bt-fixtureval-wrong")], adoption_fields: ["value"] },
+    "skl-b": { token_sha256: [sha("bt-fixtureval-right")], adoption_fields: ["value"] },
+  };
+  const v = { verdict: "PASS", attempts: [{ host: "127.0.0.1", port: "47318", value: "bt-fixtureval-right", endpoint: "skill:search", ok: true }] };
+  const a = adoptionFromAcceptance(v, tokens);
+  assert.equal(a["skl-b"].adopted, true);
+  assert.equal(a["skl-a"].adopted, false, "value 面被记录了,只是不是它的值");
+});
+
+test("哈希模式:声明字段未被记录 → 未知,不是未采纳", () => {
+  const tokens = { "skl-c": { token_sha256: [sha("qz7-xyz")], adoption_fields: ["value"] } };
+  const v = { verdict: "PASS", attempts: [{ host: "127.0.0.1", port: "47318", endpoint: "skill:search", ok: true }] };
+  const a = adoptionFromAcceptance(v, tokens);
+  assert.equal(a["skl-c"].adopted, null);
+});
+
+test("哈希模式不需要仓库里有明文:tokens 字段可以完全不存在", () => {
+  const tokens = { "skl-b": { token_sha256: [sha("bt-fixtureval-right")], adoption_fields: ["value"] } };
+  assert.ok(!("tokens" in tokens["skl-b"]), "确认没有明文");
+  const v = { verdict: "PASS", attempts: [{ value: "bt-fixtureval-right", ok: true }] };
+  assert.equal(adoptionFromAcceptance(v, tokens)["skl-b"].adopted, true);
+});

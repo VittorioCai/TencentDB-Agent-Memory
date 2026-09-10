@@ -1,8 +1,8 @@
 {
   "schema": "batch-conditions-v1",
   "batch": 4,
-  "frozen_at": "2026-09-10T15:56:01.964Z",
-  "frozen_on_top_of": "8a25bb6",
+  "frozen_at": "2026-09-10T21:44:24.389Z",
+  "frozen_on_top_of": "6c3849c",
   "what_this_is": "两臂之间必须相同的一切。arms.vary 之外的任何差异都使对照失效。核对命令:node evaluation/runner/batch-conditions.mjs --check --conditions=<本文件>",
   "spec": {
     "task_dir": "evaluation/tasks/bridge-addr",
@@ -19,44 +19,40 @@
     "skl-sZFb3KatWY6m": {
       "role": "wrong",
       "name": "eval-bridge-endpoint-a",
-      "version": 3,
-      "content_hash": "0c0f62eb7fd16797ab0144d73c6065ba",
+      "version": 4,
+      "content_hash": "c0566d8595d65ddaaa5add8ff1ef69de",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "approved",
+      "status_at_freeze": "candidate",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
       "required_status_why": "场景前提是闸门表态前的池:两臂都从两条资产可读出发,gate-on 臂再由 Core 按冻结证据判定。",
-      "tokens": [
-        "bt-7c4wgsmdac"
-      ],
+      "tokens": [],
       "adoption_fields": [
         "value"
       ],
       "body_file": "evaluation/tasks/bridge-addr/assets/wrong.md",
-      "body_md5": "0c0f62eb7fd16797ab0144d73c6065ba"
+      "body_md5": null
     },
     "skl-oBaDO5CceKnr": {
       "role": "right",
       "name": "eval-bridge-endpoint-b",
-      "version": 3,
-      "content_hash": "8832fffba2e4d48ae87fbcb3ba23f4ae",
+      "version": 4,
+      "content_hash": "91d3869cc76132508cc02169f5187c49",
       "owner_user_id": "usr-n68ea5ythq",
       "visibility": "team",
-      "status_at_freeze": "approved",
+      "status_at_freeze": "candidate",
       "gate_decision_at_freeze": "pending",
       "confidence_at_freeze": null,
       "required_status_before_run": "approved",
       "required_status_why": "场景前提是闸门表态前的池:两臂都从两条资产可读出发,gate-on 臂再由 Core 按冻结证据判定。",
-      "tokens": [
-        "bt-yf39kfehc5"
-      ],
+      "tokens": [],
       "adoption_fields": [
         "value"
       ],
       "body_file": "evaluation/tasks/bridge-addr/assets/right.md",
-      "body_md5": "8832fffba2e4d48ae87fbcb3ba23f4ae"
+      "body_md5": null
     }
   },
   "consumer": {
@@ -86,6 +82,7 @@
     "container_started_at": "2026-09-09T21:23:05.776165968Z"
   },
   "isolation": {
+    "require_empty_consumer": true,
     "method": "run-once.sh snapshots profiles/ before each session and restores it after; hashes recorded in run.json.agent_memory (whole tree) and .consumer_scope (the consumer's share)",
     "session_cwd_policy": "run-once.sh --auto runs each session in a fresh empty directory (mktemp under /private/tmp/topic4-sessions), never in the repository; run.json.session records cwd, CodeBuddy project dir, and cached files before the run",
     "session_cwd_why": "every earlier session's system prompt read 'Working directory: <the repository>' — the model could read tokens.json, pair.json and the run records; and CodeBuddy keeps each session's tool results under ~/.codebuddy/projects/<slug of cwd>/, so one slug for all runs let any run read any earlier run's tool output (51 sessions under the repository slug at freeze). Measured 2026-09-10; in 20260908T075637Z the file read was the run's own, so no cross-run read is on record — the channel existed, unused.",
@@ -100,13 +97,14 @@
     "late_write_risk": "the memory pipeline can write to a profile long after its session; a write landing between two runs shows up as same_baseline=false in isolation-check, which is the guard",
     "memory": {
       "root": "/data/tdai-memory/profiles",
-      "tree_sha256": "637768bf556e2a0384fb0723e1a50a1ff5ade951bfad1fc542900bf9edbf719c",
+      "tree_sha256": "3912716affb6df6f3e88dc62ff64e8b7642ffa59cf61b2bca06fd630b4756e14",
       "consumer_scope": {
         "agent_id": "agt-eiwlwrb0me",
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "files": 0
+        "sha256": "bc94f2520f444686975312eecbf98e28b82c5e1053cd5bcd1e1eb540d0f1f23c",
+        "files": 4
       },
-      "snapshot_files": 14,
+      "snapshot_files": 18,
+      "token_plaintext_resolved": 0,
       "consumer_baseline_clean": true,
       "consumer_baseline_hits": 0,
       "consumer_baseline_unscanned": 0,
@@ -115,95 +113,38 @@
     }
   },
   "token_provenance": {
-    "sources_scanned": 289,
-    "gaps": 0,
-    "gap_list": [],
-    "tokens": {
-      "bt-7c4wgsmdac": {
-        "clean": false,
-        "found_in": [
-          {
-            "name": "task:README.md",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:pair.json",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:tokens.json",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:verify.test.mjs",
-            "kind": "record",
-            "count": 2
-          },
-          {
-            "name": "codebuddy:private-tmp-topic4-sessions-20260910T154648Z-harness-smoke-v3.z5aM/87eebf9d-26f7-4983-b993-15bc6e3e78f3.jsonl",
-            "kind": "cache",
-            "count": 32
-          },
-          {
-            "name": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T154648Z-harness-smoke-v3/tool-call-logs.jsonl",
-            "kind": "cache",
-            "count": 2
-          }
-        ],
-        "derivable_from_deployment": false
+    "sources_scanned": 294,
+    "gaps": 2,
+    "gap_list": [
+      "resolve:skl-sZFb3KatWY6m: Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-sZFb3KatWY6m is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有",
+      "resolve:skl-oBaDO5CceKnr: Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-oBaDO5CceKnr is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
+    ],
+    "by_asset": {
+      "skl-sZFb3KatWY6m": {
+        "clean": null,
+        "derivable_from_deployment": null,
+        "found_in": [],
+        "why": "Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-sZFb3KatWY6m is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
       },
-      "bt-yf39kfehc5": {
-        "clean": false,
-        "found_in": [
-          {
-            "name": "task:README.md",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:pair.json",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:tokens.json",
-            "kind": "record",
-            "count": 1
-          },
-          {
-            "name": "task:verify.test.mjs",
-            "kind": "record",
-            "count": 4
-          },
-          {
-            "name": "codebuddy:private-tmp-topic4-sessions-20260910T154648Z-harness-smoke-v3.z5aM/87eebf9d-26f7-4983-b993-15bc6e3e78f3.jsonl",
-            "kind": "cache",
-            "count": 32
-          },
-          {
-            "name": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T154648Z-harness-smoke-v3/tool-call-logs.jsonl",
-            "kind": "cache",
-            "count": 2
-          }
-        ],
-        "derivable_from_deployment": false
+      "skl-oBaDO5CceKnr": {
+        "clean": null,
+        "derivable_from_deployment": null,
+        "found_in": [],
+        "why": "Core 读不到资产正文(SKILL_NOT_ADMITTED: skl-oBaDO5CceKnr is not in the admitted pool (not_admitted:candidate))——可能被闸门挡着;读不到 ≠ 没有"
       }
     }
   },
   "files": {
     "evaluation/tasks/bridge-addr/task.md": "a2453587db67c44aa168d2dfbaf77a2be525805014609c5361bfa77c3eac09b6",
     "evaluation/tasks/bridge-addr/verify.mjs": "29fe156257a107bb800f873c6c5765db48fe2a24fa794005e77c39575669a3af",
-    "evaluation/tasks/bridge-addr/tokens.json": "7d7dc7ed79f4536e1b77b2bbad6cda240738f4cf130dd3a4eef57ea4caa65ef3",
+    "evaluation/tasks/bridge-addr/tokens.json": "0aaf50bf95a43316ee781da5049b50a929f2ae3a966fa1cc10b3ed1be5500456",
     "evaluation/tasks/bridge-addr/confounders.watch": "f0984ab8d6870bb27cce3c71a619de3e9492329ca629ba09b0945b581a03b3d3",
-    "evaluation/tasks/bridge-addr/assets/wrong.md": "f041dafc0e5564611e5e82e399d8c9e7122975b844a75adc7d429bf02c3144dc",
-    "evaluation/tasks/bridge-addr/assets/right.md": "a13d209bc46b28c2b9c527b4f9519240e4ff9090ef05708754c7839d07cae187",
+    "evaluation/tasks/bridge-addr/assets/wrong.md": "8a1b81d4834f3dc3ab1ca7a84b92556e6c926a535e57782a031be1a4f6ac969f",
+    "evaluation/tasks/bridge-addr/assets/right.md": "23def1d4a531cfedafc67e623578890e3abca76160451a4e952485fcccc22ca0",
     "evaluation/attribution/delivery-audit.mjs": "f1c69943b123fa11a21c2ce0dea4029f83eb5745ae2262f42debdd834612ff38",
-    "evaluation/attribution/adoption.mjs": "33507ad18f08d1e0320f98e0fac0d8c1f8ca2dcdd73683633e8923d9e0a5cd46",
-    "evaluation/attribution/calibration.mjs": "b59437e4fbe5674407ee6d7d28f992aaf35c741edbe7962924acda4c7e9969d3",
-    "evaluation/attribution/calibrate-runs.mjs": "d56d8a370f7361c7fed3cd609a63cfb5f33931718fe714bb95159b24c5d5b390",
+    "evaluation/attribution/adoption.mjs": "76b4788be935fe6c5551e7e3c7a150db2c9d9d6cc78dd4e8a8f4e4126f39ff81",
+    "evaluation/attribution/calibration.mjs": "2b9844bef1262e2f287f3474a634cfb5fbb56c0453987bcbea4440e0aa57a384",
+    "evaluation/attribution/calibrate-runs.mjs": "1ef0eb14b2ec15a363f1ddd00d68909e1fa9cc515a78488d38782c6988f74253",
     "evaluation/attribution/judge-hard.mjs": "2455b4e521f8f550bb9a4f41d549981c1433c880e167822eafbe50f727472c12",
     "evaluation/attribution/judge-outcome.mjs": "df72231b13038ae4da64bad91b100f1767f6aac36efc67192634db01bee1f769",
     "evaluation/attribution/extract-tokens.mjs": "f2ea4b2645941418fc3dc99dd98e88a87c92bb199a68b6db4e845935aa588490",

@@ -284,6 +284,15 @@ ${verdictSentences(u.name + " · 使用检测", ut).join("\n\n")}
 
 **采纳证据的覆盖率是 ${n(ut.adoption_coverage)}**,其中 ${n(ut.unknown_adoption)} 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
 
+${(() => {
+  // 泄漏来的 TP:采纳判 TP、而同一 (run, asset) 的送达桶是 isolation_failure。这类
+  // TP 证明的是"泄漏进来的东西被用了",不是"闸门放行的东西被用了",必须分开点名。
+  const leak = new Set((result?.rows ?? []).filter((r) => r.bucket === "isolation_failure").map((r) => `${r.run_id}|${r.asset_id}`));
+  const leakedTPs = (usage?.rows ?? []).filter((r) => r.bucket === "true_positive" && leak.has(`${r.run_id}|${r.asset_id}`));
+  if (!leak.size) return "没有送达桶为隔离失败的运行,所以没有 TP 来自泄漏。";
+  return `**其中 ${leakedTPs.length} 个 TP 来自隔离失败的运行**(资产被藏起、内容经别的通道到达后被采用):${leakedTPs.map((r) => `\`${r.run_id}\``).join("、") || "(无)"}。这类 TP 说明"泄漏进来的东西被用了",不说明"闸门放行的东西被用了",不能与干净的 TP 混算。`;
+})()}
+
 ### 收益不等于采纳
 
 采纳且奏效 ${n(ut.adopted_and_worked)} 项,采纳但未奏效 ${n(ut.adopted_but_failed)} 项,采纳而收益未知 ${n(ut.adopted_benefit_unknown)} 项。

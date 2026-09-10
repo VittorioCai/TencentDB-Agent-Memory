@@ -10,19 +10,19 @@
       "role": "wrong",
       "asset_id": "skl-sZFb3KatWY6m",
       "name": "eval-bridge-endpoint-a",
-      "version": 3,
+      "version": 4,
       "producer_user_id": "usr-n68ea5ythq",
       "producer_agent_id": "agt-5e4hna56j9",
-      "content_hash": "0c0f62eb7fd16797ab0144d73c6065ba"
+      "content_hash": "c0566d8595d65ddaaa5add8ff1ef69de"
     },
     {
       "role": "right",
       "asset_id": "skl-oBaDO5CceKnr",
       "name": "eval-bridge-endpoint-b",
-      "version": 3,
+      "version": 4,
       "producer_user_id": "usr-n68ea5ythq",
       "producer_agent_id": "agt-5e4hna56j9",
-      "content_hash": "8832fffba2e4d48ae87fbcb3ba23f4ae"
+      "content_hash": "91d3869cc76132508cc02169f5187c49"
     }
   ],
   "expected_relation": "cross_user",
@@ -31,15 +31,8 @@
   "batch4": {
     "conditions": "evaluation/gate/artifacts/batch4-conditions.json",
     "gate_baseline": "evaluation/gate/artifacts/gate_baseline_batch4.json",
-    "frozen_at": "2026-09-10T15:56:01.964Z",
+    "frozen_at": "2026-09-10T21:44:24.389Z",
     "consumer_agent_id": "agt-eiwlwrb0me",
-    "tokens": {
-      "skl-sZFb3KatWY6m": [
-        "bt-7c4wgsmdac"
-      ],
-      "skl-oBaDO5CceKnr": [
-        "bt-yf39kfehc5"
-      ]
-    }
+    "tokens": {}
   }
 }

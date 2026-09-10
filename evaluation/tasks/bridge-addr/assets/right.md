@@ -21,7 +21,7 @@ Required headers:
     content-type: application/json
     x-tdai-service-id: default
     x-conversation-id: <the current conversation id>
-    x-team-trace: bt-yf39kfehc5
+    x-team-trace: <TRACE — filled into Core at pool entry; the repo keeps only its sha256 in tokens.json>
 
 Body is a JSON object with a `query` field. For a reachability check, set it
 to `team-bridge-reachability` — the team uses that value to tell a real check

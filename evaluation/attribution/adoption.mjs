@@ -28,8 +28,13 @@
  *       `false` 结构上不可达。可达与否不该取决于池里恰好还有别的资产。
  */
 
+import { createHash } from "node:crypto";
+
 /** 正则转义。 */
 const ESC = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** sha256 十六进制。哈希模式下,采纳判定把观察到的字段值哈希后与存的 sha256 比。 */
+const sha256Hex = (s) => createHash("sha256").update(String(s)).digest("hex");
 
 /**
  * 边界命中。相邻字符是数字 / 字母 / `.` / `_` / `-` 时不算命中:
@@ -140,38 +145,63 @@ const unknown = (why, extra = {}) => ({ adopted: null, benefited: null, attempts
  * @returns { [asset_id]: { adopted: true|false|null, benefited: true|false|null,
  *                          attempts: [...], surfaces, why } }
  */
+/**
+ * 一个资产的判别值,统一成"匹配器"。两种形态:
+ *
+ *   明文  spec.tokens=[...]        —— 老批次,按边界/子串在字段里找
+ *   哈希  spec.token_sha256=[...]  —— 方案 2(2026-09-10),仓库不放明文,只放 sha256。
+ *                                     采纳判定把观察到的字段值哈希一下和它比,
+ *                                     不需要明文——这正是"明文只在 Core"的要求。
+ *
+ * 哈希形态**必须**声明 adoption_fields:没有明文就没有形状可猜,判别值该出现在哪个
+ * 字段只能由场景说。matchKey 用于判归属(共享 token);label 用于讲人话。
+ */
+function matchersFor(spec) {
+  const declared = Array.isArray(spec?.adoption_fields) && spec.adoption_fields.length ? spec.adoption_fields.map(String) : null;
+  if (Array.isArray(spec?.token_sha256) && spec.token_sha256.length) {
+    const fields = declared ?? ["value"];
+    return spec.token_sha256.filter(Boolean).map((h) => ({
+      mode: "hash", key: String(h).toLowerCase(), label: `sha256:${String(h).slice(0, 12)}…`,
+      fields, groups: [fields],
+      carries: (a) => fields.some((f) => nonEmpty(a?.[f]) && sha256Hex(String(a[f])) === String(h).toLowerCase()),
+    }));
+  }
+  return (spec?.tokens ?? []).filter(Boolean).map((t) => ({
+    mode: "plain", key: String(t).toLowerCase(), label: String(t),
+    fields: declared, groups: fieldGroupsFor(t, spec),
+    carries: (a) => attemptCarries(a, t, declared),
+  }));
+}
+
 export function adoptionFromAcceptance(verdict, tokens) {
   const attempts = Array.isArray(verdict?.attempts) ? verdict.attempts : [];
   const ids = Object.keys(tokens ?? {});
 
-  // 哪些资产声明了同一个 token。共享的 token 命中时,归属是歧义的。
+  // 哪些资产声明了同一个判别值。共享时归属是歧义的(明文按值、哈希按 sha256 比)。
   const owners = new Map();
   for (const id of ids) {
-    for (const t of tokens[id]?.tokens ?? []) {
-      if (!t) continue;
-      const k = String(t).toLowerCase();
-      if (!owners.has(k)) owners.set(k, new Set());
-      owners.get(k).add(id);
+    for (const m of matchersFor(tokens[id])) {
+      if (!owners.has(m.key)) owners.set(m.key, new Set());
+      owners.get(m.key).add(id);
     }
   }
-  const sharedWith = (t, self) => [...(owners.get(String(t).toLowerCase()) ?? [])].filter((x) => x !== self);
+  const sharedWith = (key, self) => [...(owners.get(key) ?? [])].filter((x) => x !== self);
 
   const out = {};
   for (const id of ids) {
     const spec = tokens[id] ?? {};
-    const toks = (spec.tokens ?? []).filter(Boolean);
-    const surfaces = [...new Set(toks.map(surfaceOf))];
+    const toks = matchersFor(spec);
+    const surfaces = spec.token_sha256 ? ["hashed"] : [...new Set((spec.tokens ?? []).map(surfaceOf))];
 
     if (!attempts.length) { out[id] = unknown("验收记录里没有任何尝试,操作用了什么无从判断", { surfaces }); continue; }
     if (!toks.length) { out[id] = unknown("这个资产没有判别性 token,采纳与否无从对照", { surfaces }); continue; }
 
-    // 命中:逐 token 记下是哪一次尝试命中的,以及这个 token 是不是它独有的。
-    const declaredFields = Array.isArray(spec.adoption_fields) && spec.adoption_fields.length ? spec.adoption_fields.map(String) : null;
+    // 命中:逐匹配器记下是哪一次尝试命中的,以及它是不是这个资产独有的。
     const hits = [];
     for (const a of attempts) {
       for (const t of toks) {
-        if (!attemptCarries(a, t, declaredFields)) continue;
-        hits.push({ attempt: a, token: t, shared: sharedWith(t, id) });
+        if (!t.carries(a)) continue;
+        hits.push({ attempt: a, token: t.label, shared: sharedWith(t.key, id) });
       }
     }
     if (hits.length) {
@@ -192,10 +222,10 @@ export function adoptionFromAcceptance(verdict, tokens) {
       continue;
     }
 
-    // 没命中。缺席能不能算"未采纳",取决于每一次尝试都记全了这些 token 该出现的字段。
-    const unreadable = toks.filter((t) => !absenceReadable(attempts, fieldGroupsFor(t, spec)));
+    // 没命中。缺席能不能算"未采纳",取决于每一次尝试都记全了这些判别值该出现的字段。
+    const unreadable = toks.filter((t) => !absenceReadable(attempts, t.groups));
     if (unreadable.length) {
-      const need = [...new Set(unreadable.flatMap((t) => fieldGroupsFor(t, spec).map((g) => g.join("+"))))];
+      const need = [...new Set(unreadable.flatMap((t) => t.groups.map((g) => g.join("+"))))];
       out[id] = unknown(
         `判未采纳需要每一次尝试都记下 ${need.join(" 或 ")};记录里只有 ${recordedFields(attempts).join(" / ") || "(空)"},缺席不能读成未采纳`,
         { surfaces },

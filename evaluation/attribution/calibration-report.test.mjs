@@ -169,3 +169,32 @@ test("派生结论进入报告正文,并同时说出隔离配置的状态", () =
   assert.ok(text.includes("/tmp/sop_scene.md"), "点名来源");
   assert.ok(text.includes("未记录"), "隔离配置的状态一起讲");
 });
+
+// ---------------------------------------------------------------------------
+// 隔离失败的运行里,被判 used 的资产是"泄漏来的 TP",要在报告里标出来 —— 2026-09-10
+//
+// 送达桶 isolation_failure 意味着资产被藏起、内容却经别的通道到达。这种运行里采纳
+// 判定仍可能判 TP(操作确实用了到达的内容)。这类 TP 不能和干净的 TP 混为一谈:
+// 它证明的是"泄漏进来的东西被用了",不是"闸门放行的东西被用了"。
+// ---------------------------------------------------------------------------
+
+test("报告点名有多少个 TP 来自隔离失败的运行", () => {
+  const dt = tally({ true_positive: 1, isolation_failure: 1, decisions_rated: 1, decisions_total: 2, accuracy: 1 });
+  const delivery = {
+    rows: [
+      { run_id: "r1", asset_id: "a", bucket: "isolation_failure" },
+      { run_id: "r2", asset_id: "a", bucket: "true_positive" },
+    ],
+    cumulative: dt, by_rules_version: { "rules-x": dt }, by_experiment: { "rules-x · batch4": dt }, table: "(送达表)",
+  };
+  const ut = { true_positive: 2, false_positive: 0, true_negative: 0, false_negative: 0, unknown_adoption: 0, decisions_rated: 2, decisions_total: 2, accuracy: 1, adoption_coverage: 1, adopted_and_worked: 2, adopted_but_failed: 0, adopted_benefit_unknown: 0 };
+  const usage = {
+    rows: [
+      { run_id: "r1", asset_id: "a", bucket: "true_positive" },   // TP,但送达是隔离失败 → leaked
+      { run_id: "r2", asset_id: "a", bucket: "true_positive" },   // 干净 TP
+    ],
+    cumulative: ut, by_rules_version: { "rules-x": ut }, by_experiment: { "rules-x · batch4": ut }, table: "(使用表)",
+  };
+  const text = report(delivery, { frozen: "rules-x", runs: [], usage });
+  assert.match(text, /1 个 TP 来自隔离失败/);
+});

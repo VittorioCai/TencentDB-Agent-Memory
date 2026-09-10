@@ -170,8 +170,8 @@ the asset therefore leaves that value in the command, which is the guarantee
 
 | asset | role | v3 trace value |
 |---|---|---|
-| `skl-sZFb3KatWY6m` | wrong | `bt-7c4wgsmdac` |
-| `skl-oBaDO5CceKnr` | right | `bt-yf39kfehc5` |
+| `skl-sZFb3KatWY6m` | wrong | sha256 `a97b5919…` (plaintext only in Core) |
+| `skl-oBaDO5CceKnr` | right | sha256 `74a29c97…` (plaintext only in Core) |
 
 Both values were checked against every source before being written in: the
 task directory, the memory baseline, CodeBuddy's project cache, every captured

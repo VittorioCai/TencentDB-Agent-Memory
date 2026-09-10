@@ -240,7 +240,7 @@ const cmdWith = (addr, trace) =>
   ` -d '{"query":"team-bridge-reachability"}'`;
 
 test("追踪头的值被读出来", () => {
-  assert.equal(traceOf(cmdWith("127.0.0.1:47318", "bt-yf39kfehc5")), "bt-yf39kfehc5");
+  assert.equal(traceOf(cmdWith("127.0.0.1:47318", "bt-testonly-rightval")), "bt-testonly-rightval");
 });
 
 test("没带追踪头 → 空,不是猜一个", () => {
@@ -248,7 +248,7 @@ test("没带追踪头 → 空,不是猜一个", () => {
 });
 
 test("大小写与空格不影响读取", () => {
-  assert.equal(traceOf(`-H "X-Team-Trace:   bt-7c4wgsmdac"`), "bt-7c4wgsmdac");
+  assert.equal(traceOf(`-H "X-Team-Trace:   bt-testonly-wrongval"`), "bt-testonly-wrongval");
 });
 
 test("尝试记录里带上追踪值,并且它不参与判定", () => {
@@ -259,9 +259,9 @@ test("尝试记录里带上追踪值,并且它不参与判定", () => {
         { role: "tool", tool_call_id: `call_${id}`, content: out },
       ] } } },
   ]);
-  const got = attempts(mk("1", "127.0.0.1:47318", "bt-yf39kfehc5", 'Exit code: 0\n{"code":0}'));
+  const got = attempts(mk("1", "127.0.0.1:47318", "bt-testonly-rightval", 'Exit code: 0\n{"code":0}'));
   assert.equal(got.length, 1);
-  assert.equal(got[0].value, "bt-yf39kfehc5", "采纳判定要读它");
+  assert.equal(got[0].value, "bt-testonly-rightval", "采纳判定要读它");
   assert.equal(got[0].ok, true);
 
   const noTrace = attempts(mk("2", "127.0.0.1:47318", null, 'Exit code: 0\n{"code":0}'));

@@ -33,7 +33,12 @@ import { filesInTar, onlyAgent, baselineFindings } from "./isolation-check.mjs";
 import { provenanceOf, isDerivableFromDeployment, readTextFilesUnder, sourcesFromRun, taskFileKind } from "./token-provenance.mjs";
 import { verifyCoverage } from "../attribution/delivery-audit.mjs";
 import { adoptionFromAcceptance } from "../attribution/adoption.mjs";
+import { resolveTokens } from "../attribution/resolve-tokens.mjs";
 import { homedir } from "node:os";
+
+// 批次运行记录的根目录(仓库之外)。方案 2 补充二:运行记录不写进仓库,来源扫描
+// 要把它也扫进去。默认值与 run-once.sh 的 RUN_RECORDS_ROOT 对齐。
+const RUN_RECORDS_ROOT = process.env.RUN_RECORDS_ROOT ?? "/private/tmp/topic4-runs";
 
 const REPO = resolve(new URL("../..", import.meta.url).pathname);
 const rel = (p) => relative(REPO, p);
@@ -111,6 +116,9 @@ async function readLive(spec) {
   const tokens = readJson(join(taskDir, "tokens.json"), {});
   const assetIds = Object.keys(tokens).filter((k) => !k.startsWith("_"));
   const key = keyFrom(spec.reader_key_file);
+  // 判别值明文只在 Core(方案 2)。先取回,基线扫描和来源扫描都要用它——哈希扫不了。
+  const resolved = await resolveTokens(taskDir, { keyFile: spec.reader_key_file, team_id: spec.team_id, author_agent_id: spec.author_agent_id });
+  const resolvedPlain = assetIds.flatMap((id) => resolved[id]?.tokens ?? []);
 
   const assets = {};
   for (const id of assetIds) {
@@ -157,8 +165,10 @@ async function readLive(spec) {
   const watch = existsSync(join(taskDir, "confounders.watch"))
     ? readFileSync(join(taskDir, "confounders.watch"), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"))
     : [];
-  const tokenList = assetIds.flatMap((id) => tokens[id]?.tokens ?? []);
-  const clean = baselineFindings(scoped, tokenList, watch);
+  // 用从 Core 取回的明文扫基线;哈希模式下仓库里没有明文可扫。取不到时(资产被闸门
+  // 挡着)tokenList 为空,基线只按观察行扫,报告会提示明文未取回。
+  const clean = baselineFindings(scoped, resolvedPlain, watch);
+  memory.token_plaintext_resolved = resolvedPlain.length;
   memory.consumer_baseline_clean = clean.clean;
   memory.consumer_baseline_hits = clean.hits.length;
   memory.consumer_baseline_unscanned = clean.unscanned.length;
@@ -184,29 +194,45 @@ async function readLive(spec) {
     sessions_under_repository_slug: existsSync(join(cbProjects, repoSlug)) ? readdirSync(join(cbProjects, repoSlug)).filter((d) => { try { return statSync(join(cbProjects, repoSlug, d)).isDirectory(); } catch { return false; } }).length : 0,
     files_scanned: cb.files.length, files_skipped: cb.skipped.length,
   };
-  const runsDir = resolve(REPO, "evaluation/runner/runs");
+  // 运行记录:仓库内的旧 runs/,加上仓库外的批次运行记录根(补充二)。两处都扫。
   const runProblems = [];
-  if (existsSync(runsDir)) {
+  for (const runsDir of [resolve(REPO, "evaluation/runner/runs"), RUN_RECORDS_ROOT]) {
+    if (!existsSync(runsDir)) continue;
     for (const d of readdirSync(runsDir)) {
       const p = join(runsDir, d);
-      if (!statSync(p).isDirectory()) continue;
+      try { if (!statSync(p).isDirectory()) continue; } catch { continue; }
       const r = sourcesFromRun(p);
       sources.push(...r.sources);
       runProblems.push(...r.problems);
     }
   }
+
+  // 来源唯一性按**资产 id** 汇总,绝不用明文当键——这份结果会写进仓库里的条件清单。
+  // found_in 只带文件名/类型/次数,不带明文。取不到明文时该资产的来源唯一性是未知。
   const provenance = {};
   for (const id of assetIds) {
-    for (const t of tokens[id]?.tokens ?? []) {
-      const v = provenanceOf(t, sources);
-      provenance[t] = { clean: v.clean, found_in: v.found_in, derivable_from_deployment: isDerivableFromDeployment(t) };
+    const r = resolved[id] ?? {};
+    const plain = r.tokens ?? [];
+    if (!plain.length) {
+      provenance[id] = { clean: null, derivable_from_deployment: null, found_in: [], why: r.why ?? "明文未能从 Core 取回" };
+      continue;
     }
+    const found = [], derivs = [];
+    let clean = true;
+    for (const t of plain) {
+      const v = provenanceOf(t, sources);
+      if (!v.clean) clean = false;
+      found.push(...v.found_in.map((f) => ({ name: f.name, kind: f.kind, count: f.count })));
+      derivs.push(isDerivableFromDeployment(t));
+    }
+    provenance[id] = { clean, derivable_from_deployment: derivs.some(Boolean), found_in: found };
   }
   const provenanceGapList = [
     ...td.skipped.map((x) => `task:${x.name}: ${x.why}`),
     ...memFiles.filter((f) => f.text == null).map((f) => `memory:${f.path}: ${f.why ?? "未读取"}`),
     ...runProblems.map((x) => `${x.where}: ${x.why}`),
     ...cb.skipped.map((x) => `codebuddy:${x.name}: ${x.why}`),
+    ...Object.entries(resolved).filter(([, r]) => !(r.tokens ?? []).length).map(([id, r]) => `resolve:${id}: ${r.why ?? "明文未取回"}`),
   ];
   const provenanceGaps = provenanceGapList.length;
   rmSync(tmp, { recursive: true, force: true });
@@ -215,22 +241,31 @@ async function readLive(spec) {
   for (const f of TASK_FILES) files[`${rel(taskDir)}/${f}`] = fileSha(join(taskDir, f));
   for (const f of ANALYSIS_FILES) files[f] = fileSha(resolve(REPO, f));
 
-  // 资产正文与 token:本地正文的 md5 应等于 Core 的 content_hash;正文含自己的 token,不含对方的
+  // 资产源文件是占位符(方案 2):明文不在其中。所以不再比"本地 md5 == Core
+  // content_hash"。改为:本地必须是占位符(不含任何 bt- 明文),且 Core 正文里的
+  // 判别值哈希与 tokens.json 的 token_sha256 一致(由 resolved.verified 给出)。
+  const PLACEHOLDER = /x-team-trace:\s*<[^>\n]*>/;
   const bodies = {};
   for (const [id, spec_] of Object.entries(tokens)) {
     if (id.startsWith("_")) continue;
     const role = spec_.role;
     const p = join(taskDir, "assets", `${role}.md`);
     const text = existsSync(p) ? readFileSync(p, "utf8") : null;
+    const hashMode = Array.isArray(spec_.token_sha256) && spec_.token_sha256.length > 0;
     bodies[id] = {
-      role, file: text == null ? null : rel(p), md5: text == null ? null : md5(text),
-      carries_own_tokens: text == null ? null : (spec_.tokens ?? []).every((t) => text.includes(t)),
-      carries_other_tokens: text == null ? null : Object.entries(tokens).some(([oid, os]) => oid !== id && !oid.startsWith("_") && (os.tokens ?? []).some((t) => text.includes(t))),
+      role, file: text == null ? null : rel(p), hash_mode: hashMode,
+      is_placeholder: text == null ? null : (hashMode ? PLACEHOLDER.test(text) : true),
+      // 占位符里不能有任何 bt- 明文;万一残留就抓出来。
+      leaks_plaintext: text == null ? null : /bt-[a-z0-9]{6,}/.test(text.replace(PLACEHOLDER, "")),
+      core_trace_verified: resolved[id]?.verified ?? null,
+      core_trace_why: resolved[id]?.why ?? null,
       adoption_fields: spec_.adoption_fields ?? null,
+      // 老批次(明文模式)保留原来的检查语义。
+      carries_own_tokens: !hashMode && text != null ? (spec_.tokens ?? []).every((t) => text.includes(t)) : null,
     };
   }
 
-  return { assets, consumer, author, proxy, memory, provenance, provenance_sources: sources.length, provenance_gaps: provenanceGaps, provenance_gap_list: provenanceGapList, codebuddy_cache: codebuddyCache, files, bodies, tokens };
+  return { assets, consumer, author, proxy, memory, resolved, provenance, provenance_sources: sources.length, provenance_gaps: provenanceGaps, provenance_gap_list: provenanceGapList, codebuddy_cache: codebuddyCache, files, bodies, tokens };
 }
 
 // --- freeze ----------------------------------------------------------------
@@ -283,6 +318,7 @@ async function freeze(args) {
     model: { id: args.model ?? "deepseek-v4-flash", source: "batch-3 captures; the trial run's capture must show the same id", invocation: "run-once.sh --auto — a fresh CodeBuddy process per run" },
     proxy: live.proxy,
     isolation: {
+      require_empty_consumer: true,
       method: "run-once.sh snapshots profiles/ before each session and restores it after; hashes recorded in run.json.agent_memory (whole tree) and .consumer_scope (the consumer's share)",
       session_cwd_policy: "run-once.sh --auto runs each session in a fresh empty directory (mktemp under /private/tmp/topic4-sessions), never in the repository; run.json.session records cwd, CodeBuddy project dir, and cached files before the run",
       session_cwd_why: "every earlier session's system prompt read 'Working directory: <the repository>' — the model could read tokens.json, pair.json and the run records; and CodeBuddy keeps each session's tool results under ~/.codebuddy/projects/<slug of cwd>/, so one slug for all runs let any run read any earlier run's tool output (51 sessions under the repository slug at freeze). Measured 2026-09-10; in 20260908T075637Z the file read was the run's own, so no cross-run read is on record — the channel existed, unused.",
@@ -291,7 +327,7 @@ async function freeze(args) {
       late_write_risk: "the memory pipeline can write to a profile long after its session; a write landing between two runs shows up as same_baseline=false in isolation-check, which is the guard",
       memory: live.memory,
     },
-    token_provenance: { sources_scanned: live.provenance_sources, gaps: live.provenance_gaps, gap_list: live.provenance_gap_list, tokens: live.provenance },
+    token_provenance: { sources_scanned: live.provenance_sources, gaps: live.provenance_gaps, gap_list: live.provenance_gap_list, by_asset: live.provenance },
     files: live.files,
     arms: {
       vary: ["gate"], values: ["off", "on"], order: "interleaved: off, on, off, on, …",
@@ -384,8 +420,11 @@ async function check(args) {
     row(`asset ${a.role} ${id} 可读`, l.ok === true, "code 0", l.ok ? "code 0" : (l.message ?? "unreadable"));
     row(`asset ${a.role} 版本`, l.version === a.version, a.version, l.version);
     row(`asset ${a.role} 正文哈希(Core)`, l.content_hash === a.content_hash, a.content_hash, l.content_hash);
-    row(`asset ${a.role} 本地正文 md5 == Core content_hash`, live.bodies[id]?.md5 === l.content_hash, l.content_hash, live.bodies[id]?.md5 ?? null);
-    row(`asset ${a.role} 正文含自己的 token、不含对方的`, live.bodies[id]?.carries_own_tokens === true && live.bodies[id]?.carries_other_tokens === false, "own=true other=false", `own=${live.bodies[id]?.carries_own_tokens} other=${live.bodies[id]?.carries_other_tokens}`);
+    // 方案 2:资产源文件是占位符,明文只在 Core。所以查"本地是占位符、无明文残留",
+    // 并查 Core 正文里的判别值哈希与 tokens.json 一致(resolved.verified)。
+    row(`asset ${a.role} 本地是占位符、无 bt- 明文残留`, live.bodies[id]?.is_placeholder === true && live.bodies[id]?.leaks_plaintext === false, "placeholder, no plaintext", `placeholder=${live.bodies[id]?.is_placeholder} leaks=${live.bodies[id]?.leaks_plaintext}`);
+    row(`asset ${a.role} Core 正文判别值哈希 == tokens.json`, live.bodies[id]?.core_trace_verified, "verified from Core", live.bodies[id]?.core_trace_why ?? "unverified",
+      `资产须 approved 才能读回正文;先 core-gate.sh --reset --baseline ${c.arms.gate_baseline}`);
     row(`asset ${a.role} visibility`, l.visibility === a.visibility, a.visibility, l.visibility);
     row(`asset ${a.role} owner`, l.owner_user_id === a.owner_user_id, a.owner_user_id, l.owner_user_id);
     row(`asset ${a.role} 开跑前状态`, l.status === a.required_status_before_run, a.required_status_before_run, l.status,
@@ -411,12 +450,20 @@ async function check(args) {
   const m = live.memory, cm = c.isolation.memory;
   row("消费者记忆范围哈希 == 冻结值", m.consumer_scope.sha256 === cm.consumer_scope.sha256, cm.consumer_scope.sha256?.slice(0, 12), m.consumer_scope.sha256?.slice(0, 12), "重新冻结:node evaluation/runner/batch-conditions.mjs --freeze …");
   row("消费者记忆文件数 == 冻结值", m.consumer_scope.files === cm.consumer_scope.files, cm.consumer_scope.files, m.consumer_scope.files);
-  row("消费者基线干净(token + 观察行)", m.consumer_baseline_clean === true, "clean", m.consumer_baseline_clean === null ? `unknown (unscanned ${m.consumer_baseline_unscanned}, invalid patterns ${m.invalid_watch_patterns})` : m.consumer_baseline_clean ? "clean" : `${m.consumer_baseline_hits} hit(s)`);
+  row("消费者基线干净(token + 观察行)", m.consumer_baseline_clean === true, "clean", m.consumer_baseline_clean === null ? `unknown (明文取回 ${m.token_plaintext_resolved ?? 0};unscanned ${m.consumer_baseline_unscanned}, invalid patterns ${m.invalid_watch_patterns})` : m.consumer_baseline_clean ? "clean" : `${m.consumer_baseline_hits} hit(s)`);
+  if (c.isolation?.require_empty_consumer) {
+    // 批次四是"空基线"设计:消费者从零起步。冒烟运行的记忆流水线迟到写入把它污染成
+    // 4 个文件(含"endpoint-b 可达"的结论),必须在开跑前清成 0,否则一次 run 就带着答案。
+    row("消费者基线为空(files==0,空基线批次的硬要求)", m.consumer_scope.files === 0, 0, m.consumer_scope.files,
+      "该消费者已被冒烟运行污染;新建一个空消费者或清空其 profile,再重新冻结");
+  }
   rows.push({ name: "整树记忆哈希 == 冻结值(仅提示:整树会被别的 agent 的迟到写入带漂)", ok: m.tree_sha256 === cm.tree_sha256 ? true : "note", expected: cm.tree_sha256?.slice(0, 12), actual: m.tree_sha256?.slice(0, 12) });
 
-  for (const [t, p] of Object.entries(c.token_provenance.tokens)) {
-    const lp = live.provenance[t] ?? {};
-    row(`token ${t} 来源唯一且不可从部署推导`, lp.clean === true && lp.derivable_from_deployment === false, "clean, not derivable", `clean=${lp.clean} derivable=${lp.derivable_from_deployment}${(lp.found_in ?? []).length ? ` found_in=${lp.found_in.map((f) => f.name).slice(0, 3).join(",")}` : ""}`);
+  for (const [id, a] of Object.entries(c.assets)) {
+    const lp = live.provenance[id] ?? {};
+    row(`asset ${a.role} 判别值来源唯一且不可从部署推导`, lp.clean === true && lp.derivable_from_deployment === false, "clean, not derivable",
+      lp.clean === null ? `unknown(${lp.why ?? "明文未取回"})` : `clean=${lp.clean} derivable=${lp.derivable_from_deployment}${(lp.found_in ?? []).length ? ` found_in=${lp.found_in.map((f) => f.name).slice(0, 3).join(",")}` : ""}`,
+      lp.clean === null ? `资产须 approved 才能取回明文扫描;先 core-gate.sh --reset --baseline ${c.arms.gate_baseline}` : "");
   }
   row("来源扫描无缺口", live.provenance_gaps === 0, 0, live.provenance_gaps === 0 ? 0 : `${live.provenance_gaps}: ${live.provenance_gap_list.slice(0, 4).join(" | ")}`);
   row("CodeBuddy 项目缓存已纳入扫描", live.codebuddy_cache.files_scanned > 0 || live.codebuddy_cache.sessions_under_repository_slug === 0, ">0 files scanned", `${live.codebuddy_cache.files_scanned} files, ${live.codebuddy_cache.sessions_under_repository_slug} sessions under the repository slug`);
