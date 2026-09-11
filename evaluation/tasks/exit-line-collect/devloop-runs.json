@@ -381,6 +381,12 @@
       "what": "pair.json, confounders.watch, asset-pool-snapshot.json → symlinks to ../exit-code-fix/ (the note's home)",
       "why": "run-once.sh and resolve-tokens.mjs read these from $TASK_DIR; the first re-run note run died at resolve-tokens for the missing pair.json",
       "runs_voided": 1
+    },
+    {
+      "at": "2026-09-11T21:55:36Z",
+      "what": "runtime image digests backfilled: core sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed (2026-09-07 build), proxy sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
+      "why": "the conditions froze assets, tokens, consumer, proxy config, memory baseline and analysis-code hashes but not the images the containers ran; found 2026-09-11 after the containers were rebuilt. Not frozen at the time: the digests are what the containers run at the time of the backfill (upstream :latest re-pulled after a Docker clean-up); 'the same image during the runs' rests on the build date preceding the runs and the re-pull returning the same digest. From now on selfcheck.sh records runtime.* live in conditions.json.",
+      "backfilled": true
     }
   ]
 }

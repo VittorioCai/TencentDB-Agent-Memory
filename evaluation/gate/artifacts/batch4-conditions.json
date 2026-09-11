@@ -506,5 +506,22 @@
       "note": "备份在受 .gitignore 保护的持久目录里,含密钥,不进 Git(CLAUDE.md §10)"
     }
   },
-  "gate_baseline_sha256": "f0351540a01684e57e8ff25473fed75dc748cc96e28e407c66fd82b9d81fe4f8"
+  "gate_baseline_sha256": "f0351540a01684e57e8ff25473fed75dc748cc96e28e407c66fd82b9d81fe4f8",
+  "runtime": {
+    "core_image_digest": "sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed",
+    "core_image_ref": "agentmemory/memory-core:latest",
+    "core_repo_digests": [
+      "agentmemory/memory-core@sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed"
+    ],
+    "core_image_created": "2026-09-07T09:24:55Z",
+    "proxy_image_digest": "sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
+    "proxy_image_ref": "agentmemory/memory-proxy:latest",
+    "proxy_repo_digests": [
+      "agentmemory/memory-proxy@sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19"
+    ],
+    "proxy_image_created": "2026-09-07T09:27:27Z",
+    "backfilled": true,
+    "backfilled_at": "2026-09-11T21:55:36Z",
+    "note": "事后回填(2026-09-11 发现冻结遗漏镜像摘要时补),不是当时冻结的。取值是发现时容器实际运行的镜像(Docker 清理后重新拉取的上游 :latest);\"批次期间镜像相同\"的依据是:镜像构建于 2026-09-07(早于批次),重新拉取得到同一摘要(上游未更新),而不是当时的记录。"
+  }
 }

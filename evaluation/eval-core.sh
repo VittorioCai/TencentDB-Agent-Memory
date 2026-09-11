@@ -30,8 +30,23 @@
 #
 # Usage:
 #   bash evaluation/eval-core.sh enable
+#   bash evaluation/eval-core.sh enable --accept-image <digest>
 #   bash evaluation/eval-core.sh status
 #   bash evaluation/eval-core.sh disable   # back to the stock image source
+#
+# --accept-image (2026-09-11, rule change agreed with the user): the parity
+# guard `image_dir_matches_prepatch` walks this branch's history of
+# MemoryCore/src/metadata and requires the image's directory to equal one of
+# those commits. The image is built upstream and holds the upstream
+# directory; every commit of ours that touched the directory already carries
+# the gate — the two can never match. It used to pass only because our
+# directory was already mounted (the guard returned early on the marker
+# file); after the containers were rebuilt it compared for the first time
+# and refused. With --accept-image <digest>, and only when the digest is the
+# container's actual image, that one guard is skipped as an explicit,
+# printed exception. The uncommitted-changes guard is untouched: what goes
+# live must still be traceable to a commit. Without the option nothing
+# changes.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -49,11 +64,29 @@ GATEWAY_MARKER="admissionFilter"
 die() { echo "[error] $*" >&2; exit 1; }
 ok()  { echo "[ok] $*"; }
 
+MODE="${1:-status}"; shift || true
+ACCEPT_IMAGE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --accept-image) [[ -n "${2:-}" ]] || die "--accept-image needs a digest"; ACCEPT_IMAGE="$2"; shift 2 ;;
+    *) die "unknown option: $1 (usage: $0 enable [--accept-image <digest>] | status | disable)" ;;
+  esac
+done
+
 command -v docker >/dev/null || die "docker not found"
 docker inspect "$CONTAINER" >/dev/null 2>&1 || die "container $CONTAINER is not present"
 
 read_config() { docker inspect "$CONTAINER" --format "$1"; }
 IMAGE="$(read_config '{{.Config.Image}}')"
+IMAGE_ID="$(read_config '{{.Image}}')"                     # the image the container actually runs (content id)
+REPO_DIGESTS="$(docker image inspect "$IMAGE_ID" --format '{{join .RepoDigests " "}}' 2>/dev/null || true)"
+# A digest given with --accept-image must be the container's image: its id, or the digest part of one of its repo digests.
+image_digest_matches() {  # $1 = digest
+  local d="$1" r
+  [[ "$d" == "$IMAGE_ID" ]] && return 0
+  for r in $REPO_DIGESTS; do [[ "${r#*@}" == "$d" ]] && return 0; done
+  return 1
+}
 NETWORK="$(read_config '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' | awk 'NF' | head -1)"
 ALIAS="$(read_config '{{range $k, $v := .NetworkSettings.Networks}}{{range $v.Aliases}}{{.}}{{"\n"}}{{end}}{{end}}' | awk 'NF' | head -1)"
 PORT="$(read_config '{{range $p, $c := .NetworkSettings.Ports}}{{range $c}}{{.HostPort}}{{"\n"}}{{end}}{{end}}' | awk 'NF' | head -1)"
@@ -138,10 +171,16 @@ gateway_mounted_now() {
   read_config '{{range .Mounts}}{{if eq .Destination "/app/src/gateway/skill-handlers.ts"}}{{.Source}}{{end}}{{end}}'
 }
 
-case "${1:-status}" in
+case "$MODE" in
   enable)
     [[ -f "$PATCHED_DIR/$MARKER_FILE" ]] || die "gate source not found: $PATCHED_DIR/$MARKER_FILE"
-    image_dir_matches_prepatch || die "refusing to enable"
+    if [[ -n "$ACCEPT_IMAGE" ]]; then
+      image_digest_matches "$ACCEPT_IMAGE" \
+        || die "--accept-image $ACCEPT_IMAGE is not the container's image (id $IMAGE_ID; repo digests: ${REPO_DIGESTS:-none}); nothing changed"
+      echo "[ok] 已接受镜像 $ACCEPT_IMAGE,守卫 image_dir_matches_prepatch 按显式例外跳过(容器镜像 id $IMAGE_ID;repo digest: ${REPO_DIGESTS:-none};镜像=上游原版,分支=原版+闸门)"
+    else
+      image_dir_matches_prepatch || die "refusing to enable (or, once the image's directory has been inspected and is the upstream original: enable --accept-image $IMAGE_ID)"
+    fi
     if [[ -n "$(git -C "$REPO_ROOT" status --porcelain -- MemoryCore/src/metadata)" ]]; then
       echo "[warn] MemoryCore/src/metadata has uncommitted changes; they would go live with the mount:"
       git -C "$REPO_ROOT" status --short -- MemoryCore/src/metadata
@@ -187,6 +226,7 @@ case "${1:-status}" in
       echo "gate:   not mounted (stock image source)"
     fi
     echo "image:  $IMAGE  port: $PORT  network: $NETWORK${ALIAS:+ alias: $ALIAS}"
+    echo "digest: $IMAGE_ID${REPO_DIGESTS:+  ($REPO_DIGESTS)}"
     ;;
-  *) die "usage: $0 enable|disable|status" ;;
+  *) die "usage: $0 enable [--accept-image <digest>] | disable | status" ;;
 esac

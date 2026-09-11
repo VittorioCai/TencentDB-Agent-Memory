@@ -269,6 +269,12 @@
       "what": "asset-pool-snapshot.json refreshed to the pool as read live by run 20260911T184746Z (note v2 approved team, 7 assets); the previous snapshot (note v1) kept as asset-pool-snapshot.v1-note-team.json",
       "why": "after the rotation to v2 every run reported POOL DRIFT (version_changed v1→v2) against the frozen v1 snapshot; run 20260911T184746Z (task 1 on v2) was judged against the frozen v1 snapshot and its record says so (pool-drift.json)",
       "affects": "runs after this time; exit-line-collect links to this file"
+    },
+    {
+      "at": "2026-09-11T21:55:36Z",
+      "what": "runtime image digests backfilled: core sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed (2026-09-07 build), proxy sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
+      "why": "the conditions froze assets, tokens, consumer, proxy config, memory baseline and analysis-code hashes but not the images the containers ran; found 2026-09-11 after the containers were rebuilt. Not frozen at the time: the digests are what the containers run at the time of the backfill (upstream :latest re-pulled after a Docker clean-up); 'the same image during the runs' rests on the build date preceding the runs and the re-pull returning the same digest. From now on selfcheck.sh records runtime.* live in conditions.json.",
+      "backfilled": true
     }
   ],
   "rejudges": [

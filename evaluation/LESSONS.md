@@ -261,3 +261,13 @@ B 的能力读成 unknown。加 `consumer_user_id` 查询后 own_business 32/10,
 笔记事件);缺 pair.json 时 resolve-tokens 以 null user 读 Core 失败,运行在判定前中止。处置:四个文件做成指向
 笔记之家的符号链接,selfcheck 把链接目标冻进 conditions.json。教训:新任务目录先对照 harness 实际读取的文件清单
 (`grep -o '\$TASK_DIR/[^ ]*' run-once.sh`),缺一个就是一次作废;回退到别的值比报错更危险。
+
+**实验条件冻结遗漏了运行时镜像。**(2026-09-11 重建容器后发现)
+冻结了资产版本、token、消费者、proxy 配置、记忆基线、分析代码哈希,唯独没冻镜像摘要——上游一旦更新 `:latest`,
+结果会变而无人知晓。守卫本身也有缺陷:`eval-core.sh` 的 `image_dir_matches_prepatch` 只认本分支历史里的目录版本,
+而镜像由上游构建,两者永远对不上;重建容器前它一直被"已挂载"短路(标记文件在,提前返回 0),从没真正执行过。
+处置(规则改动经用户同意):`enable --accept-image <digest>` 在摘要与容器实际镜像一致时按显式例外跳过该守卫并打印;
+"未提交改动不得上线"不变。`batch-conditions.mjs --freeze` 记 `runtime.{core,proxy}_image_digest`,`--check` 核对
+容器实际摘要(先失败后通过:`image-digest-check.before.txt` / `.after.txt`);批次四与两个闭环任务的条件清单事后回填
+当时容器运行的镜像摘要,注明是回填。教训:清单里每一项"两臂之间必须相同"的东西都要问一句"它由谁构建、谁能改";
+守卫要在真实条件下至少被触发过一次,否则它只是注释。

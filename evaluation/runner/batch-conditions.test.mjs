@@ -91,3 +91,41 @@ test("source_runs 是 build-baseline 的对象形态时也按 run_id 比", () =>
   const bad = prepFormalDisjoint({ source_runs: [{ run_id: "r-prep-1" }] }, { runs: [{ run_id: "r-prep-1" }] }, { "r-prep-1": "b4-prep" });
   assert.deepEqual(bad.overlap, ["r-prep-1"]);
 });
+
+// ---------------------------------------------------------------------------
+// 运行时镜像摘要要冻结、要核对 —— 2026-09-11 发现的缺口
+//
+// 条件清单冻结了资产版本、token、消费者、proxy 配置、记忆基线、分析代码哈希,唯独
+// 没冻运行时镜像。上游一旦更新 :latest,结果会变而无人知晓。核对项:容器实际镜像
+// 摘要 == 冻结值;清单没冻或容器读不到 → 未知,不是通过。
+// ---------------------------------------------------------------------------
+import { imageDigestCheck } from "./batch-conditions.mjs";
+
+test("冻结的镜像摘要与容器实际不同 → 不通过,两边都点名", () => {
+  const r = imageDigestCheck({ core_image_digest: "sha256:aaa" }, { core: { image_id: "sha256:bbb", repo_digests: ["agentmemory/memory-core@sha256:bbb"] } }, "core");
+  assert.equal(r.ok, false);
+  assert.equal(r.expected, "sha256:aaa");
+  assert.equal(r.actual, "sha256:bbb");
+});
+
+test("冻结值等于容器镜像 id,或等于任一 repo digest 的摘要部分 → 通过", () => {
+  const live = { core: { image_id: "sha256:bbb", repo_digests: ["agentmemory/memory-core@sha256:ccc"] } };
+  assert.equal(imageDigestCheck({ core_image_digest: "sha256:bbb" }, live, "core").ok, true);
+  assert.equal(imageDigestCheck({ core_image_digest: "sha256:ccc" }, live, "core").ok, true);
+});
+
+test("清单没冻镜像摘要 → 未知,不是通过", () => {
+  const r = imageDigestCheck({}, { core: { image_id: "sha256:bbb", repo_digests: [] } }, "core");
+  assert.equal(r.ok, null);
+  assert.match(r.why, /未冻结|not frozen/);
+});
+
+test("容器读不到 → 未知,不是通过", () => {
+  const r = imageDigestCheck({ core_image_digest: "sha256:aaa" }, { core: null }, "core");
+  assert.equal(r.ok, null);
+});
+
+test("proxy 一样按它自己的键核对", () => {
+  const r = imageDigestCheck({ proxy_image_digest: "sha256:p1" }, { proxy: { image_id: "sha256:p1", repo_digests: [] } }, "proxy");
+  assert.equal(r.ok, true);
+});

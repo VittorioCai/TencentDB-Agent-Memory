@@ -106,8 +106,12 @@ LINKS="$(for f in pair.json confounders.watch asset-pool-snapshot.json; do print
 echo "task dir links: $LINKS"
 NOTE_SPEC="$(python3 -c "import json;t=json.load(open('$HERE/tokens.json'));k=[x for x in t if not x.startswith('_')][0];print(k, t[k]['version'], t[k]['token_sha256'][0][:12])")"
 echo "tokens.json → $TOKENS_LINK (sha256 ${TOKENS_SHA:0:12}…): note $NOTE_SPEC"
-python3 - "$HERE/conditions.json" "$START" "$TREE" "$FILES" "$TESTS_BASE" "$(sha "$HERE/reference/regression.reference.mjs")" "$(sha "$HERE/reference/fix.patch")" "$(sha "$HERE/verify.mjs")" "$HINTS_EXIT" "$HINTS_CURL" "$WORK/start.json" "$WORK/seg2.json" "$S0" "$S1" "$S2" "$S4" "$TOKENS_LINK" "$TOKENS_SHA" "$NOTE_SPEC" "$LINKS" <<'PY'
-import json,sys,datetime
+# The images the containers run, read now (frozen since 2026-09-11; earlier runs have the digest backfilled in devloop-runs.json config_fixes)
+RUNTIME_JSON="$(node --input-type=module -e "import { containerImage } from '$REPO/evaluation/runner/batch-conditions.mjs'; const c = containerImage('tdai-memory-core'), p = containerImage('tdai-proxy'); console.log(JSON.stringify({ core_image_digest: c?.image_id ?? null, core_image_ref: c?.image_ref ?? null, core_repo_digests: c?.repo_digests ?? [], core_image_created: c?.image_created ?? null, proxy_image_digest: p?.image_id ?? null, proxy_image_ref: p?.image_ref ?? null, proxy_repo_digests: p?.repo_digests ?? [], proxy_image_created: p?.image_created ?? null, recorded_live: true, since: '2026-09-11' }));" 2>/dev/null || echo '{"error":"docker not readable"}')"
+echo "runtime images: $(python3 -c "import json,sys;d=json.loads(sys.argv[1]);print('core', str(d.get('core_image_digest'))[:19], 'proxy', str(d.get('proxy_image_digest'))[:19])" "$RUNTIME_JSON")"
+RUNTIME_JSON="$RUNTIME_JSON" python3 - "$HERE/conditions.json" "$START" "$TREE" "$FILES" "$TESTS_BASE" "$(sha "$HERE/reference/regression.reference.mjs")" "$(sha "$HERE/reference/fix.patch")" "$(sha "$HERE/verify.mjs")" "$HINTS_EXIT" "$HINTS_CURL" "$WORK/start.json" "$WORK/seg2.json" "$S0" "$S1" "$S2" "$S4" "$TOKENS_LINK" "$TOKENS_SHA" "$NOTE_SPEC" "$LINKS" <<'PY'
+import json,sys,datetime,os
+runtime=json.loads(os.environ.get("RUNTIME_JSON") or "{}")
 out,start,tree,files,tests,rt,rp,vf,hints_exit,hints_curl,startjson,seg2,s0,s1,s2,s4,tokens_link,tokens_sha,note_spec,links=sys.argv[1:21]
 r=json.load(open(seg2)); st=json.load(open(startjson))
 task=json.load(open(out.replace("conditions.json","task.json")))
@@ -124,6 +128,7 @@ doc={"frozen_at":datetime.datetime.now(datetime.timezone.utc).replace(microsecon
    "reading":"the copy already holds a correct implementation to refer to (evaluation/gate0/verify-capture.mjs reads `\\nExit Code: (-?\\d+)`); the note's value is to shorten the search, not to be the only source of the answer. The note itself names bridge-addr/verify.mjs, not this file: applying it here is the transfer this task measures."},
  "task_dir_links":dict(x.split("→",1) for x in links.split()),
  "tokens_json":{"link_target":tokens_link,"sha256":tokens_sha,"note":note_spec.split()[0],"note_version":int(note_spec.split()[1]),"token_sha256_prefix":note_spec.split()[2],"why":"run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; the link keeps one source of truth with the note's home"},
+ "runtime":runtime,
  "selfcheck":{"seg0_exit":int(s0),"seg1_exit":int(s1),"seg2_exit":int(s2),"seg4_exit":int(s4),"expected":{"seg0":0,"seg1":1,"seg2":0,"seg4":0}}}
 json.dump(doc,open(out,"w"),indent=2,ensure_ascii=False); open(out,"a").write("\n")
 print(f"\nconditions.json written ({out})")

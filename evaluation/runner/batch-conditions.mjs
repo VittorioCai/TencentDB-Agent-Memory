@@ -105,6 +105,35 @@ function memSnapshotTo(path) {
 function containerStartedAt(name) {
   try { return sh(["inspect", name, "--format", "{{.State.StartedAt}}"]); } catch { return null; }
 }
+/**
+ * The image a container actually runs: its content id and the repo digests
+ * that id was pulled as. Null when the container cannot be read. Frozen and
+ * checked since 2026-09-11 — the conditions used to freeze everything but
+ * the runtime, and an upstream update of `:latest` would have changed the
+ * results with nothing on file to say so.
+ */
+export function containerImage(name) {
+  try {
+    const id = sh(["inspect", name, "--format", "{{.Image}}"]);
+    let digests = [];
+    try { digests = sh(["image", "inspect", id, "--format", "{{join .RepoDigests \" \"}}"]).split(/\s+/).filter(Boolean); } catch { digests = []; }
+    let created = null;
+    try { created = sh(["image", "inspect", id, "--format", "{{.Created}}"]); } catch { created = null; }
+    return { container: name, image_ref: (() => { try { return sh(["inspect", name, "--format", "{{.Config.Image}}"]); } catch { return null; } })(), image_id: id, repo_digests: digests, image_created: created };
+  } catch { return null; }
+}
+/** One check row: the frozen digest for `which` (core | proxy) against the live container image. */
+export function imageDigestCheck(frozenRuntime, liveRuntime, which) {
+  const key = `${which}_image_digest`;
+  const expected = frozenRuntime?.[key] ?? null;
+  const live = liveRuntime?.[which] ?? null;
+  const name = `${which} 容器镜像摘要 == 冻结值`;
+  if (!expected) return { name, ok: null, expected: null, actual: live?.image_id ?? null, why: `未冻结 (not frozen): the conditions carry no ${key}` };
+  if (!live?.image_id) return { name, ok: null, expected, actual: null, why: `container ${which} not readable` };
+  const candidates = [live.image_id, ...(live.repo_digests ?? []).map((d) => String(d).split("@").pop())];
+  const ok = candidates.includes(expected);
+  return { name, ok, expected, actual: live.image_id, why: ok ? null : `live image ${live.image_id} (${(live.repo_digests ?? []).join(", ") || "no repo digest"}) ≠ frozen ${expected}` };
+}
 
 // --- the live reading ------------------------------------------------------
 
@@ -167,6 +196,8 @@ async function readLive(spec) {
     forced_identity: proxyForcedIdentity(proxyConfig),
     container_started_at: containerStartedAt("tdai-proxy"),
   };
+  // the images the two containers actually run (frozen since 2026-09-11)
+  const runtime = { core: containerImage(CONTAINER), proxy: containerImage("tdai-proxy") };
 
   // 记忆:整树哈希、消费者范围哈希、一份临时快照(给干净检查与来源扫描用)
   const tmp = mkdtempSync(join(tmpdir(), "batchcond-"));
@@ -289,7 +320,7 @@ async function readLive(spec) {
     };
   }
 
-  return { assets, consumer, author, proxy, memory, resolved, provenance, provenance_sources: sources.length, provenance_gaps: provenanceGaps, provenance_gap_list: provenanceGapList, codebuddy_cache: codebuddyCache, files, bodies, tokens };
+  return { assets, consumer, author, proxy, runtime, memory, resolved, provenance, provenance_sources: sources.length, provenance_gaps: provenanceGaps, provenance_gap_list: provenanceGapList, codebuddy_cache: codebuddyCache, files, bodies, tokens };
 }
 
 // --- freeze ----------------------------------------------------------------
@@ -422,6 +453,11 @@ async function freeze(args) {
       invocation: "run-once.sh --auto — a fresh CodeBuddy process per run",
     },
     proxy: live.proxy,
+    runtime: {
+      core_image_digest: live.runtime.core?.image_id ?? null, core_image_ref: live.runtime.core?.image_ref ?? null, core_repo_digests: live.runtime.core?.repo_digests ?? [], core_image_created: live.runtime.core?.image_created ?? null,
+      proxy_image_digest: live.runtime.proxy?.image_id ?? null, proxy_image_ref: live.runtime.proxy?.image_ref ?? null, proxy_repo_digests: live.runtime.proxy?.repo_digests ?? [], proxy_image_created: live.runtime.proxy?.image_created ?? null,
+      why: "the images the containers run are part of the conditions: an upstream update of :latest would change the results with nothing on file to say so (gap found 2026-09-11)",
+    },
     isolation: {
       require_empty_consumer: true,
       method: "run-once.sh snapshots profiles/ before each session and restores it after; hashes recorded in run.json.agent_memory (whole tree) and .consumer_scope (the consumer's share)",
@@ -572,6 +608,7 @@ async function check(args) {
   row("proxy 配置未被改动", live.proxy.config_sha256 === c.proxy.config_sha256, c.proxy.config_sha256?.slice(0, 12), live.proxy.config_sha256?.slice(0, 12));
   const inEffect = live.proxy.container_started_at && live.proxy.config_mtime ? new Date(live.proxy.container_started_at) >= new Date(live.proxy.config_mtime) : null;
   row("proxy 已在配置修改后重启(配置生效)", inEffect, "started_at >= config mtime", `${live.proxy.container_started_at} vs ${live.proxy.config_mtime}`, "docker restart tdai-proxy");
+  for (const which of ["core", "proxy"]) { const d = imageDigestCheck(c.runtime, live.runtime, which); row(d.name, d.ok, d.expected?.slice(0, 19) ?? null, d.actual?.slice(0, 19) ?? null, d.why ?? undefined); }
   row("proxy 配置备份在受保护位置且哈希一致", fileSha(resolve(REPO, c.rollback.proxy_config.backup)) === c.rollback.proxy_config.backup_sha256, c.rollback.proxy_config.backup_sha256?.slice(0, 12), fileSha(resolve(REPO, c.rollback.proxy_config.backup))?.slice(0, 12));
 
   const m = live.memory, cm = c.isolation.memory;

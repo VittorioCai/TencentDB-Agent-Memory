@@ -177,6 +177,11 @@ wrong 资产 `failed`(最后一次是 gate-on)、消费者 profile 残留四项(
 - v4 trace 明文已进过 git(旧报告与已删的待决测试文件里写了值),换新前不得再开批次。
 - `bridge-name` 场景的验收仍是旧解析(整段含标记),未随本次修改。
 
+- **运行时镜像摘要当时没有冻结**(2026-09-11 重建容器后发现):条件清单冻结了资产、token、消费者、proxy 配置、记忆基线、
+  分析代码哈希,没有冻 memory-core / proxy 的镜像摘要。事后回填(`batch4-conditions.json` 的 `runtime`,标明 backfilled):
+  容器现运行 `agentmemory/memory-core@sha256:55fec3a6…`(2026-09-07 构建),批次期间上游 `:latest` 未变的判断依据是重新拉取得到同一摘要,
+  不是当时的记录。
+
 ## 证据位置
 
 - 重判副本(仓库外,可由上面命令重生成):`/private/tmp/topic4-rejudge/2026-09-11/<run_id>/`,
