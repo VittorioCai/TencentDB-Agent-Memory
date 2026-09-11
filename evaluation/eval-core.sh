@@ -83,6 +83,11 @@ read_config() { docker inspect "$CONTAINER" --format "$1"; }
 IMAGE="$(read_config '{{.Config.Image}}')"
 IMAGE_ID="$(read_config '{{.Image}}')"                     # the image the container actually runs (content id)
 REPO_DIGESTS="$(docker image inspect "$IMAGE_ID" --format '{{join .RepoDigests " "}}' 2>/dev/null || true)"
+# A container that failed to start (2026-09-12: a mount that could not boot) has no
+# NetworkSettings.Networks and no published ports; read the run configuration from
+# HostConfig too, so `disable` still works as the restore path.
+NETWORK_MODE="$(read_config '{{.HostConfig.NetworkMode}}')"
+PORT_HC="$(read_config '{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{.HostPort}}{{"\n"}}{{end}}{{end}}' | awk 'NF' | head -1)"
 # A digest given with --accept-image must be the container's image: its id, or the digest part of one of its repo digests.
 image_digest_matches() {  # $1 = digest
   local d="$1" r
@@ -105,10 +110,17 @@ while IFS= read -r line; do
   [[ -n "$line" ]] && ENV_ARGS+=(-e "$line")
 done < <(read_config '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' | grep -E '^(TDAI_|NODE_OPTIONS=)')
 
+[[ -n "$NETWORK" ]] || NETWORK="$NETWORK_MODE"
+[[ -n "$PORT" ]] || PORT="$PORT_HC"
+# the alias the running stack expects (the proxy reaches Core as memory-core); read when live, else the stack's convention
+[[ -n "$ALIAS" ]] || ALIAS="${CORE_NETWORK_ALIAS:-memory-core}"
 [[ -n "$IMAGE" && -n "$NETWORK" && -n "$PORT" && -n "$DATA_VOLUME" && -n "$CONFIG_FILE" ]] \
-  || die "could not read the current run configuration from $CONTAINER"
+  || die "could not read the current run configuration from $CONTAINER (image=$IMAGE network=$NETWORK port=$PORT volume=$DATA_VOLUME config=$CONFIG_FILE)"
 
 recreate() {
+  # macOS ships bash 3.2: "${arr[@]}" of an EMPTY array trips `set -u`. On
+  # 2026-09-12 that killed `disable` between `docker rm -f` and `docker run`,
+  # leaving no container at all; the expansions below are the 3.2-safe form.
   local -a extra=("$@")
   docker rm -f "$CONTAINER" >/dev/null
   docker run -d --name "$CONTAINER" \
@@ -117,8 +129,8 @@ recreate() {
     -p "${PORT}:8420" \
     -v "$DATA_VOLUME:/data/tdai-memory" \
     -v "$CONFIG_FILE:/data/config/tdai-gateway.yaml:ro" \
-    "${ENV_ARGS[@]}" \
-    "${extra[@]}" \
+    ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} \
+    ${extra[@]+"${extra[@]}"} \
     "$IMAGE" >/dev/null
   for _ in $(seq 1 60); do
     case "$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo none)" in
@@ -153,6 +165,77 @@ mounted_now() {
   read_config '{{range .Mounts}}{{if eq .Destination "'"$IN_IMAGE_DIR"'"}}{{.Source}}{{end}}{{end}}'
 }
 
+# --accept-image (2026-09-12, 方案 ①): the overwrite is measured, printed and
+# recorded, never skipped silently. Per mounted file: how many lines the
+# image's copy differs from what we mount, and from this branch's base (the
+# upstream state the branch grew from). A file that exists only in the image
+# under src/metadata would be HIDDEN by the directory mount — that is a real
+# clobber and still refuses. The record goes to evaluation/gate/artifacts/
+# core-mount-accept-<digest12>.json (§10: what changed, restore path), and
+# batch-conditions.mjs freezes and checks it.
+BRANCH_BASE="${BRANCH_BASE:-$(git -C "$REPO_ROOT" merge-base HEAD feat/server_team 2>/dev/null || echo 97f94654280b2932c35ba4806a491999ed244cc9)}"
+ACCEPT_RECORD_DIR="$REPO_ROOT/evaluation/gate/artifacts"
+diff_lines() { local n; n="$(diff "$1" "$2" 2>/dev/null | grep -c '^[<>]')" || true; echo "${n:-0}"; }
+ACCEPT_ROWS=(); ACCEPT_ROUTES=""; ACCEPT_IMAGE_ONLY=""
+accept_overwrite_report() {
+  local tmp; tmp="$(mktemp -d)"
+  docker cp "$CONTAINER:$IN_IMAGE_DIR" "$tmp/image" 2>/dev/null || { rm -rf "$tmp"; die "cannot read $IN_IMAGE_DIR from the container"; }
+  mkdir -p "$tmp/base"
+  git -C "$REPO_ROOT" archive "$BRANCH_BASE" MemoryCore/src 2>/dev/null | tar -x -C "$tmp/base" || { rm -rf "$tmp"; die "cannot archive the branch base $BRANCH_BASE"; }
+  ACCEPT_IMAGE_ONLY="$(diff -rq "$tmp/image" "$PATCHED_DIR" 2>/dev/null | grep "^Only in $tmp/image" || true)"
+  if [[ -n "$ACCEPT_IMAGE_ONLY" ]]; then
+    echo "[error] files that exist only in the image under $IN_IMAGE_DIR would be hidden by the directory mount:" >&2
+    echo "$ACCEPT_IMAGE_ONLY" >&2
+    rm -rf "$tmp"; return 1
+  fi
+  echo "[info] overwrite by the mount (image vs mounted / image vs branch base $(printf %.7s "$BRANCH_BASE")), lines:"
+  local f rel vo vb
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
+    rel="${f#$tmp/image/}"
+    vo="$(diff_lines "$f" "$PATCHED_DIR/$rel")"; vb="$(diff_lines "$f" "$tmp/base/MemoryCore/src/metadata/$rel")"
+    echo "       src/metadata/$rel: $vo / $vb"
+    ACCEPT_ROWS+=("{\"path\":\"src/metadata/$rel\",\"image_vs_mounted_lines\":$vo,\"image_vs_base_lines\":$vb}")
+  done < <(diff -rq "$tmp/image" "$PATCHED_DIR" 2>/dev/null | awk '/^Files /{print $2}')
+  for rel in "${GATEWAY_FILES[@]}"; do
+    docker cp "$CONTAINER:/app/src/$rel" "$tmp/gw.ts" 2>/dev/null || continue
+    vo="$(diff_lines "$tmp/gw.ts" "$REPO_ROOT/MemoryCore/src/$rel")"; vb="$(diff_lines "$tmp/gw.ts" "$tmp/base/MemoryCore/src/$rel")"
+    echo "       src/$rel: $vo / $vb"
+    ACCEPT_ROWS+=("{\"path\":\"src/$rel\",\"image_vs_mounted_lines\":$vo,\"image_vs_base_lines\":$vb}")
+  done
+  # routes the image's router serves that the mounted router does not: the upstream features not in effect under the mount
+  ACCEPT_ROUTES="$(comm -23 <(grep -oE '\$\{V3_PREFIX\}/[a-z0-9/_-]+' "$tmp/image/router/v3-meta-router.ts" 2>/dev/null | sort -u) <(grep -oE '\$\{V3_PREFIX\}/[a-z0-9/_-]+' "$PATCHED_DIR/router/v3-meta-router.ts" 2>/dev/null | sort -u) | sed 's#${V3_PREFIX}#/v3/meta#' | tr '\n' ' ')"
+  echo "[info] routes in the image's v3-meta-router not served under the mount: ${ACCEPT_ROUTES:-none}"
+  rm -rf "$tmp"; return 0
+}
+write_accept_record() {  # after a successful enable
+  local digest12; digest12="$(printf %s "${IMAGE_ID#sha256:}" | cut -c1-12)"
+  local out="$ACCEPT_RECORD_DIR/core-mount-accept-$digest12.json"
+  local commit; commit="$(git -C "$REPO_ROOT" log -1 --format=%H -- MemoryCore/src/metadata MemoryCore/src/gateway MemoryCore/src/core)"
+  local touches; touches="$(grep -rln -i -E 'instance-upstream|InstanceUpstream|bind-external|find-by-external' "$REPO_ROOT/evaluation" --include='*.mjs' --include='*.sh' --include='*.ts' 2>/dev/null | grep -v node_modules | wc -l | tr -d ' ')"
+  local rows; rows="$(IFS=,; echo "${ACCEPT_ROWS[*]}")"
+  python3 - "$out" "$IMAGE_ID" "$IMAGE" "$REPO_DIGESTS" "$(docker image inspect "$IMAGE_ID" --format '{{.Created}}' 2>/dev/null || true)" "$BRANCH_BASE" "$commit" "$rows" "$ACCEPT_ROUTES" "$touches" "$ACCEPT_IMAGE" <<'PY'
+import json, sys, datetime
+out, image_id, image_ref, repo, created, base, commit, rows, routes, touches, accepted = sys.argv[1:12]
+rec = {
+  "accepted_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+  "container": "tdai-memory-core", "image_ref": image_ref, "image_id": image_id, "accepted_digest": accepted,
+  "repo_digests": repo.split(), "image_created": created or None,
+  "branch_base": base, "mounted_commit": commit,
+  "mounted_paths": ["src/metadata (directory)", "src/gateway/skill-handlers.ts", "src/gateway/v2-schemas.ts", "src/gateway/v2-router.ts", "src/gateway/server.ts", "src/core/tdai-core.ts", "src/core/skill/skill-versioning.ts"],
+  "overwritten": json.loads("[" + rows + "]") if rows else [],
+  "image_only_files_under_metadata": [],
+  "routes_in_image_not_served_under_mount": routes.split(),
+  "evaluation_references_those_routes": int(touches) > 0,
+  "what_runs": "the image's other src files (upstream, newer than the branch base) plus these mounted files (branch base + gate): the same runtime every batch-4 and dev-loop run recorded on this image digest ran on",
+  "restore": "bash evaluation/eval-core.sh disable   # back to the stock image source (the upstream features return)",
+  "verify": "bash evaluation/eval-core.sh status",
+}
+json.dump(rec, open(out, "w"), indent=2, ensure_ascii=False); open(out, "a").write("\n")
+print(f"[ok] record → {out}")
+PY
+}
+
 # One gateway file: the image's copy must equal a committed version of ours
 # (any commit in this branch's history of the file), unless it is already
 # our mounted copy.
@@ -180,10 +263,11 @@ case "$MODE" in
     if [[ -n "$ACCEPT_IMAGE" ]]; then
       image_digest_matches "$ACCEPT_IMAGE" \
         || die "--accept-image $ACCEPT_IMAGE is not the container's image (id $IMAGE_ID; repo digests: ${REPO_DIGESTS:-none}); nothing changed"
-      echo "[ok] 已接受镜像 $ACCEPT_IMAGE,守卫 image_dir_matches_prepatch 按显式例外跳过(容器镜像 id $IMAGE_ID;repo digest: ${REPO_DIGESTS:-none})"
-      echo "[ok] 明知覆盖:镜像的 src/metadata 比本分支基点新(上游实例上游配置等),挂载后运行时为本分支版本(上游旧版 + 闸门);已确认评测不经过被覆盖的功能"
+      echo "[ok] 已接受镜像 $ACCEPT_IMAGE(容器镜像 id $IMAGE_ID;repo digest: ${REPO_DIGESTS:-none}):目录守卫与逐文件守卫按显式例外跳过,覆盖按下面逐项打印并记录"
+      accept_overwrite_report || die "refusing to enable: the directory mount would hide files that exist only in the image"
+      echo "[ok] 明知覆盖:镜像比本分支基点新(上游实例上游配置等),挂载后这些文件的运行时为本分支版本(上游旧版 + 闸门);评测不经过被覆盖的路由"
     else
-      image_dir_matches_prepatch || die "refusing to enable (or, once the image's directory has been inspected and is the upstream original: enable --accept-image $IMAGE_ID)"
+      image_dir_matches_prepatch || die "refusing to enable (once the overwrite has been read and accepted: enable --accept-image $IMAGE_ID)"
     fi
     if [[ -n "$(git -C "$REPO_ROOT" status --porcelain -- MemoryCore/src/metadata)" ]]; then
       echo "[warn] MemoryCore/src/metadata has uncommitted changes; they would go live with the mount:"
@@ -194,7 +278,7 @@ case "$MODE" in
     MOUNT_ARGS=(-v "$PATCHED_DIR:$IN_IMAGE_DIR:ro")
     for rel in "${GATEWAY_FILES[@]}"; do
       [[ -f "$REPO_ROOT/MemoryCore/src/$rel" ]] || die "gateway source not found: MemoryCore/src/$rel"
-      image_file_matches_committed "$rel" || die "refusing to enable"
+      if [[ -z "$ACCEPT_IMAGE" ]]; then image_file_matches_committed "$rel" || die "refusing to enable"; fi
       if [[ -n "$(git -C "$REPO_ROOT" status --porcelain -- "MemoryCore/src/$rel")" ]]; then
         die "MemoryCore/src/$rel has uncommitted changes; commit or stash them first — a run must be traceable to a commit"
       fi
@@ -213,6 +297,7 @@ case "$MODE" in
     ok "gate mounted → /v3/meta/asset/outcome/{append,list}, /v3/meta/asset/gate/{evaluate,get,review,submit} live (HTTP $code without a key)"
     ok "skill data plane mounted → ${GATEWAY_FILES[*]} (admission filter on get/get-by-name/files-read/list/search/listing)"
     ok "source commit: $(git -C "$REPO_ROOT" log -1 --format=%h -- MemoryCore/src/metadata MemoryCore/src/gateway)"
+    if [[ -n "$ACCEPT_IMAGE" ]]; then write_accept_record; fi
     ;;
   disable)
     recreate

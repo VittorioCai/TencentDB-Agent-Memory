@@ -129,3 +129,46 @@ test("proxy 一样按它自己的键核对", () => {
   const r = imageDigestCheck({ proxy_image_digest: "sha256:p1" }, { proxy: { image_id: "sha256:p1", repo_digests: [] } }, "proxy");
   assert.equal(r.ok, true);
 });
+
+// ---------------------------------------------------------------------------
+// 接受覆盖的挂载要冻结、要核对 —— 2026-09-12(方案 ①)
+//
+// enable --accept-image 写一份记录(镜像摘要、挂载文件的提交、逐文件覆盖行数、
+// 未生效的上游路由)。冻结把它记进 runtime.core_mount;核对三件事:闸门目录确实
+// 挂着、记录的摘要等于冻结的镜像摘要且等于容器实际、挂载来源提交等于当前分支
+// 对应路径的最新提交。记录缺失 → 未知,不是通过。
+// ---------------------------------------------------------------------------
+import { coreMountCheck } from "./batch-conditions.mjs";
+
+test("挂载在、记录摘要一致、来源提交一致 → 三行全过", () => {
+  const frozen = { core_image_digest: "sha256:img", core_mount: { image_id: "sha256:img", mounted_commit: "abc" } };
+  const live = { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "abc" };
+  const rows = coreMountCheck(frozen, live);
+  assert.equal(rows.length, 3);
+  assert.ok(rows.every((r) => r.ok === true), JSON.stringify(rows));
+});
+
+test("闸门目录没挂 → 该行不通过", () => {
+  const frozen = { core_image_digest: "sha256:img", core_mount: { image_id: "sha256:img", mounted_commit: "abc" } };
+  const rows = coreMountCheck(frozen, { core: { image_id: "sha256:img" }, core_mounted: false, mounted_commit_now: "abc" });
+  assert.equal(rows.find((r) => /挂载/.test(r.name) && !/记录|提交/.test(r.name)).ok, false);
+});
+
+test("记录的摘要与冻结的镜像摘要不同,或与容器实际不同 → 不通过,点名", () => {
+  const frozen = { core_image_digest: "sha256:img", core_mount: { image_id: "sha256:other", mounted_commit: "abc" } };
+  const r = coreMountCheck(frozen, { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "abc" }).find((x) => /记录/.test(x.name));
+  assert.equal(r.ok, false);
+  assert.match(r.why, /sha256:other/);
+});
+
+test("挂载来源提交与当前分支不同 → 不通过(上线的不是当前代码)", () => {
+  const frozen = { core_image_digest: "sha256:img", core_mount: { image_id: "sha256:img", mounted_commit: "abc" } };
+  const r = coreMountCheck(frozen, { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "def" }).find((x) => /提交/.test(x.name));
+  assert.equal(r.ok, false);
+});
+
+test("清单没有 core_mount 记录 → 未知,不是通过", () => {
+  const rows = coreMountCheck({ core_image_digest: "sha256:img" }, { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "abc" });
+  assert.ok(rows.some((r) => r.ok === null));
+  assert.ok(!rows.some((r) => r.ok === true && /记录/.test(r.name)));
+});

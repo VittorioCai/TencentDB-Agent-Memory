@@ -122,6 +122,42 @@ export function containerImage(name) {
     return { container: name, image_ref: (() => { try { return sh(["inspect", name, "--format", "{{.Config.Image}}"]); } catch { return null; } })(), image_id: id, repo_digests: digests, image_created: created };
   } catch { return null; }
 }
+/** The §10 record eval-core.sh writes when a mount over a newer image is accepted (方案 ①, 2026-09-12). */
+export function coreMountRecord(digest, dir = resolve(REPO, "evaluation/gate/artifacts")) {
+  if (!digest) return null;
+  const p = join(dir, `core-mount-accept-${String(digest).replace(/^sha256:/, "").slice(0, 12)}.json`);
+  if (!existsSync(p)) return null;
+  try { return { ...JSON.parse(readFileSync(p, "utf8")), record_file: rel(p) }; } catch { return null; }
+}
+/** Is the gate directory mounted into the container right now, and which commit do the mounted paths stand at? */
+export function coreMountLive(container = CONTAINER) {
+  let mounted = null;
+  try { mounted = sh(["inspect", container, "--format", "{{range .Mounts}}{{if eq .Destination \"/app/src/metadata\"}}{{.Source}}{{end}}{{end}}"]) !== ""; } catch { mounted = null; }
+  let commit = null;
+  try { commit = execFileSync("git", ["-C", REPO, "log", "-1", "--format=%H", "--", "MemoryCore/src/metadata", "MemoryCore/src/gateway", "MemoryCore/src/core"], { encoding: "utf8" }).trim() || null; } catch { commit = null; }
+  return { core_mounted: mounted, mounted_commit_now: commit };
+}
+/**
+ * Three check rows for an accepted mount: the gate directory is mounted; the
+ * record's image digest equals the frozen one and the container's actual;
+ * the mounted paths' commit equals the record's (what is live is the current
+ * code). No record → unknown, never a pass.
+ */
+export function coreMountCheck(frozenRuntime, liveRuntime) {
+  const rec = frozenRuntime?.core_mount ?? null;
+  const rows = [];
+  rows.push({ name: "core 闸门目录已挂载", ok: liveRuntime?.core_mounted ?? null, expected: true, actual: liveRuntime?.core_mounted ?? null, why: liveRuntime?.core_mounted ? null : "not mounted (or container unreadable): bash evaluation/eval-core.sh enable --accept-image <digest>" });
+  if (!rec) {
+    rows.push({ name: "core 挂载记录存在且摘要 == 冻结镜像 == 容器实际", ok: null, expected: frozenRuntime?.core_image_digest ?? null, actual: liveRuntime?.core?.image_id ?? null, why: "未冻结 (not frozen): the conditions carry no runtime.core_mount record" });
+    rows.push({ name: "挂载来源提交 == 当前分支对应路径的最新提交", ok: null, expected: null, actual: liveRuntime?.mounted_commit_now ?? null, why: "未冻结 (not frozen): no record" });
+    return rows;
+  }
+  const digestOk = rec.image_id === frozenRuntime?.core_image_digest && rec.image_id === liveRuntime?.core?.image_id;
+  rows.push({ name: "core 挂载记录存在且摘要 == 冻结镜像 == 容器实际", ok: digestOk, expected: frozenRuntime?.core_image_digest ?? null, actual: `record ${rec.image_id}; live ${liveRuntime?.core?.image_id ?? null}`, why: digestOk ? null : `record ${rec.image_id} vs frozen ${frozenRuntime?.core_image_digest} vs live ${liveRuntime?.core?.image_id}` });
+  const commitOk = rec.mounted_commit && liveRuntime?.mounted_commit_now ? rec.mounted_commit === liveRuntime.mounted_commit_now : null;
+  rows.push({ name: "挂载来源提交 == 当前分支对应路径的最新提交", ok: commitOk, expected: rec.mounted_commit ?? null, actual: liveRuntime?.mounted_commit_now ?? null, why: commitOk === false ? "the mounted files were accepted at another commit: re-run eval-core.sh enable --accept-image (a run must be traceable to the current commit)" : commitOk === null ? "commit unreadable" : null });
+  return rows;
+}
 /** One check row: the frozen digest for `which` (core | proxy) against the live container image. */
 export function imageDigestCheck(frozenRuntime, liveRuntime, which) {
   const key = `${which}_image_digest`;
@@ -197,7 +233,7 @@ async function readLive(spec) {
     container_started_at: containerStartedAt("tdai-proxy"),
   };
   // the images the two containers actually run (frozen since 2026-09-11)
-  const runtime = { core: containerImage(CONTAINER), proxy: containerImage("tdai-proxy") };
+  const runtime = { core: containerImage(CONTAINER), proxy: containerImage("tdai-proxy"), ...coreMountLive(CONTAINER) };
 
   // 记忆:整树哈希、消费者范围哈希、一份临时快照(给干净检查与来源扫描用)
   const tmp = mkdtempSync(join(tmpdir(), "batchcond-"));
@@ -456,6 +492,8 @@ async function freeze(args) {
     runtime: {
       core_image_digest: live.runtime.core?.image_id ?? null, core_image_ref: live.runtime.core?.image_ref ?? null, core_repo_digests: live.runtime.core?.repo_digests ?? [], core_image_created: live.runtime.core?.image_created ?? null,
       proxy_image_digest: live.runtime.proxy?.image_id ?? null, proxy_image_ref: live.runtime.proxy?.image_ref ?? null, proxy_repo_digests: live.runtime.proxy?.repo_digests ?? [], proxy_image_created: live.runtime.proxy?.image_created ?? null,
+      core_mounted: live.runtime.core_mounted, mounted_commit: live.runtime.mounted_commit_now,
+      core_mount: coreMountRecord(live.runtime.core?.image_id),
       why: "the images the containers run are part of the conditions: an upstream update of :latest would change the results with nothing on file to say so (gap found 2026-09-11)",
     },
     isolation: {
@@ -609,6 +647,7 @@ async function check(args) {
   const inEffect = live.proxy.container_started_at && live.proxy.config_mtime ? new Date(live.proxy.container_started_at) >= new Date(live.proxy.config_mtime) : null;
   row("proxy 已在配置修改后重启(配置生效)", inEffect, "started_at >= config mtime", `${live.proxy.container_started_at} vs ${live.proxy.config_mtime}`, "docker restart tdai-proxy");
   for (const which of ["core", "proxy"]) { const d = imageDigestCheck(c.runtime, live.runtime, which); row(d.name, d.ok, d.expected?.slice(0, 19) ?? null, d.actual?.slice(0, 19) ?? null, d.why ?? undefined); }
+  for (const d of coreMountCheck(c.runtime, live.runtime)) row(d.name, d.ok, typeof d.expected === "string" ? d.expected.slice(0, 19) : d.expected, typeof d.actual === "string" ? d.actual.slice(0, 60) : d.actual, d.why ?? undefined);
   row("proxy 配置备份在受保护位置且哈希一致", fileSha(resolve(REPO, c.rollback.proxy_config.backup)) === c.rollback.proxy_config.backup_sha256, c.rollback.proxy_config.backup_sha256?.slice(0, 12), fileSha(resolve(REPO, c.rollback.proxy_config.backup))?.slice(0, 12));
 
   const m = live.memory, cm = c.isolation.memory;

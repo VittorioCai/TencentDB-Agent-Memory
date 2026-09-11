@@ -417,6 +417,11 @@
         "recorded_at": "2026-09-11T22:03:16Z",
         "note": "2026-09-12 改正:镜像 = 上游新版,分支 = 上游旧版 + 闸门;挂载覆盖了这些上游新增功能,运行时是分支版本。评测不经过这些功能,结论不受影响;当时该记而没记。"
       }
+    },
+    {
+      "at": "2026-09-11T22:23:08Z",
+      "what": "correction: the historical core image digest is unknown; sha256:55fec3a6… is the image after the rebuild, not the one these runs used",
+      "why": "2026-09-12 改正:重建后拉到的上游 :latest(sha256:55fec3a6…,package 1.0.2-beta.1)不是记录运行时用的镜像——把批次四与闭环期间一直挂着的同一套文件挂上去,容器起不来(skill-versioning.ts 引用的 ./skill-store.js 在该镜像里不存在,evaluation/gate/artifacts/core-mount-accept-failure-20260912.log);而那些运行健康跑了 30 多次。当时的镜像没有记录,Docker 清理后已不可考:历史镜像摘要 = 未知。"
     }
   ]
 }

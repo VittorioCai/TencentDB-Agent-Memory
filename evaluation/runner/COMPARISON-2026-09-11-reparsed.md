@@ -179,10 +179,10 @@ wrong 资产 `failed`(最后一次是 gate-on)、消费者 profile 残留四项(
 
 - **运行时镜像摘要当时没有冻结,而且运行时不是镜像原样**(2026-09-11 重建容器后发现):条件清单冻结了资产、token、消费者、
   proxy 配置、记忆基线、分析代码哈希,没有冻 memory-core / proxy 的镜像摘要。事后回填(`batch4-conditions.json` 的 `runtime`,
-  标明 backfilled):容器运行 `agentmemory/memory-core@sha256:55fec3a6…`(2026-09-07 构建),批次期间上游 `:latest` 未变的判断依据是
-  重新拉取得到同一摘要,不是当时的记录。批次期间 Core 的 `src/metadata`(9 个文件)与 4 个 gateway 文件被本分支挂载覆盖:镜像里
-  更新的上游功能(实例上游配置 `InstanceUpstreamConfig`、`/v3/meta/instance-upstream/*` 等)未生效,运行时是"上游旧版 + 闸门";
-  评测不经过这些功能(evaluation/ 无引用),结论不受影响,但当时该记而没记。
+  标明 backfilled):**批次期间的镜像摘要不可考**。重建后拉到的上游 `:latest`(`sha256:55fec3a6…`,2026-09-07 构建)一度被当作
+  当时的镜像回填,2026-09-12 证明不是:把批次期间一直挂着的同一套文件挂到它上面,容器起不来(`skill-versioning.ts` 引用的模块在该镜像里
+  不存在,`gate/artifacts/core-mount-accept-failure-20260912.log`),而那些运行健康跑了 30 多次。能确定的只有:批次期间 Core 的
+  `src/metadata` 整目录与 6 个 gateway/core 文件被本分支挂载覆盖(运行时 = 当时镜像的其余文件 + 本分支这些文件),当时该记而没记。
 
 ## 证据位置
 
