@@ -223,7 +223,7 @@ the asset carries and never fills it in.
 | File | Does |
 |---|---|
 | `core-gate.sh` | The runner's side of the in-Core gate: `--seed` (evidence base → Core, decisions checked against the frozen baseline), `--sync <run>` (a run's outcomes → Core as the admin naming the consumer, with `call_id` from `target_ref` and `event_id`; evaluate=false), `--reset` (gate off: every baseline asset approved), `--apply` (gate on: Core evaluates at `as_of` = frozen baseline), `--status`. Every write read back; the record carries status, the full decision per asset and, since v2, each row's `trusted` mark |
-| `../eval-core.sh` | Mounts this branch's `MemoryCore/src/metadata` and six gateway/core files (`gateway/skill-handlers.ts`, `v2-schemas.ts`, `v2-router.ts`, `server.ts`, `core/tdai-core.ts`, `core/skill/skill-versioning.ts`) over the core image's copies (the image runs tsx on src), after checking parity with a committed version and a clean tree |
+| `../eval-core.sh` | Mounts this branch's `MemoryCore/src/metadata` and six gateway/core files (`gateway/skill-handlers.ts`, `v2-schemas.ts`, `v2-router.ts`, `server.ts`, `core/tdai-core.ts`, `core/skill/skill-versioning.ts`) over the core image's copies (the image runs tsx on src), after checking parity with a committed version and a clean tree. Since 2026-09-12 the live Core is a Core image built from this branch (`agentmemory/memory-core:topic4-<commit>`, gate built in, nothing mounted): `status` reports that mode and checks the tag's build commit against HEAD's MemoryCore tree; `enable` has nothing to do on it |
 | `check-cold-start-selfheal.sh` | The cold-start experiment above, end to end on a throwaway skill: create, move it to v2, force the registry back to v1/approved, recreate the container, then read three times and print the registry after each. Deletes the skill afterwards |
 | `check-listing-agrees.sh` | Against the running stack: every row a decision cites is one the listing calls usable, and the usable count equals the calls counted. Pages with top-level `limit`/`offset` — the schema has no nested `pagination` object and Zod strips one, so an earlier version of this check silently compared the first 20 rows against a whole decision |
 | `artifacts/gate_baseline.json` | The frozen evidence base: which runs, which events, what they decided |
@@ -592,7 +592,11 @@ of any comparison.
 ## Running it
 
 ```bash
-# put the gate into the running product (checks image parity, needs a clean tree)
+# the gate in the running product: since 2026-09-12 it is built into the image the product runs
+# (deploy/global-images/.env MEMORY_CORE_IMAGE=agentmemory/memory-core:topic4-<commit>, built with
+# `docker build -t agentmemory/memory-core:topic4-<commit> MemoryCore`); status says which mode is live
+bash evaluation/eval-core.sh status
+# on an upstream image: mount it instead (checks image parity, needs a clean tree)
 bash evaluation/eval-core.sh enable
 
 # evidence base → Core, then check Core's decisions against the frozen baseline

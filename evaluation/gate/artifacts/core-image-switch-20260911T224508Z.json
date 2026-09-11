@@ -1,0 +1,108 @@
+{
+  "what": "Core container switched from the upstream image to a Core image built from this branch (方案 ⑤), user's decision 2026-09-12 (\"切\")",
+  "when": {
+    "container_stopped": "2026-09-11T22:45:36Z",
+    "backup_taken": "2026-09-11T22:45:40Z",
+    "container_started": "2026-09-11T22:48:05.646387169Z",
+    "switch_record_written": "20260911T224508Z"
+  },
+  "before": {
+    "image": "agentmemory/memory-core:latest",
+    "image_id": "sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed",
+    "status": "running",
+    "health": "healthy",
+    "started": "2026-09-11T22:23:50.858217509Z",
+    "mounts": [
+      {
+        "type": "volume",
+        "src": "/var/lib/docker/volumes/tdai-memory-core-data/_datatdai-memory-core-data",
+        "dst": "/data/tdai-memory"
+      },
+      {
+        "type": "bind",
+        "src": "/host_mnt/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.memory-core-config/tdai-gateway.yaml",
+        "dst": "/data/config/tdai-gateway.yaml"
+      }
+    ],
+    "package_version": "1.0.2-beta.1",
+    "gate_routes": "404 (gate/get, outcome/list)",
+    "asset_gate_ts_in_image": false
+  },
+  "after": {
+    "image": "agentmemory/memory-core:topic4-11d30eaa720d",
+    "image_id": "sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9",
+    "status": "running",
+    "health": "healthy",
+    "started": "2026-09-11T22:48:05.646387169Z",
+    "package_version": "2.0.0-beta.1",
+    "gate_routes": "401 without a key (gate/get, outcome/list): routes exist, key required",
+    "asset_gate_ts_in_image": true,
+    "admissionFilter_in_skill_handlers": 9,
+    "image_build_commit": "11d30eaa720d",
+    "memorycore_tree_at_build_equals_head": "66dc38be39434b8aa8eb787e35664e535576da4c (git rev-parse 11d30ea:MemoryCore == HEAD:MemoryCore)"
+  },
+  "change": {
+    "file": "deploy/global-images/.env (gitignored)",
+    "line": "MEMORY_CORE_IMAGE=agentmemory/memory-core:latest → MEMORY_CORE_IMAGE=agentmemory/memory-core:topic4-11d30eaa720d",
+    "then": "bash deploy/global-images/start-memory-core.sh (removes the old container, keeps the volume; pull_image only pulls with PULL=1, so the local tag is used; admin key reused, auth/verify 200)"
+  },
+  "backups": {
+    "env": {
+      "path": "deploy/global-images/.env.bak-20260911T224508Z-before-image-switch",
+      "sha256": "ce4b8bb731dbe27cad9c23070d4b61aae6cb92916a2fee617ab159329dd3646c",
+      "mode": "0600, gitignored"
+    },
+    "data_volume": {
+      "path": "/Users/vittoriocai/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz",
+      "sha256": "66bf38305f6e01a31499ccd75c694dbb44357f17024d24d6f6fadc2797b5c2f4",
+      "bytes": 3800628,
+      "entries": 2156,
+      "how": "container stopped, then docker cp tdai-memory-core:/data/tdai-memory - | gzip (consistent: no writer)",
+      "earlier_backup": "~/Desktop/topic4-backup/core-data.tar.gz (2026-09-11 23:29, before the rebuild)"
+    }
+  },
+  "restore": {
+    "image": "sed -i '' 's#^MEMORY_CORE_IMAGE=.*#MEMORY_CORE_IMAGE=agentmemory/memory-core:latest#' deploy/global-images/.env && bash deploy/global-images/start-memory-core.sh",
+    "data_volume_if_needed": "docker stop tdai-memory-core && docker run --rm -v tdai-memory-core-data:/data -v ~/Desktop/topic4-backup:/bk alpine sh -c 'rm -rf /data/* && tar xzf /bk/core-data-20260911T224508Z-before-image-switch.tar.gz -C /data --strip-components=1' && docker start tdai-memory-core   # (alpine must be pullable; or docker cp the extracted tree in)",
+    "verify": "bash evaluation/eval-core.sh status; bash evaluation/gate/core-gate.sh --status --baseline evaluation/gate/artifacts/gate_baseline_batch4.json"
+  },
+  "verification_after_switch": {
+    "health": "GET /health 200; container healthy 6 s after start",
+    "eval_core_status": "gate: built into the image; plane: admission filter built in; build: commit 11d30eaa720d — MemoryCore tree equals HEAD's",
+    "batch4_assets_v4": {
+      "record": "evaluation/gate/artifacts/core-status-after-image-switch-20260912.json",
+      "state": {
+        "skl-oBaDO5CceKnr": {
+          "status": "approved",
+          "visibility": "team",
+          "gate_decision": "admit"
+        },
+        "skl-sZFb3KatWY6m": {
+          "status": "failed",
+          "visibility": "team",
+          "gate_decision": "reject"
+        }
+      }
+    },
+    "devloop_note_v2": {
+      "record": "evaluation/gate/artifacts/core-status-note-after-image-switch-20260912.json",
+      "state": {
+        "skl-pXLc38dex6Zt": {
+          "status": "approved",
+          "visibility": "team",
+          "gate_decision": "admit"
+        }
+      }
+    },
+    "reads_agree_with_records": "right approved/team/admit conf 1, wrong failed/team/reject conf 0 (batch-4 end state); note v2 approved/team/admit conf 1 (gate-observations.jsonl last row) — the pool survived the Docker cleanup and the image switch",
+    "extraction": "ON — start-memory-core.sh regenerates the gateway config with skill.extraction.enabled: true on every start; not switched off here (no run planned; core-extraction.sh off --record before the next comparison run)",
+    "clickhouse": "no tdai-clickhouse container (unchanged by this switch; needed before any run)"
+  },
+  "relation_to_recorded_runs": "batch 4 and both dev-loop tasks ran on a bind mount of the same MemoryCore paths over an image whose digest was never recorded (proved not to be sha256:55fec3a6…; see core-mount-accept-failure-20260912.log). The built image carries the same branch code with a different, now recorded, remainder of the image: same gate code, different image — batch-conditions --check reports '闸门来源 == 冻结值' FAIL against the old conditions on purpose.",
+  "image": {
+    "ref": "agentmemory/memory-core:topic4-11d30eaa720d",
+    "id": "sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9",
+    "built": "2026-09-11T22:23:18Z from MemoryCore/Dockerfile at 11d30ea (MemoryCore tree identical to HEAD b8b4879)",
+    "smoke": "throwaway container on port 18420 with its own volume before the switch: healthy, gate routes 401, asset-gate.ts present, admissionFilter ×9, package 2.0.0-beta.1"
+  }
+}

@@ -34,6 +34,16 @@
 #   bash evaluation/eval-core.sh status
 #   bash evaluation/eval-core.sh disable   # back to the stock image source
 #
+# Since 2026-09-12 the gate can also be BUILT INTO the image: a Core image
+# built from this branch (MemoryCore/Dockerfile at HEAD, tagged
+# agentmemory/memory-core:topic4-<commit>) runs with nothing mounted, and
+# `status` reports it as such (marker file present in the image, gate route
+# answers 401 not 404, tag's build commit vs HEAD's MemoryCore tree). The
+# mount mode above stays for an upstream image; on a built image `enable` has
+# nothing to do and says so, `disable` recreates the same image (the gate
+# stays — it is the image). Which image runs is deploy/global-images/.env
+# MEMORY_CORE_IMAGE (gitignored) + start-memory-core.sh.
+#
 # --accept-image (2026-09-11, rule change agreed with the user; reasoning
 # corrected 2026-09-12): the parity guard `image_dir_matches_prepatch`
 # requires the image's src/metadata to equal a committed version of ours.
@@ -256,10 +266,32 @@ image_file_matches_committed() {  # rel path under src
 gateway_mounted_now() {
   read_config '{{range .Mounts}}{{if eq .Destination "/app/src/gateway/skill-handlers.ts"}}{{.Source}}{{end}}{{end}}'
 }
+# The gate built into the image (nothing mounted): the marker file is in the image itself.
+gate_in_image() { [[ -z "$(mounted_now)" ]] && docker exec "$CONTAINER" sh -c "test -f $IN_IMAGE_DIR/$MARKER_FILE" 2>/dev/null; }
+gate_route_code() { curl -sS -o /dev/null -w '%{http_code}' --max-time 5 -X POST "http://127.0.0.1:${PORT}/v3/meta/asset/gate/get" -H 'content-type: application/json' -H 'x-tdai-service-id: default' -d '{"asset_id":"x"}' 2>/dev/null || echo 000; }
+# agentmemory/memory-core:topic4-<commit> → the commit the image was built at; empty for any other tag
+image_build_commit() { [[ "$IMAGE" =~ :topic4-([0-9a-f]{7,40})$ ]] && echo "${BASH_REMATCH[1]}" || true; }
+print_builtin_status() {
+  local bc tree_b tree_h
+  echo "gate:   built into the image (${IN_IMAGE_DIR}/${MARKER_FILE} present, nothing mounted; /v3/meta/asset/gate/get → HTTP $(gate_route_code) without a key)"
+  if docker exec "$CONTAINER" grep -q "$GATEWAY_MARKER" /app/src/gateway/skill-handlers.ts 2>/dev/null; then echo "plane:  admission filter built in (skill-handlers.ts carries $GATEWAY_MARKER)"; else echo "plane:  skill-handlers.ts in the image has NO admission filter"; fi
+  bc="$(image_build_commit)"
+  if [[ -n "$bc" ]]; then
+    tree_b="$(git -C "$REPO_ROOT" rev-parse "$bc:MemoryCore" 2>/dev/null || true)"; tree_h="$(git -C "$REPO_ROOT" rev-parse HEAD:MemoryCore 2>/dev/null || true)"
+    if [[ -n "$tree_b" && "$tree_b" == "$tree_h" ]]; then echo "build:  commit $bc — its MemoryCore tree equals HEAD's ($tree_h)"; else echo "build:  commit $bc — MemoryCore tree ${tree_b:-unreadable} ≠ HEAD's ${tree_h:-unreadable}: what runs is NOT the current code; rebuild the image"; fi
+  else
+    echo "build:  image tag carries no commit (expected agentmemory/memory-core:topic4-<commit>); the built code cannot be tied to a commit from here"
+  fi
+}
 
 case "$MODE" in
   enable)
     [[ -f "$PATCHED_DIR/$MARKER_FILE" ]] || die "gate source not found: $PATCHED_DIR/$MARKER_FILE"
+    if gate_in_image; then
+      print_builtin_status
+      ok "the gate is built into the image $IMAGE ($IMAGE_ID); nothing to mount, nothing changed"
+      exit 0
+    fi
     if [[ -n "$ACCEPT_IMAGE" ]]; then
       image_digest_matches "$ACCEPT_IMAGE" \
         || die "--accept-image $ACCEPT_IMAGE is not the container's image (id $IMAGE_ID; repo digests: ${REPO_DIGESTS:-none}); nothing changed"
@@ -301,7 +333,7 @@ case "$MODE" in
     ;;
   disable)
     recreate
-    ok "evaluation mode off: stock image source for src/metadata"
+    if gate_in_image; then ok "no mounts; the gate stays because it is built into the image $IMAGE (to run without it: set MEMORY_CORE_IMAGE to an upstream image in deploy/global-images/.env and re-run start-memory-core.sh)"; else ok "evaluation mode off: stock image source for src/metadata"; fi
     ;;
   status)
     src="$(mounted_now)"
@@ -311,8 +343,10 @@ case "$MODE" in
       [[ -n "$gw" ]] && echo "plane:  gateway files mounted (${GATEWAY_FILES[*]})" || echo "plane:  gateway files NOT mounted (image copies; skill reads are not admission-filtered)"
       echo "commit: $(git -C "$REPO_ROOT" log -1 --format='%h %s' -- MemoryCore/src/metadata MemoryCore/src/gateway)"
       [[ -z "$(git -C "$REPO_ROOT" status --porcelain -- MemoryCore/src/metadata MemoryCore/src/gateway)" ]] && echo "tree:   clean" || echo "tree:   UNCOMMITTED CHANGES in MemoryCore/src/metadata or src/gateway"
+    elif gate_in_image; then
+      print_builtin_status
     else
-      echo "gate:   not mounted (stock image source)"
+      echo "gate:   not mounted, not in the image (stock image source; gate routes → HTTP $(gate_route_code))"
     fi
     echo "image:  $IMAGE  port: $PORT  network: $NETWORK${ALIAS:+ alias: $ALIAS}"
     echo "digest: $IMAGE_ID${REPO_DIGESTS:+  ($REPO_DIGESTS)}"

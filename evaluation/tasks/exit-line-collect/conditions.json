@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-09-11T21:57:59Z",
+  "frozen_at": "2026-09-11T23:03:54Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
@@ -110,12 +110,19 @@
     "why": "run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; the link keeps one source of truth with the note's home"
   },
   "runtime": {
-    "core_image_digest": "sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed",
-    "core_image_ref": "agentmemory/memory-core:latest",
+    "core_gate": "image",
+    "core_mounted": false,
+    "mounted_commit": "973116273df097513157ce5ba4a13d2c2c4831b8",
+    "core_image_build_commit": "11d30eaa720d",
+    "memorycore_tree_at_build": "66dc38be39434b8aa8eb787e35664e535576da4c",
+    "memorycore_tree_now": "66dc38be39434b8aa8eb787e35664e535576da4c",
+    "core_mount": null,
+    "core_image_digest": "sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9",
+    "core_image_ref": "agentmemory/memory-core:topic4-11d30eaa720d",
     "core_repo_digests": [
-      "agentmemory/memory-core@sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed"
+      "agentmemory/memory-core@sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9"
     ],
-    "core_image_created": "2026-09-07T09:24:55.037668025Z",
+    "core_image_created": "2026-09-11T22:23:18.7196263Z",
     "proxy_image_digest": "sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
     "proxy_image_ref": "agentmemory/memory-proxy:latest",
     "proxy_repo_digests": [
@@ -123,7 +130,9 @@
     ],
     "proxy_image_created": "2026-09-07T09:27:27.00487263Z",
     "recorded_live": true,
-    "since": "2026-09-11"
+    "read_at": "2026-09-11T23:03:54Z",
+    "recorded_live_since": "2026-09-11",
+    "meaning": "the containers as they run when this selfcheck runs (read live, not frozen at run time); the Core image the recorded runs used is unknown — see devloop-runs.json config_fixes"
   },
   "selfcheck": {
     "seg0_exit": 0,

@@ -144,7 +144,7 @@ test("挂载在、记录摘要一致、来源提交一致 → 三行全过", () 
   const frozen = { core_image_digest: "sha256:img", core_mount: { image_id: "sha256:img", mounted_commit: "abc" } };
   const live = { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "abc" };
   const rows = coreMountCheck(frozen, live);
-  assert.equal(rows.length, 3);
+  assert.equal(rows.length, 4); // 2026-09-12: + the gate-source row (mount | image)
   assert.ok(rows.every((r) => r.ok === true), JSON.stringify(rows));
 });
 
@@ -171,4 +171,47 @@ test("清单没有 core_mount 记录 → 未知,不是通过", () => {
   const rows = coreMountCheck({ core_image_digest: "sha256:img" }, { core: { image_id: "sha256:img" }, core_mounted: true, mounted_commit_now: "abc" });
   assert.ok(rows.some((r) => r.ok === null));
   assert.ok(!rows.some((r) => r.ok === true && /记录/.test(r.name)));
+});
+
+// --- 2026-09-12: the gate can be built into the image (a Core image built from the branch) ---------------
+import { gateSource } from "./batch-conditions.mjs";
+
+test("gateSource: 挂载优先;无挂载但镜像自带闸门文件 → image;两者皆无 → none;读不到 → null", () => {
+  assert.equal(gateSource({ core_mounted: true, gate_in_image: null }), "mount");
+  assert.equal(gateSource({ core_mounted: false, gate_in_image: true }), "image");
+  assert.equal(gateSource({ core_mounted: false, gate_in_image: false }), "none");
+  assert.equal(gateSource({ core_mounted: null, gate_in_image: null }), null);
+});
+
+test("内建闸门、冻结来源 image、镜像构建提交的 MemoryCore 树 == 当前 → 全过", () => {
+  const frozen = { core_image_digest: "sha256:img", core_gate: "image", core_image_build_commit: "abc" };
+  const live = { core: { image_id: "sha256:img" }, core_mounted: false, gate_in_image: true, core_gate: "image", image_build_commit: "abc", memorycore_tree_at_build: "t1", memorycore_tree_now: "t1", mounted_commit_now: "zzz" };
+  const rows = coreMountCheck(frozen, live);
+  assert.ok(rows.every((r) => r.ok === true), JSON.stringify(rows));
+  assert.ok(rows.some((r) => /树/.test(r.name)));
+  assert.ok(!rows.some((r) => /挂载记录/.test(r.name)), "no mount-record rows for a built-in gate");
+});
+
+test("冻结的是挂载(旧清单只有 core_mounted / mount_override),线上是内建 → 闸门在线上通过,来源行不通过并说明", () => {
+  for (const frozen of [{ core_image_digest: "sha256:old", core_mounted: true }, { core_image_digest: null, mount_override: { evaluation_touches_them: false } }]) {
+    const live = { core: { image_id: "sha256:img" }, core_mounted: false, gate_in_image: true, core_gate: "image", image_build_commit: "abc", memorycore_tree_at_build: "t1", memorycore_tree_now: "t1" };
+    const rows = coreMountCheck(frozen, live);
+    assert.equal(rows.find((r) => /在线上/.test(r.name)).ok, true, JSON.stringify(rows));
+    const src = rows.find((r) => /来源 ==/.test(r.name));
+    assert.equal(src.ok, false);
+    assert.match(src.why, /mount/); assert.match(src.why, /image/);
+  }
+});
+
+test("内建闸门但镜像构建提交的 MemoryCore 树 ≠ 当前 HEAD → 树行不通过;tag 不带提交 → 未知", () => {
+  const frozen = { core_image_digest: "sha256:img", core_gate: "image" };
+  const stale = coreMountCheck(frozen, { core: { image_id: "sha256:img" }, core_mounted: false, gate_in_image: true, core_gate: "image", image_build_commit: "abc", memorycore_tree_at_build: "t1", memorycore_tree_now: "t2" }).find((r) => /树/.test(r.name));
+  assert.equal(stale.ok, false);
+  const untagged = coreMountCheck(frozen, { core: { image_id: "sha256:img" }, core_mounted: false, gate_in_image: true, core_gate: "image", image_build_commit: null, memorycore_tree_at_build: null, memorycore_tree_now: "t2" }).find((r) => /树/.test(r.name));
+  assert.equal(untagged.ok, null);
+});
+
+test("既无挂载也无内建 → 闸门不在线上,不通过", () => {
+  const rows = coreMountCheck({ core_gate: "image" }, { core: { image_id: "sha256:img" }, core_mounted: false, gate_in_image: false, core_gate: "none" });
+  assert.equal(rows.find((r) => /在线上/.test(r.name)).ok, false);
 });

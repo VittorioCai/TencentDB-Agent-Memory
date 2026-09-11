@@ -6,10 +6,10 @@
 | 项 | 值 |
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
-| **线上状态(接手先看)** | **2026-09-12 00:24Z**:Core 是重新用 `deploy/global-images/start-memory-core.sh` 起的 stock 容器(上游 `:latest` sha256:55fec3a6…,package 1.0.2-beta.1),**无闸门**(gate 路由 404);方案 ① 的挂载在该镜像上起不来(`gate/artifacts/core-mount-accept-failure-20260912.log`),该镜像已证明**不是**批次四 / 闭环当时的镜像(当时摘要未记、不可考);已从分支自建镜像 `agentmemory/memory-core:topic4-11d30eaa720d`(MemoryCore 与 HEAD 一致,隔离冒烟:健康、gate 路由 401 非 404),**是否切换由用户定**;Core 提取 **on**(start 脚本重生成配置);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;数据卷完好:笔记 v2 approved 读回一致;备份 `~/Desktop/topic4-backup/core-data.tar.gz` |
+| **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-11d30eaa720d`(id sha256:72d7076e…,构建提交 11d30ea 的 MemoryCore 树 == HEAD;package 2.0.0-beta.1),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **on**(start 脚本每次重生成配置;下次对照运行前 `core-extraction.sh off --record`);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-11 深夜(第 5 件第二任务 `exit-line-collect` 闭合、作者评估进闭环;交付复跑见 `evaluation/delivery/2026-09-11b/SUMMARY.md`,判决类步骤全过、生成报告 diff 0) |
+| 验证时间 | 2026-09-12 凌晨(Core 切到自建镜像后交付复跑 `evaluation/delivery/2026-09-12/SUMMARY.md`;此前 2026-09-11 深夜第 5 件第二任务 `exit-line-collect` 闭合、作者评估进闭环,`evaluation/delivery/2026-09-11b/SUMMARY.md`) |
 | 测试 | evaluation 584(2026-09-11 深夜,从仓库根跑全 0 失败;含 exit-code-fix 反例 11 + 单测 14、证据包 +2、collect-artifacts 回归 1);Core 122;proxy 24 |
 
 ## 第 1 件"新实验条件准备齐":已验收
@@ -192,7 +192,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 | 条件清单(冻结 2026-09-10T23:21:51Z) | `evaluation/gate/artifacts/batch4-conditions.json` |
 | 闸门基线(冻结 23:20:45Z,source_runs = 两次 b4-prep) | `evaluation/gate/artifacts/gate_baseline_batch4.json` |
 | 批次清单(顺序、退出码) | `evaluation/gate/artifacts/batch4-runs.json`;驱动日志 `batch4-runs.log`(本地,按 .gitignore 不入库)|
-| 核对输出 | `batch4-conditions-check.txt`(开批次前 61+2)、`batch4-conditions-check-post.txt`(批次后 53/9/2) |
+| 核对输出 | `batch4-conditions-check.txt`(开批次前 61+2)、`batch4-conditions-check-post.txt`(批次后 53/9/2);2026-09-12 起 `--check` 多出运行时行,对旧清单按设计 FAIL:`core 容器镜像摘要 == 冻结值`(冻结的 55fec… 本身是重建后的回填,历史摘要未知)、`闸门来源 == 冻结值`(冻结 mount,现 image);`core 闸门在线上`、`镜像构建提交的 MemoryCore 树 == HEAD` PASS |
 | 检查点输出 | `batch4-trial-gate-{off,on}.txt`(开批次前 16 条)、`batch4-formal-checkpoints.txt`、`batch4-prep-trial-checkpoints.txt`(17 条) |
 | 运行记录(不入库) | `evaluation/runner/runs/20260910T23*`,14 个目录;旧批次未改动 |
 | 校准报告(生成) | `evaluation/attribution/CALIBRATION.md`;派生隔离审计 `artifacts/isolation-findings.json` |
@@ -210,6 +210,15 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 | 当前 sha256 | `76428b8b…`(条件清单 `proxy.config_sha256`) |
 | 恢复命令 | `cp deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy` |
 | 验证命令 | `docker logs tdai-proxy 2>&1 \| grep -F '→ initialized' \| tail -1` |
+
+**Core 镜像**(2026-09-12 00:48Z 切换,用户决定;记录 `evaluation/gate/artifacts/core-image-switch-20260911T224508Z.json`)
+
+| 项 | 值 |
+|---|---|
+| 变更 | `deploy/global-images/.env` `MEMORY_CORE_IMAGE`:`agentmemory/memory-core:latest`(上游,sha256:55fec3a6…)→ `agentmemory/memory-core:topic4-11d30eaa720d`(自建,sha256:72d7076e…);随后 `bash deploy/global-images/start-memory-core.sh`(删旧容器、保留数据卷、本地 tag 不拉远端) |
+| 备份 | `.env.bak-20260911T224508Z-before-image-switch`(0600,受 .gitignore 保护);数据卷 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(停容器后 `docker cp` 取,2156 项,sha256 在记录里) |
+| 恢复命令 | `sed -i '' 's#^MEMORY_CORE_IMAGE=.*#MEMORY_CORE_IMAGE=agentmemory/memory-core:latest#' deploy/global-images/.env && bash deploy/global-images/start-memory-core.sh`(镜像回上游;数据卷不动。若卷需回滚,记录里有从 tar 恢复的命令) |
+| 验证命令 | `bash evaluation/eval-core.sh status`(应打印 gate built into the image、build 提交树 == HEAD);`bash evaluation/gate/core-gate.sh --status --baseline evaluation/gate/artifacts/gate_baseline_batch4.json`(两条 v4 读回 approved/admit、failed/reject) |
 
 **Core 资产状态**:两条资产 v4;批次结束时 right `approved`、wrong `failed`(最后一次是
 gate-on)。恢复 approved 由用户跑 `core-gate.sh --reset --baseline …gate_baseline_batch4.json`。

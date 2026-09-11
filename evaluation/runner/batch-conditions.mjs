@@ -135,18 +135,57 @@ export function coreMountLive(container = CONTAINER) {
   try { mounted = sh(["inspect", container, "--format", "{{range .Mounts}}{{if eq .Destination \"/app/src/metadata\"}}{{.Source}}{{end}}{{end}}"]) !== ""; } catch { mounted = null; }
   let commit = null;
   try { commit = execFileSync("git", ["-C", REPO, "log", "-1", "--format=%H", "--", "MemoryCore/src/metadata", "MemoryCore/src/gateway", "MemoryCore/src/core"], { encoding: "utf8" }).trim() || null; } catch { commit = null; }
-  return { core_mounted: mounted, mounted_commit_now: commit };
+  // 2026-09-12: the gate may be BUILT INTO the image (a Core image built from this branch, tag
+  // topic4-<commit>) instead of mounted. With a mount the marker file is ours anyway, so it is read
+  // only when nothing is mounted; the tag's commit says which MemoryCore tree was built.
+  let inImage = null;
+  if (mounted === false) { try { inImage = sh(["exec", container, "sh", "-c", "test -f /app/src/metadata/service/asset-gate.ts && echo yes || echo no"]) === "yes"; } catch { inImage = null; } }
+  let imageRef = null; try { imageRef = sh(["inspect", container, "--format", "{{.Config.Image}}"]) || null; } catch { imageRef = null; }
+  const buildCommit = /:topic4-([0-9a-f]{7,40})$/.exec(imageRef ?? "")?.[1] ?? null;
+  const tree = (rev) => { try { return execFileSync("git", ["-C", REPO, "rev-parse", `${rev}:MemoryCore`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || null; } catch { return null; } };
+  return {
+    core_mounted: mounted, mounted_commit_now: commit,
+    gate_in_image: inImage, core_gate: gateSource({ core_mounted: mounted, gate_in_image: inImage }),
+    core_image_ref: imageRef, image_build_commit: buildCommit,
+    memorycore_tree_at_build: buildCommit ? tree(buildCommit) : null, memorycore_tree_now: tree("HEAD"),
+  };
+}
+/** Where the gate comes from at runtime: "mount" (bind mount over /app/src/metadata), "image" (asset-gate.ts baked into the image, nothing mounted), "none", or null when unreadable. */
+export function gateSource({ core_mounted, gate_in_image }) {
+  if (core_mounted === true) return "mount";
+  if (core_mounted === false && gate_in_image === true) return "image";
+  if (core_mounted === false && gate_in_image === false) return "none";
+  return null;
+}
+/** The gate source a conditions file froze: `core_gate` when present; older files only say mounted (core_mounted / core_mount record / mount_override backfill). */
+export function frozenGateSource(frozenRuntime) {
+  if (!frozenRuntime) return null;
+  if (frozenRuntime.core_gate) return frozenRuntime.core_gate;
+  if (frozenRuntime.core_mounted === true || frozenRuntime.core_mount || frozenRuntime.mount_override) return "mount";
+  return null;
 }
 /**
- * Three check rows for an accepted mount: the gate directory is mounted; the
- * record's image digest equals the frozen one and the container's actual;
- * the mounted paths' commit equals the record's (what is live is the current
- * code). No record → unknown, never a pass.
+ * Check rows for the gate at runtime. First: the gate is on line (mounted or built in) and its source
+ * equals the frozen one. Then, per source — mount: the accept record's image digest equals the frozen
+ * one and the container's actual, and the mounted paths' commit equals the record's; image: the tag's
+ * build commit has the same MemoryCore tree as HEAD (what runs is the current code). No record / no
+ * frozen value → unknown, never a pass.
  */
 export function coreMountCheck(frozenRuntime, liveRuntime) {
-  const rec = frozenRuntime?.core_mount ?? null;
   const rows = [];
-  rows.push({ name: "core 闸门目录已挂载", ok: liveRuntime?.core_mounted ?? null, expected: true, actual: liveRuntime?.core_mounted ?? null, why: liveRuntime?.core_mounted ? null : "not mounted (or container unreadable): bash evaluation/eval-core.sh enable --accept-image <digest>" });
+  const liveSrc = liveRuntime?.core_gate ?? gateSource({ core_mounted: liveRuntime?.core_mounted ?? null, gate_in_image: liveRuntime?.gate_in_image ?? null }) ?? (liveRuntime?.core_mounted === false ? "none" : null);
+  const frozenSrc = frozenGateSource(frozenRuntime);
+  const onLine = liveSrc === "mount" || liveSrc === "image";
+  rows.push({ name: "core 闸门在线上(挂载或内建)", ok: liveSrc == null ? null : onLine, expected: "mount | image", actual: liveSrc, why: onLine ? null : liveSrc == null ? "container unreadable" : "the gate is neither mounted nor built into the image: bash evaluation/eval-core.sh enable --accept-image <digest>, or run a Core image built from the branch (deploy/global-images/.env MEMORY_CORE_IMAGE)" });
+  if (!frozenSrc) rows.push({ name: "闸门来源 == 冻结值", ok: null, expected: null, actual: liveSrc, why: "未冻结 (not frozen): the conditions say nothing about how the gate reached Core" });
+  else rows.push({ name: "闸门来源 == 冻结值", ok: liveSrc == null ? null : liveSrc === frozenSrc, expected: frozenSrc, actual: liveSrc, why: liveSrc === frozenSrc ? null : `frozen ${frozenSrc} (${frozenSrc === "mount" ? "a bind mount over an image whose digest is on file only if frozen" : "a Core image built from the branch"}) vs live ${liveSrc} (${liveSrc === "image" ? "a Core image built from the branch" : liveSrc === "mount" ? "a bind mount" : "no gate"}): the runtime is not the one the recorded runs used — say so in the report` });
+  if (liveSrc === "image") {
+    const bc = liveRuntime?.image_build_commit ?? null;
+    const treeOk = bc && liveRuntime?.memorycore_tree_at_build && liveRuntime?.memorycore_tree_now ? liveRuntime.memorycore_tree_at_build === liveRuntime.memorycore_tree_now : null;
+    rows.push({ name: "内建闸门:镜像构建提交的 MemoryCore 树 == 当前 HEAD 的 MemoryCore 树", ok: treeOk, expected: liveRuntime?.memorycore_tree_now ?? null, actual: liveRuntime?.memorycore_tree_at_build ?? null, why: treeOk === true ? null : treeOk === false ? `the image was built at ${bc} whose MemoryCore differs from HEAD: rebuild the image (what is live must be the current code)` : bc ? "trees unreadable" : `image tag ${liveRuntime?.core_image_ref ?? "?"} carries no build commit (expected agentmemory/memory-core:topic4-<commit>)` });
+    return rows;
+  }
+  const rec = frozenRuntime?.core_mount ?? null;
   if (!rec) {
     rows.push({ name: "core 挂载记录存在且摘要 == 冻结镜像 == 容器实际", ok: null, expected: frozenRuntime?.core_image_digest ?? null, actual: liveRuntime?.core?.image_id ?? null, why: "未冻结 (not frozen): the conditions carry no runtime.core_mount record" });
     rows.push({ name: "挂载来源提交 == 当前分支对应路径的最新提交", ok: null, expected: null, actual: liveRuntime?.mounted_commit_now ?? null, why: "未冻结 (not frozen): no record" });
@@ -493,6 +532,7 @@ async function freeze(args) {
       core_image_digest: live.runtime.core?.image_id ?? null, core_image_ref: live.runtime.core?.image_ref ?? null, core_repo_digests: live.runtime.core?.repo_digests ?? [], core_image_created: live.runtime.core?.image_created ?? null,
       proxy_image_digest: live.runtime.proxy?.image_id ?? null, proxy_image_ref: live.runtime.proxy?.image_ref ?? null, proxy_repo_digests: live.runtime.proxy?.repo_digests ?? [], proxy_image_created: live.runtime.proxy?.image_created ?? null,
       core_mounted: live.runtime.core_mounted, mounted_commit: live.runtime.mounted_commit_now,
+      core_gate: live.runtime.core_gate ?? null, core_image_build_commit: live.runtime.image_build_commit ?? null,
       core_mount: coreMountRecord(live.runtime.core?.image_id),
       why: "the images the containers run are part of the conditions: an upstream update of :latest would change the results with nothing on file to say so (gap found 2026-09-11)",
     },

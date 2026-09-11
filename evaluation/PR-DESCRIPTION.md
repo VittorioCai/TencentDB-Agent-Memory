@@ -68,6 +68,8 @@
 - `bridge-name` 场景仍用旧解析。
 - 第二任务的五次早期运行因任务目录缺 harness 读取的文件而作废留档(`devloop-runs.json`);写入作者评估会重判并撤销
   刚置的准入,准入须放在评估之后(`LESSONS.md`)。
+- 记录运行时的 Core 镜像摘要没有冻结,事后不可考(重建后拉到的上游镜像已证明不是它);从 2026-09-12 起条件清单冻结镜像摘要与
+  闸门来源(`batch-conditions.mjs --freeze/--check`),线上改为自建镜像(`eval-core.sh status` 能从镜像核出是不是当前代码)。
 
 ## 已决与后续
 
@@ -76,7 +78,12 @@
 
 ## 线上状态(接手先看)
 
-proxy 强制身份已恢复为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy 密钥回到身份 b
-(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 off(`extraction-switch.jsonl`);
-闭环笔记 v2 approved(规则);批次四资产 right approved / wrong failed;10 项由消费者会话提取的候选属 usr-4u07qc2kuj、private,
-其中 `skl-z0V6zwphUvhB` 已由所有者提交复核并带签名评估;第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。
+Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-11d30eaa720d`(闸门内建、无挂载;构建提交的 MemoryCore 树 == HEAD;
+`bash evaluation/eval-core.sh status` 打印 gate built into the image),2026-09-12 由用户决定切换;切换记录、备份与恢复命令在
+`evaluation/gate/artifacts/core-image-switch-20260911T224508Z.json`。批次四与两个闭环任务当时跑在"同一 MemoryCore 代码的挂载 +
+摘要未记的上游镜像"上(重建后拉到的上游镜像已证明不是它,`core-mount-accept-failure-20260912.log`),所以运行时镜像对那些记录
+只能写"未知",对现在的线上是自建镜像的摘要。proxy 强制身份为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy
+密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **on**(产品启动脚本每次重生成配置,
+下次对照运行前用 `evaluation/runner/core-extraction.sh off --record` 关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
+批次四资产 right approved / wrong failed;10 项由消费者会话提取的候选属 usr-4u07qc2kuj、private,其中 `skl-z0V6zwphUvhB` 已由所有者
+提交复核并带签名评估;第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。

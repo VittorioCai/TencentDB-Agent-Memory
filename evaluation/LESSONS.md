@@ -283,3 +283,15 @@ B 的能力读成 unknown。加 `consumer_user_id` 查询后 own_business 32/10,
 (`gate/artifacts/core-mount-accept-failure-20260912.log`)。另一个教训:`eval-core.sh disable` 在容器起不来时也起不来(从停止的容器
 读不到发布端口),恢复路径自己先坏了——已改成从 HostConfig 读。方案 ① 在这个镜像上不可行;可行的是从分支自建镜像(⑤),
 运行时 = 分支本身,摘要 = 构建产物,守卫问题消失,但它与历史运行时的关系只能表述为"同一分支代码,镜像其余部分不同"。
+
+**闸门进 Core 的方式换成自建镜像后,"线上是不是当前代码"要能从镜像本身核出来。**(2026-09-12 切换)
+用户定切(方案 ⑤):`.env` 的 `MEMORY_CORE_IMAGE` 指到 `agentmemory/memory-core:topic4-11d30eaa720d`,用产品的启动脚本重起,
+数据卷不动;切前停容器取一致备份,切后读回两条 v4 与闭环笔记 v2,都与记录一致(`gate/artifacts/core-image-switch-*.json`)。
+三件事跟着改:① `eval-core.sh status` 之前只认挂载,内建闸门会被报成"stock image source"——现在看镜像里有没有 `asset-gate.ts`、
+gate 路由是 401 还是 404,并用 tag 里的构建提交比 `git rev-parse <commit>:MemoryCore` 与 `HEAD:MemoryCore`;`enable` 在内建镜像上
+无事可做,直说。② `batch-conditions` 冻结与核对多了"闸门来源"(mount | image)与"构建提交的 MemoryCore 树 == HEAD",对旧清单
+报 `闸门来源 == 冻结值` FAIL 是故意的:批次四与闭环跑在"同一代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",
+这句话要出现在报告里,不能让 PASS 把它盖过去。③ 两个 selfcheck 记的运行时是"跑 selfcheck 时的线上",不是运行当时的;字段名改
+成 `read_at` / `recorded_live_since`,并写明记录运行的镜像摘要未知。另两条小的:产品启动脚本每次重生成 gateway 配置,提取开关会
+被拨回 on,切换后要记得;会话安全分类器会拦下"改 .env + 起容器"合在一起的命令,拆成单步各自能过——拆开跑不是绕过,是把每步的
+意图说清楚。

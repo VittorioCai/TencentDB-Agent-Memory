@@ -93,7 +93,7 @@ row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/
 
 echo "[8] batch-4 conditions check (post-batch: known FAIL items are the design working)"
 node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json > "$OUT/conditions-check.txt" 2>&1; e=$?
-row "conditions-check" "batch-conditions.mjs --check --conditions=batch4-conditions.json" "$e" "post-batch: exit 1 with the FAIL items listed in STATE.md (trace burned, atomic footprint, run-once.sh changed)" "$(grep -c -E 'PASS' "$OUT/conditions-check.txt") PASS / $(grep -c -E 'FAIL' "$OUT/conditions-check.txt") FAIL lines"
+row "conditions-check" "batch-conditions.mjs --check --conditions=batch4-conditions.json" "$e" "post-batch: exit 1 with the FAIL items listed in STATE.md (trace burned, atomic footprint, run-once.sh changed; since 2026-09-12 also the runtime rows: core image digest, gate source mount→image)" "$(grep -c -E 'PASS' "$OUT/conditions-check.txt") PASS / $(grep -c -E 'FAIL' "$OUT/conditions-check.txt") FAIL lines"
 
 echo "[9] live state"
 { bash evaluation/runner/core-extraction.sh status; bash evaluation/runner/prepare.sh --status 2>&1 | head -6; node evaluation/tasks/exit-code-fix/gate-observe.mjs --label="delivery re-run $STAMP" --out="$OUT/gate-observation.jsonl"; } > "$OUT/live-state.txt" 2>&1; e=$?
