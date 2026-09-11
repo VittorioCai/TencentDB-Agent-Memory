@@ -195,3 +195,41 @@ test("runSuite reconciles exit status, counts and named failures, with the file 
 test("test titles are read from test / it / describe calls with any quote", () => {
   assert.deepEqual(testTitles(`test("a"); it('b c'); describe(\`d bt-abcdef1\`, () => {}); notatest("x")`), ["a", "b c", "d bt-abcdef1"]);
 });
+
+// ── a test case added to an EXISTING file (the smoke run did this) ──
+test("a marker in the title of a test added to an existing test file is an attempt, tied to the Edit that wrote it; the rewritten file is run as the model's own test", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  const added = `test("bt-fixturemark: capital C is read", () => { assert.equal(outcomeOfAttempt("Stdout: \\nStderr: \\nExit Code: 28").ok, false); });\n`;
+  const rewritten = OTHER_TEST + added;
+  writeFileSync(join(repo, OTHER), rewritten);
+  const rows = [{ event: "http.request", body: { json: { messages: [
+    { role: "assistant", tool_calls: [{ id: "call_s", function: { name: "Grep", arguments: JSON.stringify({ pattern: "bt-fixturemark" }) } }] },
+    { role: "assistant", tool_calls: [{ id: "call_e", function: { name: "Edit", arguments: JSON.stringify({ file_path: join(repo, OTHER), old_string: "\n", new_string: "\n" + added }) } }] },
+  ] } } }];
+  const r = verifyRepo(repo, { start, capture: rows });
+  assert.equal(r.verdict, PASS, r.reason);
+  assert.deepEqual(r.checks.tests_kept.modified, [OTHER]);
+  const a = r.attempts.find((x) => x.value === "bt-fixturemark");
+  assert.ok(a, JSON.stringify(r.attempts));
+  assert.equal(a.file, OTHER);
+  assert.equal(a.call_id, "call_e");
+  assert.equal(a.needs_review, false);
+  // the model's version of the rewritten file is run and recorded apart; the controlled suite ran the original
+  assert.deepEqual(r.checks.model_tests.files, [OTHER]);
+  assert.equal(r.checks.model_tests.tests, 2);
+  assert.equal(r.checks.model_tests.fail, 0);
+  assert.equal(r.checks.suite.tests, 1 + 7);
+});
+
+test("a test added to an existing file without a marker is recorded in the 'none' attempt, not silently dropped", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  writeFileSync(join(repo, OTHER), OTHER_TEST + `test("capital C is read", () => {});\n`);
+  const r = verifyRepo(repo, { start });
+  assert.equal(r.verdict, PASS, r.reason);
+  assert.equal(r.attempts.length, 1);
+  assert.match(r.attempts[0].value, /^none: no test file was added; 1 test\(s\) added to existing file\(s\) carry no bt- marker$/);
+});
