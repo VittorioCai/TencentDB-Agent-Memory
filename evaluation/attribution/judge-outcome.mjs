@@ -149,9 +149,27 @@ export function outcomeOf({ used, attempt, tokens, verdict, attempts = [], reach
  * Judge every `used` event. `verdictDoc` is verify.mjs --json output;
  * `tokensByAsset` is extract-tokens --out (asset → {version, tokens}).
  */
+/**
+ * The request in that call that carried this asset's value. A tool call is
+ * not a request (attempts-2026-09-11): one Bash command can dial several
+ * addresses, and each used event must be judged by the request that carried
+ * its own asset's value, never by whichever attempt was stored last under
+ * the call id. One request: that request (outcomeOf checks its value). Several:
+ * exactly the one carrying the value; none or more than one: no attempt, with why.
+ */
+export function attemptFor(callId, tokens, allAttempts) {
+  const mine = (allAttempts ?? []).filter((a) => a.call_id === callId);
+  if (!mine.length) return { attempt: null, why: null };
+  // one request: the call is the request; outcomeOf says whether its address/value is the asset's
+  if (mine.length === 1) return { attempt: mine[0], why: null };
+  const carrying = mine.filter((a) => dialledToken(a, tokens));
+  if (carrying.length === 1) return { attempt: carrying[0], why: null };
+  if (!carrying.length) return { attempt: null, why: `the call made ${mine.length} request(s) and no request in that call carries this asset's value` };
+  return { attempt: null, why: `the call made ${mine.length} requests and ${carrying.length} of them carry this asset's value; the outcome cannot be tied to one` };
+}
+
 export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset, reachability = null }) {
   const allAttempts = verdictDoc?.attempts ?? [];
-  const attempts = new Map(allAttempts.map((a) => [a.call_id, a]));
   const verdict = verdictDoc?.verdict ?? "ERROR";
   const reachabilityRecord = reachability?.targets ?? reachability ?? {};
   const out = [];
@@ -163,7 +181,6 @@ export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset, reachabili
       continue;
     }
     const callId = callIdOf(used.target_ref);
-    const attempt = callId ? attempts.get(callId) ?? null : null;
 
     // Tokens are versioned. Judging a v2 event with v3's tokens would tie an
     // outcome to text the model never saw.
@@ -175,7 +192,11 @@ export function judgeOutcome({ usedEvents, verdictDoc, tokensByAsset, reachabili
       versionNote = `tokens on file are for v${entry.version}, the event credits v${used.asset_version}`;
     }
 
-    let decision = outcomeOf({ used, attempt, tokens, verdict, attempts: allAttempts, reachabilityRecord });
+    const picked = callId ? attemptFor(callId, tokens, allAttempts) : { attempt: null, why: null };
+    const attempt = picked.attempt;
+    let decision = picked.why
+      ? { state: "needs_review", why: picked.why }
+      : outcomeOf({ used, attempt, tokens, verdict, attempts: allAttempts, reachabilityRecord });
     // A failed call can only be blamed on content we can check; with the wrong
     // version's tokens on file there is nothing to check it against.
     if (versionNote && attempt && attempt.ok === false) {

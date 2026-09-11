@@ -17,11 +17,11 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-11T10:22:55.171Z。
+生成于 2026-09-10T23:30:26.501Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 4b165fd8e4b5
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 5055eff4ef8f
 - **规则版本**:gate-rules-2026-09-08f
 - **数据范围**:51 次运行,2026-09-05T15:35:18Z → 2026-09-10T23:29:24Z
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 3 项;隐藏状态未记录 6 项;捕获不完整 1 次
@@ -61,8 +61,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 | unrecorded · pre-batch (2026-09-05) | 0 | 0 | 0 | 0 | 0 | 6 | 0/6 | — |
 | unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 0 | 32/32 | 1 |
 | gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 9 | 0 | 1 | 0 | 29/30 | 1 |
-| gate-rules-2026-09-08f · batch4-trial (checkpoint pair, not a sample) (frozen) | 6 | 0 | 2 | 0 | 0 | 0 | 8/8 | 1 |
-| gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 5 | 1 | 0 | 0 | 20/20 | 0.95 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 20 | 0 | 7 | 1 | 0 | 0 | 28/28 | 0.964 |
 | gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 0 | 4/4 | 1 |
 | **cumulative** | 68 | 0 | 24 | 1 | 1 | 6 | 93/100 | 0.989 |
 
@@ -87,8 +86,7 @@ unsettled: the content did reach the model.
 | unrecorded · pre-batch (2026-09-05) | 4 | 0 | 0 | 0 | 2 | 4/6 | 1 | 0.667 |
 | unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 32/32 | 1 | 1 |
 | gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 10 | 0 | 0 | 30/30 | 1 | 1 |
-| gate-rules-2026-09-08f · batch4-trial (checkpoint pair, not a sample) (frozen) | 6 | 0 | 2 | 0 | 0 | 8/8 | 1 | 1 |
-| gate-rules-2026-09-08f · batch4 (frozen) | 13 | 0 | 6 | 0 | 1 | 19/20 | 1 | 0.95 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 19 | 0 | 8 | 0 | 1 | 27/28 | 1 | 0.964 |
 | gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 4/4 | 1 | 1 |
 | **cumulative** | 71 | 0 | 26 | 0 | 3 | 97/100 | 1 | 0.97 |
 

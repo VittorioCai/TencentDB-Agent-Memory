@@ -8,8 +8,8 @@
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-11(批次四跑完、收口、两处 harness 缺陷定位) |
-| 测试 | evaluation 519;Core 122;proxy 24(2026-09-11,全 0 失败) |
+| 验证时间 | 2026-09-11 晚(正式名单对齐、验收解析按四条边界重写并重判批次四) |
+| 测试 | evaluation 552;Core 122;proxy 24(2026-09-11,全 0 失败) |
 
 ## 第 1 件"新实验条件准备齐":已验收
 
@@ -22,19 +22,27 @@ node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate
 tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文判别值哈希 == tokens.json"
 两条 PASS)。
 
-## 第 2 件"正式对照":已跑完,报告在 `evaluation/runner/COMPARISON-2026-09-11.md`
+## 第 2 件"正式对照":已跑完并重判,报告在 `evaluation/runner/COMPARISON-2026-09-11-reparsed.md`
 
-按"第 2 件的顺序"逐步:修通分析链 → `--check` 61/61 → gate-off 准备运行两次
-(`b4-prep`)→ `build-baseline` 冻结证据(source_runs = 两次准备运行)→ off/on 试跑一对
-16/16 → 交错正式 off/on 各五次(顺序在 `evaluation/gate/artifacts/batch4-runs.json`)→
-`collect-runs.sh` 收记录 → 报告。
+按"第 2 件的顺序"逐步:修通分析链 → `--check` 61/61 → gate-off 准备运行两次(`b4-prep`)→
+`build-baseline` 冻结证据 → off/on 试跑一对 → 交错正式 off/on 各五次(顺序在
+`evaluation/gate/artifacts/batch4-runs.json`)→ `collect-runs.sh` 收记录 → 报告。
 
-结果一句话:gate-on 5/5 PASS、0 次见到被拒资产、0 次失败尝试;gate-off 4/5 PASS、5/5
-见到、3 次失败尝试、2 次 corrected;墙钟 47 → 15 s,prompt token 218k → 118k。准备运行
-在校准表里单列一行(证据基础,不是样本);`--check` 的"准备运行 ≠ 对照样本"PASS。
+2026-09-11 晚按审阅意见收口(顺序即优先级,1–4 已做):
 
-**但 off 臂只有 3 个独立样本**:第 5、9 次在拨号前经 memory-bridge 读到了本批次更早会话
-写的结论(见下"记忆通道")。
+1. **正式名单对齐**:主表只由 `batch4-runs.json` 十个 run id 生成(`calibrate-runs.mjs --manifest=`,
+   `experimentOf`);准备、试跑各自另列;同一目录传两遍只算一次。旧解析下正式行:送达
+   14/0/5/1、20/20、0.95;使用 13/0/6/0、未知 1、19/20、1.0、覆盖 0.95——与审阅独立重算一致。
+2. **多目标解析按四条边界重写**(`verify.mjs` attempts-2026-09-11 + `provenance/shell-requests.mjs`;
+   `judge-outcome.mjs` 按"带该资产值的那条请求"配对;`run-once.sh` 两遍验收,带服务端日志与
+   探针)。十四次运行在仓库外副本上重判(`rejudge-runs.mjs`),差异 `REPARSE-DIFF-2026-09-11.md`:
+   正式十次 4 变——第 1、3、7 次 PASS→ERROR(最后一条消息并发双拨,服务端日志证明 right
+   在 0.1 s 内被应答、整条消息跑满 wrong 的超时,没有"最后一次"),第 5 次 FAIL→ERROR
+   (一条命令连拨,本次探针没探 10.244.7.19:8096,结果不可分)。新口径:off PASS 1 / 不可判 4,
+   on PASS 5/5;校准送达不变,使用 14/0/6/0、未知 0。
+3. **三处口径**已改(见新报告):"3 次未观察到该类记忆读取,2 次确认受记忆影响";全批与
+   未读子集分别报、不作无偏/保守估计;atomic 足迹是冻结前漏检不是批次后状态。
+4. **第 9 次**单独一节:使用检测的真阴性;只关闭 REMAINING.md:94 的第 1 例。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
@@ -50,12 +58,8 @@ tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文
    (guard 生效,`pre_run_cleared_files` 4–5)。已抽成 `evaluation/runner/lib/agent-memory.sh`
    (先清理后快照),`agent-memory.test.mjs` 假 docker 跑真函数,先失败后 4/4。
    **改动未经真实运行**:批次五准备运行前先跑一次 harness 冒烟(不进批次)。
-3. **一条命令拨两个目标,解析器只取第一个 URL、读一段合并结果(判定逻辑,待同意)。**
-   第 5 次 gate-off 记成"47318 timed out",实际 47318 code 0、8096 超时;按"最后一拨决定"
-   FAIL 仍成立,但反向顺序会把真 PASS 判 FAIL,且 wrong 的 trace 值丢失 → 采纳 unknown。
-   提案与先失败测试:`evaluation/tasks/bridge-addr/verify.multi-target.pending.mjs`
-   (不进套件),实际输出 `verify.multi-target.pending.txt`。同意后升 `rules_version`,
-   批次四按新口径另报,不改 `runs/`。
+3. **一条命令拨两个目标 / 同一消息并发双拨(判定逻辑,已按审阅四条边界改,已重判)。**
+   见上"第 2 件"第 2 点。待决的只剩并发组的判定规则(下)。
 
 ## 需决策事项
 
@@ -63,29 +67,37 @@ tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文
    (a) 每次运行换全新 agent id(proxy `debugForceIdentity` 跟着改并重启,十次重启);
    (b) 批次期间关闭该消费者的记忆生成(要找 proxy/Core 的开关,未查);
    (c) Core 加按 agent 删 atomic/conversation 的管理接口(动产品代码,需团队管理员);
-   (d) 整库快照还原 `vectors.db`+`records/`+`conversations/`+`skill_buffer/`(会连带
-   别的 agent 的写入,不推荐)。执行会话倾向 (a) 或 (b),等用户定。
-2. **是否采纳"多目标命令"解析提案**(见缺陷 3)。同意 → 改 `verify.mjs`、升
-   `rules_version`、批次四另报一份;不同意 → 现状保留,报告里按现在的写法说明。
-3. 同类限制:含任务标记的 skill **搜索**被算成目标尝试(第 5 次第 7 条消息),是否收紧
-   `isTargetCommand`。与 2 一起定。
+   (d) 整库快照还原(会连带别的 agent 的写入,不推荐)。执行会话倾向 (a) 或 (b)。
+2. **并发发出、结果不一致的最后一组请求怎么判**:现按"不可读不是失败"记 ERROR;替代是
+   按完成时间取最后(六次都是 wrong 最后完成 → FAIL)或"全部成功才 PASS"。任一种都不会
+   把这六次判成 PASS。定了才能把批次三按新口径另报。
+3. `bridge-name` 场景的验收仍用旧解析(整段含标记),是否同步改。
 
-## 批次五之前必须做的事(按序)
+## 下一步(审阅 2026-09-11 定的顺序)
 
-1. 定上面的决策 1(和 2、3)。
-2. `fill-traces.mjs` 换新 trace(v4 的已烧:明文在收进来的 `runs/` 记录和消费者残留里),
-   资产升 v5;用户跑 `core-gate.sh --reset` 恢复 approved(管理员密钥)。
-3. 新消费者或清空消费者(含 atomic/conversation,按决策 1);`--freeze` 记新的
-   `run-once.sh` 哈希与 atomic 足迹;`--check` 全过(现在 64 项:61 + 准备≠样本 +
-   atomic 足迹 + 文件未变项已含)。
-4. harness 冒烟一次(不进批次),看 `hash_restored == hash_before` 与记忆通道 PASS。
+5. **最小开发闭环**:历史资产 → 真实 BugFix/Feature → 测试 → 回执 → 候选处理;复用已有
+   导入/抽取/检索,不建新组件。
+6. **交付前**:demo 接真实工件、一次真实冒烟、交付复跑、整理 PR。
+7. 有余量再做隔离反证验证或批次五;不得据此声称额外工作已完成。
+
+## 批次五之前必须做的事(按序,仅当做到第 7 步)
+
+1. 定决策 1(和 2、3)。
+2. `fill-traces.mjs` 换新 trace(v4 已烧:明文在收集的记录、消费者残留,以及旧报告与
+   已删测试文件的 git 历史里),资产升 v5;用户跑 `core-gate.sh --reset` 恢复 approved。
+3. 新消费者或清空消费者(含 atomic/conversation,按决策 1);`--freeze` 记新的 `run-once.sh`
+   哈希与 atomic 足迹;`--check` 全过(64 项)。
+4. harness 冒烟一次(不进批次):`hash_restored == hash_before`、记忆通道 PASS、两遍验收产出
+   `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
 ## 证据位置
 
 | 什么 | 在哪 |
 |---|---|
-| 批次四对照报告 | `evaluation/runner/COMPARISON-2026-09-11.md`;表格 `summary-2026-09-11.md` |
+| 批次四对照报告(新口径) | `evaluation/runner/COMPARISON-2026-09-11-reparsed.md`;表格 `summary-2026-09-11-reparsed{,-noread}.md`;校准 `attribution/CALIBRATION-batch4-reparsed-2026-09-11.md`;差异 `attribution/REPARSE-DIFF-2026-09-11.md` |
+| 旧口径(保留) | `evaluation/runner/COMPARISON-2026-09-11.md`(顶部有取代说明)、`summary-2026-09-11.md`、`attribution/CALIBRATION.md`(名单已对齐)、`CALIBRATION-2026-09-11-as-committed-ef22463.md` |
+| 重判副本(仓库外,可重生成) | `/private/tmp/topic4-rejudge/2026-09-11/<run_id>/`,命令在新报告开头 |
 | 条件清单(冻结 2026-09-10T23:21:51Z) | `evaluation/gate/artifacts/batch4-conditions.json` |
 | 闸门基线(冻结 23:20:45Z,source_runs = 两次 b4-prep) | `evaluation/gate/artifacts/gate_baseline_batch4.json` |
 | 批次清单(顺序、退出码) | `evaluation/gate/artifacts/batch4-runs.json`;驱动日志 `batch4-runs.log`(本地,按 .gitignore 不入库)|
@@ -94,7 +106,7 @@ tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文
 | 运行记录(不入库) | `evaluation/runner/runs/20260910T23*`,14 个目录;旧批次未改动 |
 | 校准报告(生成) | `evaluation/attribution/CALIBRATION.md`;派生隔离审计 `artifacts/isolation-findings.json` |
 | 场景记录 / token | `evaluation/tasks/bridge-addr/pair.json`(v4,`batch4` 块)、`tokens.json`(哈希形态) |
-| 待决提案 | `evaluation/tasks/bridge-addr/verify.multi-target.pending.{mjs,txt}` |
+| 多目标解析测试 | `evaluation/tasks/bridge-addr/verify.multi-target.test.mjs`、`evaluation/provenance/shell-requests.test.mjs`(待决提案文件已删,已进套件) |
 
 ## 线上状态的受控记录(CLAUDE.md §10)
 

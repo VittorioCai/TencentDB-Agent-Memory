@@ -81,6 +81,36 @@ export function isHashManifest(tokens) {
  * tokens 分析(2026-09-11 审阅点 1:哈希清单直接喂给送达审计,正例静默变 not_delivered)。
  * 作者身份从 --task 目录的 pair.json 取;明文形态的老运行原样返回。
  */
+/**
+ * Which row a run belongs to.
+ *
+ * The formal sample is the batch manifest (`batch4-runs.json`: the ten run ids
+ * the interleaved batch actually produced), not "every run whose baseline says
+ * batch 4" — the trial pair and the preparation runs carry the same baseline
+ * and were being counted into the sample (28 decisions instead of 20,
+ * 2026-09-11). A run named in the manifest is the sample whatever its label;
+ * preparation runs (label *-prep) are the evidence base; the trial pair
+ * (label trial-*) is the checkpoint pair; anything else under that batch is
+ * listed apart, never folded in. Older batches without a manifest keep their row.
+ */
+/** The same run listed twice (overlapping globs) is one run. Trailing slashes do not make a new one. */
+export function uniqueDirs(list) {
+  return [...new Set((list ?? []).map((d) => String(d).replace(/\/+$/, "")))];
+}
+
+export function experimentOf({ label, run_id, base, manifest = null }) {
+  const l = String(label ?? "");
+  const ownBatch = manifest && base === `batch${manifest.batch}`;
+  if (ownBatch) {
+    const ids = new Set((manifest.runs ?? []).map((r) => r?.run_id ?? r));
+    if (ids.has(run_id)) return base;
+  }
+  if (/(^|-)prep$/.test(l)) return `${base}-prep (evidence base, not a sample)`;
+  if (/(^|-)trial(-|$)/.test(l)) return `${base}-trial (checkpoint pair, not a sample)`;
+  if (ownBatch) return `${base}-other (not in the formal manifest)`;
+  return base;
+}
+
 export async function loadRunTokens(dir, { taskDir = null, keyFile } = {}) {
   const manifest = readJson(`${dir}/tokens.json`, {}) ?? {};
   if (!isHashManifest(manifest)) return manifest;
@@ -170,11 +200,10 @@ export function runInput(dir, opts = {}) {
       : run.started_at
         ? `pre-batch (${String(run.started_at).slice(0, 10)})`
         : "unknown";
-  // 准备运行(标签 *-prep)是闸门证据的来源,不是对照样本:单独成行,名字里写明
-  // (2026-09-11 硬约束:证据与样本必须是不同的运行)。
-  const experiment = /(^|-)prep$/.test(String(run.label ?? "")) ? `${experimentBase}-prep (evidence base, not a sample)` : experimentBase;
+  const runId = run.run_id ?? dir.split("/").pop();
+  const experiment = experimentOf({ label: run.label, run_id: runId, base: experimentBase, manifest: opts.manifest ?? null });
   return {
-    run_id: run.run_id ?? dir.split("/").pop(), label: run.label ?? null,
+    run_id: runId, label: run.label ?? null,
     rules_version: baseline.rules_version ?? null,
     experiment,
     started_at: run.started_at ?? null,
@@ -376,15 +405,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const frozen = (args.find((a) => a.startsWith("--frozen=")) ?? "").slice(9) || null;
   const mdOut = (args.find((a) => a.startsWith("--md=")) ?? "").slice(5) || null;
-  const dirs = args.filter((a) => !a.startsWith("--"));
-  if (!dirs.length) { console.error("usage: calibrate-runs.mjs [--frozen=<rules version>] [--md=<file>] <run dir> …"); process.exit(2); }
+  const dirs = uniqueDirs(args.filter((a) => !a.startsWith("--")));
+  if (!dirs.length) { console.error("usage: calibrate-runs.mjs [--frozen=<rules version>] [--manifest=<batchN-runs.json>] [--md=<file>] <run dir> …"); process.exit(2); }
   const taskDir = (process.argv.slice(2).find((a) => a.startsWith("--task=")) ?? "").slice(7) || "evaluation/tasks/bridge-addr";
+  // --manifest=<batchN-runs.json>:正式样本名单。主表只由名单里的 run id 生成;
+  // 同批次不在名单里的运行(准备、试跑、其他)各自另列。
+  const manifestPath = (args.find((a) => a.startsWith("--manifest=")) ?? "").slice(11) || null;
+  const manifest = manifestPath ? readJson(manifestPath, null) : null;
+  if (manifestPath && !manifest) { console.error(`--manifest 读不到:${manifestPath}`); process.exit(2); }
   const runs0 = [];
   for (const d of dirs) {
     // 哈希形态的运行先按冻结四元组取明文;解析失败就中止整份报告——报告不能在
     // 读错版本或读不到明文的情况下"照常"生成。
     const tokens = await loadRunTokens(d, { taskDir });
-    runs0.push(runInput(d, { tokens }));
+    runs0.push(runInput(d, { tokens, manifest }));
   }
   let runs = runs0;
   // 派生审计如果在,就把它的结论合并进来。它由原始捕获复算,不改原始记录。

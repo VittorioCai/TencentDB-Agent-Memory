@@ -261,3 +261,40 @@ test("value 只按整值比,不按子串:bt-trace 不能命中 bt-tracewrong9", 
   const a = { host: "1.2.3.4", port: "9", value: "bt-tracewrong9", ok: false, why: "timed out" };
   assert.equal(_dt(a, ["bt-trace"]), null);
 });
+
+// ── one tool call, several requests (attempts-2026-09-11) ─────────
+// Batch 4 run 5: one Bash command dialled the right address and then the
+// wrong one. Both used events point at the same call id; each asset's outcome
+// must be read from the request that carried ITS value, not from whichever
+// attempt happened to be stored last under that id.
+const ONE_CALL = "call_00_qitA9lGDUjEoxP4ADzJ69247";
+const TOKENS_V4 = { [WRONG]: { version: 4, tokens: ["10.244.7.19", "bt-testwrong"] }, [RIGHT]: { version: 4, tokens: ["47318", "bt-testright"] } };
+const VERDICT_ONE_CALL = {
+  verdict: "FAIL",
+  reason: "the final attempt at 10.244.7.19:8096 failed (timed out) despite 1 earlier success(es)",
+  attempts: [
+    { ...attempt(ONE_CALL, "127.0.0.1", "47318", true, "code 0"), request_index: 0, value: "bt-testright" },
+    { ...attempt(ONE_CALL, "10.244.7.19", "8096", false, "timed out"), request_index: 1, value: "bt-testwrong" },
+  ],
+};
+
+test("several requests in one call: each asset is judged by the request that carried its own value", () => {
+  const usedV4 = (id, name, token) => ({ ...used(id, name, ONE_CALL, token), asset_version: 4 });
+  const r = judgeOutcome({
+    usedEvents: [usedV4(WRONG, "eval-bridge-endpoint-a", "bt-testwrong"), usedV4(RIGHT, "eval-bridge-endpoint-b", "bt-testright")],
+    verdictDoc: VERDICT_ONE_CALL, tokensByAsset: TOKENS_V4, reachability: REACH,
+  });
+  const by = Object.fromEntries(r.events.map((e) => [e.asset_id, e]));
+  assert.equal(by[WRONG].state, "corrected", by[WRONG].proof_refs?.[0]?.detail);
+  assert.equal(by[WRONG].metadata.attempt.host, "10.244.7.19");
+  assert.equal(by[RIGHT].metadata.attempt.host, "127.0.0.1");
+  // the run did not pass, so the right asset's successful call is not validated either
+  assert.notEqual(by[RIGHT].state, "validated");
+});
+
+test("a used event whose call made several requests, none carrying that asset's value, is needs_review, not judged by a stranger's request", () => {
+  const twoStrangers = { ...VERDICT_ONE_CALL, attempts: [VERDICT_ONE_CALL.attempts[0], { ...VERDICT_ONE_CALL.attempts[0], request_index: 1 }] };
+  const r = judgeOutcome({ usedEvents: [{ ...used(WRONG, "eval-bridge-endpoint-a", ONE_CALL, "bt-testwrong"), asset_version: 4 }], verdictDoc: twoStrangers, tokensByAsset: TOKENS_V4, reachability: REACH });
+  assert.equal(r.events[0].state, "needs_review");
+  assert.match(r.events[0].proof_refs[0].detail, /no request in that call carries/);
+});

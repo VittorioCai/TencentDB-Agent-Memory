@@ -333,9 +333,15 @@ CANDIDATES="$EVAL/provenance/artifacts/candidate-log.jsonl"
 # a fact about the run; whether an asset helped is a judgement about that fact.
 # Letting the second decide the first is how a scenario starts grading itself.
 info "acceptance …"
-node "$TASK_DIR/verify.mjs" "$CAPTURE" --json > "$RUN_DIR/verdict.json" 2>"$RUN_DIR/verify.log"
+# Two passes (attempts-2026-09-11). The acceptance reads each request's outcome
+# from evidence that separates the requests — the service's own log of what it
+# answered (exported above) and, once it exists, the harness's reachability
+# probe. The probe needs the attempts to know which addresses to try, so: pass
+# one with the service log (its verdict is kept as verdict.pass1.json), then
+# the probe, then pass two with both, which is the verdict on record.
+node "$TASK_DIR/verify.mjs" "$CAPTURE" --json --service-log="$TOOL_CALLS" > "$RUN_DIR/verdict.pass1.json" 2>"$RUN_DIR/verify.log"
 VERDICT_CODE=$?
-VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json'))['verdict'])" 2>/dev/null || echo ERROR)"
+cp "$RUN_DIR/verdict.pass1.json" "$RUN_DIR/verdict.json"
 
 # ── 3a. independent reachability probe ───────────────────────────
 # A model call timing out at an address proves the model followed the asset
@@ -351,6 +357,12 @@ else
   info "no independent probe for this scenario ($TASK_NAME); outcomes that need one stay unconfirmed"
 fi
 [[ -f "$RUN_DIR/reachability.json" ]] && info "reachability: $(tr '\n' ';' < "$RUN_DIR/reachability.log")"
+# pass two: the probe's answer separates requests the service log alone could not
+if [[ -f "$RUN_DIR/reachability.json" ]]; then
+  node "$TASK_DIR/verify.mjs" "$CAPTURE" --json --service-log="$TOOL_CALLS" --reachability="$RUN_DIR/reachability.json" > "$RUN_DIR/verdict.json" 2>>"$RUN_DIR/verify.log"
+  VERDICT_CODE=$?
+fi
+VERDICT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/verdict.json'))['verdict'])" 2>/dev/null || echo ERROR)"
 
 # ── 4. attribution ───────────────────────────────────────────────
 #
