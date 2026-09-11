@@ -27,11 +27,11 @@ PASS  消费者 user
 PASS  作者 user
 PASS  跨人:消费者 user ≠ 作者 user
 FAIL  proxy 强制身份 agent == 消费者
-      期望 "agt-giawngxum4"  实际 "agt-hsylov19pn"
+      期望 "agt-giawngxum4"  实际 "agt-5e0y4l8a7a"
 PASS  proxy 强制身份 team
 PASS  proxy 强制身份 task
 FAIL  proxy 配置未被改动
-      期望 "76428b8b89ba"  实际 "ef1278347dc7"
+      期望 "76428b8b89ba"  实际 "4453c5fd4e0e"
 PASS  proxy 已在配置修改后重启(配置生效)
 PASS  proxy 配置备份在受保护位置且哈希一致
 FAIL  消费者记忆范围哈希 == 冻结值

@@ -17,7 +17,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-11T16:57:48.365Z。
+生成于 2026-09-11T17:08:07.279Z。
 
 ## 这次分析的口径
 

@@ -1,8 +1,8 @@
 skill.extraction.enabled: file=false container=enabled:false
   probe:            running (pid 97176)
   proxy upstream:   http://host.docker.internal:18097
-  forced identity:  agt-hsylov19pn  (neither evaluation agent)
+  forced identity:  agt-5e0y4l8a7a  (consumer — mainline runs)
   core auto-extraction: OFF  (pool frozen for the comparison)
   candidate log: ON
-  entries: 17  (/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/provenance/artifacts/candidate-log.jsonl)
-2026-09-11T16:57:52Z [delivery re-run 2026-09-11T165731Z] skl-pXLc38dex6Zt: status approved, visibility team, evidence_revision 6, gate admit decided_at 2026-09-11T16:54:11.610Z (online validated 2, used 0, corrected 0)
+  entries: 0  (/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/provenance/artifacts/candidate-log.jsonl)
+2026-09-11T17:08:11Z [delivery re-run 2026-09-11T170753Z] skl-pXLc38dex6Zt: status approved, visibility team, evidence_revision 6, gate admit decided_at 2026-09-11T16:54:11.610Z (online validated 2, used 0, corrected 0)

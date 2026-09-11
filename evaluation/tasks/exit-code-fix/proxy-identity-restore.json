@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-11T17:07:15Z",
+  "what": "proxy sessionInit.debugForceIdentity.agent_id restored to the mainline consumer b (agt-5e0y4l8a7a) after the dev loop left it at the last per-run consumer",
+  "command": "bash evaluation/runner/prepare.sh --identity b (CONSUMER_AGENT default)",
+  "backup_before": "deploy/global-images/.proxy-config/config.yaml.bak-20260911T170708Z-before-restore-neutral",
+  "sha256_before": "ef1278347dc75798282e7780f7dac517a591210fdfacfa5b8f2b410bc13356a6",
+  "sha256_after": "4453c5fd4e0e50feb27b109b7961cfedf641cfff98f3c81de3485bf7578175cc",
+  "forced_agent_after": "agt-5e0y4l8a7a",
+  "prepare_exit": 0,
+  "proxy_last_init_line_at_record": "[session-init:cb] session=codebuddy:fbbd6f35-dca2-4479-9e51-a16db7a38f15 \u2192 initialized agent=agt-hsylov19pn task=task-5e6xp4mrrw team=team-5ezfoladb5 user=<id",
+  "restore_previous": "cp deploy/global-images/.proxy-config/config.yaml.bak-20260911T170708Z-before-restore-neutral deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
+  "verify": "bash evaluation/runner/prepare.sh --status | head -4"
+}

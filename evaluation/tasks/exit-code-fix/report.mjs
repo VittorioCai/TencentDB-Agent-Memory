@@ -210,7 +210,7 @@ else {
   const moved = first.gate?.decided_at !== last.gate?.decided_at;
   L.push("");
   L.push(moved
-    ? `闸门在 ${last.at} 重判:decided_at ${first.gate?.decided_at} → ${last.gate?.decided_at},decision ${first.gate?.decision} → ${last.gate?.decision},status ${first.status} → ${last.status};evidence_revision ${first.evidence_revision} → ${last.evidence_revision}。回流闭合。`
+    ? `闸门在 ${last.at} 重判:decided_at ${first.gate?.decided_at} → ${last.gate?.decided_at},decision ${first.gate?.decision} → ${last.gate?.decision},status ${first.status} → ${last.status};evidence_revision ${first.evidence_revision} → ${last.evidence_revision}。回流闭合:一条经验被提取 → 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 ${q(last.gate?.online?.validated)} 次 validated 来自同一消费者用户、同一任务,见"apply 之前的两项确认"。`
     : `闸门 decided_at 停在 ${last.gate?.decided_at}(decision ${last.gate?.decision}),evidence_revision ${first.evidence_revision} → ${last.evidence_revision}:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。`);
 }
 L.push("");
@@ -269,7 +269,9 @@ else {
   L.push("");
   L.push(`**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user ${q(ownerUser)};` + rel.map((x) => `${x.run_id} 消费者 ${x.consumer} 属 user ${q(x.user)} → ${x.relation}`).join(";") +
     `。Core 试算信号 cross_user_validated ${q(lastDry.signals?.online?.cross_user_validated)}、distinct_consumers ${q(lastDry.signals?.online?.distinct_consumers)}(按 user 计:两个 agent 同属一个消费者用户)。` +
-    (rel.every((x) => x.relation === "cross_user") ? `两次都是跨人(作者用户 ≠ 消费者用户),"基于跨人验证 admit"成立;但只有一个消费者用户、一个任务。` : `不全是跨人:"基于跨人验证 admit"这句要改。`));
+    (rel.every((x) => x.relation === "cross_user")
+      ? `**闸门 admit 基于 ${q(lastDry.signals?.online?.cross_user_validated)} 次 cross_user validated,但两次来自同一消费者用户、同一任务(distinct_consumers=${q(lastDry.signals?.online?.distinct_consumers)},distinct_tasks=${q(lastDry.signals?.online?.distinct_tasks)})。跨人关系成立,独立性不成立——这是单主体条件下的已知限制,不是两个独立验证。**`
+      : `不全是跨人:"基于跨人验证 admit"这句要改。`));
 }
 L.push("");
 if (evals.length) {
@@ -350,7 +352,8 @@ for (const s of [
   "模型自报测试结果不采信,验收只认验证器自带参考测试与起点测试原内容;模型新增的测试另记",
   "笔记正文列出 52/56、任务文本只描述超时:有笔记组在非零退出码一例上的通过含'笔记披露了验收覆盖范围'成分",
   "团队资产只在模型主动 skill_search 时送达;task.md 已加一句团队经验可检索(两组同文,改动前的运行作废留档),送达与否仍按事件如实报",
-  "笔记的 approved 状态是实验干预,跑完置回 candidate;闸门判定 pending,待回流后由证据驱动",
+  "笔记最终 approved 是闸门规则的判定(admit 基于 2 次 cross_user validated,但 distinct_consumers=1、distinct_tasks=1:跨人成立、独立性不成立);人工 approved 那段已置回,实验干预不算闸门批准",
+  "后续不做:跨运行记忆隔离方案(要点已记:每次新 agent + 反证验证 + 查借入的 chat_memory)、并发最后一组维持 ERROR、bridge-name 不换解析;批次五不跑(4 次不可判源于 gate-off 下两条冲突约定并存,换 trace 重跑会复现)",
   "回流走产品的 /v3/skill/extract,提取内容由 Core 决定;是否产生资产、状态为何,以 write-back.json 为准",
 ]) L.push(`- ${s}`);
 L.push("");

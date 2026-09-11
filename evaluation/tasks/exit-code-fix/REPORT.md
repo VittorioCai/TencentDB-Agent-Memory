@@ -70,7 +70,7 @@
 | 2026-09-11T16:54:11Z | after the extraction window closed (before apply) | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 | 2026-09-11T16:54:11Z | after apply | approved | team | 6 | admit | 2026-09-11T16:54:11.610Z | 2/0/0 |
 
-闸门在 2026-09-11T16:54:11Z 重判:decided_at 2026-09-11T11:25:46.115Z → 2026-09-11T16:54:11.610Z,decision pending → admit,status candidate → approved;evidence_revision 2 → 6。回流闭合。
+闸门在 2026-09-11T16:54:11Z 重判:decided_at 2026-09-11T11:25:46.115Z → 2026-09-11T16:54:11.610Z,decision pending → admit,status candidate → approved;evidence_revision 2 → 6。回流闭合:一条经验被提取 → 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 2 次 validated 来自同一消费者用户、同一任务,见"apply 之前的两项确认"。
 
 ## 回流窗口、池快照与新资产的来源
 
@@ -89,7 +89,7 @@
 
 **1. 作者先验有没有计入试算的 admit?** 试算(2026-09-11T16:19:07Z)的判定理由:"rule admit: cross-person validated >= 1 (2 record(s)) and no corrected";"reported signals: 2 call(s) from 2 trusted row(s), 1 distinct task(s), 1 distinct consumer(s); none is a threshold";"2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read";"author usr-n68ea5ythq: 29 validated / 10 corrected on other assets (reported, not used)"。作者那一行标注 "(reported, not used)":规则(rule admit: cross-person validated >= 1 (2 record(s)) and no corrected)不读作者先验;作者信号只决定 review_priority(asset-gate.ts 371–387:近 30 天有被判 wrong 的资产 → high),不进 admit/reject 判定。因此 apply 的结果与试算一致,理由是 rule admit: cross-person validated >= 1 (2 record(s)) and no corrected。
 
-**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user usr-n68ea5ythq;20260911T154907Z-devloop-note 消费者 agt-hsv5hd4ys2 属 user usr-4u07qc2kuj → cross_user;20260911T155035Z-devloop-note 消费者 agt-hsylov19pn 属 user usr-4u07qc2kuj → cross_user。Core 试算信号 cross_user_validated 2、distinct_consumers 1(按 user 计:两个 agent 同属一个消费者用户)。两次都是跨人(作者用户 ≠ 消费者用户),"基于跨人验证 admit"成立;但只有一个消费者用户、一个任务。
+**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user usr-n68ea5ythq;20260911T154907Z-devloop-note 消费者 agt-hsv5hd4ys2 属 user usr-4u07qc2kuj → cross_user;20260911T155035Z-devloop-note 消费者 agt-hsylov19pn 属 user usr-4u07qc2kuj → cross_user。Core 试算信号 cross_user_validated 2、distinct_consumers 1(按 user 计:两个 agent 同属一个消费者用户)。**闸门 admit 基于 2 次 cross_user validated,但两次来自同一消费者用户、同一任务(distinct_consumers=1,distinct_tasks=1)。跨人关系成立,独立性不成立——这是单主体条件下的已知限制,不是两个独立验证。**
 
 闸门评估记录:
 - 2026-09-11T16:19:07Z dry-run(before the write-back with extraction on (trusted rows 2)):decision admit → status_target approved;status candidate → candidate;online validated 2 / corrected 0 / cross_user_validated 2 / untrusted_ignored 2
@@ -153,6 +153,7 @@ apply 结果:status candidate → approved,与最后一次试算(admit)一致。
 - 模型自报测试结果不采信,验收只认验证器自带参考测试与起点测试原内容;模型新增的测试另记
 - 笔记正文列出 52/56、任务文本只描述超时:有笔记组在非零退出码一例上的通过含'笔记披露了验收覆盖范围'成分
 - 团队资产只在模型主动 skill_search 时送达;task.md 已加一句团队经验可检索(两组同文,改动前的运行作废留档),送达与否仍按事件如实报
-- 笔记的 approved 状态是实验干预,跑完置回 candidate;闸门判定 pending,待回流后由证据驱动
+- 笔记最终 approved 是闸门规则的判定(admit 基于 2 次 cross_user validated,但 distinct_consumers=1、distinct_tasks=1:跨人成立、独立性不成立);人工 approved 那段已置回,实验干预不算闸门批准
+- 后续不做:跨运行记忆隔离方案(要点已记:每次新 agent + 反证验证 + 查借入的 chat_memory)、并发最后一组维持 ERROR、bridge-name 不换解析;批次五不跑(4 次不可判源于 gate-off 下两条冲突约定并存,换 trace 重跑会复现)
 - 回流走产品的 /v3/skill/extract,提取内容由 Core 决定;是否产生资产、状态为何,以 write-back.json 为准
 

@@ -6,6 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
+| **线上状态(接手先看)** | proxy 强制身份已恢复为主线消费者 `agt-5e0y4l8a7a`(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore.json`);Core 提取 off;闭环笔记 `skl-pXLc38dex6Zt` approved(闸门规则判定,保留);批次四资产 right approved / wrong failed |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
 | 验证时间 | 2026-09-11 晚(第 5 件最小开发闭环闭合:无/有笔记各 2 次、回流 10 项候选、闸门按规则 admit;第 6 件交付复跑见 `evaluation/delivery/2026-09-11/SUMMARY.md`) |
@@ -122,7 +123,16 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 3. **一条命令拨两个目标 / 同一消息并发双拨(判定逻辑,已按审阅四条边界改,已重判)。**
    见上"第 2 件"第 2 点。待决的只剩并发组的判定规则(下)。
 
-## 需决策事项
+## 已决(2026-09-11 晚)与后续
+
+- 闭环笔记**保留 approved**:这次是闸门按规则 admit,decision 与 status 一致;上次人工 approved 时 gate 仍
+  pending,状态与判定不一致,故置回。保留它,"回流闭合"才有实物支撑。admit 所依据的 2 次 cross_user validated
+  来自同一消费者用户、同一任务(distinct_consumers=1、distinct_tasks=1):跨人成立、独立性不成立,报告同行写明。
+- 下列三项**留作后续,不做**:记忆隔离方案(写进局限;要点:每次新 agent + 反证验证 + 查借入的 chat_memory)、
+  并发最后一组维持 ERROR(已裁定)、bridge-name 不换解析(不在任何结论里)。
+- **批次五不跑**:4 次不可判源于 gate-off 下两条冲突约定并存,换 trace 重跑会复现同一现象。
+
+## 需决策事项(历史,已由上一节处理)
 
 1. **atomic / conversation 记忆的逐运行隔离方案**(批次五前置)。可选:
    (a) 每次运行换全新 agent id(proxy `debugForceIdentity` 跟着改并重启,十次重启);
@@ -139,8 +149,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
    `void`),重跑两次。参考测试覆盖范围与笔记正文的关系按决定 ② 写硬在 REPORT.md。
 5. ~~笔记准入~~ 已按决定 ③ 做完(approved → 跑有笔记组 → 置回 candidate)。
 6. ~~回流要不要临时打开提取~~ 已做(用户开、关;§10 记录)。
-7. ~~闸门 apply~~ 已做(规则 admit → approved)。笔记现为 approved,是产品规则的判定;若要回到实验前状态由
-   管理员置 candidate。
+7. ~~闸门 apply~~ 已做(规则 admit → approved)。笔记保留 approved(已决,见上)。
 
 ## 下一步(审阅 2026-09-11 定的顺序)
 
@@ -193,8 +202,8 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 gate-on)。恢复 approved 由用户跑 `core-gate.sh --reset --baseline …gate_baseline_batch4.json`。
 笔记 `skl-pXLc38dex6Zt` v1:team、**approved(闸门规则 2026-09-11T16:54:11Z)**;10 项由消费者会话提取的候选
 (private,属 usr-4u07qc2kuj)。**Core 提取开关**:off(16:52:28Z 恢复,sha 66ebab0a…;备份与恢复命令在
-`evaluation/tasks/exit-code-fix/extraction-switch.jsonl`)。**proxy 强制身份**:最后一次运行的消费者
-`agt-hsylov19pn`;回到批次四消费者的命令见上文第 5 件。
+`evaluation/tasks/exit-code-fix/extraction-switch.jsonl`)。**proxy 强制身份**:交付前已恢复为主线消费者
+`agt-5e0y4l8a7a`(`prepare.sh --identity b`;备份与恢复命令在 `evaluation/tasks/exit-code-fix/proxy-identity-restore.json`)。
 
 **消费者记忆**:profiles/ 下 `agt-giawngxum4` 现有 5 个残留文件(最后一次会话的迟到写入,
 下一次运行前由 guard 清);atomic/conversation 足迹 139 行 / 16 会话目录,**没有清理办法**
