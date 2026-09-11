@@ -28,7 +28,10 @@ const fresh = () => "bt-" + [...randomBytes(11)].map((b) => ALPHABET[b % ALPHABE
 const args = process.argv.slice(2);
 const MODE = args.includes("--check") ? "check" : args.includes("--dry-run") ? "dry-run" : args.includes("--fix-visibility") ? "fix-visibility" : "fill";
 const keyFile = (args.find((a) => a.startsWith("--key=")) ?? "").slice(6) || join(REPO, "deploy/global-images/.topic4-user-key");
-const k = readFileSync(keyFile, "utf8").replace(/\s+/g, "");
+// The author key is required to fill or fix; --check can run without it (a clean clone) through the
+// offline burned-value route of resolve-tokens.mjs, which then skips what only Core can answer.
+const k = existsSync(keyFile) ? readFileSync(keyFile, "utf8").replace(/\s+/g, "") : null;
+if (!k && MODE !== "check") { console.error(`author key file missing: ${keyFile} (needed to ${MODE})`); process.exit(1); }
 
 const core = (path, body, extra = {}) => fetch(`${CORE_URL}${path}`, {
   method: "POST",
@@ -111,6 +114,18 @@ if (MODE === "fix-visibility") {
 if (MODE === "check") {
   if (!id) { console.error("tokens.json is empty: nothing to check (run without --check first)"); process.exit(1); }
   const spec = tokens[id];
+  if (!k || process.env.TOKENS_OFFLINE === "1") {
+    // offline: the value comes from the burned registry (verified against the frozen sha256); Core is not consulted,
+    // so the content hash and the visibility are NOT checked here — said so, not skipped silently.
+    const { resolveTokens } = await import(join(REPO, "evaluation/attribution/resolve-tokens.mjs"));
+    const rr = (await resolveTokens(DIR, { keyFile, offline: true }))[id];
+    console.log(`${rr?.verified ? "OK  " : "BAD "} ${NAME} ${id} v${spec.version}  sha256 ${spec.token_sha256[0].slice(0, 12)}…  ${rr?.verified ? "offline: value from the burned registry, version and sha256 verified; content hash and visibility NOT checked (no key / Core)" : `offline: ${rr?.why ?? "unresolved"}`}`);
+    if (!rr?.verified) process.exit(1);
+    console.log(`SKIP ${id} visibility check (offline: no key / Core)`);
+    const p = provenance(id, rr.tokens[0]);
+    console.log(p.out.split("\n").map((l) => l.replace(rr.tokens[0], "bt-<value>")).join("\n"));
+    process.exit(p.exit ?? 1);
+  }
   const back = await manageGet({ team_id, user_id: authorUser, agent_id: authorAgent, skill_id: id, version: spec.version, include_content: true });
   if (back?.code !== 0) { console.error(`cannot read the note back from Core (${back?.message})`); process.exit(1); }
   const content = String(back.data?.content ?? "");

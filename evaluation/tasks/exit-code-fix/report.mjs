@@ -13,6 +13,9 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../..");
+// A recorded backup path is absolute and belongs to the machine that ran the loop; shown from the
+// repository-relative segment so the report reads the same from any checkout (clean-clone rehearsal 2026-09-12).
+const showPath = (p) => { const s = String(p ?? ""); const i = s.indexOf("/deploy/global-images/"); return i >= 0 ? s.slice(i + 1) : relative(REPO, s); };
 const args = process.argv.slice(2);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
 const manifestPath = opt("manifest") ?? join(HERE, "devloop-runs.json");
@@ -226,7 +229,7 @@ if (!sw.length) L.push(`提取开关记录(extraction-switch.jsonl)尚无:提取
 else {
   L.push(`| 时间 | 开关 | 前 → 后 | 容器读回 | 配置 sha 前→后 | 备份 | ok |`);
   L.push(`|---|---|---|---|---|---|---|`);
-  for (const o of sw) L.push(`| ${o.at} | ${o.switch} | ${o.before} → ${o.after} | ${o.container_reads} | ${String(o.sha256_before).slice(0, 8)}→${String(o.sha256_after).slice(0, 8)} | ${relative(REPO, o.backup)} | ${o.ok} |`);
+  for (const o of sw) L.push(`| ${o.at} | ${o.switch} | ${o.before} → ${o.after} | ${o.container_reads} | ${String(o.sha256_before).slice(0, 8)}→${String(o.sha256_after).slice(0, 8)} | ${showPath(o.backup)} | ${o.ok} |`);
   const on = sw.filter((o) => o.switch === "on").map((o) => o.at), off = sw.filter((o) => o.switch === "off").map((o) => o.at);
   L.push("");
   L.push(`开关时间窗:开 ${on.join(", ") || "无"} → 关 ${off.join(", ") || "未关"}。四次写回的调用时间:` + rows.filter((r) => r.sample && r.wb).map((r) => `${r.run_id} ${r.wb.called_at}`).join("; ") + "。");
@@ -296,7 +299,7 @@ L.push(`| run_id | 消费者 | 创建时足迹(profile/records/buffer) | proxy �
 L.push(`|---|---|---|---|---|---|---|---|---|---|---|`);
 for (const r of rows) {
   const c = r.run?.consumer, f = c?.footprint_at_creation, p = c?.proxy_switch, m = r.memory;
-  L.push(`| ${r.run_id} | ${q(c?.agent_id)} | ${f ? `${q(f.profile_files)}/${q(f.records_lines)}/${q(f.buffer_sessions)}` : "?"} | ${p ? `${p.sha256_before.slice(0, 8)}→${p.sha256_after.slice(0, 8)}` : "?"} | ${p ? relative(REPO, p.backup) : "?"} | ${q(m?.reads)} | ${q(m?.items)} | ${q(m?.residue)} | ${q(m?.borrowed_from_other_agents)} | ${q(m?.undated)} | ${yn(m?.ok)} |`);
+  L.push(`| ${r.run_id} | ${q(c?.agent_id)} | ${f ? `${q(f.profile_files)}/${q(f.records_lines)}/${q(f.buffer_sessions)}` : "?"} | ${p ? `${p.sha256_before.slice(0, 8)}→${p.sha256_after.slice(0, 8)}` : "?"} | ${p ? showPath(p.backup) : "?"} | ${q(m?.reads)} | ${q(m?.items)} | ${q(m?.residue)} | ${q(m?.borrowed_from_other_agents)} | ${q(m?.undated)} | ${yn(m?.ok)} |`);
 }
 L.push("");
 L.push(`## 新经验回流候选池`);

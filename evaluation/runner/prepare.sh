@@ -192,7 +192,7 @@ restart_proxy() {
 
 case "${1:---status}" in
   --status)
-    echo "  probe:            $(probe_running && echo "running (pid $(cat "$PROBE_PID"))" || echo "${C_R}not running${C_0}")"
+    echo "  probe:            $(probe_running && echo "running (pid $(cat "$PROBE_PID" 2>/dev/null))" || echo "${C_R}not running${C_0}")"
     echo "  proxy upstream:   $(current_upstream)"
     up="$(current_upstream)"
     [[ "$up" == "$PROBE_UPSTREAM" ]] || echo "                    ${C_Y}not routed through the probe — nothing will be captured${C_0}"

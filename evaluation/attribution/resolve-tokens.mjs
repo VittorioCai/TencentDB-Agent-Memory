@@ -17,8 +17,16 @@
  * 读取走**管理路径**(`x-tdai-read-purpose: manage`,作者密钥与 user_id 匹配),所以资产
  * 被闸门置为 candidate/failed 时同样读得到——闸门管的是模型路径,不是作者的管理读取。
  *
+ * 离线路线(2026-09-12,审阅裁定"每个数字可从原始记录重算"必须在干净克隆上成立):干净克隆既无
+ * 作者密钥也无 Core。对**已烧毁**的值(明文已随记录进入 git 历史,按规则再也不能用)可以从
+ * 登记簿 `evaluation/attribution/burned-tokens.json` 取明文——登记簿只收 git 历史里已经有的值
+ * (build-burned-registry.mjs 逐个 `git grep` 证明),所以它不暴露任何新东西。走这条路的条件:
+ * `--offline` / TOKENS_OFFLINE=1,或密钥文件不存在且没有注入读取器。核验:版本 == 钉住的版本、
+ * 明文 sha256 集合 == 冻结的 token_sha256;content_hash 离线核不了,why 里写明。有密钥时登记簿
+ * 不参与:Core 的答案说了算,不做静默回退。
+ *
  * 用法:
- *   node evaluation/attribution/resolve-tokens.mjs [--task=DIR] [--key=FILE] [--out=FILE]
+ *   node evaluation/attribution/resolve-tokens.mjs [--task=DIR] [--key=FILE] [--out=FILE] [--offline]
  *     --out 写出**明文形态**的 tokens.json(含 version),给运行时判定用;写到仓库外的临时
  *     目录,用完即删。退出 0 = 全部 verified;1 = 有未 verified。
  */
@@ -40,6 +48,27 @@ function keyFrom(file) {
   const k = readFileSync(p, "utf8").replace(/\s+/g, "");
   if (!k) throw new Error(`key file empty: ${file}`);
   return k;
+}
+export const BURNED_REGISTRY = "evaluation/attribution/burned-tokens.json";
+/** The burned-value registry, or null when there is none; `file` may be absolute or repo-relative. */
+export function loadBurned(file) {
+  const p = resolve(REPO, file ?? process.env.TOKENS_BURNED_FILE ?? BURNED_REGISTRY);
+  if (!existsSync(p)) return null;
+  try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; }
+}
+/** Offline resolution of one asset from the registry: version pinned, sha256 set must equal the frozen one. */
+export function resolveBurned(id, spec, registry, { keyMissing = false } = {}) {
+  const pinVersion = spec.version ?? null;
+  const want = (spec.token_sha256 ?? []).map((h) => String(h).toLowerCase());
+  const base = { mode: "burned-offline", version: pinVersion, content_hash: spec.content_hash ?? null, token_sha256: spec.token_sha256 ?? [], read_purpose: null, adoption_fields: spec.adoption_fields ?? null };
+  const need = keyMissing ? "作者密钥文件不存在(干净克隆)" : "离线模式";
+  if (!registry) return { ...base, tokens: [], verified: false, why: `${need}:没有登记簿 ${BURNED_REGISTRY}(burned-tokens.json),也就无法离线取值;要么提供密钥 + Core,要么提供登记簿` };
+  const entry = registry?.[id]?.burned?.[String(pinVersion)] ?? null;
+  if (!entry || !Array.isArray(entry.tokens) || !entry.tokens.length) return { ...base, tokens: [], verified: false, why: `${need}:登记簿(burned-tokens.json)没有 ${id} 版本 ${pinVersion} 的已烧毁值` };
+  const got = entry.tokens.map(sha256Hex);
+  const ok = want.length > 0 && want.every((h) => got.includes(h)) && got.every((h) => want.includes(h));
+  if (!ok) return { ...base, tokens: [], verified: false, why: `${need}:登记簿里的明文 sha256 与冻结的 token_sha256 不一致` };
+  return { ...base, tokens: [...entry.tokens], verified: true, why: `${need}:明文取自已烧毁值登记簿,版本与 sha256 与冻结一致;content_hash 未经 Core 核验(离线核不了)` };
 }
 
 async function corePost(path, body, key, extraHeaders = {}) {
@@ -112,6 +141,11 @@ export async function resolveTokens(input, opts = {}) {
         why: "tokens.json 没有钉住 version/content_hash,无法确认 Core 里读到的是冻结的那一版" };
       continue;
     }
+    // 离线路线:显式要求,或没有读取器且密钥文件不存在(干净克隆)。有密钥时不走这里。
+    const keyPath = resolve(REPO, opts.keyFile ?? "deploy/global-images/.topic4-user-key");
+    const keyMissing = !read && !existsSync(keyPath);
+    const offline = opts.offline === true || process.env.TOKENS_OFFLINE === "1" || keyMissing;
+    if (offline) { out[id] = resolveBurned(id, spec, loadBurned(opts.burnedFile), { keyMissing }); continue; }
     await ensureReader(); await ensureAuthorUser();
     let r;
     try { r = await read({ team_id, user_id: author_user_id, agent_id: author_agent_id, skill_id: id, version: pinVersion }); }
@@ -167,7 +201,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const opt = (k) => (args.find((a) => a.startsWith(`--${k}=`)) ?? "").slice(k.length + 3) || undefined;
   const taskDir = opt("task") ?? args.find((a) => !a.startsWith("--")) ?? "evaluation/tasks/bridge-addr";
-  const resolved = await resolveTokens(taskDir, { keyFile: opt("key") });
+  const resolved = await resolveTokens(taskDir, { keyFile: opt("key"), offline: args.includes("--offline") });
   let bad = 0;
   for (const [id, r] of Object.entries(resolved)) {
     if (!r.verified) bad += 1;

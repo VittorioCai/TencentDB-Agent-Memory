@@ -61,11 +61,13 @@ function keyFrom(file) {
   return readFileSync(p, "utf8").replace(/\s+/g, "");
 }
 async function core(path, body, key) {
-  const res = await fetch(`${CORE_URL}${path}`, {
+  if (!key) return { code: -1, message: "no key file (clean clone): Core not read" };
+  let res;
+  try { res = await fetch(`${CORE_URL}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-tdai-service-id": SERVICE_ID, authorization: `Bearer ${key}`, "x-tdai-user-key": key },
     body: JSON.stringify(body),
-  });
+  }); } catch (e) { return { code: -1, message: `Core unreachable (${e.cause?.code ?? e.message})` }; }
   const j = await res.json().catch(() => ({ code: -1, message: `non-JSON reply (${res.status})` }));
   return j;
 }
@@ -236,8 +238,11 @@ async function readLive(spec) {
   const taskDir = resolve(REPO, spec.task_dir);
   const tokens = readJson(join(taskDir, "tokens.json"), {});
   const assetIds = Object.keys(tokens).filter((k) => !k.startsWith("_"));
-  const key = keyFrom(spec.reader_key_file);
-  // 判别值明文只在 Core(方案 2)。先取回,基线扫描和来源扫描都要用它——哈希扫不了。
+  // No key (a clean clone): Core reads come back as unreadable rows (never a pass) and the discriminative
+  // values come from the burned registry through resolve-tokens' offline route (2026-09-12).
+  let key = null, keyMissing = null;
+  try { key = keyFrom(spec.reader_key_file); } catch (e) { keyMissing = e.message; }
+  // 判别值明文只在 Core(方案 2);烧毁的值可离线取自登记簿。先取回,基线扫描和来源扫描都要用它——哈希扫不了。
   const resolved = await resolveTokens(taskDir, { keyFile: spec.reader_key_file, team_id: spec.team_id, author_agent_id: spec.author_agent_id });
   const resolvedPlain = assetIds.flatMap((id) => resolved[id]?.tokens ?? []);
 

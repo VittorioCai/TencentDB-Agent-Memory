@@ -71,7 +71,10 @@ deploy/global-images/.memory-core-config/
 
 # Eval scripts output
 scripts/eval-report.json
-evaluation/gate0/artifacts/
+evaluation/gate0/artifacts/*
+# …except the recorded three-channel session, a test fixture (extract-tokens / build-early-events tests);
+# force-added 2026-09-12 after the clean-clone rehearsal (scanned: no key values).
+!evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl
 
 # OS files
 .DS_Store

@@ -70,3 +70,69 @@ test("明文形态(老批次)原样通过,不联网,版本保留", async () => {
   assert.equal(r["skl-old"].verified, true);
   assert.equal(plainTokensOrThrow(r)["skl-old"].version, 2);
 });
+
+// --- 2026-09-12: offline route for BURNED values (a clean clone has no key and no Core) ------------------
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const burnedFile = (entries) => {
+  const dir = mkdtempSync(join(tmpdir(), "burned-"));
+  const p = join(dir, "burned-tokens.json");
+  writeFileSync(p, JSON.stringify({ _meta: { what: "test" }, ...entries }));
+  return { p, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+};
+
+test("离线 + 登记簿里有该资产该版本、sha256 对上 → verified,mode burned-offline,不碰 Core", async () => {
+  const { p, cleanup } = burnedFile({ "skl-a": { burned: { 4: { tokens: ["bt-abcdefgh11"] } } } });
+  try {
+    let coreTouched = false;
+    const r = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { offline: true, burnedFile: p, read: async () => { coreTouched = true; return { code: 0 }; } });
+    assert.equal(r["skl-a"].verified, true);
+    assert.equal(r["skl-a"].mode, "burned-offline");
+    assert.deepEqual(r["skl-a"].tokens, ["bt-abcdefgh11"]);
+    assert.equal(r["skl-a"].version, 4);
+    assert.equal(coreTouched, false);
+    assert.match(r["skl-a"].why, /content_hash/); // says what was NOT verified offline
+    assert.doesNotThrow(() => plainTokensOrThrow(r));
+  } finally { cleanup(); }
+});
+
+test("离线但登记簿的明文 sha256 与冻结不一致 → 不 verified,点名", async () => {
+  const { p, cleanup } = burnedFile({ "skl-a": { burned: { 4: { tokens: ["bt-wrongvalue1"] } } } });
+  try {
+    const r = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { offline: true, burnedFile: p });
+    assert.equal(r["skl-a"].verified, false);
+    assert.match(r["skl-a"].why, /sha256/);
+    assert.throws(() => plainTokensOrThrow(r));
+  } finally { cleanup(); }
+});
+
+test("离线且登记簿没有该版本(或没有登记簿)→ 不 verified,说明需要密钥+Core 或登记簿", async () => {
+  const { p, cleanup } = burnedFile({ "skl-a": { burned: { 3: { tokens: ["bt-abcdefgh11"] } } } });
+  try {
+    const r = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { offline: true, burnedFile: p });
+    assert.equal(r["skl-a"].verified, false);
+    assert.match(r["skl-a"].why, /burned-tokens|登记簿/);
+    const r2 = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { offline: true, burnedFile: join(tmpdir(), "does-not-exist-" + Date.now() + ".json") });
+    assert.equal(r2["skl-a"].verified, false);
+  } finally { cleanup(); }
+});
+
+test("密钥文件不存在且未注入读取器 → 自动走离线登记簿(干净克隆的情形)", async () => {
+  const { p, cleanup } = burnedFile({ "skl-a": { burned: { 4: { tokens: ["bt-abcdefgh11"] } } } });
+  try {
+    const r = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { keyFile: "deploy/global-images/.no-such-key-file", burnedFile: p });
+    assert.equal(r["skl-a"].verified, true);
+    assert.equal(r["skl-a"].mode, "burned-offline");
+  } finally { cleanup(); }
+});
+
+test("有读取器(有密钥)时登记簿不参与:Core 的答案说了算", async () => {
+  const { p, cleanup } = burnedFile({ "skl-a": { burned: { 4: { tokens: ["bt-abcdefgh11"] } } } });
+  try {
+    const r = await resolveTokens({ tokens: spec("bt-abcdefgh11"), pair }, { read: readOk("bt-abcdefgh11", 5), author_user_id: "u", burnedFile: p });
+    assert.equal(r["skl-a"].verified, false); // version mismatch from Core wins; no silent fallback
+    assert.equal(r["skl-a"].mode, "hash");
+  } finally { cleanup(); }
+});
