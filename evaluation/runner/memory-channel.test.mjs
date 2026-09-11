@@ -145,3 +145,39 @@ test("an item with neither a date nor a session is undated, never assumed own", 
   assert.deepEqual(r.residue, []);
   assert.deepEqual(r.own, []);
 });
+
+// ── per-run record (fresh consumer per run, review 2026-09-11 item 5) ──
+import { memoryChannelRecord } from "./memory-channel.mjs";
+
+function captureWithRead(items) {
+  const call_id = "call_m1";
+  return [{ event: "http.request", timestamp: "2026-09-11T10:00:05Z", body: { json: { messages: [
+    { role: "assistant", tool_calls: [{ id: call_id, function: { name: "Bash", arguments: JSON.stringify({ command: "curl http://127.0.0.1:8096/memory-bridge/v3/atomic/search -d '{}'" }) } }] },
+    { role: "tool", tool_call_id: call_id, content: JSON.stringify({ code: 0, data: { items } }) },
+  ] } } }];
+}
+
+test("an item owned by another agent is borrowed even when it is dated inside this run", () => {
+  const rows = captureWithRead([
+    { id: "m1", type: "work_fact", content: "own", created_at: "2026-09-11T10:00:02Z", agent_id: "agt-fresh" },
+    { id: "m2", type: "work_fact", content: "someone else's", created_at: "2026-09-11T10:00:03Z", agent_id: "agt-older" },
+  ]);
+  const rec = memoryChannelRecord(rows, { started_at: "2026-09-11T10:00:00Z", consumer: "agt-fresh" });
+  assert.equal(rec.reads, 1);
+  assert.equal(rec.items, 2);
+  assert.equal(rec.residue, 0);
+  assert.equal(rec.borrowed_from_other_agents, 1);
+  assert.equal(rec.ok, false);
+  assert.deepEqual(rec.borrowed_items.map((i) => i.id), ["m2"]);
+});
+
+test("a clean run — only its own, later-dated items — is ok; an undated item leaves ok undecided", () => {
+  const clean = memoryChannelRecord(captureWithRead([{ id: "m1", content: "x", created_at: "2026-09-11T10:00:02Z", agent_id: "agt-fresh" }]), { started_at: "2026-09-11T10:00:00Z", consumer: "agt-fresh" });
+  assert.equal(clean.ok, true);
+  const undated = memoryChannelRecord(captureWithRead([{ id: "m1", content: "x", agent_id: "agt-fresh" }]), { started_at: "2026-09-11T10:00:00Z", consumer: "agt-fresh" });
+  assert.equal(undated.ok, null);
+  assert.equal(undated.undated, 1);
+  const none = memoryChannelRecord([], { started_at: "2026-09-11T10:00:00Z", consumer: "agt-fresh" });
+  assert.equal(none.reads, 0);
+  assert.equal(none.ok, true);
+});

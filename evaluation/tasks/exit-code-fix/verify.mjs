@@ -180,7 +180,7 @@ export function assessSuite(result, baselineFailures = []) {
  * content (beside `out`) so the controlled suite can run the original tests
  * whatever the model did to them.
  */
-export function freezeStart(repo, { out = null } = {}) {
+export function freezeStart(repo, { out = null, source = null } = {}) {
   const start_commit = git(repo, "rev-parse", "HEAD").stdout.trim();
   const start_tree = git(repo, "rev-parse", "HEAD^{tree}").stdout.trim();
   if (!/^[0-9a-f]{40}$/.test(start_commit)) throw new Error(`cannot read HEAD of ${repo}`);
@@ -196,7 +196,8 @@ export function freezeStart(repo, { out = null } = {}) {
   }
   const record = {
     frozen_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
-    start_commit, start_tree, test_files, tests_tar: test_files.length ? tests_tar : null,
+    // the copy's own single commit; `source_commit` is the commit in the main repository it was archived from
+    start_commit, start_tree, source_commit: source ?? null, test_files, tests_tar: test_files.length ? tests_tar : null,
     suite_at_start: { exit: suite.exit, tests: suite.tests, pass: suite.pass, fail: suite.fail, cancelled: suite.cancelled, failures: suite.failures, explained: suite.explained, problems: suite.problems },
   };
   writeFileSync(outPath, JSON.stringify(record, null, 2) + "\n");
@@ -383,7 +384,9 @@ export function verifyRepo(repo, { start = null, capture = null, diffOut = null 
   if (!checks.reference_test.explained) errors.push(`the reference test's result could not be read (${checks.reference_test.problems.join("; ")})`);
   else if (!refOk) fails.push(`the verifier's reference regression test does not pass (${checks.reference_test.fail} failing)`);
   if (checks.tests_kept.missing.length) fails.push(`original test file(s) missing: ${checks.tests_kept.missing.join(", ")}`);
-  if (checks.suite.state === "REGRESSED") fails.push(`the controlled suite regresses: ${checks.suite.new_failures.length} test(s) fail that did not fail at the start (${checks.suite.new_failures.slice(0, 5).map((f) => `${f.file}: ${f.name}`).join("; ")})`);
+  // the reference test is part of the controlled suite; its failures are already the first reason
+  const regressed = (checks.suite.new_failures ?? []).filter((f) => f.file !== REFERENCE_TEST_DEST);
+  if (checks.suite.state === "REGRESSED" && regressed.length) fails.push(`the controlled suite regresses: ${regressed.length} original test(s) fail that did not fail at the start (${regressed.slice(0, 5).map((f) => `${f.file}: ${f.name}`).join("; ")})`);
   else if (checks.suite.state === "UNEXPLAINED") errors.push(checks.suite.why);
   if (problems.length) errors.push(...problems);
   const verdict = fails.length ? FAIL : errors.length ? ERROR : PASS;
@@ -423,9 +426,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (args.includes("--freeze")) {
     const out = opt("out");
     if (!out) { console.error("--freeze needs --out=<start.json>"); process.exit(2); }
-    const rec = freezeStart(resolve(repo), { out: resolve(out) });
+    const rec = freezeStart(resolve(repo), { out: resolve(out), source: opt("source") });
     const s = rec.suite_at_start;
-    console.log(`frozen ${rec.frozen_at}: start ${rec.start_commit.slice(0, 7)} (tree ${rec.start_tree.slice(0, 7)}), ${rec.test_files.length} test files → ${out}`);
+    console.log(`frozen ${rec.frozen_at}: copy commit ${rec.start_commit.slice(0, 7)} (tree ${rec.start_tree.slice(0, 7)}${rec.source_commit ? `, archived from ${rec.source_commit.slice(0, 7)}` : ""}), ${rec.test_files.length} test files → ${out}`);
     console.log(`suite at start: tests ${s.tests} pass ${s.pass} fail ${s.fail} (exit ${s.exit}${s.explained ? "" : "; NOT explained: " + s.problems.join("; ")}); baseline failing: ${s.failures.map((f) => `${f.file}: ${f.name}`).join("; ") || "none"}`);
     process.exit(s.explained ? 0 : 2);
   }

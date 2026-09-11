@@ -44,7 +44,7 @@ echo "start commit $START (tree $TREE); $FILES tracked files, $TESTS_BASE test f
 echo "runs/ present in copy: $([[ -d "$COPY/evaluation/runner/runs" ]] && echo yes || echo no);  task dir present in copy: $([[ -d "$COPY/evaluation/tasks/exit-code-fix" ]] && echo yes || echo no)"
 
 hr; echo "【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)"
-node "$HERE/verify.mjs" --freeze --repo="$COPY" --out="$WORK/start.json"; S0=$?
+node "$HERE/verify.mjs" --freeze --repo="$COPY" --out="$WORK/start.json" --source="$START"; S0=$?
 echo "exit $S0 (expected 0 = 套件结果可解释)"
 
 hr; echo "【1】起点 + 原版失败:在冻结起点跑验证器自带的参考回归测试"

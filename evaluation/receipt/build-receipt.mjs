@@ -149,7 +149,9 @@ export function relatedTestsOf(events) {
   for (const e of events) {
     const a = e.metadata?.attempt;
     if (!a || a.ok === null || a.ok === undefined) continue;
-    out.push({ command: `verify.mjs: dial ${a.host}:${a.port} (${e.metadata.call_id ?? "call"})`, passed: a.ok === true });
+    // a repository task's attempt is an added test, not a dialled address (exit-code-fix, 2026-09-11)
+    const what = a.host || a.port ? `dial ${a.host}:${a.port}` : a.kind === "added_test" ? `added test ${a.file ?? "none"} (${a.value})` : `attempt ${a.value ?? "?"}`;
+    out.push({ command: `verify.mjs: ${what} (${e.metadata.call_id ?? "call"})`, passed: a.ok === true });
   }
   return out;
 }

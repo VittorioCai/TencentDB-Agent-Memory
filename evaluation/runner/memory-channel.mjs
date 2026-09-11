@@ -148,3 +148,49 @@ export function memoryResidue(items, startedAt, { batch_started_at = null, own_s
   const from_before_batch = batchStart === null ? null : residue.filter((it) => at(it) !== null && at(it) < batchStart);
   return { residue, own, from_this_batch, from_before_batch, undated, why: null };
 }
+
+/**
+ * One run's memory-channel record: what the model read back through the
+ * memory bridge, and whether any of it was borrowed — created before this
+ * run started, written by another session, or owned by another agent than
+ * this run's consumer (a fresh consumer per run must read nothing but its
+ * own). `ok` is null when the record cannot decide (undated items, unreadable
+ * results), never a default.
+ */
+export function memoryChannelRecord(rows, { started_at, own_session = null, consumer = null, batch_started_at = null } = {}) {
+  let read = { reads: [], items: [], problems: [] };
+  try { read = memoryItemsFromCapture(rows); } catch (e) { read.problems.push(e.message); }
+  const res = memoryResidue(read.items, started_at ?? null, { batch_started_at, own_session });
+  const borrowed = consumer ? read.items.filter((it) => it.agent_id && it.agent_id !== consumer) : null;
+  const nRes = res.residue?.length ?? null;
+  const ok = read.problems.length ? null
+    : nRes === null ? null
+    : nRes > 0 || (borrowed?.length ?? 0) > 0 ? false
+    : (res.undated?.length ?? 0) > 0 ? null : true;
+  const brief = (it) => ({ id: it.id, type: it.type, created_at: it.created_at, agent_id: it.agent_id, session_id: it.session_id, endpoint: it.endpoint, call_id: it.call_id, content_head: String(it.content ?? "").slice(0, 120) });
+  return {
+    consumer, started_at: started_at ?? null, own_session,
+    reads: read.reads.length, endpoints: [...new Set(read.reads.map((r) => r.endpoint))],
+    items: read.items.length,
+    residue: nRes, from_this_batch: res.from_this_batch?.length ?? null, from_before_batch: res.from_before_batch?.length ?? null,
+    undated: res.undated?.length ?? null,
+    borrowed_from_other_agents: borrowed ? borrowed.length : null,
+    problems: read.problems,
+    ok, why: res.why,
+    residue_items: (res.residue ?? []).slice(0, 20).map(brief),
+    borrowed_items: (borrowed ?? []).slice(0, 20).map(brief),
+    undated_items: (res.undated ?? []).slice(0, 20).map(brief),
+  };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const { readFileSync, writeFileSync } = await import("node:fs");
+  const args = process.argv.slice(2);
+  const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
+  if (!opt("capture") || !opt("started")) { console.error("usage: node memory-channel.mjs --capture=F --started=<iso> [--session=<conversation id>] [--consumer=<agent id>] [--batch-started=<iso>] [--out=F]"); process.exit(2); }
+  const rows = readFileSync(opt("capture"), "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const rec = memoryChannelRecord(rows, { started_at: opt("started"), own_session: opt("session"), consumer: opt("consumer"), batch_started_at: opt("batch-started") });
+  if (opt("out")) writeFileSync(opt("out"), JSON.stringify(rec, null, 2) + "\n");
+  console.log(`memory channel: ${rec.reads} read(s) over ${rec.endpoints.join(", ") || "no endpoint"}, ${rec.items} item(s) back; residue ${rec.residue ?? "?"}, borrowed from other agents ${rec.borrowed_from_other_agents ?? "?"}, undated ${rec.undated ?? "?"}; ok=${rec.ok}${rec.problems.length ? `; problems: ${rec.problems.slice(0, 2).join("; ")}` : ""}`);
+  process.exit(rec.ok === false ? 1 : 0);
+}

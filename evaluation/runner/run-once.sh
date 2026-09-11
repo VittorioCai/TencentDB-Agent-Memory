@@ -43,6 +43,7 @@ TASK_DIR=""
 SINCE="${SINCE:-30 MINUTE}"
 AUTO=0
 GATE=""
+FRESH_CONSUMER=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --label) LABEL="$2"; shift 2 ;;
@@ -67,6 +68,11 @@ while [[ $# -gt 0 ]]; do
     # before the probe (which sits upstream of the proxy) sees anything, giving
     # an empty capture that looks like the model did nothing.
     --auto) AUTO=1; shift ;;
+    # --fresh-consumer: create a new consumer agent for THIS run (identity b's
+    # user, its own key), switch the proxy's forced identity to it and record
+    # the switch (review 2026-09-11 item 5: one new consumer per run, not one
+    # per arm). The agent's memory scope has never had a session.
+    --fresh-consumer) FRESH_CONSUMER=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -81,6 +87,20 @@ fi
 TASK_DIR="${TASK_DIR:-$EVAL/tasks/bridge-addr}"
 [[ -d "$TASK_DIR" && -f "$TASK_DIR/task.md" && -f "$TASK_DIR/verify.mjs" ]] || { echo "--task must name a scenario directory with task.md and verify.mjs, got: $TASK_DIR" >&2; exit 2; }
 TASK_NAME="$(basename "$TASK_DIR")"
+# task.json.kind "repo": the session runs inside a working copy built from the
+# task's frozen start commit, frozen again by the task's verifier before the
+# model starts, and judged as a repository (evaluation/tasks/exit-code-fix).
+# Anything else is the capture-judged kind (bridge-addr).
+TASK_KIND="capture"; TASK_START_COMMIT=""
+if [[ -f "$TASK_DIR/task.json" ]]; then
+  TASK_KIND="$(python3 -c "import json;print(json.load(open('$TASK_DIR/task.json')).get('kind','capture'))")"
+  TASK_START_COMMIT="$(python3 -c "import json;print(json.load(open('$TASK_DIR/task.json')).get('start_commit',''))")"
+fi
+if [[ "$TASK_KIND" == "repo" ]]; then
+  { [[ -n "$TASK_START_COMMIT" ]] && git -C "$REPO_ROOT" cat-file -e "${TASK_START_COMMIT}^{commit}" 2>/dev/null; } \
+    || { echo "task.json.kind is repo but start_commit is missing or not in this repository: '$TASK_START_COMMIT'" >&2; exit 2; }
+  (( AUTO )) || { echo "a repo-kind task runs only with --auto: the session must start inside the working copy" >&2; exit 2; }
+fi
 [[ -n "$LABEL" ]] || LABEL="${GATE:+gate-$GATE}"
 [[ -n "$LABEL" ]] || LABEL="${ABLATE:+loo-${ABLATE##*-}}"
 [[ -n "$LABEL" ]] || LABEL="run"
@@ -116,6 +136,36 @@ STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
 info "run $RUN_ID → $RUN_DIR"
+
+# ── 0a. a fresh consumer for this run ────────────────────────────
+# One new agent per run under the consumer user, never used before; the
+# proxy's debugForceIdentity is switched to it by prepare.sh (which restarts
+# the proxy and re-verifies the live state), with the config backed up in its
+# own gitignored directory and the restore command recorded (CLAUDE.md §10).
+PROXY_CFG="$REPO_ROOT/deploy/global-images/.proxy-config/config.yaml"
+if (( FRESH_CONSUMER )); then
+  [[ -z "${CAPTURE_FROM:-}" ]] || die "--fresh-consumer makes no sense for a replay (CAPTURE_FROM)"
+  node "$EVAL/runner/fresh-consumer.mjs" --name="Topic4-Consumer-$RUN_ID" --identity="$IDENTITY" --out="$RUN_DIR/consumer.json" > "$RUN_DIR/fresh-consumer.log" 2>&1 \
+    || { cat "$RUN_DIR/fresh-consumer.log" >&2; die "could not create a fresh consumer agent"; }
+  FRESH_AGENT="$(python3 -c "import json;print(json.load(open('$RUN_DIR/consumer.json'))['agent_id'])")"
+  CFG_BEFORE="$(shasum -a 256 "$PROXY_CFG" | cut -c1-64)"
+  CFG_BACKUP="$PROXY_CFG.bak-$RUN_ID"
+  cp "$PROXY_CFG" "$CFG_BACKUP"
+  CONSUMER_AGENT="$FRESH_AGENT" bash "$EVAL/runner/prepare.sh" --identity "$IDENTITY" > "$RUN_DIR/prepare.log" 2>&1 \
+    || { cat "$RUN_DIR/prepare.log" >&2; die "could not switch the proxy to the fresh consumer $FRESH_AGENT (config backup: $CFG_BACKUP)"; }
+  CFG_AFTER="$(shasum -a 256 "$PROXY_CFG" | cut -c1-64)"
+  python3 - "$RUN_DIR/consumer.json" "$CFG_BEFORE" "$CFG_AFTER" "$CFG_BACKUP" "$PROXY_CFG" <<'PY'
+import json, sys
+p, before, after, backup, cfg = sys.argv[1:6]
+d = json.load(open(p, encoding="utf-8"))
+d["proxy_switch"] = {"config": cfg, "sha256_before": before, "sha256_after": after, "backup": backup,
+                     "restore": f"cp {backup} {cfg} && docker restart tdai-proxy",
+                     "verify": "docker logs tdai-proxy 2>&1 | grep -F '→ initialized' | tail -1"}
+json.dump(d, open(p, "w", encoding="utf-8"), indent=2); open(p, "a").write("\n")
+PY
+  export MEM_AGENT="$FRESH_AGENT" MEM_EXPECT_EMPTY="${MEM_EXPECT_EMPTY:-1}"
+  info "fresh consumer $FRESH_AGENT for this run; proxy switched (config sha $(cut -c1-12 <<<"$CFG_BEFORE")… → $(cut -c1-12 <<<"$CFG_AFTER")…; backup $CFG_BACKUP)"
+fi
 
 # ── 0. the gate ──────────────────────────────────────────────────
 # Before the session, never after: the model must see the pool the gate left.
@@ -222,13 +272,29 @@ else
     SESSION_PARENT="$(mktemp -d "$SESSION_ROOT/${RUN_ID}.XXXX")"
     SESSION_CWD="${SESSION_CWD:-$SESSION_PARENT/session}"
     mkdir -p "$SESSION_CWD"
+    if [[ "$TASK_KIND" == "repo" ]]; then
+      # The working copy: the tracked files of the frozen start commit, the
+      # task's excludes removed, one commit — then frozen by the task's
+      # verifier (copy commit and tree, every test file with its content, the
+      # suite's own result) BEFORE the model starts; the acceptance compares
+      # with that record, never with the copy's HEAD at the end. Later commits,
+      # runs/ and the task directory are not in the copy, and the copy is
+      # derived from a commit that predates the note's value.
+      git -C "$REPO_ROOT" archive --format=tar "$TASK_START_COMMIT" | tar -x -C "$SESSION_CWD" || die "could not archive $TASK_START_COMMIT into the working copy"
+      for ex in $(python3 -c "import json;print(' '.join(json.load(open('$TASK_DIR/task.json')).get('archive_excludes',[])))"); do rm -rf "$SESSION_CWD/$ex"; done
+      (cd "$SESSION_CWD" && git init -q && git -c user.name=harness -c user.email=harness@local add -A && git -c user.name=harness -c user.email=harness@local commit -q -m "start $TASK_START_COMMIT") \
+        || die "could not initialise the working copy"
+      node "$TASK_DIR/verify.mjs" --freeze --repo="$SESSION_CWD" --out="$RUN_DIR/start.json" --source="$TASK_START_COMMIT" > "$RUN_DIR/freeze.log" 2>&1 \
+        || { cat "$RUN_DIR/freeze.log" >&2; die "the working copy could not be frozen (see freeze.log); the run is not started"; }
+      info "working copy from $TASK_START_COMMIT at $SESSION_CWD; frozen → start.json ($(tail -1 "$RUN_DIR/freeze.log"))"
+    fi
     SESSION_SIBLINGS="$(( $(ls -1A "$(dirname "$SESSION_CWD")" 2>/dev/null | wc -l | tr -d ' ') - 1 ))"
     # CodeBuddy's slug: leading slash dropped, every "/" becomes "-", dots kept
     # (checked against ~/.codebuddy/projects on 2026-09-10).
     SESSION_SLUG="$(printf '%s' "$SESSION_CWD" | sed -E 's#^/##; s#/#-#g')"
     SESSION_PROJECT_DIR="$HOME/.codebuddy/projects/$SESSION_SLUG"
     SESSION_CACHE_BEFORE="$(find "$SESSION_PROJECT_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')"
-    if [[ -n "$(ls -A "$SESSION_CWD" 2>/dev/null)" ]]; then
+    if [[ "$TASK_KIND" != "repo" && -n "$(ls -A "$SESSION_CWD" 2>/dev/null)" ]]; then
       warn "session directory $SESSION_CWD is not empty; the session can read what is in it"
     fi
     (( SESSION_CACHE_BEFORE > 0 )) && warn "CodeBuddy already holds $SESSION_CACHE_BEFORE file(s) for this directory's project slug; the session can read earlier tool results"
@@ -339,9 +405,20 @@ info "acceptance …"
 # probe. The probe needs the attempts to know which addresses to try, so: pass
 # one with the service log (its verdict is kept as verdict.pass1.json), then
 # the probe, then pass two with both, which is the verdict on record.
+if [[ "$TASK_KIND" == "repo" ]]; then
+  # A repository task: the verdict is read from the working copy the model
+  # changed, against the start frozen before it ran; the capture only names
+  # the call that wrote an added test. The final diff and the copy's git
+  # state are kept beside the run.
+  node "$TASK_DIR/verify.mjs" --repo="$SESSION_CWD" --start="$RUN_DIR/start.json" --capture="$CAPTURE" --diff-out="$RUN_DIR/final.diff" --json > "$RUN_DIR/verdict.json" 2>"$RUN_DIR/verify.log"
+  VERDICT_CODE=$?
+  (cd "$SESSION_CWD" && { echo "HEAD $(git rev-parse HEAD)"; git log --oneline | head -20; echo "--- status ---"; git status --porcelain; }) > "$RUN_DIR/copy-state.txt" 2>&1
+  info "working copy judged: $(python3 -c "import json;d=json.load(open('$RUN_DIR/verdict.json'));print(d['verdict'], '-', d['reason'][:200])" 2>/dev/null || echo "verdict unreadable; see verify.log")"
+else
 node "$TASK_DIR/verify.mjs" "$CAPTURE" --json --service-log="$TOOL_CALLS" > "$RUN_DIR/verdict.pass1.json" 2>"$RUN_DIR/verify.log"
 VERDICT_CODE=$?
 cp "$RUN_DIR/verdict.pass1.json" "$RUN_DIR/verdict.json"
+fi
 
 # ── 3a. independent reachability probe ───────────────────────────
 # A model call timing out at an address proves the model followed the asset
@@ -452,8 +529,9 @@ if python3 -c "import json,sys;d=json.load(open('$TOKENS_SRC'));sys.exit(0 if an
     die "could not resolve the discriminative values from Core by the frozen (id, version, content_hash, token_sha256); judging a hash-only manifest would silently drop attribution"
   fi
 fi
+DIFF_ARG=""; [[ -s "$RUN_DIR/final.diff" ]] && DIFF_ARG="--diff=$RUN_DIR/final.diff"
 (cd "$REPO_ROOT" && node "$EVAL/attribution/collect-artifacts.mjs" "$CAPTURE" \
-  --task="$TASK_DIR/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} >/dev/null 2>&1) || warn "collect-artifacts failed"
+  --task="$TASK_DIR/task.md" --run-id="$RUN_ID" ${TASK_ID:+--task-id="$TASK_ID"} ${DIFF_ARG:+"$DIFF_ARG"} >/dev/null 2>&1) || warn "collect-artifacts failed"
 cp "$EVAL/attribution/artifacts/run-artifacts.json" "$RUN_DIR/run-artifacts.json" 2>/dev/null \
   || { warn "no artifacts collected"; echo "[]" > "$RUN_DIR/run-artifacts.json"; }
 (cd "$REPO_ROOT" && node "$EVAL/attribution/judge-hard.mjs" \
@@ -536,6 +614,17 @@ else
   warn "could not find this session's '→ initialized' line in the proxy log; identity unverified"
 fi
 
+# ── 5b'. the memory channel ──────────────────────────────────────
+# What the model read back through the memory bridge, and whether any of it
+# was borrowed: created before this run started, from another session, or
+# owned by another agent than this run's consumer (memory-channel.mjs).
+node "$EVAL/runner/memory-channel.mjs" --capture="$CAPTURE" --started="$STARTED_AT" ${CONV_ID:+--session="$CONV_ID"} ${MEM_AGENT:+--consumer="$MEM_AGENT"} --out="$RUN_DIR/memory-channel.json" > "$RUN_DIR/memory-channel.txt" 2>&1
+case $? in
+  0) info "$(cat "$RUN_DIR/memory-channel.txt")" ;;
+  1) warn "$(cat "$RUN_DIR/memory-channel.txt")" ;;
+  *) warn "memory-channel record failed: $(cat "$RUN_DIR/memory-channel.txt")" ;;
+esac
+
 # ── 5c. is the product's auto-extraction on or off for this run? ─────
 # Decided for the on/off comparison: extraction is switched off so both arms
 # see the same frozen pool and no run can teach the next one. That is a change
@@ -602,6 +691,13 @@ if os.path.exists(co_p):
     base_p = os.path.join(run_dir, "gate_baseline.json")
     if os.path.exists(base_p):
         gate_block["baseline_frozen_at"] = json.load(open(base_p, encoding="utf-8")).get("frozen_at")
+
+def load(name):
+    p = os.path.join(run_dir, name)
+    try:
+        return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+    except ValueError:
+        return None
 
 def count(name):
     p = os.path.join(run_dir, name)
@@ -683,6 +779,22 @@ manifest = {
     # nothing was recorded (replay, old mechanism, or a failed sync — see core-sync.log).
     "core_outcomes": core_outcomes,
     "verdict": verdict,
+    # A repository task (review 2026-09-11 item 2): what the copy was frozen from,
+    # where it is, the final diff; null for capture-judged tasks.
+    "repo_task": (lambda s, v: {
+        "kind": "repo", "source_commit": s.get("source_commit"), "copy_commit": s.get("start_commit"), "start_tree": s.get("start_tree"),
+        "frozen_at": s.get("frozen_at"), "test_files_at_start": len(s.get("test_files") or []),
+        "suite_at_start": {k: (s.get("suite_at_start") or {}).get(k) for k in ("tests", "pass", "fail", "explained")},
+        "working_copy": os.environ.get("SESSION_CWD") or None,
+        "final_diff": "final.diff" if os.path.exists(os.path.join(run_dir, "final.diff")) else None,
+        "files_changed": [f.get("file") for f in (((v or {}).get("checks") or {}).get("diff") or {}).get("files", [])],
+        "commits_after_start": (((v or {}).get("checks") or {}).get("history") or {}).get("commits_after_start"),
+        "acceptance_version": (v or {}).get("acceptance_version"),
+    })(load("start.json"), load("verdict.json")) if os.path.exists(os.path.join(run_dir, "start.json")) else None,
+    # This run's consumer when created fresh for it (consumer.json), with the proxy switch record.
+    "consumer": load("consumer.json"),
+    # What the memory bridge handed the model this run (memory-channel.json); null means no record, never "nothing".
+    "memory_channel": (lambda m: {k: m.get(k) for k in ("reads", "items", "residue", "borrowed_from_other_agents", "undated", "ok")} if m else None)(load("memory-channel.json")),
     # What else the model had in context: the consumer's injected L3 memory
     # (present? which lines the task watches for?) and skills outside the
     # frozen pool that were listed or read. Nulls mean the record is missing,

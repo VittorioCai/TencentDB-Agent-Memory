@@ -1,0 +1,9 @@
+# Lines of the consumer's injected L3 memory (or anything else in context)
+# that would hand this task its answer, one regex per line (case-insensitive).
+# A fresh consumer per run should carry none; the record says whether it did.
+Exit Code:
+Exit \[Cc\]ode
+case-insensitive
+exit.status
+exit-status
+outcomeOfAttempt
