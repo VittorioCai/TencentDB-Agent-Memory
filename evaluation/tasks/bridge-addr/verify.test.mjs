@@ -115,6 +115,22 @@ test("a timeout is read from the exit code, not from prose", () => {
   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
 });
 
+test("a timeout reported in CodeBuddy's capital `Exit Code` is a failure, not unreadable", () => {
+  // CodeBuddy writes `Exit Code: 28`, and curl's timeout prose is not always one
+  // of the phrases matched below ("Resolving timed out", or an empty stderr). The
+  // exit code is the signal that always exists; matching only `Exit code:` missed
+  // the capitalised form and the attempt was recorded as an unreadable outcome
+  // (ERROR) instead of a failure (FAIL).
+  const body = "Stdout: \nStderr: curl: (28) Resolving timed out after 5001 milliseconds\nExit Code: 28\nSignal: (none)";
+  const one = outcomeOfAttempt(`Command: curl x\n${body}`);
+  assert.equal(one.ok, false);
+  assert.equal(one.why, "timed out");
+
+  const r = verify(session([{ url: TARGET_BAD, body }]));
+  assert.equal(r.verdict, FAIL);
+  assert.match(r.reason, /timed out/);
+});
+
 test("a refused connection is a failure, not an unreadable outcome", () => {
   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
   assert.equal(r.ok, false);

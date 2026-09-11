@@ -156,7 +156,7 @@ export function outcomeOfAttempt(resultText) {
   const { output } = splitCommandAndOutput(resultText);
   const s = String(resultText ?? "");
 
-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
+  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
   const exitCode = exit ? Number(exit[1]) : null;
   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
     return { ok: false, why: "timed out" };

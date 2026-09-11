@@ -183,6 +183,15 @@ content_hash_of() {  # asset_id version → hash or empty
   [[ -f "$f" ]] && { cat "$f"; return 0; }
   local agent uid; agent="$(python3 -c "import json;print(json.load(open('$BASELINE'))['assets'].get('$id',{}).get('producer_agent_id',''))")"; uid="$(submitter_user_id)"
   local key; key="$(tr -d '[:space:]' < "$SUBMITTER_KEY_FILE")"
+  # An asset outside the baseline (the dev loop's note, 2026-09-11) has no
+  # producer in it; without the owner agent the manage read returned no hash
+  # and every outcome landed untrusted. Ask the registry for the owner instead.
+  if [[ -z "$agent" ]]; then
+    printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$key" "$key" \
+      | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" \
+          -X POST "$CORE_URL/v3/meta/asset/get" -d "{\"asset_id\":\"$id\"}" -o "$TMP/asset-$id.json"
+    agent="$(python3 -c "import json; d=(json.load(open('$TMP/asset-$id.json')).get('data') or {}); print(d.get('producer_agent_id') or d.get('owner_agent_id') or '')" 2>/dev/null || true)"
+  fi
   printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$key" "$key" \
     | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -H 'x-tdai-read-purpose: manage' \
         -X POST "$CORE_URL/v3/skill/get" -d "{\"team_id\":\"$TEAM_ID\",\"agent_id\":\"$agent\",\"user_id\":\"$uid\",\"skill_id\":\"$id\",\"version\":$ver,\"include_content\":false,\"include_manifest\":false}" -o "$TMP/skill-$id-$ver.json"
