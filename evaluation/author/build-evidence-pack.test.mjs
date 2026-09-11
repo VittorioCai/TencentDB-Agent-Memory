@@ -12,7 +12,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pairCalls, outcomeRecord, bodyTokens, l0Record, mergeRecord } from "./build-evidence-pack.mjs";
+import { pairCalls, outcomeRecord, bodyTokens, l0Record, mergeRecord, outcomeQueries, mergeOutcomeRows } from "./build-evidence-pack.mjs";
 
 const call = (id, kind, at, body, over = {}) => ({
   record_id: `call:${id}`, kind: "call", evidence_class: "proxy_observed", at,
@@ -107,4 +107,22 @@ test("the same message from two endpoints merges instead of overwriting", () => 
   assert.equal(merged.meta.task_id, "t1");
   // …in either arrival order.
   assert.equal(mergeRecord(fromSearch, fromQuery).meta.session_id, "sess-1");
+});
+
+test("the pack asks for the author's results as a consumer, not only results on the author's assets", () => {
+  // B validated A's note twice as its consumer. A pack built from the owner
+  // query alone holds no harness-verified row for B, and B's competence reads
+  // "unknown" with two successes on file (2026-09-11, the second dev-loop task).
+  const qs = outcomeQueries({ team_id: "team-1", user_id: "usr-b" }, "2026-09-11T18:00:00.000Z");
+  assert.equal(qs.length, 2);
+  assert.deepEqual(qs.map((q) => q.owner_user_id ?? null), ["usr-b", null]);
+  assert.deepEqual(qs.map((q) => q.consumer_user_id ?? null), [null, "usr-b"]);
+  assert.ok(qs.every((q) => q.occurred_before === "2026-09-11T18:00:00.000Z" && q.team_id === "team-1"));
+});
+
+test("rows from both queries are merged once per outcome id", () => {
+  const onAssets = [{ id: "o1", asset_id: "skl-mine", consumer_user_id: "usr-b" }, { id: "o2", asset_id: "skl-mine", consumer_user_id: "usr-me" }];
+  const asConsumer = [{ id: "o2", asset_id: "skl-mine", consumer_user_id: "usr-me" }, { id: "o3", asset_id: "skl-theirs", consumer_user_id: "usr-me" }];
+  const merged = mergeOutcomeRows(onAssets, asConsumer);
+  assert.deepEqual(merged.map((o) => o.id), ["o1", "o2", "o3"]);   // o2 once; o3 (my result on their asset) present
 });

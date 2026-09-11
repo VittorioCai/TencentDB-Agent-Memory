@@ -1,0 +1,121 @@
+{
+  "task": "exit-line-collect",
+  "runs": [
+    {
+      "arm": "smoke",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260911T175839Z-devloop-smoke",
+      "exit": 2,
+      "dir": "/private/tmp/topic4-runs/20260911T175839Z-devloop-smoke.i3iV/20260911T175839Z-devloop-smoke",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-hyv1cffnme",
+      "verdict": null,
+      "attempts": [],
+      "memory_channel_ok": null,
+      "started_at": null,
+      "recorded_at": "2026-09-11T17:58:46Z",
+      "void": true,
+      "void_reason": "harness: run-once.sh died before the session started — bridge-addr/use-identity.sh accepted only a|b (identity c was documented in its header but not in its case block); fixed, smoke re-run"
+    },
+    {
+      "arm": "smoke",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260911T180035Z-devloop-smoke",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T180035Z-devloop-smoke.eWVe/20260911T180035Z-devloop-smoke",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-hyy95lvov6",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:00:35Z",
+      "recorded_at": "2026-09-11T18:02:06Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T180413Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T180413Z-devloop-no-note.SdoG/20260911T180413Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-hy5bxf99k6",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:04:13Z",
+      "recorded_at": "2026-09-11T18:06:14Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T180614Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T180614Z-devloop-no-note.zS5i/20260911T180614Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-hy8ov81zak",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:06:14Z",
+      "recorded_at": "2026-09-11T18:07:40Z"
+    }
+  ],
+  "status_observations": [
+    {
+      "at": "2026-09-11T17:58:38Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "smoke",
+      "n": 1,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:00:35Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "smoke",
+      "n": 1,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:04:13Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "no-note",
+      "n": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    }
+  ]
+}

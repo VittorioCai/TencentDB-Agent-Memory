@@ -1,0 +1,67 @@
+working copy: /private/tmp/topic4-devloop-selfcheck.c995/repo
+start commit 141c044be519e53bbfe2d1ef780632ae110a8136 (tree 631aa8559a847b34b7c169236411eecd29e1d16a); 1215 tracked files, 40 test files; excluded: evaluation/runner/runs, evaluation/tasks/exit-code-fix, evaluation/tasks/exit-line-collect
+runs/ present in copy: no;  task dirs present in copy: exit-code-fix no, exit-line-collect no
+defect present at the start: 1 lower-case exit-line pattern(s) in evaluation/attribution/collect-artifacts.mjs
+
+════════════════════════════════════════════════════════════════════
+【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)
+frozen 2026-09-11T17:57:16Z: copy commit ddb319f (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.c995/start.json
+suite at start: tests 554 pass 549 fail 3 (exit 1); baseline failing: evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值; evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt; evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+exit 0 (expected 0 = 套件结果可解释)
+
+════════════════════════════════════════════════════════════════════
+【1】起点 + 原版失败:在冻结起点跑验证器自带的参考回归测试
+verdict FAIL: the verifier's reference regression test does not pass (3 failing)
+reference test: tests 6 pass 3 fail 3
+    not ok 1 - the exit status of a real tool result, as CodeBuddy spells it, is read
+      error: |-
+    not ok 2 - exit 0 as CodeBuddy spells it reads 0, not null
+      error: |-
+    not ok 3 - a non-zero status as CodeBuddy spells it is read
+      error: |-
+    ok 4 - the lower-case spelling found in older records still reads
+    ok 5 - stderr is still read beside the status
+    ok 6 - a result with no exit line stays null
+exit 1 (expected 1 = FAIL)
+
+════════════════════════════════════════════════════════════════════
+【2】参考修复通过:同一副本打上 reference/fix.patch,同一测试;判决对照冻结起点
+patch applied:  1 file changed, 1 insertion(+), 1 deletion(-)
+verdict PASS: reference test passed (6/6); no new identified failure in the controlled suite (560 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing
+reference test: tests 6 pass 6 fail 0
+compared with start ddb319f (frozen 2026-09-11T17:57:16Z); copy HEAD ddb319f, commits after start 0
+diff: ['evaluation/attribution/collect-artifacts.mjs']  out_of_scope []  touched_verifier False  deleted_tests []
+attempts: ['none: no test file was added']
+exit 0 (expected 0 = PASS)
+
+════════════════════════════════════════════════════════════════════
+【3】既有套件不回归:受控套件(起点的测试内容)+ 参考测试;基线绑定(文件, 测试名)
+controlled suite: state OK; 41 test files (start 40 + 1 reference), tests 560 pass 555 fail 3 cancelled 0, exit 1, explained True
+new failures vs the frozen start: []
+baseline failures still failing (3 of 3):
+    evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值
+    evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt
+    evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+original tests: baseline 40 files, missing [], rewritten [], model-added []
+
+════════════════════════════════════════════════════════════════════
+【4】判别值来源唯一:token-provenance 对笔记判别值(笔记的家在 exit-code-fix;本目录作为额外任务目录一并扫描)
+OK   eval-tool-result-exit-line skl-pXLc38dex6Zt v2  sha256 1e85dcf5dcf7…  value, version and content hash verified from Core (manage read)
+OK   skl-pXLc38dex6Zt visibility=team status=candidate  team-visible: the bridge's search can return it to a consumer
+扫描来源 2362 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+
+OK   skl-pXLc38dex6Zt  token="bt-<value>"
+
+全部干净
+
+[extra task dir /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/tasks/exit-line-collect]
+扫描来源 8 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+
+OK   skl-pXLc38dex6Zt  token="bt-<value>"
+
+全部干净
+
+exit 0 (expected 0 = 全部 OK、零未扫描缺口)
+
+conditions.json written (/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/tasks/exit-line-collect/conditions.json)
+结论:验证器四段全过,可以跑模型(exit-line-collect)

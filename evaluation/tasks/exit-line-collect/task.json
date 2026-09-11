@@ -1,0 +1,9 @@
+{
+  "kind": "repo",
+  "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
+  "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
+  "archive_excludes": ["evaluation/runner/runs", "evaluation/tasks/exit-code-fix", "evaluation/tasks/exit-line-collect"],
+  "scope": ["evaluation/attribution/"],
+  "reference_test_dest": "evaluation/attribution/collect-artifacts.exit-status.reference.test.mjs",
+  "note": "第二个开发闭环任务(2026-09-12):同一条经验笔记(eval-tool-result-exit-line)、另一个文件里的同一类缺陷。起点与 exit-code-fix 相同(141c044,笔记与两个任务目录都不在副本里),所以两个任务的副本一字不差,区别只在任务文本、参考测试与修复范围。这次要测的是泛化:笔记正文写的是 bridge-addr 的验收器,模型能不能把同一个事实用到 collect-artifacts.mjs 上。"
+}

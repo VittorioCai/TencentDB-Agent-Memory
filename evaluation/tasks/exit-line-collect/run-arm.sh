@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# The dev loop's runs, one arm at a time, each run with a fresh consumer:
+# The second dev-loop task's runs (exit-line-collect), one arm at a time, each
+# run with a fresh consumer — by default under identity c, a user with no
+# records at all. The note is the SAME asset as exit-code-fix's (its home is
+# ../exit-code-fix/tokens.json); this task exists to see whether that note,
+# written about another file, is applied to this one.
 #
-#   bash evaluation/tasks/exit-code-fix/run-arm.sh --arm no-note --n 2
-#   bash evaluation/tasks/exit-code-fix/run-arm.sh --arm note --n 2
-#   bash evaluation/tasks/exit-code-fix/run-arm.sh --arm smoke --n 1     # not a sample
+#   bash evaluation/tasks/exit-line-collect/run-arm.sh --arm no-note --n 2 [--identity c]
+#   bash evaluation/tasks/exit-line-collect/run-arm.sh --arm note --n 2
 #
 # Before an arm starts, the note's status in Core is read and must match the
 # arm: `candidate` (not listed to consumers) for no-note, `approved` for note.
@@ -14,15 +17,16 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
-ARM=""; N=1; IDENTITY="${DEVLOOP_IDENTITY:-b}"
+ARM=""; N=1; IDENTITY="${DEVLOOP_IDENTITY:-c}"
 # --identity: whose user the fresh consumer agent is created under (identities.json: b = the mainline consumer user, c = a user with no records)
 while [[ $# -gt 0 ]]; do case "$1" in --arm) ARM="$2"; shift 2;; --n) N="$2"; shift 2;; --identity) IDENTITY="$2"; shift 2;; *) echo "unknown: $1" >&2; exit 2;; esac; done
 case "$IDENTITY" in b|c) ;; *) echo "--identity must be b or c" >&2; exit 2;; esac
 case "$ARM" in no-note|note|smoke) ;; *) echo "--arm must be no-note, note or smoke" >&2; exit 2;; esac
 MANIFEST="$HERE/devloop-runs.json"
-[[ -f "$MANIFEST" ]] || echo '{"task":"exit-code-fix","runs":[]}' > "$MANIFEST"
+[[ -f "$MANIFEST" ]] || echo '{"task":"exit-line-collect","runs":[]}' > "$MANIFEST"
 
-NOTE_ID="$(python3 -c "import json;print([k for k in json.load(open('$HERE/tokens.json')) if not k.startswith('_')][0])")"
+TOKENS="$HERE/../exit-code-fix/tokens.json"   # the note's home; this task adds no asset
+NOTE_ID="$(python3 -c "import json;print([k for k in json.load(open('$TOKENS')) if not k.startswith('_')][0])")"
 STATUS="$(node --input-type=module -e "
 import { readFileSync } from 'node:fs';
 const k = readFileSync('$REPO/deploy/global-images/.topic4-user-key', 'utf8').replace(/\s+/g, '');

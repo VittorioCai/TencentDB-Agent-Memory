@@ -36,16 +36,16 @@ key_for() {
 
 case "${1:-show}" in
   show)
-    python3 - "$MODELS" "$(key_for a | tr -d '[:space:]')" "$(key_for b | tr -d '[:space:]')" <<'PY'
+    python3 - "$MODELS" "$(key_for a | tr -d '[:space:]')" "$(key_for b | tr -d '[:space:]')" "$(key_for c | tr -d '[:space:]')" <<'PY'
 import json, sys
-models, ka, kb = sys.argv[1], sys.argv[2], sys.argv[3]
+models, ka, kb, kc = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 for m in json.load(open(models))["models"]:
     k = m.get("apiKey", "")
-    who = "a (author)" if k == ka else "b (consumer)" if k == kb else "unknown"
+    who = "a (author)" if k == ka else "b (consumer)" if k == kb else "c (second user)" if k == kc else "unknown"
     print(f"  {m['id']}  name={m['name']}  identity={who}")
 PY
     ;;
-  a|b)
+  a|b|c)
     KEY="$(key_for "$1" | tr -d '[:space:]')"
     cp "$MODELS" "$MODELS.bak"
     python3 - "$MODELS" "$KEY" <<'PY'
@@ -60,5 +60,5 @@ PY
     echo "switched to identity $1 (previous config saved to models.json.bak)"
     ;;
   *)
-    echo "usage: $0 [a|b|show]" >&2; exit 2 ;;
+    echo "usage: $0 [a|b|c|show]" >&2; exit 2 ;;
 esac

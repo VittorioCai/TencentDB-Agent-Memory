@@ -1,0 +1,13 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..1411bf5 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,7 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const code = /(?:^|\n)Exit [Cc]ode:\s*(\d+)/.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,

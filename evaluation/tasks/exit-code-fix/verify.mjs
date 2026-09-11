@@ -56,18 +56,24 @@
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+// The task directory this verifier judges for. Another dev-loop task reuses
+// this file unchanged (its verify.mjs sets DEVLOOP_TASK_DIR and imports this
+// one), so everything task-specific — task.json, the reference test — is read
+// from TASK_DIR, never from HERE. Nothing here differs per task otherwise.
+export const TASK_DIR = process.env.DEVLOOP_TASK_DIR ? resolve(process.env.DEVLOOP_TASK_DIR) : HERE;
 export const ACCEPTANCE_VERSION = "repo-2026-09-11d"; // c: attempts also from test titles added to existing files; model tests cover rewritten originals. d: a shell command writes the file only when a redirection / tee / cp / mv points INTO it (2>&1 is not a write)
 export const PASS = "PASS", FAIL = "FAIL", ERROR = "ERROR";
-export const REFERENCE_TEST_SRC = join(HERE, "reference/regression.reference.mjs");
-const TASK = existsSync(join(HERE, "task.json")) ? JSON.parse(readFileSync(join(HERE, "task.json"), "utf8")) : {};
+export const REFERENCE_TEST_SRC = join(TASK_DIR, "reference/regression.reference.mjs");
+const TASK = existsSync(join(TASK_DIR, "task.json")) ? JSON.parse(readFileSync(join(TASK_DIR, "task.json"), "utf8")) : {};
 export const REFERENCE_TEST_DEST = TASK.reference_test_dest ?? "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs";
 export const SCOPE = (TASK.scope ?? ["evaluation/tasks/bridge-addr/"]).map((p) => (p.endsWith("/") ? (f) => f.startsWith(p) : (f) => f === p));
-export const VERIFIER_DIR = "evaluation/tasks/exit-code-fix/";
+// the task directory as a repository-relative prefix: changes under it are "touched_verifier"
+export const VERIFIER_DIR = relative(resolve(HERE, "../../.."), TASK_DIR).replace(/\\/g, "/") + "/";
 const MARKER = /bt-[a-z0-9]{6,}/g;
 const TEST_FILE = /\.test\.mjs$/;
 
@@ -461,8 +467,7 @@ export function render(r) {
   return L.join("\n");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const args = process.argv.slice(2);
+export async function main(args) {
   const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
   const repo = opt("repo");
   if (!repo) { console.error("usage: node verify.mjs --freeze --repo=<copy> --out=<start.json> | node verify.mjs --repo=<copy> --start=<start.json> [--json] [--capture=F] [--diff-out=F]"); process.exit(2); }
@@ -482,3 +487,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log(args.includes("--json") ? JSON.stringify(result, null, 2) : render(result));
   process.exit(result.verdict === PASS ? 0 : result.verdict === FAIL ? 1 : 2);
 }
+
+if (import.meta.url === `file://${process.argv[1]}`) await main(process.argv.slice(2));

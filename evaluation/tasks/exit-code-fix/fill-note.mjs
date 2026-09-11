@@ -68,7 +68,14 @@ function provenance(assetId, value) {
     const runsRoot = join(REPO, "evaluation/runner/runs");
     const runs = existsSync(runsRoot) ? readdirSync(runsRoot).map((d) => join(runsRoot, d)).filter((d) => statSync(d).isDirectory()) : [];
     const r = spawnSync("node", [join(REPO, "evaluation/runner/token-provenance.mjs"), `--tokens=${join(tmp, "plain.json")}`, `--task=${DIR}`, ...runs], { cwd: REPO, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-    return { exit: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
+    let exit = r.status, out = (r.stdout ?? "") + (r.stderr ?? "");
+    // another task directory that hands the same note to a session (exit-line-collect) is scanned the same way
+    for (const extra of (process.env.NOTE_EXTRA_TASK_DIRS ?? "").split(":").filter(Boolean)) {
+      const e = spawnSync("node", [join(REPO, "evaluation/runner/token-provenance.mjs"), `--tokens=${join(tmp, "plain.json")}`, `--task=${resolve(extra)}`], { cwd: REPO, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      out += `\n[extra task dir ${extra}]\n` + (e.stdout ?? "") + (e.stderr ?? "");
+      exit = Math.max(exit ?? 1, e.status ?? 1);
+    }
+    return { exit, out };
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
 

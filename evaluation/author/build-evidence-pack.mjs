@@ -242,6 +242,28 @@ export function pairCalls(records) {
 }
 
 /** Discriminative tokens of an asset: from a tokens file when it names the asset, else what its body carries. */
+/**
+ * The two outcome queries a pack needs, both as the author's own key:
+ * results on the author's assets (someone else's use — the others_on_assets
+ * ledger, or the author's own use of their own asset), and results the
+ * author produced AS A CONSUMER on other people's assets — the own_business
+ * ledger the checker keys on `consumer_user_id`. Until 2026-09-11 only the
+ * first was fetched, so a consumer's validated results on another author's
+ * asset never reached their own pack and their competence read `unknown`
+ * with two harness-verified successes on file.
+ */
+export function outcomeQueries(author, cut) {
+  return [
+    { team_id: author.team_id, owner_user_id: author.user_id, occurred_before: cut },
+    { team_id: author.team_id, consumer_user_id: author.user_id, occurred_before: cut },
+  ];
+}
+/** Rows from several queries, one per outcome id; the first copy wins. */
+export function mergeOutcomeRows(...lists) {
+  const seen = new Map();
+  for (const l of lists) for (const o of l ?? []) if (o?.id != null && !seen.has(o.id)) seen.set(o.id, o);
+  return [...seen.values()];
+}
 export function assetTokens(assetId, content, tokensFiles = []) {
   // The body's own exact values first (host:port, ids); a tokens file only
   // when the body carries none — its entries may be host-only, and a host
@@ -354,7 +376,9 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
     // SAME window the pack is built for. Without it a row that is final as of
     // the cutoff comes back marked superseded by a row the pack excludes
     // (2026-09-08h).
-    const rows = await pages("/v3/meta/asset/outcome/list", { team_id: author.team_id, owner_user_id: author.user_id, occurred_before: cut }, author.key, "items", 100, 2000);
+    const [onAssets, asConsumer] = await Promise.all(outcomeQueries(author, cut).map((q) => pages("/v3/meta/asset/outcome/list", q, author.key, "items", 100, 2000)));
+    const rows = mergeOutcomeRows(onAssets, asConsumer);
+    sources.outcome_queries = { on_authors_assets: onAssets.length, author_as_consumer: asConsumer.length, merged: rows.length };
     // Core decides what the gate may read and stamps it on every row
     // (`gate_validity`, from `outcomeValidity` — the same function the
     // decision uses). The pack does not re-derive it: a second copy of the

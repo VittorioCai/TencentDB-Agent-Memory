@@ -1,0 +1,337 @@
+{
+  "schema": "author-assessment-v2",
+  "assessed_at": "2026-09-11T18:09:25.019Z",
+  "evidence_cutoff": "2026-09-11T17:56:52.000Z",
+  "author": {
+    "letter": "a",
+    "user_id": "usr-n68ea5ythq",
+    "agent_id": "agt-5e4hna56j9",
+    "team_id": "team-5ezfoladb5"
+  },
+  "asset_id": "skl-pXLc38dex6Zt",
+  "asset": {
+    "asset_id": "skl-pXLc38dex6Zt",
+    "name": "eval-tool-result-exit-line",
+    "version": 2,
+    "content_hash": "b230f087c6f958348d5fe6406693bdc2",
+    "owner_user_id": "usr-n68ea5ythq",
+    "status": "candidate",
+    "tokens": [],
+    "tokens_from": null
+  },
+  "chain": {
+    "asset_version": 2,
+    "content_hash": "b230f087c6f958348d5fe6406693bdc2",
+    "producer": {
+      "asset_owner_user_id": "usr-n68ea5ythq",
+      "owner_agent_id": "agt-5e4hna56j9",
+      "wrote_this_version": "usr-n68ea5ythq",
+      "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v2"
+    },
+    "source_sessions": [],
+    "naming_messages": [],
+    "operations": [],
+    "results": [
+      {
+        "record_id": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced",
+        "state": "validated",
+        "corrected_reason": null,
+        "at": "2026-09-11T15:51:10.518Z"
+      },
+      {
+        "record_id": "outcome:591f0db4-6b17-473e-9523-006f70889287",
+        "state": "validated",
+        "corrected_reason": null,
+        "at": "2026-09-11T15:50:06.824Z"
+      }
+    ],
+    "complete": false,
+    "breaks": [
+      "source session: no L0 message at or before the cutoff names the asset or its tokens",
+      "operations: no proxy-observed call carries the asset's tokens"
+    ]
+  },
+  "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
+  "asset_claim": "CodeBuddy's Bash tool result ends with a line labelled 'Exit Code:' (capital C); an acceptance parser that only accepts 'Exit code:' never reads the exit status of a real result, so the parser must accept both spellings and a regression test for the capital spelling should be added",
+  "pack": {
+    "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-a-exit-line.json",
+    "sha256": "a3c0b2d9262aa16a9a03531957eb1302c62beb1a599754163dd17df489e57643",
+    "record_count": 88,
+    "by_class": {
+      "user_instruction": 4,
+      "assistant_report": 4,
+      "derived_memory": 4,
+      "team_principles": 22,
+      "harness_verified": 41,
+      "proxy_observed": 9,
+      "authored_text": 4
+    },
+    "excluded": {
+      "after_cutoff": 0,
+      "modified_after_cutoff": 0,
+      "no_timestamp": 0,
+      "untrusted_outcomes": 21,
+      "retracted_outcomes": 0,
+      "persona_after_cutoff": false,
+      "other_users_calls": 0,
+      "skills_created_after_cutoff": 0
+    },
+    "shown": 88,
+    "left_out": [],
+    "chars": 48163,
+    "terms": [
+      "exit code",
+      "exit status",
+      "exit line",
+      "outcomeofattempt",
+      "outcomeof",
+      "collect-artifacts",
+      "verify.mjs",
+      "tool result",
+      "regression test",
+      "reading",
+      "exit",
+      "status",
+      "line",
+      "codebuddy",
+      "tool",
+      "result",
+      "label",
+      "spelled",
+      "acceptance",
+      "parser",
+      "must",
+      "read"
+    ]
+  },
+  "model": {
+    "url": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 21111,
+      "completion_tokens": 13898,
+      "total_tokens": 35009,
+      "prompt_tokens_details": {
+        "cached_tokens": 20864
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 12761
+      },
+      "prompt_cache_hit_tokens": 20864,
+      "prompt_cache_miss_tokens": 247
+    },
+    "temperature": 0
+  },
+  "raw_model_output": "{\"competence\": \"unknown\", \"domain\": \"reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it\", \"claims\": [{\"statement\": \"The evaluation harness validated a call on the asset under assessment's prior version, skl-pXLc38dex6Zt v1 (run 20260911T154907Z-devloop-note, 2026-09-11T15:50:06Z).\", \"type\": \"execution_result\", \"outcome\": \"success\", \"record_ids\": [\"outcome:591f0db4-6b17-473e-9523-006f70889287\"], \"quote\": \"validated on asset skl-pXLc38dex6Zt v1 by usr-4u07qc2kuj (cross_user)\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"The harness validated a second call on skl-pXLc38dex6Zt v1 (run 20260911T155035Z-devloop-note, 2026-09-11T15:51:10Z).\", \"type\": \"execution_result\", \"outcome\": \"success\", \"record_ids\": [\"outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced\"], \"quote\": \"validated on asset skl-pXLc38dex6Zt v1 by usr-4u07qc2kuj (cross_user)\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"The asset skl-pXLc38dex6Zt v2 asserts the label is 'Exit Code:' with a capital C, based on 329 batch-4 tool results — this is the asset's own authored text, not independent verification.\", \"type\": \"model_inference\", \"outcome\": null, \"record_ids\": [\"skill:skl-pXLc38dex6Zt@2\"], \"quote\": \"The label is `Exit Code:` — capital C.\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"The asset locates the misreading acceptance at evaluation/tasks/bridge-addr/verify.mjs, so its applicability is the CodeBuddy Bash tool-result format and that acceptance script.\", \"type\": \"environment_applicability\", \"outcome\": null, \"record_ids\": [\"skill:skl-pXLc38dex6Zt@2\"], \"quote\": \"evaluation/tasks/bridge-addr/verify.mjs\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"The author (agent agt-5e4hna56j9) issued a POST search to the skill bridge at 127.0.0.1:8096 — an observed operation unrelated to exit-status parsing.\", \"type\": \"observed_operation\", \"outcome\": null, \"record_ids\": [\"call:cd4a73260f5a931d\"], \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"The author probed both documented bridge endpoints with the reachability query, again an operation in the bridge-endpoint domain, not the exit-status domain.\", \"type\": \"observed_operation\", \"outcome\": null, \"record_ids\": [\"call:b5903fc59d61214c\", \"call:d332718e481fcbe0\"], \"quote\": \"team-bridge-reachability\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"No record shows the author reading or parsing the exit status line of any CodeBuddy tool result.\", \"type\": \"coverage_unknown\", \"outcome\": null, \"record_ids\": [], \"quote\": \"\", \"relation_to_asset\": \"silent\"}, {\"statement\": \"No L0 message at or before the cutoff names skl-pXLc38dex6Zt or its tokens, and no proxy-observed call carries the asset's tokens; the only records naming the asset are its own authored text and two cross-user harness validations of v1.\", \"type\": \"coverage_unknown\", \"outcome\": null, \"record_ids\": [], \"quote\": \"\", \"relation_to_asset\": \"silent\"}], \"counter_evidence\": [], \"asset_claim_check\": {\"verdict\": \"silent\", \"type\": \"coverage_unknown\", \"outcome\": null, \"record_ids\": [], \"quote\": \"\"}, \"summary\": \"The records contain no observed operation, session, or proxy call in which the author (usr-n68ea5ythq / agt-5e4hna56j9) reads or parses a CodeBuddy exit-status line; all of the author's recorded work concerns the conflicting skill-bridge endpoint convention. The only records naming the exit-status asset skl-pXLc38dex6Zt are its own authored text (v2) and two cross-user harness validations of v1, which validate calls against the asset but do not independently verify the 'Exit Code:' spelling or the parser fix. Because the pack neither demonstrates nor refutes the author's ability in this domain, competence is unknown and the asset claim is neither supported nor contradicted.\"}",
+  "verified": {
+    "competence": "medium",
+    "competence_basis": "31 business-level success(es) (own 0, others on the author's assets 31), 10 failure(s) beside them; high is not derived without calibration",
+    "competence_as_said": "unknown",
+    "competence_downgraded": true,
+    "execution_claims": {
+      "success": 31,
+      "failure": 10,
+      "calls": 41,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 31,
+          "failure": 10
+        },
+        "own_transport": {
+          "success": 0,
+          "failure": 0
+        }
+      },
+      "harness_records": 41,
+      "superseded_by_a_later_row": 0,
+      "cited_transport_calls": 0
+    },
+    "asset_claim_check": {
+      "verdict": "silent",
+      "record_ids": [],
+      "quote": null,
+      "strength": null,
+      "basis": [],
+      "reason": "nothing accepted supports or contradicts the asset"
+    },
+    "asset_claim_as_said": "silent",
+    "claims_kept": [
+      {
+        "group": "claim",
+        "statement": "The evaluation harness validated a call on the asset under assessment's prior version, skl-pXLc38dex6Zt v1 (run 20260911T154907Z-devloop-note, 2026-09-11T15:50:06Z).",
+        "record_ids": [
+          "outcome:591f0db4-6b17-473e-9523-006f70889287"
+        ],
+        "quote": "validated on asset skl-pXLc38dex6Zt v1 by usr-4u07qc2kuj (cross_user)",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": "outcome:591f0db4-6b17-473e-9523-006f70889287 is about version 1 (9ed211c254) of this asset, not version 2 (b230f087c6); it neither supports nor contradicts the current text",
+        "found_in": "outcome:591f0db4-6b17-473e-9523-006f70889287",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "claim",
+        "statement": "The harness validated a second call on skl-pXLc38dex6Zt v1 (run 20260911T155035Z-devloop-note, 2026-09-11T15:51:10Z).",
+        "record_ids": [
+          "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced"
+        ],
+        "quote": "validated on asset skl-pXLc38dex6Zt v1 by usr-4u07qc2kuj (cross_user)",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced is about version 1 (9ed211c254) of this asset, not version 2 (b230f087c6); it neither supports nor contradicts the current text",
+        "found_in": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "claim",
+        "statement": "The asset skl-pXLc38dex6Zt v2 asserts the label is 'Exit Code:' with a capital C, based on 329 batch-4 tool results — this is the asset's own authored text, not independent verification.",
+        "record_ids": [
+          "skill:skl-pXLc38dex6Zt@2"
+        ],
+        "quote": "The label is `Exit Code:` — capital C.",
+        "type": "model_inference",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "skill:skl-pXLc38dex6Zt@2",
+        "evidence_class": "authored_text"
+      },
+      {
+        "group": "claim",
+        "statement": "The asset locates the misreading acceptance at evaluation/tasks/bridge-addr/verify.mjs, so its applicability is the CodeBuddy Bash tool-result format and that acceptance script.",
+        "record_ids": [
+          "skill:skl-pXLc38dex6Zt@2"
+        ],
+        "quote": "evaluation/tasks/bridge-addr/verify.mjs",
+        "type": "environment_applicability",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "skill:skl-pXLc38dex6Zt@2",
+        "evidence_class": "authored_text"
+      },
+      {
+        "group": "claim",
+        "statement": "The author (agent agt-5e4hna56j9) issued a POST search to the skill bridge at 127.0.0.1:8096 — an observed operation unrelated to exit-status parsing.",
+        "record_ids": [
+          "call:cd4a73260f5a931d"
+        ],
+        "quote": "curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:cd4a73260f5a931d",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The author probed both documented bridge endpoints with the reachability query, again an operation in the bridge-endpoint domain, not the exit-status domain.",
+        "record_ids": [
+          "call:b5903fc59d61214c",
+          "call:d332718e481fcbe0"
+        ],
+        "quote": "team-bridge-reachability",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:b5903fc59d61214c",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "No record shows the author reading or parsing the exit status line of any CodeBuddy tool result.",
+        "record_ids": [],
+        "quote": "",
+        "type": "coverage_unknown",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "found_in": null,
+        "note": "statement of absence; not evidence"
+      },
+      {
+        "group": "claim",
+        "statement": "No L0 message at or before the cutoff names skl-pXLc38dex6Zt or its tokens, and no proxy-observed call carries the asset's tokens; the only records naming the asset are its own authored text and two cross-user harness validations of v1.",
+        "record_ids": [],
+        "quote": "",
+        "type": "coverage_unknown",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "found_in": null,
+        "note": "statement of absence; not evidence"
+      }
+    ],
+    "claims_dropped": [],
+    "counts": {
+      "claims": 8,
+      "counter_evidence": 0,
+      "kept": 8,
+      "dropped": 0,
+      "citations": 6,
+      "execution": 2
+    },
+    "summary": "competence medium: 31 business-level success(es) (own 0, others on the author's assets 31), 10 failure(s) beside them; high is not derived without calibration. asset claim silent. 6 claim(s) kept, 0 dropped.",
+    "summary_as_said": "The records contain no observed operation, session, or proxy call in which the author (usr-n68ea5ythq / agt-5e4hna56j9) reads or parses a CodeBuddy exit-status line; all of the author's recorded work concerns the conflicting skill-bridge endpoint convention. The only records naming the exit-status asset skl-pXLc38dex6Zt are its own authored text (v2) and two cross-user harness validations of v1, which validate calls against the asset but do not independently verify the 'Exit Code:' spelling or the parser fix. Because the pack neither demonstrates nor refutes the author's ability in this domain, competence is unknown and the asset claim is neither supported nor contradicted."
+  },
+  "summary_for_gate": {
+    "schema": "author-assessment-summary-v2",
+    "competence": "medium",
+    "competence_as_said": "unknown",
+    "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
+    "assessed_at": "2026-09-11T18:09:25.019Z",
+    "evidence_cutoff": "2026-09-11T17:56:52.000Z",
+    "citations": 6,
+    "execution_claims": {
+      "success": 31,
+      "failure": 10,
+      "calls": 41,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 31,
+          "failure": 10
+        },
+        "own_transport": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    "asset_claim_check": {
+      "verdict": "silent",
+      "record_ids": [],
+      "strength": null
+    },
+    "asset_claim_as_said": "silent",
+    "author_user_id": "usr-n68ea5ythq",
+    "asset_version": 2,
+    "content_hash": "b230f087c6f958348d5fe6406693bdc2",
+    "chain_complete": false,
+    "pack_sha256": "a3c0b2d9262aa16a9a03531957eb1302c62beb1a599754163dd17df489e57643",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-a-exit-line.json"
+  }
+}

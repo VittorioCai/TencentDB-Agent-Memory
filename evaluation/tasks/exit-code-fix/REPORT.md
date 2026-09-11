@@ -1,7 +1,7 @@
 # 开发闭环 `exit-code-fix`:运行报告(脚本生成)
 
 生成命令:`node evaluation/tasks/exit-code-fix/report.mjs`;数据范围:`evaluation/tasks/exit-code-fix/devloop-runs.json` 列出的 9 次运行(正式样本 4 次,冒烟 1 次,作废留档 4 次);
-判据版本:repo-2026-09-11b, repo-2026-09-11c, repo-2026-09-11d;2 次运行读的是仓库外复判副本(/private/tmp/topic4-rejudge/devloop-2026-09-11;原记录不改,REJUDGED.json 记代码哈希):20260911T154907Z-devloop-note 0a3043b5c578; 20260911T155035Z-devloop-note 0a3043b5c578;笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v1,仓库只存 sha256 d3d4dd1bd6a4…)。
+判据版本:repo-2026-09-11b, repo-2026-09-11c, repo-2026-09-11d;2 次运行读的是仓库外复判副本(/private/tmp/topic4-rejudge/devloop-2026-09-11;原记录不改,REJUDGED.json 记代码哈希):20260911T154907Z-devloop-note 0a3043b5c578; 20260911T155035Z-devloop-note 0a3043b5c578;笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line,当前 v2,仓库只存 sha256 1e85dcf5dcf7…;此前 v1 sha256 d3d4dd1bd6a4… 于 2026-09-11T17:55:11Z 退役)。每次运行开跑时的笔记版本见"每次运行"表;未记录版本的运行都早于第一次轮换,在 v1 上。
 
 ## 这份数字测的是什么,不是什么
 
@@ -14,15 +14,15 @@
 
 | 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态/可见性 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | smoke(冒烟) | 20260911T135759Z-devloop-smoke | agt-hnqxin11n9 | agt-hnqxin11n9 | candidate | 1 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 未加 | 是 | 0 |
-| 1 | no-note(作废) | 20260911T140427Z-devloop-no-note | agt-hn1pxo9rcm | agt-hn1pxo9rcm | candidate | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 2 | no-note(作废) | 20260911T140806Z-devloop-no-note | agt-hn7snfdspu | agt-hn7snfdspu | candidate | 2 | 否 | 无 | 0 / 0 | 无 | FAIL | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 1 | no-note | 20260911T144347Z-devloop-no-note | agt-hpvaeml21e | agt-hpvaeml21e | candidate | 3 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 2 | no-note | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v | agt-hpyg3smf6v | candidate | 2 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 1 | note(作废) | 20260911T151132Z-devloop-note | agt-hq5ik0kr3g | agt-hq5ik0kr3g | approved/private | 4 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 0 | note(作废) | 20260911T151342Z-devloop-note | agt-hq84sw27hy | agt-hq84sw27hy | approved/private | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 1 | note | 20260911T154907Z-devloop-note(复判 repo-2026-09-11d) | agt-hsv5hd4ys2 | agt-hsv5hd4ys2 | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
-| 2 | note | 20260911T155035Z-devloop-note(复判 repo-2026-09-11d) | agt-hsylov19pn | agt-hsylov19pn | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
+| 1 | smoke(冒烟) | 20260911T135759Z-devloop-smoke | agt-hnqxin11n9 | agt-hnqxin11n9 | candidate v1 | 1 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 未加 | 是 | 0 |
+| 1 | no-note(作废) | 20260911T140427Z-devloop-no-note | agt-hn1pxo9rcm | agt-hn1pxo9rcm | candidate v1 | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 2 | no-note(作废) | 20260911T140806Z-devloop-no-note | agt-hn7snfdspu | agt-hn7snfdspu | candidate v1 | 2 | 否 | 无 | 0 / 0 | 无 | FAIL | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 1 | no-note | 20260911T144347Z-devloop-no-note | agt-hpvaeml21e | agt-hpvaeml21e | candidate v1 | 3 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 2 | no-note | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v | agt-hpyg3smf6v | candidate v1 | 2 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 1 | note(作废) | 20260911T151132Z-devloop-note | agt-hq5ik0kr3g | agt-hq5ik0kr3g | approved/private v1 | 4 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 0 | note(作废) | 20260911T151342Z-devloop-note | agt-hq84sw27hy | agt-hq84sw27hy | approved/private v1 | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 1 | note | 20260911T154907Z-devloop-note(复判 repo-2026-09-11d) | agt-hsv5hd4ys2 | agt-hsv5hd4ys2 | approved/team v1 | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
+| 2 | note | 20260911T155035Z-devloop-note(复判 repo-2026-09-11d) | agt-hsylov19pn | agt-hsylov19pn | approved/team v1 | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
 
 ## 验收明细
 
@@ -69,8 +69,9 @@
 | 2026-09-11T16:11:39Z | after re-sync with the owner-key hash lookup | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 | 2026-09-11T16:54:11Z | after the extraction window closed (before apply) | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 | 2026-09-11T16:54:11Z | after apply | approved | team | 6 | admit | 2026-09-11T16:54:11.610Z | 2/0/0 |
+| 2026-09-11T17:56:52Z | after rotation to v2 (value burned by the 2026-09-11 records); before any run | candidate | team | 6 | pending | 2026-09-11T17:56:50.752Z | 0/0/0 |
 
-闸门在 2026-09-11T16:54:11Z 重判:decided_at 2026-09-11T11:25:46.115Z → 2026-09-11T16:54:11.610Z,decision pending → admit,status candidate → approved;evidence_revision 2 → 6。回流闭合:一条经验被提取 → 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 2 次 validated 来自同一消费者用户、同一任务,见"apply 之前的两项确认"。
+闸门在 2026-09-11T17:56:52Z 重判:decided_at 2026-09-11T11:25:46.115Z → 2026-09-11T17:56:50.752Z,decision pending → pending,status candidate → candidate;evidence_revision 2 → 6。回流闭合:一条经验被提取 → 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 0 次 validated 来自同一消费者用户、同一任务,见"apply 之前的两项确认"。
 
 ## 回流窗口、池快照与新资产的来源
 

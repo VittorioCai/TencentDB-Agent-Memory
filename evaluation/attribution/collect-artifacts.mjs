@@ -121,11 +121,19 @@ function messagesOf(body) {
 /** Exit status and stderr, read out of a shell tool result envelope. */
 export function outcomeOf(resultText) {
   const s = String(resultText ?? "");
-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
-  const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+  // A real CodeBuddy Bash result spells the tail sections "Exit Code:" (capital
+  // C) and "Signal:", after "Stderr:"; older shell fixtures used the lowercase
+  // "Exit code:". Match either, and the negative codes the envelope can carry.
+  // Matching only the lowercase spelling is why a real capture's exit status
+  // always read back null.
+  const code = /(?:^|\n)Exit Code:\s*(-?\d+)/i.exec(s);
+  // Stderr runs until the next tail section, not to the end of the result —
+  // otherwise "Exit Code:" and "Signal:" are read back as part of stderr.
+  const stderr = /(?:^|\n)Stderr:\s*([\s\S]*?)(?=\n(?:Exit Code|Signal):|$)/i.exec(s);
+  const text = stderr ? stderr[1].trim() : "";
   return {
     exit_code: code ? Number(code[1]) : null,
-    stderr: stderr ? stderr[1].trim().slice(0, 400) : "",
+    stderr: text === "(empty)" ? "" : text.slice(0, 400),
   };
 }
 

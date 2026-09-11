@@ -107,7 +107,7 @@ L.push("");
 const voided = rows.filter((r) => r.void);
 L.push(`生成命令:\`node evaluation/tasks/exit-code-fix/report.mjs\`;数据范围:\`${relative(REPO, manifestPath)}\` 列出的 ${manifest.runs.length} 次运行(正式样本 ${samples.length} 次,冒烟 ${rows.length - samples.length - voided.length} 次,作废留档 ${voided.length} 次);`);
 const rejudgedRows = rows.filter((r) => r.rejudged);
-L.push(`判据版本:${[...new Set(rows.map((r) => r.acceptance_version).filter(Boolean))].join(", ") || "无"}${rejudgedRows.length ? `;${rejudgedRows.length} 次运行读的是仓库外复判副本(${REJUDGE};原记录不改,REJUDGED.json 记代码哈希):${rejudgedRows.map((r) => `${r.run_id} ${r.rejudged.code?.["verify.mjs"] ?? "?"}`).join("; ")}` : ""};笔记 ${NOTE ?? "?"}(${noteSpec.name ?? "?"} v${q(noteSpec.version)},仓库只存 sha256 ${String(noteSpec.token_sha256?.[0] ?? "").slice(0, 12)}…)。`);
+L.push(`判据版本:${[...new Set(rows.map((r) => r.acceptance_version).filter(Boolean))].join(", ") || "无"}${rejudgedRows.length ? `;${rejudgedRows.length} 次运行读的是仓库外复判副本(${REJUDGE};原记录不改,REJUDGED.json 记代码哈希):${rejudgedRows.map((r) => `${r.run_id} ${r.rejudged.code?.["verify.mjs"] ?? "?"}`).join("; ")}` : ""};笔记 ${NOTE ?? "?"}(${noteSpec.name ?? "?"},当前 v${q(noteSpec.version)},仓库只存 sha256 ${String(noteSpec.token_sha256?.[0] ?? "").slice(0, 12)}…${(tokens._history ?? []).length ? `;此前 ${(tokens._history ?? []).map((h) => `v${h.version} sha256 ${String(h.token_sha256?.[0] ?? "").slice(0, 12)}… 于 ${h.retired_at} 退役`).join(",")}` : ""})。每次运行开跑时的笔记版本见"每次运行"表;未记录版本的运行都早于第一次轮换,在 v1 上。`);
 L.push("");
 L.push(`## 这份数字测的是什么,不是什么`);
 L.push("");
@@ -124,7 +124,7 @@ for (const r of rows) {
   const deliv = r.delivered === null ? "?" : Object.keys(r.delivered).length ? Object.entries(r.delivered).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const outc = r.noteOutcomes === null ? "?" : Object.keys(r.noteOutcomes).length ? Object.entries(r.noteOutcomes).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const mt = r.model_tests ? (r.model_tests.files?.length ? `${q(r.model_tests.pass)}/${q(r.model_tests.tests)}` : "未加") : "?";
-  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废)" : r.sample ? "" : "(冒烟)"} | ${r.run_id}${r.rejudged ? "(复判 " + (r.rejudged.acceptance_version ?? "?") + ")" : ""} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)}${r.note_visibility_at_start ? "/" + r.note_visibility_at_start : ""} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
+  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废)" : r.sample ? "" : "(冒烟)"} | ${r.run_id}${r.rejudged ? "(复判 " + (r.rejudged.acceptance_version ?? "?") + ")" : ""} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)}${r.note_visibility_at_start ? "/" + r.note_visibility_at_start : ""} v${r.note_version_at_start ?? 1} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
 }
 L.push("");
 L.push(`## 验收明细`);

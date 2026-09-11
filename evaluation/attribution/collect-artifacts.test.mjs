@@ -1,0 +1,61 @@
+/**
+ * Regression: the exit status of a real CodeBuddy Bash result must survive into
+ * the operation list.
+ *
+ * The collection stage read the outcome with a lowercase `Exit code:` pattern,
+ * but the envelope CodeBuddy actually writes spells it `Exit Code:` — with a
+ * capital C, after the `Stderr:` section. Every real operation therefore
+ * carried `exit_code: null`, and the downstream classification of failed calls
+ * had nothing to classify by. The synthetic fixtures used elsewhere happen to
+ * be built without a tail section at all, which is why the defect stayed
+ * invisible to them: the test below feeds the envelope exactly as captured.
+ */
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { collectArtifacts, outcomeOf } from "./collect-artifacts.mjs";
+
+/** A Bash result in the shape the capture observed. */
+const envelope = (exit, stderr = "(empty)") =>
+  "Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search -d '{\"query\":\"x\"}'\n"
+  + 'Stdout: {"code":0,"data":{"items":[]}}\n'
+  + `Stderr: ${stderr}\n`
+  + `Exit Code: ${exit}\n`
+  + "Signal: (none)";
+
+const capture = (messages) => [{
+  event: "http.request",
+  requestId: "req-1",
+  timestamp: "2026-09-11T00:00:00Z",
+  headers: { "x-conversation-id": "conv-1" },
+  body: { json: { messages } },
+}];
+
+const call = (id) => ({ role: "assistant", tool_calls: [{ id, function: { name: "Bash", arguments: "{}" } }] });
+const result = (id, content) => ({ role: "tool", tool_call_id: id, content });
+
+test("a real Bash envelope reports its exit status in the operation list", () => {
+  const [session] = collectArtifacts({
+    captureEvents: capture([
+      call("c1"),
+      result("c1", envelope(0)),
+      call("c2"),
+      result("c2", envelope(28, "curl: (28) Operation timed out after 75000 ms")),
+    ]),
+  });
+  const byCall = new Map(session.operations.map((op) => [op.call_id, op]));
+
+  assert.equal(byCall.get("c1").result.exit_code, 0, "a clean run must report exit 0");
+  assert.equal(byCall.get("c2").result.exit_code, 28, "a failed run must report its code");
+});
+
+test("the envelope's tail sections are not read back as stderr", () => {
+  const ok = outcomeOf(envelope(0));
+  assert.equal(ok.exit_code, 0);
+  assert.equal(ok.stderr, "", "`(empty)` stderr reads back empty, without `Exit Code:`");
+
+  const failed = outcomeOf(envelope(7, "curl: (7) Failed to connect"));
+  assert.equal(failed.exit_code, 7);
+  assert.equal(failed.stderr, "curl: (7) Failed to connect", "stderr stops before `Exit Code:`");
+});

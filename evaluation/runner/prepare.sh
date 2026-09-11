@@ -215,7 +215,9 @@ PY
     case "${2:-}" in
       a) AGENT="$AUTHOR_AGENT";   WHO="author (injector probe)" ;;
       b) AGENT="$CONSUMER_AGENT"; WHO="consumer (mainline)" ;;
-      c) AGENT="$AUTHOR_C_AGENT"; WHO="second author (history for the context-based assessment; extension pair)" ;;
+      # A fresh consumer created under user c (run-once.sh --fresh-consumer --identity c) arrives in
+      # FRESH_CONSUMER_AGENT and is the agent to force; without it, c is the fixed second author.
+      c) if [[ -n "${FRESH_CONSUMER_AGENT:-}" ]]; then AGENT="$FRESH_CONSUMER_AGENT"; WHO="fresh consumer under user c (dev loop)"; else AGENT="$AUTHOR_C_AGENT"; WHO="second author (history for the context-based assessment; extension pair)"; fi ;;
       *) die "usage: $0 --identity a|b|c" ;;
     esac
 
