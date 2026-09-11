@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-09-11T19:10:10Z",
+  "frozen_at": "2026-09-11T21:57:59Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
@@ -108,6 +108,22 @@
     "note_version": 2,
     "token_sha256_prefix": "1e85dcf5dcf7",
     "why": "run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; the link keeps one source of truth with the note's home"
+  },
+  "runtime": {
+    "core_image_digest": "sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed",
+    "core_image_ref": "agentmemory/memory-core:latest",
+    "core_repo_digests": [
+      "agentmemory/memory-core@sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed"
+    ],
+    "core_image_created": "2026-09-07T09:24:55.037668025Z",
+    "proxy_image_digest": "sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
+    "proxy_image_ref": "agentmemory/memory-proxy:latest",
+    "proxy_repo_digests": [
+      "agentmemory/memory-proxy@sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19"
+    ],
+    "proxy_image_created": "2026-09-07T09:27:27.00487263Z",
+    "recorded_live": true,
+    "since": "2026-09-11"
   },
   "selfcheck": {
     "seg0_exit": 0,
