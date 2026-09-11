@@ -196,6 +196,16 @@ content_hash_of() {  # asset_id version → hash or empty
     | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -H 'x-tdai-read-purpose: manage' \
         -X POST "$CORE_URL/v3/skill/get" -d "{\"team_id\":\"$TEAM_ID\",\"agent_id\":\"$agent\",\"user_id\":\"$uid\",\"skill_id\":\"$id\",\"version\":$ver,\"include_content\":false,\"include_manifest\":false}" -o "$TMP/skill-$id-$ver.json"
   python3 -c "import json; d=json.load(open('$TMP/skill-$id-$ver.json')); print((d.get('data') or {}).get('content_hash') or '')" > "$f"
+  # The registry row carries no agent, and the admin's manage read needs the
+  # owner's agent to answer; when the hash is still missing, read as the owner
+  # (the author key) with the skill id alone — the path resolve-tokens.mjs uses.
+  if [[ -z "$(cat "$f")" ]]; then
+    local okey; okey="$(tr -d '[:space:]' < "$OWNER_KEY_FILE")"
+    printf 'header = "Authorization: Bearer %s"\nheader = "x-tdai-user-key: %s"\n' "$okey" "$okey" \
+      | curl -sS -K - --max-time 25 -H 'content-type: application/json' -H "x-tdai-service-id: $SERVICE_ID" -H 'x-tdai-read-purpose: manage' \
+          -X POST "$CORE_URL/v3/skill/get" -d "{\"team_id\":\"$TEAM_ID\",\"skill_id\":\"$id\",\"version\":$ver,\"include_content\":false,\"include_manifest\":false}" -o "$TMP/skill-owner-$id-$ver.json"
+    python3 -c "import json; d=json.load(open('$TMP/skill-owner-$id-$ver.json')); print((d.get('data') or {}).get('content_hash') or '')" > "$f" 2>/dev/null || : > "$f"
+  fi
   cat "$f"
 }
 

@@ -78,7 +78,21 @@ OK 0 新增失败 3/3 基线仍在、【4】判别值来源唯一 2343 处)。
 第 2 次未检索;送达 0。配置缺陷,不是模型行为。已由作者身份置 team(`fill-note.mjs --fix-visibility`,
 记录 `visibility-fix.json`,内容哈希不变、仍 v1 approved),池重新快照(旧快照留作
 `asset-pool-snapshot.v1-note-private.json`),驱动加可见性守卫与 `--n 0` 短路(`seq 1 0` 倒数的缺陷
-让状态检查启动了那两次运行)。之后的有笔记组、置回、回流按 `devloop-runs.json` 的顺序记录。
+让状态检查启动了那两次运行)。之后:有笔记组两次(`20260911T154907Z`、`20260911T155035Z`,笔记 approved+team)均 PASS,检索返回笔记、
+get-by-name 取回、送达 injected/recalled/fetched、新建带判别值的独立测试文件、尝试值关联到写入调用
+(验证器 repo-2026-09-11d 修了"`node --test … 2>&1` 被当成写入"后在副本复判,validated 绑到 Write)。
+用户已置回 candidate(16:00 前后)。
+**回流**:四次正式样本各贴给 `/v3/skill/extract`(以该次消费者身份;`write-back.json` 在各运行目录),
+四次都受理并归档,但 **没有产生资产**:`skill.extraction.enabled: false` 下 Core 不构造提取队列与 worker
+(`tdai-core.ts` 932),extract 只是写入。切换脚本 `evaluation/runner/core-extraction.sh on|off`(§10 记录)已备好,
+**开关是产品配置改动,等用户决定**。
+**闸门**:run-once 同步的结果行原本全部"不可信"(`core-gate.sh content_hash_of` 只从 bridge-addr 基线找作者
+agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key 回退),按复判副本重新同步后 2 行可信,
+`evidence_revision` 2 → 6,闸门试算(apply:false)decision **admit**、status_target approved;未 apply,
+`decided_at` 仍停在 11:25(观测记录 `gate-observations.jsonl`,报告"闸门有没有动"一节)。**apply 等用户决定**。
+**主分支**:无笔记第 1 次的修复(不含判别值)已应用(fb4edfa),参考测试 7/7、套件 580/580;批次四 14 次
+运行按此代码复判(`/private/tmp/topic4-rejudge/2026-09-11b`),0 变化,差异文档
+`evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline.md`,既有报告数字不变。
 运行清单 `evaluation/tasks/exit-code-fix/devloop-runs.json`(驱动 `run-arm.sh`);报告由
 `report.mjs` 生成到 `REPORT.md`;回流 `write-back.mjs --run=<dir>`(产品 `/v3/skill/extract`,
 以该次消费者身份;两组跑完再做,避免中途改池)。
@@ -120,9 +134,12 @@ OK 0 新增失败 3/3 基线仍在、【4】判别值来源唯一 2343 处)。
    形式保存在团队知识库中。动手之前先检索一次团队经验,有相关的就参考,没有就按自己的判断做。"
    (两组同文;只描述环境与流程);改动前的两次无笔记运行作废留档(`devloop-runs.json` 的
    `void`),重跑两次。参考测试覆盖范围与笔记正文的关系按决定 ② 写硬在 REPORT.md。
-5. **笔记准入**是管理员动作(实验准备动作):`skl-pXLc38dex6Zt` v1 置 approved 的命令在无笔记
-   重跑完成后给用户;有笔记组跑完置回 candidate(决定 ③:闸门判定始终 pending,approved 是
-   实验干预,报告写明已撤销)。
+5. ~~笔记准入~~ 已按决定 ③ 做完(approved → 跑有笔记组 → 置回 candidate)。
+6. **回流要不要临时打开提取**:`skill.extraction.enabled` 现为 false(对照批次的设计),extract 只归档不提取。
+   若要闭合 5e:`bash evaluation/runner/core-extraction.sh on --record …` → 重新对四次样本跑 write-back →
+   等资产出现 → `core-extraction.sh off`;每步有 §10 记录。不开则报告写明"回流只是写入,未闭合"。
+7. **闸门 apply**:试算 admit;`gate/evaluate {apply:true}`(作者 key,规则判定,非人工准入)会把笔记置
+   approved、`decided_at` 更新。做不做由用户定;做了报告"闸门有没有动"一节自动变为"回流闭合"。
 
 ## 下一步(审阅 2026-09-11 定的顺序)
 

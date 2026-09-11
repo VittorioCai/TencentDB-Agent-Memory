@@ -64,8 +64,11 @@
 | 时间 | 时点 | status | visibility | evidence_revision | 闸门 decision | decided_at | online validated/used/corrected |
 |---|---|---|---|---|---|---|---|
 | 2026-09-11T16:00:28Z | before write-back (after the note arm and the revert to candidate) | candidate | team | 2 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+| 2026-09-11T16:09:56Z | after re-sync of the re-judged note runs (trusted rows expected) | candidate | team | 2 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+| 2026-09-11T16:10:55Z | after re-sync of the re-judged note runs as trusted rows | candidate | team | 4 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+| 2026-09-11T16:11:39Z | after re-sync with the owner-key hash lookup | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 
-闸门 decided_at 停在 2026-09-11T11:25:46.115Z(decision pending),evidence_revision 2 → 2:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。
+闸门 decided_at 停在 2026-09-11T11:25:46.115Z(decision pending),evidence_revision 2 → 6:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。
 
 ## 不信模型自报:这些运行的实证
 
