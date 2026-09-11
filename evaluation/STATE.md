@@ -6,11 +6,11 @@
 | 项 | 值 |
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
-| **线上状态(接手先看)** | proxy 强制身份已恢复为主线消费者 `agt-5e0y4l8a7a`(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore.json`);Core 提取 off;闭环笔记 `skl-pXLc38dex6Zt` approved(闸门规则判定,保留);批次四资产 right approved / wrong failed |
+| **线上状态(接手先看)** | proxy 强制身份已恢复为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy 密钥回到身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 off;闭环笔记 `skl-pXLc38dex6Zt` **v2** approved(闸门规则判定 2026-09-11T19:08:30Z,cross_user validated 4 / distinct_consumers 2 / distinct_tasks 2);批次四资产 right approved / wrong failed;第二任务的产品任务实体 `task-h1k7xruuhb`;B 的候选 `skl-z0V6zwphUvhB` 已提交复核并带签名评估 |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-11 晚(第 5 件最小开发闭环闭合:无/有笔记各 2 次、回流 10 项候选、闸门按规则 admit;第 6 件交付复跑见 `evaluation/delivery/2026-09-11/SUMMARY.md`) |
-| 测试 | evaluation 580(2026-09-11 晚,全 0 失败;含 exit-code-fix 反例 11 + 单测 14,主分支已含闭环接受的修复及其回归测试);Core 122;proxy 24 |
+| 验证时间 | 2026-09-11 深夜(第 5 件第二任务 `exit-line-collect` 闭合、作者评估进闭环;交付复跑见 `evaluation/delivery/2026-09-11b/SUMMARY.md`,判决类步骤全过、生成报告 diff 0) |
+| 测试 | evaluation 584(2026-09-11 深夜,从仓库根跑全 0 失败;含 exit-code-fix 反例 11 + 单测 14、证据包 +2、collect-artifacts 回归 1);Core 122;proxy 24 |
 
 ## 第 1 件"新实验条件准备齐":已验收
 
@@ -106,6 +106,18 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 当前强制身份是最后一次运行的消费者。恢复到批次四消费者:
 `cp deploy/global-images/.proxy-config/config.yaml.bak-20260911T135759Z-devloop-smoke deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy`。
 
+### 第 5 件续:第二任务 `exit-line-collect`(2026-09-11 深夜,已闭合)
+
+同一条笔记(轮换为 v2:值只换标记,`tokens.json._history` 记 v1)、另一个文件的同类缺陷(`collect-artifacts.mjs` 的 `outcomeOf`)、
+消费者用户 c(零记录)、自己的产品任务实体 `task-h1k7xruuhb`。验证器复用第一任务的(`DEVLOOP_TASK_DIR`),自检 0/1/0/1(seg4 因
+值已进记录而 1,与第一任务同)。正式样本:无笔记 2 次(PASS 2,标记 0)、有笔记 4 次(PASS 4,笔记送达 4、标记进新增测试 4;
+其中 1 次使用判定 needs_review 不计);第一任务在 v2 上用户 b 1 次 PASS validated。闸门对 v2:19:08:30Z 按规则 admit
+(cross_user validated 4、distinct_consumers 2、distinct_tasks 2),作者上下文评估在理由里 "reported, not used"。
+作者评估:A 对笔记 v2(medium / silent)、B 对自己回流的候选(medium / silent),管理员签名写入。作废留档 6 次:
+任务目录缺 harness 读取的文件(tokens.json、pair.json…,已做成指向笔记之家的链接)与身份 c 的两处 harness 缺口(`LESSONS.md`)。
+主分支已应用第二任务的修复(`REPARSE-DIFF-2026-09-11-exitline-collect.md`:批次四 95 条退出行全部可读,used 事件不受影响)。
+报告 `evaluation/tasks/exit-line-collect/REPORT.md`;清单 `devloop-runs.json`;导读 `evaluation/REVIEW-GUIDE.md`。
+
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
 1. **记忆通道未隔离(设计缺口,需决策)。** profiles/ 快照不覆盖 atomic 记忆
@@ -125,6 +137,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 
 ## 已决(2026-09-11 晚)与后续
 
+- 闭环笔记 v2 **保留 approved**(2026-09-11T19:08:30Z 规则 admit;两个用户、两个任务实体、同一操作者)。v1 时的决定如下。
 - 闭环笔记**保留 approved**:这次是闸门按规则 admit,decision 与 status 一致;上次人工 approved 时 gate 仍
   pending,状态与判定不一致,故置回。保留它,"回流闭合"才有实物支撑。admit 所依据的 2 次 cross_user validated
   来自同一消费者用户、同一任务(distinct_consumers=1、distinct_tasks=1):跨人成立、独立性不成立,报告同行写明。

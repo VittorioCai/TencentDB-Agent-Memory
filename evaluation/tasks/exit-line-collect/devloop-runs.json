@@ -243,6 +243,48 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-11T18:59:27Z",
       "recorded_at": "2026-09-11T19:01:07Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T190408Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T190408Z-devloop-no-note.07D0/20260911T190408Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h1w6wgvhfu",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T19:04:08Z",
+      "recorded_at": "2026-09-11T19:06:05Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T190605Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T190605Z-devloop-no-note.lZ4c/20260911T190605Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h10fmja5kp",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T19:06:05Z",
+      "recorded_at": "2026-09-11T19:07:45Z"
     }
   ],
   "status_observations": [
@@ -312,6 +354,16 @@
       "note_visibility": "team",
       "note_version": 2,
       "arm": "note",
+      "n": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T19:04:08Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "no-note",
       "n": 2,
       "identity": "c",
       "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"

@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-09-11T17:08:06Z",
+  "frozen_at": "2026-09-11T19:09:58Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631",
@@ -15,7 +15,7 @@
   "reference": {
     "regression_test_sha256": "d07b5248819ee265d3f30de8ed7ef4558ee3daab6c58fda9b47673779df623b4",
     "fix_patch_sha256": "282227ad00badea3e293af1a655477c0af88842e3063587bacffc569572b8705",
-    "verify_sha256": "0a3043b5c578493f7afa2af7d063d50d708ce5d164b4354734412708b57b4130",
+    "verify_sha256": "b6f880bcf60f91dfa1742852dcc6a73f69c9f02eea8c17b38d099b26d8eb4a73",
     "dest": "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs",
     "acceptance_version": "repo-2026-09-11d"
   },

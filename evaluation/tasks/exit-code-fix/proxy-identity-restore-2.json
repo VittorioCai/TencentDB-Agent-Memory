@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-11T19:09:18Z",
+  "what": "proxy sessionInit.debugForceIdentity restored to the mainline consumer b (agent agt-5e0y4l8a7a, task task-5e6xp4mrrw) after the second dev-loop task left it at the last per-run consumer of user c bound to task-h1k7xruuhb; CodeBuddy's API key switched back to identity b",
+  "command": "FRESH_CONSUMER_TASK=task-5e6xp4mrrw bash evaluation/runner/prepare.sh --identity b; bash evaluation/tasks/bridge-addr/use-identity.sh b",
+  "backup_before": "deploy/global-images/.proxy-config/config.yaml.bak-20260911T190910Z-before-restore-neutral-2",
+  "sha256_before": "77f112814acb8acbfd8148f2b9d2c5ae3d9a3729a41b0ab78f183af79e84a2cf",
+  "sha256_after": "4453c5fd4e0e50feb27b109b7961cfedf641cfff98f3c81de3485bf7578175cc",
+  "forced_identity_after": "forced identity:  agt-5e0y4l8a7a  (consumer — mainline runs)",
+  "forced_task_after": "task-5e6xp4mrrw",
+  "prepare_exit": 0,
+  "use_identity_exit": 0,
+  "restore_previous": "cp deploy/global-images/.proxy-config/config.yaml.bak-20260911T190910Z-before-restore-neutral-2 deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
+  "verify": "bash evaluation/runner/prepare.sh --status | head -4; bash evaluation/tasks/bridge-addr/use-identity.sh show"
+}

@@ -1,6 +1,6 @@
 # 开发闭环第二任务 `exit-line-collect`:运行报告(脚本生成)
 
-生成于 2026-09-11T19:09:21Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
+生成于 2026-09-11T19:10:12Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
 笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v2,仓库只存 sha256 1e85dcf5dcf7…);v1 于 2026-09-11T17:55:11Z 退役(值已进 git 历史),本任务所有运行都在 v2 上。
 判据版本:repo-2026-09-11d;起点提交 141c044(与 exit-code-fix 相同),任务文本 sha256 f32af00888d3…。
 
