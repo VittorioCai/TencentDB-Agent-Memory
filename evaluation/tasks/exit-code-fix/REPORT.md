@@ -72,9 +72,13 @@
 
 ## 回流窗口、池快照与新资产的来源
 
-提取开关记录(extraction-switch.jsonl)尚无:提取未打开,四次写回只归档(见上表)。
+| 时间 | 开关 | 前 → 后 | 容器读回 | 配置 sha 前→后 | 备份 | ok |
+|---|---|---|---|---|---|---|
+| 2026-09-11T16:25:58Z | on | false → true | enabled:true | 66ebab0a→cdb5b484 | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T162547Z-before-extraction-on | true |
 
-池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 未拍;关闭后 未拍。
+开关时间窗:开 2026-09-11T16:25:58Z → 关 未关。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z。
+
+池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 7 项(2026-09-11T16:28:23Z),新增 0;关闭后 未拍。
 
 ## apply 之前的两项确认
 
@@ -107,8 +111,8 @@
 
 | run_id | 作者(agent / user) | 来源会话 | 提取任务 | 新资产 | 实际决定 |
 |---|---|---|---|---|---|
-| 20260911T144347Z-devloop-no-note | agt-hpvaeml21e / usr-4u07qc2kuj | codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d | skill-extract-task-b44150ce (code 0) | 无 | extract accepted but no new asset appeared in the registry within 121s (Core may have judged the session had nothing to keep, or the worker is still running); nothing is claimed |
-| 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v / usr-4u07qc2kuj | codebuddy:9e6f612d-7bcd-456b-8157-7a8dc2be3432 | skill-extract-task-96dd7e7a (code 0) | 无 | extract accepted but no new asset appeared in the registry within 121s (Core may have judged the session had nothing to keep, or the worker is still running); nothing is claimed |
+| 20260911T144347Z-devloop-no-note | agt-hpvaeml21e / usr-4u07qc2kuj | codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d | skill-extract-task-96a66940 (code 0) | skl-HJW3hVeUmdXj team-skill-bridge-search v1 candidate; skl-isClIUZCR2nH codebuddy-tool-result-parsing v1 candidate | Core extracted 2 asset(s); status as Core set it: candidate (admission is the administrator's step) |
+| 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v / usr-4u07qc2kuj | codebuddy:9e6f612d-7bcd-456b-8157-7a8dc2be3432 | skill-extract-task-3656971c (code 0) | skl-d9gLp1pxJFuK team-skill-bridge-http v1 candidate; skl-uVUnsZwjjQmq eval-verifier-regression-fix-workflow v1 candidate; skl-nyuzDt1y8wmt codebuddy-bash-tool-result-format v1 candidate | Core extracted 3 asset(s); status as Core set it: candidate (admission is the administrator's step) |
 
 ## 笔记的准入是实验干预,不是闸门批准
 
