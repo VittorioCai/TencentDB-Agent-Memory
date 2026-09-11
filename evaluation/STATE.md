@@ -6,7 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
-| **线上状态(接手先看)** | **2026-09-11 深夜容器重建后**:Core 跑上游 `agentmemory/memory-core@sha256:55fec3a6…`(2026-09-07 构建,与批次四、闭环相同的摘要,事后回填),**闸门目录与 gateway 文件未挂载**(`eval-core.sh enable --accept-image` 过了目录守卫,卡在 gateway 文件的逐文件守卫:镜像的 skill-handlers.ts / v2-router.ts / server.ts / skill-versioning.ts 来自比分支基点更新的上游,server.ts 与基点差 414 行;待用户决定);Core 提取 **on**(重建时配置重生成,prepare.sh 下次准备运行会关,或用户跑 `core-extraction.sh off`);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连 deepseek(探针未路由);**无 tdai-clickhouse 容器**(跑运行前须起);数据卷完好:笔记 `skl-pXLc38dex6Zt` v2 approved 经 stock 路径读回一致;备份 `~/Desktop/topic4-backup/core-data.tar.gz` |
+| **线上状态(接手先看)** | **2026-09-12 00:24Z**:Core 是重新用 `deploy/global-images/start-memory-core.sh` 起的 stock 容器(上游 `:latest` sha256:55fec3a6…,package 1.0.2-beta.1),**无闸门**(gate 路由 404);方案 ① 的挂载在该镜像上起不来(`gate/artifacts/core-mount-accept-failure-20260912.log`),该镜像已证明**不是**批次四 / 闭环当时的镜像(当时摘要未记、不可考);已从分支自建镜像 `agentmemory/memory-core:topic4-11d30eaa720d`(MemoryCore 与 HEAD 一致,隔离冒烟:健康、gate 路由 401 非 404),**是否切换由用户定**;Core 提取 **on**(start 脚本重生成配置);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;数据卷完好:笔记 v2 approved 读回一致;备份 `~/Desktop/topic4-backup/core-data.tar.gz` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
 | 验证时间 | 2026-09-11 深夜(第 5 件第二任务 `exit-line-collect` 闭合、作者评估进闭环;交付复跑见 `evaluation/delivery/2026-09-11b/SUMMARY.md`,判决类步骤全过、生成报告 diff 0) |
