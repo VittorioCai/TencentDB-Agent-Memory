@@ -206,6 +206,22 @@
       "arm": "note",
       "n": 2,
       "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
+    },
+    {
+      "at": "2026-09-11T15:57:14Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "arm": "no-note",
+      "n": 0,
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
+    },
+    {
+      "at": "2026-09-11T15:57:26Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "arm": "no-note",
+      "n": 0,
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
     }
   ],
   "config_fixes": [
@@ -216,6 +232,18 @@
         "20260911T151132Z-devloop-note",
         "20260911T151342Z-devloop-note"
       ]
+    }
+  ],
+  "rejudges": [
+    {
+      "at": "2026-09-11T16:06:04Z",
+      "runs": [
+        "20260911T154907Z-devloop-note",
+        "20260911T155035Z-devloop-note"
+      ],
+      "out": "/private/tmp/topic4-rejudge/devloop-2026-09-11",
+      "why": "verify.mjs repo-2026-09-11d: a shell command counts as the writing call only when a redirection/tee/cp/mv points into the file; `node --test <file> 2>&1` had been taken as the write, so validated was tied to the test run and the Write got needs_review. Records untouched; the report reads the copies and names the code hashes.",
+      "acceptance_version": "repo-2026-09-11d"
     }
   ]
 }

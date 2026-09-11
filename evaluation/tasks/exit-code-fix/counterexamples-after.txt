@@ -1,18 +1,19 @@
-✔ 1a. with the test reporter set from outside (TAP), a broken original test is still a named new failure, never PASS (309.39075ms)
-✔ 1b. TAP `not ok` lines are parsed with their file; counts that the named failures cannot explain make the suite UNEXPLAINED (0.667ms)
-✔ 1c. the baseline exemption is bound to (file, name): a same-named test in another file that newly fails is a regression (367.574125ms)
-✔ 2a. a copy the model committed is still compared with the frozen start: a test deleted in that commit is missing (537.84475ms)
-✔ 2b. an original test the model rewrote runs with its original content: the rewrite cannot hide a regression (357.775708ms)
-✔ 2c. a test file the model added is recorded on its own, not folded into the regression check (588.727ms)
-✔ 2d. without a frozen start record the acceptance is an ERROR, not a verdict against the copy's own HEAD (267.189041ms)
-✔ 3a. a marker that only appears in a deleted line of the diff is not an attempt (726.099334ms)
-✔ 3b. the attempt names the call that actually wrote the added test, not the first call that mentioned the marker (512.92975ms)
-✔ 3c. an added test whose writing call cannot be found keeps the marker but is marked for review (587.513791ms)
-ℹ tests 10
+✔ 1a. with the test reporter set from outside (TAP), a broken original test is still a named new failure, never PASS (372.586042ms)
+✔ 1b. TAP `not ok` lines are parsed with their file; counts that the named failures cannot explain make the suite UNEXPLAINED (0.636916ms)
+✔ 1c. the baseline exemption is bound to (file, name): a same-named test in another file that newly fails is a regression (384.481875ms)
+✔ 2a. a copy the model committed is still compared with the frozen start: a test deleted in that commit is missing (382.925834ms)
+✔ 2b. an original test the model rewrote runs with its original content: the rewrite cannot hide a regression (437.002125ms)
+✔ 2c. a test file the model added is recorded on its own, not folded into the regression check (408.563042ms)
+✔ 2d. without a frozen start record the acceptance is an ERROR, not a verdict against the copy's own HEAD (131.799667ms)
+✔ 3a. a marker that only appears in a deleted line of the diff is not an attempt (365.255417ms)
+✔ 3b. the attempt names the call that actually wrote the added test, not the first call that mentioned the marker (406.885958ms)
+✔ 3c. an added test whose writing call cannot be found keeps the marker but is marked for review (413.33525ms)
+✔ 3d. a later shell command that merely runs the added test (with 2>&1) is not its writing call; the Write that created it is (807.591125ms)
+ℹ tests 11
 ℹ suites 0
-ℹ pass 10
+ℹ pass 11
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 4297.350083
+ℹ duration_ms 4149.637166

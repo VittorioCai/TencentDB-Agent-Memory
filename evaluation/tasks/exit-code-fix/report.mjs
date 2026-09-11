@@ -24,7 +24,11 @@ const noteSpec = tokens[NOTE] ?? {};
 
 const readJson = (p) => { try { return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null; } catch { return null; } };
 const readJsonl = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : null);
-const dirOf = (r) => (r.dir && existsSync(r.dir) ? r.dir : existsSync(join(REPO, "evaluation/runner/runs", r.run_id)) ? join(REPO, "evaluation/runner/runs", r.run_id) : null);
+// re-judged copies (rejudge-runs.mjs, outside the repo) are read when present: the record on disk stays as judged at run time
+const REJUDGE = process.env.DEVLOOP_REJUDGE_DIR ?? "/private/tmp/topic4-rejudge/devloop-2026-09-11";
+const origDirOf = (r) => (r.dir && existsSync(r.dir) ? r.dir : existsSync(join(REPO, "evaluation/runner/runs", r.run_id)) ? join(REPO, "evaluation/runner/runs", r.run_id) : null);
+const dirOf = (r) => (existsSync(join(REJUDGE, r.run_id, "REJUDGED.json")) ? join(REJUDGE, r.run_id) : origDirOf(r));
+const rejudgedOf = (r) => { try { return existsSync(join(REJUDGE, r.run_id, "REJUDGED.json")) ? JSON.parse(readFileSync(join(REJUDGE, r.run_id, "REJUDGED.json"), "utf8")) : null; } catch { return null; } };
 const q = (v) => (v === null || v === undefined ? "?" : String(v));
 const yn = (v) => (v === true ? "是" : v === false ? "否" : "未知");
 
@@ -57,6 +61,21 @@ const rows = manifest.runs.map((r) => {
       if ((results.get(tc.id) ?? "").includes(noteSpec.name ?? "\u0000")) noteReturned = true;
     }
   }
+  // outcome events explained: which call, what tool did there, why that state
+  const callIndex = new Map();
+  if (capture) {
+    const reqs = capture.filter((e) => e?.event === "http.request" && Array.isArray(e?.body?.json?.messages));
+    const msgs = reqs[reqs.length - 1]?.body?.json?.messages ?? [];
+    for (const m of msgs) for (const tc of Array.isArray(m?.tool_calls) ? m.tool_calls : []) {
+      if (callIndex.has(tc.id)) continue;
+      let head = ""; try { const a = JSON.parse(tc.function?.arguments ?? "{}"); head = String(a.command ?? a.file_path ?? a.pattern ?? "").replace(/\s+/g, " ").slice(0, 90); } catch { head = ""; }
+      callIndex.set(tc.id, { tool: tc.function?.name ?? "?", head });
+    }
+  }
+  const outcomeRows = (outcomes ?? []).filter((e) => e.asset_id === NOTE).map((e) => {
+    const cid = e.metadata?.call_id ?? null; const c = cid ? callIndex.get(cid) : null;
+    return { state: e.state, call_id: cid, tool: c?.tool ?? null, head: c?.head ?? null, why: (e.proof_refs ?? [])[0]?.detail ?? "" };
+  });
   const noteEvents = [...(events ?? []), ...(early ?? [])].filter((e) => e.asset_id === NOTE);
   const delivered = events === null && early === null ? null : Object.fromEntries([...noteEvents.reduce((m, e) => m.set(e.state, (m.get(e.state) ?? 0) + 1), new Map())]);
   const noteUsed = used === null ? null : used.filter((e) => e.asset_id === NOTE && e.state === "used").length;
@@ -64,10 +83,10 @@ const rows = manifest.runs.map((r) => {
   const noteOutcomes = outcomes === null ? null : Object.fromEntries([...outcomes.filter((e) => e.asset_id === NOTE).reduce((m, e) => m.set(e.state, (m.get(e.state) ?? 0) + 1), new Map())]);
   const c = verdict?.checks ?? {};
   return {
-    ...r, dir: d, run, verdict, cost,
+    ...r, dir: d, run, verdict, cost, rejudged: rejudgedOf(r),
     consumer: run?.consumer?.agent_id ?? r.consumer_agent_id ?? null,
     resolved_agent: run?.resolved_identity?.agent_id ?? null,
-    delivered, noteUsed, noteReview, noteOutcomes, searches, noteReturned, searchQueries,
+    delivered, noteUsed, noteReview, noteOutcomes, searches, noteReturned, searchQueries, outcomeRows,
     attempts: verdict?.attempts ?? [],
     files: c.diff?.files?.map((f) => `${f.status} ${f.file}`) ?? null,
     reference: c.reference_test ? `${q(c.reference_test.pass)}/${q(c.reference_test.tests)}` : null,
@@ -86,7 +105,8 @@ L.push(`# 开发闭环 \`exit-code-fix\`:运行报告(脚本生成)`);
 L.push("");
 const voided = rows.filter((r) => r.void);
 L.push(`生成命令:\`node evaluation/tasks/exit-code-fix/report.mjs\`;数据范围:\`${relative(REPO, manifestPath)}\` 列出的 ${manifest.runs.length} 次运行(正式样本 ${samples.length} 次,冒烟 ${rows.length - samples.length - voided.length} 次,作废留档 ${voided.length} 次);`);
-L.push(`判据版本:${[...new Set(rows.map((r) => r.acceptance_version).filter(Boolean))].join(", ") || "无"};笔记 ${NOTE ?? "?"}(${noteSpec.name ?? "?"} v${q(noteSpec.version)},仓库只存 sha256 ${String(noteSpec.token_sha256?.[0] ?? "").slice(0, 12)}…)。`);
+const rejudgedRows = rows.filter((r) => r.rejudged);
+L.push(`判据版本:${[...new Set(rows.map((r) => r.acceptance_version).filter(Boolean))].join(", ") || "无"}${rejudgedRows.length ? `;${rejudgedRows.length} 次运行读的是仓库外复判副本(${REJUDGE};原记录不改,REJUDGED.json 记代码哈希):${rejudgedRows.map((r) => `${r.run_id} ${r.rejudged.code?.["verify.mjs"] ?? "?"}`).join("; ")}` : ""};笔记 ${NOTE ?? "?"}(${noteSpec.name ?? "?"} v${q(noteSpec.version)},仓库只存 sha256 ${String(noteSpec.token_sha256?.[0] ?? "").slice(0, 12)}…)。`);
 L.push("");
 L.push(`## 这份数字测的是什么,不是什么`);
 L.push("");
@@ -103,7 +123,7 @@ for (const r of rows) {
   const deliv = r.delivered === null ? "?" : Object.keys(r.delivered).length ? Object.entries(r.delivered).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const outc = r.noteOutcomes === null ? "?" : Object.keys(r.noteOutcomes).length ? Object.entries(r.noteOutcomes).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const mt = r.model_tests ? (r.model_tests.files?.length ? `${q(r.model_tests.pass)}/${q(r.model_tests.tests)}` : "未加") : "?";
-  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废)" : r.sample ? "" : "(冒烟)"} | ${r.run_id} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)}${r.note_visibility_at_start ? "/" + r.note_visibility_at_start : ""} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
+  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废)" : r.sample ? "" : "(冒烟)"} | ${r.run_id}${r.rejudged ? "(复判 " + (r.rejudged.acceptance_version ?? "?") + ")" : ""} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)}${r.note_visibility_at_start ? "/" + r.note_visibility_at_start : ""} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
 }
 L.push("");
 L.push(`## 验收明细`);
@@ -134,6 +154,65 @@ const judged = rows.filter((r) => r.verdict && r.tests_kept);
 const rewrote = judged.filter((r) => (r.tests_kept.modified ?? []).length);
 const selfGreen = judged.filter((r) => r.model_tests && r.model_tests.files?.length && r.model_tests.fail === 0);
 const wouldHaveSlipped = judged.filter((r) => r.model_tests && r.model_tests.files?.length && r.model_tests.fail === 0 && r.verdict.verdict !== "PASS");
+// ── result judgement, explained per event (review 2026-09-11 evening, point 1) ──
+L.push(`## 结果判定逐条解释`);
+L.push("");
+L.push(`判据(judge-outcome.mjs):每条 used 事件按它的 call id 找验收记录里同一调用的 attempt;attempt 成功且本次验收 PASS → validated;` +
+  `该调用不是验收 attempt(提到了判别值但不是写入新增测试的调用)→ needs_review "the token appeared in an operation that was not an acceptance attempt";` +
+  `attempt 失败 → corrected 或 needs_review(视失败是否由资产内容解释)。attempt 只认最终新增测试的文件名/标题里的标记,并关联最后一次写入该文件且含标记的调用。`);
+L.push("");
+L.push(`| run_id | 状态 | 调用 | 工具 | 调用做了什么(参数头) | 判定理由 |`);
+L.push(`|---|---|---|---|---|---|`);
+for (const r of rows) for (const o of r.outcomeRows ?? []) {
+  L.push(`| ${r.run_id} | ${o.state} | ${q(o.call_id)} | ${q(o.tool)} | ${(o.head ?? "?").replace(/\|/g, "\\|")} | ${o.why.replace(/\|/g, "\\|").slice(0, 160)} |`);
+}
+if (!rows.some((r) => (r.outcomeRows ?? []).length)) L.push(`| (无结果判定事件) | | | | | |`);
+L.push("");
+// ── the visibility incident (point 2) ──
+const voidVis = rows.filter((r) => r.void && /visibility=private/.test(r.void_reason ?? ""));
+const cf2 = manifest.config_fixes ?? [];
+L.push(`## 可见性事故:approved 但 private,检索不到,表现为"未采用"`);
+L.push("");
+L.push(`笔记由 \`/v3/skill/create\` 建入,默认 \`visibility: private\`;批次四的资产由 enter-pool.sh 显式置 team。bridge 的 skill_search 不含别人的私有 skill。` +
+  `管理员置 approved 后跑的有笔记组第一对(${voidVis.map((r) => r.run_id).join("、") || "无"}):` +
+  voidVis.map((r) => `${r.run_id} 检索 ${q(r.searches)} 次、笔记出现在结果 ${yn(r.noteReturned)}、送达事件 ${r.delivered && Object.keys(r.delivered).length ? "有" : "无"}、采用 ${q(r.noteUsed)}`).join(";") +
+  `。若不查准入返回里的 visibility 字段就写报告,这两次会被记成"笔记送达后模型未采用"——把配置缺陷说成模型行为。` +
+  `与"探针装错位置"同类:仪器出错不报错,只给看起来正常的结论。处置:两次作废留档;` + (cf2.map((v) => `${v.at} ${v.what}`).join(";") || "未记录修正") +
+  `;fill-note 建/更新后置 team 并在 --check 校验;驱动对有笔记组同时要求 approved 与 team。`);
+L.push("");
+// ── the conclusion in the agreed wording (point 4), from the counts ──
+const nn = byArm("no-note"), nt = byArm("note");
+const nnPass = count(nn, (r) => r.verdict?.verdict === "PASS"), ntPass = count(nt, (r) => r.verdict?.verdict === "PASS");
+const ntNewFile = count(nt, (r) => (r.attempts ?? []).some((a) => /^bt-/.test(a.value) && (a.where ?? []).includes("file name")));
+const ntUsed = count(nt, (r) => (r.noteUsed ?? 0) > 0);
+const allNoNote = rows.filter((r) => r.arm === "no-note");
+const nnMarker = count(allNoNote, (r) => (r.attempts ?? []).some((a) => /^bt-/.test(a.value)));
+const viaWrite = nt.flatMap((r) => (r.attempts ?? []).filter((a) => /^bt-/.test(a.value)).map((a) => a.written_via)).filter(Boolean);
+L.push(`## 结论(按 2026-09-11 晚定的口径)`);
+L.push("");
+L.push(`两组功能验收相同(验证器自带参考测试 + 起点测试原内容),正式样本里无笔记 ${nnPass}/${nn.length} 通过、有笔记 ${ntPass}/${nt.length} 通过。` +
+  `笔记的可观测作用是改变实现路径:有笔记组 ${ntNewFile}/${nt.length} 次按团队约定新建了带判别值的独立测试文件(无笔记组把测试加进已有文件),` +
+  `不是"没笔记就做不成"。判别值随机生成、只在 Core 正文里;无笔记组 ${allNoNote.length} 次(含作废)零出现(${nnMarker} 次带标记)。` +
+  `采用证据来自送达事件(injected / recalled / fetched)与写入调用的关联(${viaWrite.length} 条,写入方式 ${[...new Set(viaWrite)].join("、") || "无"}),有笔记组 ${ntUsed}/${nt.length} 次判 used;不依赖模型自述。` +
+  `样本 ${nn.length}+${nt.length},差异仅描述这些运行。`);
+L.push("");
+// ── did the gate move (point 3) ──
+const gobs = readJsonl(join(HERE, "gate-observations.jsonl")) ?? [];
+L.push(`## 闸门有没有动:回流前后的 Core 记录`);
+L.push("");
+if (!gobs.length) L.push(`没有观测记录(gate-observe.mjs 未运行)。`);
+else {
+  L.push(`| 时间 | 时点 | status | visibility | evidence_revision | 闸门 decision | decided_at | online validated/used/corrected |`);
+  L.push(`|---|---|---|---|---|---|---|---|`);
+  for (const o of gobs) L.push(`| ${o.at} | ${o.label} | ${q(o.status)} | ${q(o.visibility)} | ${q(o.evidence_revision)} | ${q(o.gate?.decision)} | ${q(o.gate?.decided_at)} | ${q(o.gate?.online?.validated)}/${q(o.gate?.online?.used)}/${q(o.gate?.online?.corrected)} |`);
+  const first = gobs[0], last = gobs[gobs.length - 1];
+  const moved = first.gate?.decided_at !== last.gate?.decided_at;
+  L.push("");
+  L.push(moved
+    ? `闸门在 ${last.at} 重判:decided_at ${first.gate?.decided_at} → ${last.gate?.decided_at},decision ${first.gate?.decision} → ${last.gate?.decision},status ${first.status} → ${last.status};evidence_revision ${first.evidence_revision} → ${last.evidence_revision}。回流闭合。`
+    : `闸门 decided_at 停在 ${last.gate?.decided_at}(decision ${last.gate?.decision}),evidence_revision ${first.evidence_revision} → ${last.evidence_revision}:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。`);
+}
+L.push("");
 L.push(`## 不信模型自报:这些运行的实证`);
 L.push("");
 L.push(`本清单里已判决的 ${judged.length} 次运行中,${rewrote.length} 次改写了被测代码自己的测试文件(${[...new Set(rewrote.flatMap((r) => r.tests_kept.modified))].join(", ") || "无"});` +

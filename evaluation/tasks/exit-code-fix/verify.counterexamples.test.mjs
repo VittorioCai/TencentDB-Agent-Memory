@@ -222,3 +222,31 @@ test("3c. an added test whose writing call cannot be found keeps the marker but 
   assert.equal(a.call_id, null);
   assert.equal(a.needs_review, true);
 });
+
+// ── 3d. found in the note arm's first pair (2026-09-11 16:00): the writing call
+// was reported as the `node --test <file> 2>&1 | tail` command — `2>&1` matched
+// the redirection heuristic — while the Write that created the file got
+// needs_review. A redirection counts only when it points INTO the file.
+test("3d. a later shell command that merely runs the added test (with 2>&1) is not its writing call; the Write that created it is", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  writeFileSync(join(repo, ADDED), ADDED_SRC);
+  const rows = capture(repo, [
+    call("call_w", "Write", { file_path: join(repo, ADDED), content: ADDED_SRC }),
+    call("call_t", "Bash", { command: `cd ${repo} && node --test ${ADDED} 2>&1 | tail -20` }),
+    call("call_g", "Bash", { command: `cd ${repo} && git diff --stat > /dev/null; ls ${ADDED}` }),
+  ]);
+  const r = verifyRepo(repo, { start, capture: rows });
+  const a = r.attempts.find((x) => x.value === "bt-fixturemark");
+  assert.ok(a, JSON.stringify(r.attempts));
+  assert.equal(a.call_id, "call_w");
+  assert.equal(a.written_via, "Write");
+  // a real redirection into the file, later, is the writing call
+  const rows2 = capture(repo, [
+    call("call_w", "Write", { file_path: join(repo, ADDED), content: "old" }),
+    call("call_h", "Bash", { command: `cat > ${ADDED} <<'EOF'\n${ADDED_SRC}EOF\nnode --test ${ADDED} 2>&1 | tail -3` }),
+  ]);
+  const r2 = verifyRepo(repo, { start, capture: rows2 });
+  assert.equal(r2.attempts.find((x) => x.value === "bt-fixturemark").call_id, "call_h");
+});

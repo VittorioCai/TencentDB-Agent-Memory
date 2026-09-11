@@ -61,7 +61,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const ACCEPTANCE_VERSION = "repo-2026-09-11c"; // c: attempts also from test titles added to existing files; model tests cover rewritten originals
+export const ACCEPTANCE_VERSION = "repo-2026-09-11d"; // c: attempts also from test titles added to existing files; model tests cover rewritten originals. d: a shell command writes the file only when a redirection / tee / cp / mv points INTO it (2>&1 is not a write)
 export const PASS = "PASS", FAIL = "FAIL", ERROR = "ERROR";
 export const REFERENCE_TEST_SRC = join(HERE, "reference/regression.reference.mjs");
 const TASK = existsSync(join(HERE, "task.json")) ? JSON.parse(readFileSync(join(HERE, "task.json"), "utf8")) : {};
@@ -233,6 +233,17 @@ function toolCalls(captureRows) {
   return out;
 }
 const pathMatches = (p, file) => typeof p === "string" && (p === file || p.endsWith("/" + file));
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * Does this shell command write INTO `file`? Only a redirection, tee, cp or mv
+ * whose target names the file — `node --test file 2>&1 | tail` mentions the
+ * file and contains a `>`, and is not a write (note arm, 2026-09-11).
+ */
+export function bashWritesFile(command, file) {
+  const base = escapeRe(basename(file));
+  const target = `['"]?(?:[^\\s'"|;&<>]*/)?${base}['"]?`;
+  return new RegExp(`(?:(?:^|[^0-9&])>>?\\s*${target})|(?:\\btee\\b(?:\\s+-[a-z]+)*\\s+${target})|(?:\\b(?:cp|mv)\\b[^|;&]*\\s${target}(?:\\s|$|;|&|\\|))`).test(String(command ?? ""));
+}
 
 /**
  * The tool call that wrote `file` (carrying `marker` when given): a Write or
@@ -248,7 +259,7 @@ export function writingCall(captureRows, file, marker = null) {
     if (c.name === "Write" && pathMatches(a.file_path, file) && carries(a.content)) via = "Write";
     else if (c.name === "Edit" && pathMatches(a.file_path, file) && carries(a.new_string)) via = "Edit";
     else if (c.name === "MultiEdit" && pathMatches(a.file_path, file) && carries(JSON.stringify(a.edits ?? ""))) via = "MultiEdit";
-    else if (c.name === "Bash" && typeof a.command === "string" && a.command.includes(basename(file)) && /(>>?|\btee\b|\bcp\b|\bmv\b)/.test(a.command) && carries(a.command)) via = "Bash";
+    else if (c.name === "Bash" && typeof a.command === "string" && bashWritesFile(a.command, file) && carries(a.command)) via = "Bash";
     if (via) found = { call_id: c.call_id, message_index: c.message_index, via };
   }
   return found;

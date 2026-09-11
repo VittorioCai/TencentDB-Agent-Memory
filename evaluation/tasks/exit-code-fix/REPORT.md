@@ -1,7 +1,7 @@
 # 开发闭环 `exit-code-fix`:运行报告(脚本生成)
 
 生成命令:`node evaluation/tasks/exit-code-fix/report.mjs`;数据范围:`evaluation/tasks/exit-code-fix/devloop-runs.json` 列出的 9 次运行(正式样本 4 次,冒烟 1 次,作废留档 4 次);
-判据版本:repo-2026-09-11b, repo-2026-09-11c;笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v1,仓库只存 sha256 d3d4dd1bd6a4…)。
+判据版本:repo-2026-09-11b, repo-2026-09-11c, repo-2026-09-11d;2 次运行读的是仓库外复判副本(/private/tmp/topic4-rejudge/devloop-2026-09-11;原记录不改,REJUDGED.json 记代码哈希):20260911T154907Z-devloop-note 0a3043b5c578; 20260911T155035Z-devloop-note 0a3043b5c578;笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v1,仓库只存 sha256 d3d4dd1bd6a4…)。
 
 ## 这份数字测的是什么,不是什么
 
@@ -21,8 +21,8 @@
 | 2 | no-note | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v | agt-hpyg3smf6v | candidate | 2 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
 | 1 | note(作废) | 20260911T151132Z-devloop-note | agt-hq5ik0kr3g | agt-hq5ik0kr3g | approved/private | 4 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
 | 0 | note(作废) | 20260911T151342Z-devloop-note | agt-hq84sw27hy | agt-hq84sw27hy | approved/private | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 1 | note | 20260911T154907Z-devloop-note | agt-hsv5hd4ys2 | agt-hsv5hd4ys2 | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | needs_review 1, validated 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
-| 2 | note | 20260911T155035Z-devloop-note | agt-hsylov19pn | agt-hsylov19pn | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | needs_review 1, validated 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
+| 1 | note | 20260911T154907Z-devloop-note(复判 repo-2026-09-11d) | agt-hsv5hd4ys2 | agt-hsv5hd4ys2 | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
+| 2 | note | 20260911T155035Z-devloop-note(复判 repo-2026-09-11d) | agt-hsylov19pn | agt-hsylov19pn | approved/team | 2 | 是 | fetched 1, injected 1, recalled 1 | 2 / 1 | validated 1, needs_review 1 | PASS | bt-imczk9p69e3 | A evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs; M evaluation/tasks/bridge-addr/verify.mjs | 3/3 | 是 | 0 |
 
 ## 验收明细
 
@@ -39,6 +39,33 @@
 | 20260911T155035Z-devloop-note | 7/7 | 无 | OK | 0 | 3/3 | 0 / 0 / 1 | reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model's own tests (1 added or rewritten file(s)): 3/3 pass (recorded, not a verdict input) |
 
 参考测试(验证器自带,两组相同)共 7 例:大写退出行的超时(28)、大写退出行的非零退出码(52/56)、小写拼写仍可读、退出 0 + code 0 信封、退出 0 + 非零信封、退出 0 无输出保持不可读、stderr 里的连接失败。**笔记正文列出了 52/56,而任务文本只描述超时;因此有笔记组在"非零退出码"一例上的通过,包含"笔记披露了验收覆盖范围"的成分,不能只记为定位更快。** 根因修复(退出行的标签按两种拼写读,一行正则)同时覆盖超时与非零退出码两类情形;只把超时分支改成认大写、不改退出码读取的修复是治标,会在"非零退出码"一例上失败。本清单里:参考测试 7/7(根因修复)8 次(smoke 20260911T135759Z-devloop-smoke; no-note作废 20260911T140427Z-devloop-no-note; no-note 20260911T144347Z-devloop-no-note; no-note 20260911T144542Z-devloop-no-note; note作废 20260911T151132Z-devloop-note; note作废 20260911T151342Z-devloop-note; note 20260911T154907Z-devloop-note; note 20260911T155035Z-devloop-note);只过超时、不过非零退出码(治标)1 次(no-note作废 20260911T140806Z-devloop-no-note);其他参考失败 0 次。
+
+## 结果判定逐条解释
+
+判据(judge-outcome.mjs):每条 used 事件按它的 call id 找验收记录里同一调用的 attempt;attempt 成功且本次验收 PASS → validated;该调用不是验收 attempt(提到了判别值但不是写入新增测试的调用)→ needs_review "the token appeared in an operation that was not an acceptance attempt";attempt 失败 → corrected 或 needs_review(视失败是否由资产内容解释)。attempt 只认最终新增测试的文件名/标题里的标记,并关联最后一次写入该文件且含标记的调用。
+
+| run_id | 状态 | 调用 | 工具 | 调用做了什么(参数头) | 判定理由 |
+|---|---|---|---|---|---|
+| 20260911T154907Z-devloop-note | validated | call_00_RHmV4S1O5LcgS05ZIxxI6538 | Write | /private/tmp/topic4-sessions/20260911T154907Z-devloop-note.vfDN/session/evaluation/tasks/b | the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy) |
+| 20260911T154907Z-devloop-note | needs_review | call_00_KPRFvvOTwslSEGh2Z7gk0929 | Bash | cd /private/tmp/topic4-sessions/20260911T154907Z-devloop-note.vfDN/session && node --test  | the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it |
+| 20260911T155035Z-devloop-note | validated | call_00_FyIgEjn7omrGZtlb2DKJ4738 | Write | /private/tmp/topic4-sessions/20260911T155035Z-devloop-note.5s6V/session/evaluation/tasks/b | the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy) |
+| 20260911T155035Z-devloop-note | needs_review | call_00_NkcZfb0Uq36JNewscK1e8738 | Bash | cd /private/tmp/topic4-sessions/20260911T155035Z-devloop-note.5s6V/session && node --test  | the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it |
+
+## 可见性事故:approved 但 private,检索不到,表现为"未采用"
+
+笔记由 `/v3/skill/create` 建入,默认 `visibility: private`;批次四的资产由 enter-pool.sh 显式置 team。bridge 的 skill_search 不含别人的私有 skill。管理员置 approved 后跑的有笔记组第一对(20260911T151132Z-devloop-note、20260911T151342Z-devloop-note):20260911T151132Z-devloop-note 检索 4 次、笔记出现在结果 否、送达事件 无、采用 0;20260911T151342Z-devloop-note 检索 0 次、笔记出现在结果 否、送达事件 无、采用 0。若不查准入返回里的 visibility 字段就写报告,这两次会被记成"笔记送达后模型未采用"——把配置缺陷说成模型行为。与"探针装错位置"同类:仪器出错不报错,只给看起来正常的结论。处置:两次作废留档;2026-09-11T15:48:50Z note visibility private → team (owner key, fill-note.mjs --fix-visibility; record visibility-fix.json); pool re-snapshotted (v1 kept as asset-pool-snapshot.v1-note-private.json);fill-note 建/更新后置 team 并在 --check 校验;驱动对有笔记组同时要求 approved 与 team。
+
+## 结论(按 2026-09-11 晚定的口径)
+
+两组功能验收相同(验证器自带参考测试 + 起点测试原内容),正式样本里无笔记 2/2 通过、有笔记 2/2 通过。笔记的可观测作用是改变实现路径:有笔记组 2/2 次按团队约定新建了带判别值的独立测试文件(无笔记组把测试加进已有文件),不是"没笔记就做不成"。判别值随机生成、只在 Core 正文里;无笔记组 4 次(含作废)零出现(0 次带标记)。采用证据来自送达事件(injected / recalled / fetched)与写入调用的关联(2 条,写入方式 Write),有笔记组 2/2 次判 used;不依赖模型自述。样本 2+2,差异仅描述这些运行。
+
+## 闸门有没有动:回流前后的 Core 记录
+
+| 时间 | 时点 | status | visibility | evidence_revision | 闸门 decision | decided_at | online validated/used/corrected |
+|---|---|---|---|---|---|---|---|
+| 2026-09-11T16:00:28Z | before write-back (after the note arm and the revert to candidate) | candidate | team | 2 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+
+闸门 decided_at 停在 2026-09-11T11:25:46.115Z(decision pending),evidence_revision 2 → 2:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。
 
 ## 不信模型自报:这些运行的实证
 
@@ -60,11 +87,14 @@
 
 ## 新经验回流候选池
 
-尚未执行(write-back.mjs 未对任何运行调用)。
+| run_id | 作者(agent / user) | 来源会话 | 提取任务 | 新资产 | 实际决定 |
+|---|---|---|---|---|---|
+| 20260911T144347Z-devloop-no-note | agt-hpvaeml21e / usr-4u07qc2kuj | codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d | skill-extract-task-b44150ce (code 0) | 无 | extract accepted but no new asset appeared in the registry within 121s (Core may have judged the session had nothing to keep, or the worker is still running); nothing is claimed |
+| 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v / usr-4u07qc2kuj | codebuddy:9e6f612d-7bcd-456b-8157-7a8dc2be3432 | skill-extract-task-96dd7e7a (code 0) | 无 | extract accepted but no new asset appeared in the registry within 121s (Core may have judged the session had nothing to keep, or the worker is still running); nothing is claimed |
 
 ## 笔记的准入是实验干预,不是闸门批准
 
-笔记 skl-pXLc38dex6Zt 的闸门判定始终 pending;有笔记组之前由管理员置 approved 是实验准备动作,跑完即置回 candidate,报告不把它读作闸门批准;闸门判定待新经验回流(5e)后由证据驱动。驱动脚本每次调用记录的状态观测(3 条):2026-09-11T14:43:47Z candidate(no-note, n=2); 2026-09-11T15:11:32Z approved(note, n=0); 2026-09-11T15:49:07Z approved(note, n=2)。 最后一次观测为 approved:尚未置回。
+笔记 skl-pXLc38dex6Zt 的闸门判定始终 pending;有笔记组之前由管理员置 approved 是实验准备动作,跑完即置回 candidate,报告不把它读作闸门批准;闸门判定待新经验回流(5e)后由证据驱动。驱动脚本每次调用记录的状态观测(5 条):2026-09-11T14:43:47Z candidate(no-note, n=2); 2026-09-11T15:11:32Z approved(note, n=0); 2026-09-11T15:49:07Z approved(note, n=2); 2026-09-11T15:57:14Z candidate(no-note, n=0); 2026-09-11T15:57:26Z candidate(no-note, n=0)。 最后一次观测为 candidate:已撤销。
 
 任务文本改动 1 次:2026-09-11T14:42:48Z added: 本仓库所属团队把过往经验以 skill 形式保存在团队知识库中。动手之前先检索一次团队经验,有相关的就参考,没有就按自己的判断做。(原因:three runs with zero skill_search showed the injected skill_tools hint alone does not lead to a search; the sentence describes environment and workflow only, no defect information; same text for both arms;作废运行 20260911T140427Z-devloop-no-note, 20260911T140806Z-devloop-no-note)。
 配置修正 1 次:2026-09-11T15:48:50Z note visibility private → team (owner key, fill-note.mjs --fix-visibility; record visibility-fix.json); pool re-snapshotted (v1 kept as asset-pool-snapshot.v1-note-private.json)(作废运行 20260911T151132Z-devloop-note, 20260911T151342Z-devloop-note)。

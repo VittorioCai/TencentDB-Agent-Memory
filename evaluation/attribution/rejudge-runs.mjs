@@ -46,9 +46,18 @@ export function rejudgeRun(runDir, { outRoot, taskDir, tokensPlain }) {
 
   // acceptance, with the run's own evidence files when they exist
   if (existsSync(join(dest, "verdict.json"))) copyFileSync(join(dest, "verdict.json"), join(dest, "verdict.before-rejudge.json"));
-  const vArgs = [join(taskDir, "verify.mjs"), join(dest, "capture.jsonl"), "--json"];
-  if (existsSync(join(dest, "tool-call-logs.jsonl"))) vArgs.push(`--service-log=${join(dest, "tool-call-logs.jsonl")}`);
-  if (existsSync(join(dest, "reachability.json"))) vArgs.push(`--reachability=${join(dest, "reachability.json")}`);
+  // a repository-kind run (exit-code-fix): the verdict is read from the working
+  // copy against the frozen start, with the capture naming the writing call
+  let rj0 = null;
+  try { rj0 = JSON.parse(readFileSync(join(dest, "run.json"), "utf8")); } catch { rj0 = null; }
+  const repoTask = rj0?.repo_task ?? null;
+  const vArgs = repoTask?.working_copy && existsSync(join(dest, "start.json"))
+    ? [join(taskDir, "verify.mjs"), `--repo=${repoTask.working_copy}`, `--start=${join(dest, "start.json")}`, `--capture=${join(dest, "capture.jsonl")}`, `--diff-out=${join(dest, "final.diff")}`, "--json"]
+    : [join(taskDir, "verify.mjs"), join(dest, "capture.jsonl"), "--json"];
+  if (!repoTask) {
+    if (existsSync(join(dest, "tool-call-logs.jsonl"))) vArgs.push(`--service-log=${join(dest, "tool-call-logs.jsonl")}`);
+    if (existsSync(join(dest, "reachability.json"))) vArgs.push(`--reachability=${join(dest, "reachability.json")}`);
+  }
   const v = run("node", vArgs, { stdoutTo: join(dest, "verdict.json"), stderrTo: join(dest, "verify.rejudge.log") });
   notes.steps.verify = { exit: v.status, args: vArgs.slice(1).map((a) => a.replace(dest, ".")) };
   let verdict = null;
