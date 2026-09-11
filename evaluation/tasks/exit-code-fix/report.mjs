@@ -38,6 +38,25 @@ const rows = manifest.runs.map((r) => {
   const outcomes = d ? readJsonl(join(d, "outcome-events.jsonl")) : null;
   const wb = d ? readJson(join(d, "write-back.json")) : null;
   const cost = d ? readJson(join(d, "cost.json")) : null;
+  // what the model itself did with the team pool: skill_search calls and whether the note came back in any result
+  const capture = d ? readJsonl(join(d, "capture.jsonl")) : null;
+  let searches = null, noteReturned = null, searchQueries = [];
+  if (capture) {
+    const reqs = capture.filter((e) => e?.event === "http.request" && Array.isArray(e?.body?.json?.messages));
+    const last = reqs[reqs.length - 1];
+    const msgs = last?.body?.json?.messages ?? [];
+    const results = new Map(msgs.filter((m) => m?.role === "tool").map((m) => [m.tool_call_id, String(m.content ?? "")]));
+    const seen = new Set(); searches = 0; noteReturned = false;
+    for (const m of msgs) for (const tc of Array.isArray(m?.tool_calls) ? m.tool_calls : []) {
+      if (seen.has(tc.id)) continue; seen.add(tc.id);
+      const args = String(tc?.function?.arguments ?? "");
+      if (!/skill-bridge\/v3\/skill\/(search|get|get-by-name|view)/.test(args)) continue;
+      searches += 1;
+      let q = null; try { q = /"query"\s*:\s*"([^"]*)"/.exec(JSON.parse(args).command ?? "")?.[1] ?? null; } catch { q = null; }
+      if (q) searchQueries.push(q);
+      if ((results.get(tc.id) ?? "").includes(noteSpec.name ?? "\u0000")) noteReturned = true;
+    }
+  }
   const noteEvents = [...(events ?? []), ...(early ?? [])].filter((e) => e.asset_id === NOTE);
   const delivered = events === null && early === null ? null : Object.fromEntries([...noteEvents.reduce((m, e) => m.set(e.state, (m.get(e.state) ?? 0) + 1), new Map())]);
   const noteUsed = used === null ? null : used.filter((e) => e.asset_id === NOTE && e.state === "used").length;
@@ -48,7 +67,7 @@ const rows = manifest.runs.map((r) => {
     ...r, dir: d, run, verdict, cost,
     consumer: run?.consumer?.agent_id ?? r.consumer_agent_id ?? null,
     resolved_agent: run?.resolved_identity?.agent_id ?? null,
-    delivered, noteUsed, noteReview, noteOutcomes,
+    delivered, noteUsed, noteReview, noteOutcomes, searches, noteReturned, searchQueries,
     attempts: verdict?.attempts ?? [],
     files: c.diff?.files?.map((f) => `${f.status} ${f.file}`) ?? null,
     reference: c.reference_test ? `${q(c.reference_test.pass)}/${q(c.reference_test.tests)}` : null,
@@ -78,13 +97,13 @@ L.push(`- 判据保守在哪:验收只认验证器自带的参考测试与起点
 L.push("");
 L.push(`## 每次运行`);
 L.push("");
-L.push(`| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |`);
-L.push(`|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`);
+L.push(`| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |`);
+L.push(`|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`);
 for (const r of rows) {
   const deliv = r.delivered === null ? "?" : Object.keys(r.delivered).length ? Object.entries(r.delivered).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const outc = r.noteOutcomes === null ? "?" : Object.keys(r.noteOutcomes).length ? Object.entries(r.noteOutcomes).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const mt = r.model_tests ? (r.model_tests.files?.length ? `${q(r.model_tests.pass)}/${q(r.model_tests.tests)}` : "未加") : "?";
-  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废:任务文本改动前)" : r.sample ? "" : "(冒烟)"} | ${r.run_id} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
+  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废:任务文本改动前)" : r.sample ? "" : "(冒烟)"} | ${r.run_id} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
 }
 L.push("");
 L.push(`## 验收明细`);
@@ -150,8 +169,9 @@ for (const arm of ["no-note", "note"]) {
   if (!list.length) { L.push(`- ${arm}:0 次正式样本。`); continue; }
   const pass = count(list, (r) => r.verdict?.verdict === "PASS"), fail = count(list, (r) => r.verdict?.verdict === "FAIL"), err = count(list, (r) => !["PASS", "FAIL"].includes(r.verdict?.verdict));
   const usedN = count(list, (r) => (r.noteUsed ?? 0) > 0), delivN = count(list, (r) => r.delivered && Object.keys(r.delivered).length > 0), unkD = count(list, (r) => r.delivered === null);
+  const searched = count(list, (r) => (r.searches ?? 0) > 0), returned = count(list, (r) => r.noteReturned === true);
   const fresh = count(list, (r) => r.consumer && r.resolved_agent && r.consumer === r.resolved_agent), memOk = count(list, (r) => r.memory?.ok === true), memBad = count(list, (r) => r.memory?.ok === false);
-  L.push(`- ${arm}:${list.length} 次;验收 PASS ${pass} / FAIL ${fail} / ERROR ${err};笔记有送达事件 ${delivN} 次(送达未知 ${unkD});笔记被采用 ${usedN} 次;消费者为本次新建且与 proxy 解析一致 ${fresh} 次;记忆通道 ok ${memOk} 次、不 ok ${memBad} 次、未知 ${list.length - memOk - memBad} 次。`);
+  L.push(`- ${arm}:${list.length} 次;验收 PASS ${pass} / FAIL ${fail} / ERROR ${err};模型检索团队池 ${searched} 次运行、笔记出现在检索结果 ${returned} 次运行;笔记有送达事件 ${delivN} 次(送达未知 ${unkD});笔记被采用 ${usedN} 次;消费者为本次新建且与 proxy 解析一致 ${fresh} 次;记忆通道 ok ${memOk} 次、不 ok ${memBad} 次、未知 ${list.length - memOk - memBad} 次。`);
 }
 L.push("");
 L.push(`差异仅描述这些运行,不作为闸门或笔记收益的无偏或保守估计。`);
