@@ -1,6 +1,6 @@
 # 开发闭环第二任务 `exit-line-collect`:运行报告(脚本生成)
 
-生成于 2026-09-11T22:24:03Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
+生成于 2026-09-11T23:37:09Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
 笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v2,仓库只存 sha256 1e85dcf5dcf7…);v1 于 2026-09-11T17:55:11Z 退役(值已进 git 历史),本任务所有运行都在 v2 上。
 判据版本:repo-2026-09-11d;起点提交 141c044(与 exit-code-fix 相同),任务文本 sha256 f32af00888d3…。
 
@@ -164,6 +164,15 @@
 - 正式样本 6:无笔记 2(PASS 2),有笔记 4(PASS 4);作废 7,试跑 2。
 - 有笔记组送达 4、采用且通过 4、采用待复核 0;无笔记组判别值出现 0。
 - 记忆通道:11 次干净,0 次有借入,2 次不可判。
+
+## 成本(按组,cost.json 实测)
+
+| 组 | 有 usage 的运行 | 均模型调用次数 | 均墙钟 s | 均 prompt tok | 均 total tok | 均 cached tok | 验收 PASS |
+|---|---|---|---|---|---|---|---|
+| no-note | 2/2 | 25.0 | 107.5 | 1446.8k | 1461.1k | 1386.2k | 2 |
+| note | 4/4 | 23.0 | 100.5 | 1115.2k | 1127.5k | 1067.8k | 4 |
+
+只用 cost.json 已有的字段(每次流式响应的 usage 块之和、会话墙钟;模型调用次数 = 带 usage 的响应数;工具调用数不在 cost.json 里,不另测)。这是两组运行的实际开销对比,不是闸门机制的成本模型——没有哪次运行单独隔离了闸门自身的开销。
 
 ## 剩余缺点
 

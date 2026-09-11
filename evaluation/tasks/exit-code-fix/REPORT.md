@@ -86,8 +86,9 @@
 |---|---|---|---|---|---|---|
 | 2026-09-11T16:25:58Z | on | false → true | enabled:true | 66ebab0a→cdb5b484 | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T162547Z-before-extraction-on | true |
 | 2026-09-11T16:52:28Z | off | true → false | enabled:false | cdb5b484→66ebab0a | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T165220Z-before-extraction-off | true |
+| 2026-09-11T23:35:37Z | off | true → false | enabled:false | cdb5b484→66ebab0a | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T233531Z-before-extraction-off | true |
 
-开关时间窗:开 2026-09-11T16:25:58Z → 关 2026-09-11T16:52:28Z。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z; 20260911T154907Z-devloop-note 2026-09-11T16:27:42Z; 20260911T155035Z-devloop-note 2026-09-11T16:28:03Z。
+开关时间窗:开 2026-09-11T16:25:58Z → 关 2026-09-11T16:52:28Z, 2026-09-11T23:35:37Z。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z; 20260911T154907Z-devloop-note 2026-09-11T16:27:42Z; 20260911T155035Z-devloop-note 2026-09-11T16:28:03Z。
 
 写回记录里出现的新资产 10 项(每条写回调用前后比对注册表,以该次消费者用户的 key 读;注册表行只带 owner user,归档 key 的路径段给出被归档会话的 agent):skl-HJW3hVeUmdXj team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-isClIUZCR2nH codebuddy-tool-result-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-d9gLp1pxJFuK team-skill-bridge-http v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-uVUnsZwjjQmq eval-verifier-regression-fix-workflow v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-nyuzDt1y8wmt codebuddy-bash-tool-result-format v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-zxOrEOb022WE team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-706O31iXcvAU evaluation-repo-test-conventions v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-z0V6zwphUvhB codebuddy-tool-result-exit-line v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-NNeJq4zXYret confirm-fix-with-git-stash-baseline v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265; skl-47VVI0Hmdzz2 codebuddy-exit-status-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265。owner user 等于该次消费者用户的 10/10;归档 agent 等于该次消费者的 10/10。
 
@@ -156,6 +157,15 @@ apply 结果:status candidate → approved,与最后一次试算(admit)一致。
 - note:3 次;验收 PASS 3 / FAIL 0 / ERROR 0;模型检索团队池 3 次运行、笔记出现在检索结果 3 次运行;笔记有送达事件 3 次(送达未知 0);笔记被采用 3 次;消费者为本次新建且与 proxy 解析一致 3 次;记忆通道 ok 3 次、不 ok 0 次、未知 0 次。
 
 差异仅描述这些运行,不作为闸门或笔记收益的无偏或保守估计。
+
+## 成本(按组,cost.json 实测)
+
+| 组 | 有 usage 的运行 | 均模型调用次数 | 均墙钟 s | 均 prompt tok | 均 total tok | 均 cached tok | 验收 PASS |
+|---|---|---|---|---|---|---|---|
+| no-note | 2/2 | 26.5 | 142.0 | 1942.3k | 1959.6k | 1865.2k | 2 |
+| note | 3/3 | 20.0 | 84.7 | 940.4k | 949.1k | 891.7k | 3 |
+
+只用 cost.json 已有的字段(每次流式响应的 usage 块之和、会话墙钟;模型调用次数 = 带 usage 的响应数;工具调用数不在 cost.json 里,不另测)。这是两组运行的实际开销对比,不是闸门机制的成本模型——没有哪次运行单独隔离了闸门自身的开销。
 
 ## 剩余缺点
 

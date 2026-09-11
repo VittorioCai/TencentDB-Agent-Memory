@@ -62,7 +62,7 @@ const BASELINE = { frozen_at: "2026-09-06T08:47:33Z", source_runs: [{ run_id: "p
 
 test("runFacts: null for every field when the run has no extras", () => {
   const f = runFacts(run("x", "PASS", "r"));
-  assert.deepEqual(f, { first_dial_failed: null, first_batch_size: null, first_batch_all_ok: null, first_batch_any_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, wall_seconds: null, prompt_tokens: null, total_tokens: null, cached_tokens: null, profile_memory_present: null, l3_watch_hits: null, non_pool_skill_read: null });
+  assert.deepEqual(f, { first_dial_failed: null, first_batch_size: null, first_batch_all_ok: null, first_batch_any_failed: null, failed_attempts: null, attempts: null, rejected_seen: null, corrected: null, validated: null, turns: null, wall_seconds: null, prompt_tokens: null, total_tokens: null, cached_tokens: null, profile_memory_present: null, l3_watch_hits: null, non_pool_skill_read: null });
 });
 
 test("the gate shows in seen / first-dial / corrected, while the pass rate is identical", () => {
@@ -138,4 +138,21 @@ test("first batch: calls issued in the same message count together; a later retr
   assert.equal(g.failed_attempts, 1);
   const text = renderRuns(summarizeRuns([{ label: "x", run_id: "r", verdict: "PASS", verdict_doc: sameMessage }]));
   assert.match(text, /issued in the same model message/);
+});
+
+test("cost beside the benefit (2026-09-12): per-group means from cost.json only, and the caveat sentence", () => {
+  const withCost = (label, id, cost) => ({ ...richRun(label, id, { first: "right", seen: false, corrected: false, wall: cost.wall_seconds, started_at: "2026-09-06T11:00:00Z" }), cost });
+  const runs = [
+    withCost("gate-off", "o1", { turns: 6, wall_seconds: 40, prompt_tokens: 200000, total_tokens: 204000, cached_tokens: 150000 }),
+    withCost("gate-off", "o2", { turns: 8, wall_seconds: 60, prompt_tokens: 240000, total_tokens: 244000, cached_tokens: 190000 }),
+    withCost("gate-on", "n1", { turns: 4, wall_seconds: 15, prompt_tokens: 110000, total_tokens: 112000, cached_tokens: 90000 }),
+  ];
+  const s = summarizeRuns(runs, { baseline: BASELINE });
+  const off = s.groups.find((g) => g.label === "gate-off");
+  assert.equal(off.turns_mean, 7); assert.equal(off.cost_runs, 2); assert.equal(off.wall_seconds_mean, 50);
+  const md = renderRuns(s);
+  assert.match(md, /## Cost, as measured/);
+  assert.match(md, /\| gate-off \| 2\/2 \| 7\.0 \| 50\.0 \| 220\.0k \| 224\.0k \| 170\.0k \|/);
+  assert.match(md, /not\*\* a cost model of the gate mechanism/);
+  assert.match(md, /不是闸门机制的成本模型/);
 });

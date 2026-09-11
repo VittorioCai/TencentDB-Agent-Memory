@@ -134,7 +134,7 @@ import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
 m=re.search(r'^upstream:\n(?:[ \t]+\w+:.*\n)*?[ \t]+url:[ \t]*\"([^\"]*)\"',t,re.M)
 print(m.group(1) if m else '?')"; }
-current_agent() { python3 -c "
+current_agent() { [[ -f "$CONFIG" ]] || { echo "n/a (no proxy config in this checkout)"; return 0; }; python3 -c "
 import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
 m=re.search(r'debugForceIdentity:\n(?:[ \t]+\w+:.*\n)*?[ \t]+agent_id:[ \t]*\"([^\"]*)\"',t,re.M)

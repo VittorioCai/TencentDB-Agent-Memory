@@ -33,6 +33,8 @@
    `REPARSE-DIFF-2026-09-11-exitline.md`);第二任务 → `collect-artifacts.mjs`(批次四 14 次记录的 95 条退出行由全 null
    变为全部可读,used 事件按代码事实不受影响,`REPARSE-DIFF-2026-09-11-exitline-collect.md`)。
 7. **demo** `bash evaluation/demo.sh --plain`:7 段(第 7 段:第二任务与作者维度),`evaluation/demo-output.txt`。
+8. **成本并排**(审阅 2026-09-12 ②):批次四汇总表与两份闭环 REPORT 各加一表,只用 `cost.json` 已有字段按组列均模型调用次数、墙钟、
+   prompt / total / cached token;口径:这是两组运行的实际开销对比,不是闸门机制的成本模型。
 
 ## 原始记录在分支里(2026-09-12 起)
 
@@ -40,7 +42,9 @@
 (`evaluation/runner/runs/20260910T23*`)与 23 个闭环目录(`20260911T1*-devloop-*`,含作废运行)强制加入分支,每目录只排除
 `capture-before.jsonl`(运行前探针残留,无脚本读取;哈希在 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);
 入库前按 `.env` 与三把用户密钥的真实值逐文件扫描,无命中(捕获里的 user-key 头本来就是 `[REDACTED]`)。批次四的重判副本不入库,
-`deliver-check.sh` 发现缺失会用报告开头的同一命令重生成。
+`deliver-check.sh` 发现缺失会用报告开头的同一命令重生成。**干净克隆彩排**(无密钥、无 Core、无 docker):套件 604/604,批次四重判副本
+重生成、校准 / 汇总 / reparse 与两份闭环 REPORT 均与提交副本 diff 0——前提是已烧毁值登记簿 `evaluation/attribution/burned-tokens.json`
+在场(`resolve-tokens.mjs` 的离线路线,只收 git 树里已有的值);各步依赖列在 `evaluation/REVIEW-GUIDE.md`。
 
 ## 验收命令与输出
 
@@ -49,7 +53,7 @@
 | `node --test evaluation/**/*.test.mjs`(仓库根) | 0 失败 | `evaluation/delivery/2026-09-11b/suite.txt` |
 | `bash evaluation/tasks/exit-code-fix/selfcheck.sh` | 【0】起点可解释、【1】FAIL、【2】PASS、【3】0 新增失败;【4】闭环后判别值已进记录,该段失败属预期 | `evaluation/delivery/2026-09-11b/selfcheck.txt` |
 | `bash evaluation/tasks/exit-line-collect/selfcheck.sh` | 同上;链接目标冻在 conditions.json | `evaluation/delivery/2026-09-11b/selfcheck-exit-line-collect.txt` |
-| `bash evaluation/deliver-check.sh` | 各生成报告与提交副本 diff 0 | `evaluation/delivery/2026-09-11b/SUMMARY.md` |
+| `bash evaluation/deliver-check.sh` | 各生成报告与提交副本 diff 0 | `evaluation/delivery/2026-09-12b/SUMMARY.md`(线上栈);干净克隆见 REVIEW-GUIDE 的表 |
 | `node evaluation/runner/batch-conditions.mjs --check --conditions=…batch4-conditions.json` | 批次后按设计 FAIL 的项 | `evaluation/delivery/2026-09-11b/conditions-check.txt` |
 | `bash evaluation/demo.sh --plain` | 7 段无 fixture | `evaluation/delivery/2026-09-11b/demo.txt` |
 
@@ -91,7 +95,6 @@ Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-11d30e
 `evaluation/gate/artifacts/core-image-switch-20260911T224508Z.json`。批次四与两个闭环任务当时跑在"同一 MemoryCore 代码的挂载 +
 摘要未记的上游镜像"上(重建后拉到的上游镜像已证明不是它,`core-mount-accept-failure-20260912.log`),所以运行时镜像对那些记录
 只能写"未知",对现在的线上是自建镜像的摘要。proxy 强制身份为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy
-密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **on**(产品启动脚本每次重生成配置,
-下次对照运行前用 `evaluation/runner/core-extraction.sh off --record` 关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
+密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **off**(2026-09-11T23:35Z 拨回并记录;产品启动脚本每次重生成配置会把它拨回 on,重起后要再关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
 批次四资产 right approved / wrong failed;10 项由消费者会话提取的候选属 usr-4u07qc2kuj、private,其中 `skl-z0V6zwphUvhB` 已由所有者
 提交复核并带签名评估;第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。

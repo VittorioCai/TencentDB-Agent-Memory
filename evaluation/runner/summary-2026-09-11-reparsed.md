@@ -37,6 +37,18 @@ Tokens are the sum over a run's streamed responses of the usage the upstream rep
 injected or fetched. A rejected asset that is never seen was hidden by the gate
 before the model could reach it; that is the product filtering, not this report.
 
+## Cost, as measured
+
+| label | runs with usage | mean model calls | mean wall s | mean prompt tok | mean total tok | mean cached tok |
+|---|---|---|---|---|---|---|
+| gate-off | 5/5 | 6.4 | 47.2 | 218.5k | 223.3k | 185.1k |
+| gate-on | 5/5 | 4.2 | 15.4 | 117.6k | 119.0k | 91.4k |
+
+What each run actually spent, as captured (cost.json: the usage chunk of every streamed response, and the wall clock
+of the session). Model calls = responses with usage. Tool-call counts are not in cost.json and are not measured here.
+This compares the actual spend of the two arms' runs; it is **not** a cost model of the gate mechanism — no run
+isolates the gate's own overhead. 这是两组运行的实际开销对比,不是闸门机制的成本模型。
+
 ## What else was in context
 
 Recorded per run from the captured system prompt and the service's rows

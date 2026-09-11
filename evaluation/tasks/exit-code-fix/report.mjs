@@ -344,6 +344,22 @@ for (const arm of ["no-note", "note"]) {
 L.push("");
 L.push(`差异仅描述这些运行,不作为闸门或笔记收益的无偏或保守估计。`);
 L.push("");
+L.push(`## 成本(按组,cost.json 实测)`);
+L.push("");
+{
+  const meanOf = (xs) => { const v = xs.filter((x) => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const k = (x) => (x === null ? "—" : `${(x / 1000).toFixed(1)}k`), r1 = (x) => (x === null ? "—" : x.toFixed(1));
+  L.push(`| 组 | 有 usage 的运行 | 均模型调用次数 | 均墙钟 s | 均 prompt tok | 均 total tok | 均 cached tok | 验收 PASS |`);
+  L.push(`|---|---|---|---|---|---|---|---|`);
+  for (const arm of ["no-note", "note"]) {
+    const list = byArm(arm), c = list.map((r) => r.cost).filter(Boolean);
+    L.push(`| ${arm} | ${c.length}/${list.length} | ${r1(meanOf(c.map((x) => x.turns)))} | ${r1(meanOf(c.map((x) => x.wall_seconds)))} | ${k(meanOf(c.map((x) => x.prompt_tokens)))} | ${k(meanOf(c.map((x) => x.total_tokens)))} | ${k(meanOf(c.map((x) => x.cached_tokens)))} | ${list.filter((r) => r.verdict?.verdict === "PASS").length} |`);
+  }
+  L.push("");
+  L.push(`只用 cost.json 已有的字段(每次流式响应的 usage 块之和、会话墙钟;模型调用次数 = 带 usage 的响应数;工具调用数不在 cost.json 里,不另测)。` +
+    `这是两组运行的实际开销对比,不是闸门机制的成本模型——没有哪次运行单独隔离了闸门自身的开销。`);
+}
+L.push("");
 L.push(`## 剩余缺点`);
 L.push("");
 for (const s of [

@@ -63,6 +63,7 @@ export function runFacts(run, { rejected = new Set() } = {}) {
     rejected_seen: events ? events.some((e) => rejected.has(e.asset_id)) : null,
     corrected: events ? events.filter((e) => e.state === "corrected").length : null,
     validated: events ? events.filter((e) => e.state === "validated").length : null,
+    turns: run.cost?.turns ?? null,   // model calls (the upstream responses with usage), from cost.json
     wall_seconds: run.cost?.wall_seconds ?? null,
     // Null when the capture carried no usage chunk; never zero.
     prompt_tokens: run.cost?.prompt_tokens ?? null,
@@ -128,6 +129,8 @@ export function summarizeRuns(runs, { baseline = null } = {}) {
       failed_attempts: g.facts.some((f) => f.failed_attempts != null) ? g.facts.reduce((a, f) => a + (f.failed_attempts ?? 0), 0) : null,
       corrected: g.facts.some((f) => f.corrected != null) ? g.facts.reduce((a, f) => a + (f.corrected ?? 0), 0) : null,
       validated: g.facts.some((f) => f.validated != null) ? g.facts.reduce((a, f) => a + (f.validated ?? 0), 0) : null,
+      cost_runs: g.facts.filter((f) => f.total_tokens != null).length,
+      turns_mean: mean(g.facts.map((f) => f.turns)),
       wall_seconds_mean: mean(g.facts.map((f) => f.wall_seconds)),
       prompt_tokens_mean: mean(g.facts.map((f) => f.prompt_tokens)),
       total_tokens_mean: mean(g.facts.map((f) => f.total_tokens)),
@@ -194,6 +197,23 @@ export function renderRuns({ groups, total, rejected_assets = [], baseline_froze
     lines.push("", "\"seen\" means the asset appears at any lifecycle stage of the run — recalled,");
     lines.push("injected or fetched. A rejected asset that is never seen was hidden by the gate");
     lines.push("before the model could reach it; that is the product filtering, not this report.");
+  }
+
+  // Cost beside the benefit (reviewer 2026-09-12): only what cost.json already holds, per group.
+  const withCost = groups.filter((g) => g.cost_runs > 0);
+  if (withCost.length > 0) {
+    lines.push("", "## Cost, as measured", "");
+    lines.push("| label | runs with usage | mean model calls | mean wall s | mean prompt tok | mean total tok | mean cached tok |");
+    lines.push("|---|---|---|---|---|---|---|");
+    const k = (x) => (x === null ? "—" : `${(x / 1000).toFixed(1)}k`);
+    const r1 = (x) => (x === null ? "—" : x.toFixed(1));
+    for (const g of withCost) {
+      lines.push(`| ${g.label} | ${g.cost_runs}/${g.started} | ${r1(g.turns_mean)} | ${r1(g.wall_seconds_mean)} | ${k(g.prompt_tokens_mean)} | ${k(g.total_tokens_mean)} | ${k(g.cached_tokens_mean)} |`);
+    }
+    lines.push("", "What each run actually spent, as captured (cost.json: the usage chunk of every streamed response, and the wall clock");
+    lines.push("of the session). Model calls = responses with usage. Tool-call counts are not in cost.json and are not measured here.");
+    lines.push("This compares the actual spend of the two arms' runs; it is **not** a cost model of the gate mechanism — no run");
+    lines.push("isolates the gate's own overhead. 这是两组运行的实际开销对比,不是闸门机制的成本模型。");
   }
 
   const withConf = groups.filter((g) => g.facts.some((f) => f.profile_memory_present !== null || f.non_pool_skill_read !== null));
