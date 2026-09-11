@@ -6,6 +6,21 @@
 原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)与 `20260911T1*-devloop-*`(闭环,23),每目录只少一个无脚本读取的
 `capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
+## 干净克隆上什么能复算,什么需要线上(2026-09-12 彩排实测)
+
+`bash evaluation/deliver-check.sh` 在一个没有密钥、没有 Core、没有 docker 的克隆上跑过(`evaluation/delivery/rehearsal-*`
+不入库,结论如下);每一步的依赖写在这里,评审不必猜。
+
+| 步骤 | 干净克隆(无密钥、无 Core) | 需要什么 |
+|---|---|---|
+| 单元套件 604 | ✅ 全过 | 无 |
+| 批次四重判副本重生成、校准表、汇总表、重判差异、退出行 reparse | ✅ 与提交副本 diff 0(重判差异只差副本路径一行) | 已烧毁值登记簿 `attribution/burned-tokens.json`(值早已在提交的记录里;无登记簿则这几步跳过并说明) |
+| 两个闭环 REPORT | ✅ diff 0 | 无 |
+| 两个 selfcheck 【0】–【3】 | ✅ | 无;【4】离线时只核版本与 sha256,可见性与 content_hash 标 SKIP |
+| demo 7 段 | 6 段(record/fixture),第 1 段"资产池"离线降为夹具 | 第 1 段与第 5 段的 live 需要 Core + 作者密钥 |
+| 条件核对 `batch-conditions --check` | 文件哈希、基线等本地项可核;Core 读取、容器镜像、消费者记忆各行标 unreadable / 未冻结,不算通过 | 线上各行需要 Core + docker + 密钥 |
+| 线上状态一节 | 只记录,不判决 | Core + proxy 配置 + 密钥 |
+
 ## 一句话主张,和三个否定
 
 **我们把"资产被使用"从模型自述变成了被校准过的可测量量,并让闸门按可信结果在产品里写状态。**

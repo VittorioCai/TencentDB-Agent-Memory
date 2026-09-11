@@ -8,7 +8,7 @@
  *
  *   node evaluation/tasks/exit-code-fix/gate-observe.mjs --label=<why now>
  */
-import { readFileSync, appendFileSync } from "node:fs";
+import { existsSync, readFileSync, appendFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const DIR = dirname(fileURLToPath(import.meta.url));
@@ -18,7 +18,9 @@ const args = process.argv.slice(2);
 const label = (args.find((a) => a.startsWith("--label=")) ?? "").slice(8) || "observation";
 const tokens = JSON.parse(readFileSync(join(DIR, "tokens.json"), "utf8"));
 const id = Object.keys(tokens).find((k) => !k.startsWith("_"));
-const k = readFileSync(join(REPO, "deploy/global-images/.topic4-user-key"), "utf8").replace(/\s+/g, "");
+const keyPath = join(REPO, "deploy/global-images/.topic4-user-key");
+if (!existsSync(keyPath)) { console.log(`gate-observe: no author key at ${keyPath} (a clean clone) — nothing observed, nothing written`); process.exit(0); }
+const k = readFileSync(keyPath, "utf8").replace(/\s+/g, "");
 const post = (path, body) => fetch(`${CORE_URL}${path}`, { method: "POST", headers: { "content-type": "application/json", "x-tdai-service-id": "default", authorization: `Bearer ${k}`, "x-tdai-user-key": k }, body: JSON.stringify(body) }).then((r) => r.json()).catch((e) => ({ code: -1, message: String(e) }));
 const a = (await post("/v3/meta/asset/get", { asset_id: id }))?.data ?? {};
 let gate = null;

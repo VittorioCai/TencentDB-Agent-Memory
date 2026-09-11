@@ -100,7 +100,9 @@ function atomicFootprint(agentId) {
   } catch { return null; }
 }
 function memSnapshotTo(path) {
-  const buf = execFileSync("docker", ["exec", CONTAINER, "tar", "czf", "-", "-C", MEM_ROOT, "."], { stdio: ["ignore", "pipe", "ignore"], maxBuffer: 256 * 1024 * 1024 });
+  // null when the container cannot be read (no docker, a clean clone): the memory rows then read as unreadable, never as a pass
+  let buf;
+  try { buf = execFileSync("docker", ["exec", CONTAINER, "tar", "czf", "-", "-C", MEM_ROOT, "."], { stdio: ["ignore", "pipe", "ignore"], maxBuffer: 256 * 1024 * 1024 }); } catch { return null; }
   writeFileSync(path, buf);
   return path;
 }
@@ -282,13 +284,13 @@ async function readLive(spec) {
   // 记忆:整树哈希、消费者范围哈希、一份临时快照(给干净检查与来源扫描用)
   const tmp = mkdtempSync(join(tmpdir(), "batchcond-"));
   const tar = memSnapshotTo(join(tmp, "memory.tar.gz"));
-  const memFiles = filesInTar(tar);
+  const memFiles = tar ? filesInTar(tar) : [];   // null tar: container unreadable (no docker / clean clone)
   const scoped = onlyAgent(memFiles, spec.consumer_agent_id);
   const memory = {
     root: MEM_ROOT,
     tree_sha256: memTreeHash(),
     consumer_scope: { agent_id: spec.consumer_agent_id, sha256: memScopedHash(spec.consumer_agent_id), files: scoped.length },
-    snapshot_files: memFiles.length,
+    snapshot_files: memFiles.length, snapshot_readable: tar != null,
   };
   memory.atomic_footprint = atomicFootprint(spec.consumer_agent_id);
   const watch = existsSync(join(taskDir, "confounders.watch"))

@@ -44,6 +44,20 @@ event to `used`.
 A token surviving both filters is *discriminative*, and only those may support a
 `used` judgement.
 
+## Recomputing from a clean clone (2026-09-12)
+
+The reports are recomputed from the committed records (`evaluation/runner/runs/`, batch 4 and both dev-loop
+tasks) by `bash evaluation/deliver-check.sh`. The analysis needs each discriminative value in plaintext, and
+the design keeps plaintext only in Core (`resolve-tokens.mjs`, pinned by version, content hash and sha256).
+A clean clone has no author key and no Core, so `resolve-tokens.mjs` has an **offline route** for values that
+are already **burned** — their plaintext is in the committed records (the captures, verdicts, receipts of the
+runs that used them), and the rule retires such a value for good. `evaluation/attribution/burned-tokens.json`
+lists them; `build-burned-registry.mjs` writes it from Core and refuses any value it cannot find in the
+committed tree with `git grep`, so the registry exposes nothing that git does not already hold. Offline, a
+value is accepted only when its version equals the pinned one and its sha256 set equals the frozen
+`token_sha256`; the content hash is stated as not verified. With a key present the registry is never
+consulted. `TOKENS_OFFLINE=1` forces the route; a missing key file selects it.
+
 ## Usage
 
 ```bash

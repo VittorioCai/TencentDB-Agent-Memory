@@ -123,13 +123,13 @@ if n != 1:
 open(path, "w", encoding="utf-8").write(new)
 PY
 }
-current_task() { python3 -c "
+current_task() { [[ -f "$CONFIG" ]] || { echo "n/a (no proxy config in this checkout)"; return 0; }; python3 -c "
 import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
 m=re.search(r'debugForceIdentity:\n(?:[ \t]+\w+:.*\n)*?[ \t]+task_id:[ \t]*\"([^\"]*)\"',t,re.M)
 print(m.group(1) if m else '?')"; }
 
-current_upstream() { python3 -c "
+current_upstream() { [[ -f "$CONFIG" ]] || { echo "n/a (no proxy config in this checkout)"; return 0; }; python3 -c "
 import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
 m=re.search(r'^upstream:\n(?:[ \t]+\w+:.*\n)*?[ \t]+url:[ \t]*\"([^\"]*)\"',t,re.M)

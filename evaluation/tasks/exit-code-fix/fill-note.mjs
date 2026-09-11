@@ -84,8 +84,10 @@ function provenance(assetId, value) {
 
 const team_id = pair.team_id;
 const authorAgent = pair.author_agent_id;
-const authorUser = (await core("/v3/meta/agent/get", { agent_id: authorAgent }))?.data?.owner_user_id;
-if (!authorUser) { console.error("cannot resolve the author's user id from Core"); process.exit(1); }
+// --check without a key (a clean clone) never talks to Core: the author's user id is not needed on that path.
+const OFFLINE_CHECK = MODE === "check" && (!k || process.env.TOKENS_OFFLINE === "1");
+const authorUser = OFFLINE_CHECK ? null : (await core("/v3/meta/agent/get", { agent_id: authorAgent }))?.data?.owner_user_id;
+if (!authorUser && !OFFLINE_CHECK) { console.error("cannot resolve the author's user id from Core"); process.exit(1); }
 
 if (MODE === "dry-run") {
   const v = fresh();
@@ -114,7 +116,7 @@ if (MODE === "fix-visibility") {
 if (MODE === "check") {
   if (!id) { console.error("tokens.json is empty: nothing to check (run without --check first)"); process.exit(1); }
   const spec = tokens[id];
-  if (!k || process.env.TOKENS_OFFLINE === "1") {
+  if (OFFLINE_CHECK) {
     // offline: the value comes from the burned registry (verified against the frozen sha256); Core is not consulted,
     // so the content hash and the visibility are NOT checked here — said so, not skipped silently.
     const { resolveTokens } = await import(join(REPO, "evaluation/attribution/resolve-tokens.mjs"));
