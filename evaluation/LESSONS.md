@@ -220,3 +220,10 @@ run-once 每次都同步了结果,`core-outcomes.json` 却是 trusted=0:`content
 `skill.extraction.enabled: false` 下 Core 不构造提取队列与 worker;`/v3/skill/extract` 返回 task_id 与
 归档 key,注册表永远不会出现新资产。四次写回全部"受理、无资产"。教训:走产品的既有能力之前,先确认
 那条能力在当前配置下真的在跑;开关是产品配置改动,按 §10 记录并由用户决定。
+
+**闭环的"闭"要在产品侧读回:回流有资产、闸门 decided_at 动了,才算。**(2026-09-11 第 5 件收尾)
+顺序按审阅定:开提取 → 写回 → 等资产 → 关提取 → 再让闸门判(否则分不清闸门判的是哪个证据集)。
+开关前后各拍池快照;作者 key 的快照看不到消费者私有的候选(提取出的 skill 默认 private),来源以每次写回
+前后的注册表比对与归档 key 里的 agent 段为准。apply 之前先确认作者先验有没有计入(Core 标 "reported,
+not used",只定 review_priority)、两次验证是不是跨人(消费者 user ≠ 作者 user)。教训:每一跳的证据要写进
+报告,闭合与否由记录里的时间戳与状态变化说,不由步骤跑没跑说。

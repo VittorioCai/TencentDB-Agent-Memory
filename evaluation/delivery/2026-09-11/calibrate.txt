@@ -1,0 +1,59 @@
+written → evaluation/delivery/2026-09-11/CALIBRATION-reproduced.md
+## 送达一致性
+
+| set | TP | FP | TN | FN | isolation failure | unsettled | rated/total | accuracy |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 0 | 4/4 | 1 |
+| gate-rules-2026-09-08f · batch4-trial (checkpoint pair, not a sample) (frozen) | 3 | 0 | 1 | 0 | 0 | 0 | 4/4 | 1 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 5 | 1 | 0 | 0 | 20/20 | 0.95 |
+| **cumulative** | 21 | 0 | 6 | 1 | 0 | 0 | 28/28 | 0.964 |
+
+An isolation failure is not a judging error: the asset was hidden and its
+content reached the model anyway, so calling it used was right and the
+setup was what failed. Unsettled rows — a capture that does not cover the
+run, a source the record cannot name, whether the asset was hidden not
+recorded — count for neither side; `rated/total` is how much of the batch
+measured anything. An arrival from an identified other source is NOT
+unsettled: the content did reach the model.
+
+## 实际使用(参考判定 = 采纳)
+
+| set | TP | FP | TN | FN | 采纳未知 | rated/total | accuracy | 采纳证据覆盖率 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 4/4 | 1 | 1 |
+| gate-rules-2026-09-08f · batch4-trial (checkpoint pair, not a sample) (frozen) | 3 | 0 | 1 | 0 | 0 | 4/4 | 1 | 1 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 6 | 0 | 0 | 20/20 | 1 | 1 |
+| **cumulative** | 21 | 0 | 7 | 0 | 0 | 28/28 | 1 | 1 |
+
+## Per run
+
+| run | rules | experiment | model | run verdict | capture | asset | hidden | judged used | delivery | 送达桶 | adopted | benefited | 使用桶 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 20260910T231329Z-b4-prep | gate-rules-2026-09-08f | batch4-prep (evidence base, not a sample) | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | false | true_positive |
+| 20260910T231329Z-b4-prep | gate-rules-2026-09-08f | batch4-prep (evidence base, not a sample) | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T231900Z-b4-prep | gate-rules-2026-09-08f | batch4-prep (evidence base, not a sample) | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | false | true_positive |
+| 20260910T231900Z-b4-prep | gate-rules-2026-09-08f | batch4-prep (evidence base, not a sample) | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232209Z-trial-gate-off | gate-rules-2026-09-08f | batch4-trial (checkpoint pair, not a sample) | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | false | true_positive |
+| 20260910T232209Z-trial-gate-off | gate-rules-2026-09-08f | batch4-trial (checkpoint pair, not a sample) | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232305Z-trial-gate-on | gate-rules-2026-09-08f | batch4-trial (checkpoint pair, not a sample) | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232305Z-trial-gate-on | gate-rules-2026-09-08f | batch4-trial (checkpoint pair, not a sample) | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232424Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | false | true_positive |
+| 20260910T232424Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232507Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232507Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232522Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | false | true_positive |
+| 20260910T232522Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232611Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232611Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232627Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | unknown | true_positive |
+| 20260910T232627Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | unknown | true_positive |
+| 20260910T232715Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232715Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232730Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-sZFb3KatWY6m | false | true | delivered | true_positive | true | unknown | true_positive |
+| 20260910T232730Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | ERROR | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232818Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232818Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232835Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | false | false | delivered | false_negative | false | unknown | true_negative |
+| 20260910T232835Z-gate-off | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |
+| 20260910T232924Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-sZFb3KatWY6m | true | false | not_delivered | true_negative | false | unknown | true_negative |
+| 20260910T232924Z-gate-on | gate-rules-2026-09-08f | batch4 | deepseek-v4-flash | PASS | complete | skl-oBaDO5CceKnr | false | true | delivered | true_positive | true | true | true_positive |

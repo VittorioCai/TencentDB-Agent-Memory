@@ -30,5 +30,6 @@ const rec = {
   gate: gate ? { decision: gate.decision, status_target: gate.status_target, decided_at: gate.decided_at, rules_version: gate.rules_version, reasons: gate.reasons, online: gate.signals?.online ?? null, effective: gate.effective ?? null } : null,
   gate_get: g,
 };
-appendFileSync(join(DIR, "gate-observations.jsonl"), JSON.stringify(rec) + "\n");
+const outPath = (args.find((a) => a.startsWith("--out=")) ?? "").slice(6) || join(DIR, "gate-observations.jsonl");
+appendFileSync(outPath, JSON.stringify(rec) + "\n");
 console.log(`${rec.at} [${label}] ${id}: status ${rec.status}, visibility ${rec.visibility}, evidence_revision ${rec.evidence_revision}, gate ${rec.gate?.decision ?? "?"} decided_at ${rec.gate?.decided_at ?? "?"} (online validated ${rec.gate?.online?.validated ?? "?"}, used ${rec.gate?.online?.used ?? "?"}, corrected ${rec.gate?.online?.corrected ?? "?"})`);

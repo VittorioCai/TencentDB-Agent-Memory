@@ -46,6 +46,13 @@ proxy 在系统提示里注入 `<skill_tools>`(如何 curl `skill_search` / `ski
 后者对从未跑过的新 agent 是 "(none)",团队资产只在模型主动 `skill_search` 时送达。task.md 不提知识池,
 冒烟里模型一次也没检索:有笔记组是否"送达",按事件如实报,不靠改任务文本补。
 
+## 闭环的结果(2026-09-11,细节在 REPORT.md)
+
+无笔记 2/2 PASS(检索了团队池,candidate 的笔记不在结果里);有笔记 2/2 PASS(检索返回笔记 → 取回 → 新建带判别值的
+测试文件 → used → validated);结果行以可信身份记入 Core(evidence_revision 2 → 6);四次会话经产品提取回流 10 项候选
+(需临时打开 `skill.extraction.enabled`,用户开关,§10 记录);闸门按规则 admit,笔记 candidate → approved。
+作废留档 4 次(任务文本改动前 2、笔记私有 2)。
+
 ## 验收命令
 
 ```bash
@@ -83,3 +90,6 @@ bash evaluation/tasks/exit-code-fix/selfcheck.sh
 | `confounders.watch` | 上下文里会泄答案的短语清单,每次运行记录是否在场 |
 | `write-back.mjs` | 回流:以该次消费者身份把会话贴给产品的 `/v3/skill/extract`,记录作者、来源会话、提取任务、出现的资产与实际状态 |
 | `report.mjs` | 由清单与运行记录生成 `REPORT.md`;结论句全由数据算出 |
+| `gate-observe.mjs` / `gate-evaluate.mjs` | 读回并记录笔记在 Core 的状态、evidence_revision、闸门判定;试算(apply:false)与落地(apply:true)都记 `gate-evaluations.jsonl` |
+| `extraction-switch.jsonl` / `pool-*.json` | 用户开关提取的 §10 记录(`evaluation/runner/core-extraction.sh`)与开关前后的池快照 |
+| `visibility-fix.json` / `asset-pool-snapshot.v1-note-private.json` | 笔记私有 → team 的记录与修正前的池快照 |

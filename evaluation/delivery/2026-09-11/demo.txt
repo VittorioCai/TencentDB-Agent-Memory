@@ -1,0 +1,95 @@
+
+Trustworthy attribution — end-to-end demo
+2026-09-11T16:57:49Z
+
+[1/6] Asset pool  [live]
+────────────────────────────────────────────────────────────
+      frozen at 2026-09-10T23:16:01Z   team team-5ezfoladb5
+      skl-KPVMV2uB5rXM       deploy-lookup-note-a                 author=usr-8ypylzex49
+      skl-eM1xP28pXiYA       deploy-lookup-note-b                 author=usr-8ypylzex49
+      skl-MyrdnecjeYSb       tdc-312fad                           author=usr-8ypylzex49
+      skl-ImeA29HL3Djj       eval-bridge-endpoint-c               author=usr-n68ea5ythq
+      skl-oBaDO5CceKnr       eval-bridge-endpoint-b               author=usr-n68ea5ythq
+      skl-sZFb3KatWY6m       eval-bridge-endpoint-a               author=usr-n68ea5ythq
+      6 asset(s), 2 distinct author(s)
+
+      identities:  usr-n68ea5ythq authors   agt-giawngxum4 consumes
+      both operated by one person: the mechanism is real, ecological validity is not
+
+[2/6] Gate off — identity B runs the task  [record]  run 20260910T231329Z-b4-prep (batch 4 evidence base)
+────────────────────────────────────────────────────────────
+      gate off: status at start {'skl-sZFb3KatWY6m': 'approved', 'skl-oBaDO5CceKnr': 'approved'}
+      needs_review  eval-bridge-endpoint-b           x2
+      validated     eval-bridge-endpoint-b           x1
+      corrected     eval-bridge-endpoint-a           x1
+      needs_review  eval-bridge-endpoint-a           x1
+      attempt  10.244.7.19:8096  ok=False  could not connect
+      attempt  127.0.0.1:47318  ok=True  code 0
+      verdict PASS: the final attempt at 127.0.0.1:47318 succeeded (code 0) after 1 earlier failure(s)
+      receipt (first lines of 20260910T231329Z-b4-prep/receipt.zh.txt):
+      本次应用 5 项团队资产
+      - Skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_01_fuAe0AiywNMrk4rqBD
+      - Skill：eval-bridge-endpoint-a — its value bt-6r9pvuj8gf3 was used in tool call call_00_k1oyA0gHyiqc5LEwJm
+
+[3/6] Attribution, and what it changed  [record]  gate_baseline_batch4.json (frozen 2026-09-10T23:20:45Z)
+────────────────────────────────────────────────────────────
+      admit    eval-bridge-endpoint-b           used 4  validated 2  corrected 0
+               rule admit: cross_user validated >= 1 (2 record(s)) and no corrected
+      reject   eval-bridge-endpoint-a           used 3  validated 0  corrected 2
+               rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.
+      evidence: 2 run(s) — 20260910T231329Z-b4-prep, 20260910T231900Z-b4-prep
+
+[4/6] Gate on — same task, ten formal runs  [record]  batch4-runs.json; verdicts re-judged copies under /private/tmp/topic4-rejudge/2026-09-11 (attempts-2026-09-11)
+────────────────────────────────────────────────────────────
+       1 off  20260910T232424Z-gate-off  used: wrong+right  verdict ERROR
+       2 on   20260910T232507Z-gate-on  used: right        verdict PASS
+       3 off  20260910T232522Z-gate-off  used: wrong+right  verdict ERROR
+       4 on   20260910T232611Z-gate-on  used: right        verdict PASS
+       5 off  20260910T232627Z-gate-off  used: wrong+right  verdict ERROR
+       6 on   20260910T232715Z-gate-on  used: right        verdict PASS
+       7 off  20260910T232730Z-gate-off  used: wrong+right  verdict ERROR
+       8 on   20260910T232818Z-gate-on  used: right        verdict PASS
+       9 off  20260910T232835Z-gate-off  used: right        verdict PASS
+      10 on   20260910T232924Z-gate-on  used: right        verdict PASS
+      gate-off: 5 runs — PASS 1, FAIL 0, unjudgeable 4; the rejected asset was used in 4/5
+      gate-on: 5 runs — PASS 5, FAIL 0, unjudgeable 0; the rejected asset was used in 0/5
+      PASS is the endpoint request's success, not task completion; unjudgeable runs stay in the denominator
+
+[5/6] Is the judgement itself accurate?  [live]
+────────────────────────────────────────────────────────────
+      regression suite 69/69 passing
+      including one test per false positive the earlier verifier fell for:
+        command echo · an asset discussing the endpoints · the checker matching itself
+
+      calibration of the judgement against independent adoption evidence (batch 4, re-parsed; CALIBRATION-batch4-reparsed-2026-09-11.md):
+      delivery consistency   TP 14  FP 0  TN 5  FN 1  rated 20/20  accuracy 0.95
+      usage detection        TP 14  FP 0  TN 6  FN 0  adoption unknown 0  rated 20/20  accuracy 1  coverage 1
+      the FN of delivery consistency is a true negative of usage detection (run 9: read, not dialled); read both tables together
+
+[6/6] Does experience flow back — the dev loop  [record]  tasks/exit-code-fix/devloop-runs.json
+────────────────────────────────────────────────────────────
+      smoke    smoke  20260911T135759Z-devloop-smoke  consumer agt-hnqxin11n9  verdict PASS  memory ok True
+               attempt: none: no test file was added
+      no-note  void   20260911T140427Z-devloop-no-note  consumer agt-hn1pxo9rcm  verdict PASS  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      no-note  void   20260911T140806Z-devloop-no-note  consumer agt-hn7snfdspu  verdict FAIL  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      no-note  sample 20260911T144347Z-devloop-no-note  consumer agt-hpvaeml21e  verdict PASS  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      no-note  sample 20260911T144542Z-devloop-no-note  consumer agt-hpyg3smf6v  verdict PASS  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      note     void   20260911T151132Z-devloop-note  consumer agt-hq5ik0kr3g  verdict PASS  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      note     void   20260911T151342Z-devloop-note  consumer agt-hq84sw27hy  verdict PASS  memory ok True
+               attempt: none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker
+      note     sample 20260911T154907Z-devloop-note  consumer agt-hsv5hd4ys2  verdict PASS  memory ok True
+               attempt: bt-imczk9p69e3
+      note     sample 20260911T155035Z-devloop-note  consumer agt-hsylov19pn  verdict PASS  memory ok True
+               attempt: bt-imczk9p69e3
+      note status observed: 15:11:32 approved (note); 15:49:07 approved (note); 15:57:14 candidate (no-note); 15:57:26 candidate (no-note)
+      4 sample run(s), 4 voided, 1 smoke
+      full report: node evaluation/tasks/exit-code-fix/report.mjs → REPORT.md
+
+────────────────────────────────────────────────────────────
+Segments: 2 live, 4 record, 0 fixture
+
