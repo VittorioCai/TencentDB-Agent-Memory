@@ -104,7 +104,9 @@ import json,sys,datetime
 out,start,tree,files,tests,rt,rp,vf,hints_exit,hints_curl,startjson,seg2,s0,s1,s2,s4=sys.argv[1:17]
 r=json.load(open(seg2)); st=json.load(open(startjson))
 task=json.load(open(out.replace("conditions.json","task.json")))
+import hashlib
 doc={"frozen_at":datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00","Z"),"start_commit":start,"start_tree":tree,
+ "task_md_sha256":hashlib.sha256(open(out.replace("conditions.json","task.md"),"rb").read()).hexdigest(),
  "working_copy":{"how":"git archive <start> | tar -x; excludes removed; git init + one commit; frozen with verify.mjs --freeze before anything touches it","tracked_files":int(files),"test_files":int(tests),"excludes":task["archive_excludes"]},
  "reference":{"regression_test_sha256":rt,"fix_patch_sha256":rp,"verify_sha256":vf,"dest":task["reference_test_dest"],"acceptance_version":r.get("acceptance_version")},
  "suite_at_start":{k:v for k,v in st["suite_at_start"].items()},

@@ -1,7 +1,8 @@
 {
-  "frozen_at": "2026-09-11T13:57:10Z",
+  "frozen_at": "2026-09-11T14:43:46Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
+  "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631",
   "working_copy": {
     "how": "git archive <start> | tar -x; excludes removed; git init + one commit; frozen with verify.mjs --freeze before anything touches it",
     "tracked_files": 1215,
@@ -14,9 +15,9 @@
   "reference": {
     "regression_test_sha256": "d07b5248819ee265d3f30de8ed7ef4558ee3daab6c58fda9b47673779df623b4",
     "fix_patch_sha256": "282227ad00badea3e293af1a655477c0af88842e3063587bacffc569572b8705",
-    "verify_sha256": "04698f3b775470cda5a459a32fc5581b8f422d112dc7d689d8cc0677a4b83432",
+    "verify_sha256": "5b3497fab71a89a20bcdccaa5da966364f6f86b7cf6c636d0674d0d87a09c9b2",
     "dest": "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs",
-    "acceptance_version": "repo-2026-09-11b"
+    "acceptance_version": "repo-2026-09-11c"
   },
   "suite_at_start": {
     "exit": 1,

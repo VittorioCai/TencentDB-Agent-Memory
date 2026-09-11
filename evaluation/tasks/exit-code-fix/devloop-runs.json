@@ -20,7 +20,7 @@
     },
     {
       "arm": "no-note",
-      "sample": true,
+      "sample": false,
       "seq": 1,
       "run_id": "20260911T140427Z-devloop-no-note",
       "exit": 0,
@@ -33,11 +33,13 @@
       ],
       "memory_channel_ok": true,
       "started_at": "2026-09-11T14:04:27Z",
-      "recorded_at": "2026-09-11T14:08:06Z"
+      "recorded_at": "2026-09-11T14:08:06Z",
+      "void": true,
+      "void_reason": "task.md changed after this run (2026-09-11T14:42:48Z: the team-knowledge sentence was added, both arms alike); kept on file, not counted"
     },
     {
       "arm": "no-note",
-      "sample": true,
+      "sample": false,
       "seq": 2,
       "run_id": "20260911T140806Z-devloop-no-note",
       "exit": 1,
@@ -50,7 +52,21 @@
       ],
       "memory_channel_ok": true,
       "started_at": "2026-09-11T14:08:06Z",
-      "recorded_at": "2026-09-11T14:12:26Z"
+      "recorded_at": "2026-09-11T14:12:26Z",
+      "void": true,
+      "void_reason": "task.md changed after this run (2026-09-11T14:42:48Z: the team-knowledge sentence was added, both arms alike); kept on file, not counted"
     }
-  ]
+  ],
+  "task_text_versions": [
+    {
+      "at": "2026-09-11T14:42:48Z",
+      "change": "added: 本仓库所属团队把过往经验以 skill 形式保存在团队知识库中。动手之前先检索一次团队经验,有相关的就参考,没有就按自己的判断做。",
+      "reason": "three runs with zero skill_search showed the injected skill_tools hint alone does not lead to a search; the sentence describes environment and workflow only, no defect information; same text for both arms",
+      "voided_runs": [
+        "20260911T140427Z-devloop-no-note",
+        "20260911T140806Z-devloop-no-note"
+      ]
+    }
+  ],
+  "status_observations": []
 }

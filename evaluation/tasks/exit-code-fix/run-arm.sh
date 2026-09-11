@@ -31,16 +31,24 @@ case "$ARM" in
   no-note|smoke) [[ "$STATUS" == "candidate" ]] || { echo "the note $NOTE_ID is '$STATUS' in Core; the $ARM arm needs it hidden (candidate). Nothing run." >&2; exit 2; } ;;
   note) [[ "$STATUS" == "approved" ]] || { echo "the note $NOTE_ID is '$STATUS' in Core; the note arm needs it admitted (approved) — the administrator's step. Nothing run." >&2; exit 2; } ;;
 esac
-echo "note $NOTE_ID status in Core: $STATUS (arm $ARM)"
+TASK_SHA="$(shasum -a 256 "$HERE/task.md" | cut -c1-64)"
+echo "note $NOTE_ID status in Core: $STATUS (arm $ARM); task.md sha256 ${TASK_SHA:0:12}…"
+# every invocation records what it observed, so the report can show when the note was approved and when it was set back
+python3 - "$MANIFEST" "$STATUS" "$ARM" "$N" "$TASK_SHA" <<'PY'
+import json, sys, datetime
+m, status, arm, n, sha = sys.argv[1:6]
+doc = json.load(open(m)); doc.setdefault("status_observations", []).append({"at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "note_status": status, "arm": arm, "n": int(n), "task_md_sha256": sha})
+json.dump(doc, open(m, "w"), indent=2, ensure_ascii=False); open(m, "a").write("\n")
+PY
 
 for i in $(seq 1 "$N"); do
   log="$(mktemp)"
   bash "$REPO/evaluation/runner/run-once.sh" --task "$HERE" --auto --fresh-consumer --label "devloop-$ARM" > "$log" 2>&1; rc=$?
   rid="$(grep -oE 'run [0-9TZ]+-devloop-[a-z-]+(-[0-9]+)? →' "$log" | head -1 | sed -E 's/^run //; s/ →$//')"
   dir="$(grep -oE '/private/tmp/topic4-runs/[^ ]+' "$log" | tail -1)"
-  python3 - "$MANIFEST" "$ARM" "$i" "${rid:-unknown}" "$rc" "$dir" "$STATUS" <<'PY'
+  python3 - "$MANIFEST" "$ARM" "$i" "${rid:-unknown}" "$rc" "$dir" "$STATUS" "$TASK_SHA" <<'PY'
 import json, sys, os, datetime
-m, arm, i, rid, rc, d, status = sys.argv[1:8]
+m, arm, i, rid, rc, d, status, task_sha = sys.argv[1:9]
 doc = json.load(open(m))
 def load(n):
     p = os.path.join(d, n)
@@ -48,7 +56,7 @@ def load(n):
     except ValueError: return None
 run, verdict, consumer, mc = load("run.json"), load("verdict.json"), load("consumer.json"), load("memory-channel.json")
 doc["runs"].append({"arm": arm, "sample": arm != "smoke", "seq": int(i), "run_id": rid, "exit": int(rc), "dir": d,
-  "note_status_at_start": status,
+  "note_status_at_start": status, "task_md_sha256": task_sha,
   "consumer_agent_id": (consumer or {}).get("agent_id"),
   "verdict": (verdict or {}).get("verdict"), "attempts": [a.get("value") for a in (verdict or {}).get("attempts", [])],
   "memory_channel_ok": (mc or {}).get("ok"), "started_at": (run or {}).get("started_at"),
