@@ -1,0 +1,105 @@
+批次 4 条件核对 — 清单 evaluation/gate/artifacts/batch4-conditions.json,冻结于 2026-09-10T23:21:51.384Z
+
+PASS  asset wrong skl-sZFb3KatWY6m 可读
+PASS  asset wrong 版本
+PASS  asset wrong 正文哈希(Core)
+PASS  asset wrong 本地是占位符、无 bt- 明文残留
+PASS  asset wrong Core 正文判别值哈希 == tokens.json
+PASS  asset wrong visibility
+PASS  asset wrong owner
+FAIL  asset wrong 开跑前状态
+      期望 "approved"  实际 "failed"
+      修法 bash evaluation/gate/core-gate.sh --reset --baseline evaluation/gate/artifacts/gate_baseline_batch4.json   # 需要团队管理员密钥
+PASS  asset wrong 规则版本
+PASS  asset wrong adoption_fields 已声明
+PASS  asset right skl-oBaDO5CceKnr 可读
+PASS  asset right 版本
+PASS  asset right 正文哈希(Core)
+PASS  asset right 本地是占位符、无 bt- 明文残留
+PASS  asset right Core 正文判别值哈希 == tokens.json
+PASS  asset right visibility
+PASS  asset right owner
+PASS  asset right 开跑前状态
+PASS  asset right 规则版本
+PASS  asset right adoption_fields 已声明
+PASS  消费者 agent 可读
+PASS  消费者 user
+PASS  作者 user
+PASS  跨人:消费者 user ≠ 作者 user
+FAIL  proxy 强制身份 agent == 消费者
+      期望 "agt-giawngxum4"  实际 "agt-5e0y4l8a7a"
+PASS  proxy 强制身份 team
+PASS  proxy 强制身份 task
+FAIL  proxy 配置未被改动
+      期望 "76428b8b89ba"  实际 "aee1e1674898"
+PASS  proxy 已在配置修改后重启(配置生效)
+FAIL  core 容器镜像摘要 == 冻结值
+      期望 "sha256:55fec3a6067a"  实际 "sha256:72d7076eea6b"
+      修法 live image sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9 (agentmemory/memory-core@sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9) ≠ frozen sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed
+PASS  proxy 容器镜像摘要 == 冻结值
+PASS  core 闸门在线上(挂载或内建)
+FAIL  闸门来源 == 冻结值
+      期望 "mount"  实际 "image"
+      修法 frozen mount (a bind mount over an image whose digest is on file only if frozen) vs live image (a Core image built from the branch): the runtime is not the one the recorded runs used — say so in the report
+PASS  内建闸门:镜像构建提交的 MemoryCore 树 == 当前 HEAD 的 MemoryCore 树
+PASS  proxy 配置备份在受保护位置且哈希一致
+FAIL  消费者记忆范围哈希 == 冻结值
+      期望 "e3b0c44298fc"  实际 "5bb5621145cf"
+      修法 重新冻结:node evaluation/runner/batch-conditions.mjs --freeze …
+FAIL  消费者记忆文件数 == 冻结值
+      期望 0  实际 4
+FAIL  消费者基线干净(token + 观察行)
+      期望 "clean"  实际 "1 hit(s)"
+FAIL  消费者基线为空(files==0,空基线批次的硬要求)
+      期望 0  实际 4
+      修法 该消费者已被冒烟运行污染;新建一个空消费者或清空其 profile,再重新冻结
+NOTE  整树记忆哈希 == 冻结值(仅提示:整树会被别的 agent 的迟到写入带漂)
+      期望 "3912716affb6"  实际 "3260f3dd9a37"
+FAIL  消费者 atomic 记忆足迹为空(records/*.jsonl 与 skill_buffer/;profile 快照不覆盖)
+      期望 "0 line(s), 0 session dir(s)"  实际 "139 line(s), 16 session dir(s)"
+      修法 atomic 记忆还没有逐运行隔离方案(见 STATE.md 需决策事项);批次四两次 gate-off 运行读到了批次内其他会话写的结论
+FAIL  asset wrong 判别值来源唯一且不可从部署推导
+      期望 "clean, not derivable"  实际 "clean=false derivable=false found_in=/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T231329Z-b4-prep/capture.jsonl,/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T231329Z-b4-prep/codebuddy-stdout.txt,/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T231329Z-b4-prep/judgement.md"
+FAIL  asset right 判别值来源唯一且不可从部署推导
+      期望 "clean, not derivable"  实际 "clean=false derivable=false found_in=memory:team%3Ateam-5ezfoladb5%7Cagent%3Aagt-giawngxum4/scene_blocks/Team-SkillBridge-Convention-Task.md,/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T231329Z-b4-prep/capture.jsonl,/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260910T231329Z-b4-prep/codebuddy-stdout.txt"
+FAIL  来源扫描无缺口
+      期望 0  实际 "1: /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T175839Z-devloop-smoke/capture.jsonl: capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过"
+NOTE  运行记录根里的 trace(批次内预期;靠目录隔离不可达,单列)
+      期望 "0 before the batch"  实际 "30 处"
+PASS  CodeBuddy 项目缓存已纳入扫描
+PASS  run-once.sh 会话目录策略已记录
+PASS  文件未变 evaluation/tasks/bridge-addr/task.md
+FAIL  文件未变 evaluation/tasks/bridge-addr/verify.mjs
+      期望 "29fe156257a1"  实际 "cca4827f13fc"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
+PASS  文件未变 evaluation/tasks/bridge-addr/tokens.json
+PASS  文件未变 evaluation/tasks/bridge-addr/confounders.watch
+PASS  文件未变 evaluation/tasks/bridge-addr/assets/wrong.md
+PASS  文件未变 evaluation/tasks/bridge-addr/assets/right.md
+PASS  文件未变 evaluation/attribution/delivery-audit.mjs
+PASS  文件未变 evaluation/attribution/adoption.mjs
+PASS  文件未变 evaluation/attribution/calibration.mjs
+FAIL  文件未变 evaluation/attribution/calibrate-runs.mjs
+      期望 "5055eff4ef8f"  实际 "582dd50e0471"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
+PASS  文件未变 evaluation/attribution/judge-hard.mjs
+FAIL  文件未变 evaluation/attribution/judge-outcome.mjs
+      期望 "4ed4b47f33c5"  实际 "686803a4e5d3"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
+PASS  文件未变 evaluation/attribution/extract-tokens.mjs
+FAIL  文件未变 evaluation/runner/run-once.sh
+      期望 "7770bfdb9711"  实际 "9f98932b525d"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
+PASS  文件未变 evaluation/runner/isolation-check.mjs
+PASS  文件未变 evaluation/runner/token-provenance.mjs
+FAIL  文件未变 evaluation/gate/core-gate.sh
+      期望 "1d6f0c465bdd"  实际 "15537ccadcbf"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
+PASS  文件未变 MemoryCore/src/metadata/service/asset-gate.ts
+PASS  准备运行 ≠ 对照样本:正式 run id 与 source_runs 零交集且准备运行全标 b4-prep
+PASS  闸门基线文件存在且 rules/版本一致
+PASS  pair.json 顶层消费者 == 冻结消费者
+PASS  pair.json 资产版本 == 线上版本
+
+通过 49  未过 18  未知 0  提示 2  / 共 69
+结论:条件不一致,不开试跑
