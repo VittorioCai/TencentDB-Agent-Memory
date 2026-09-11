@@ -1,9 +1,9 @@
 {
-  "frozen_at": "2026-09-11T11:25:55Z",
+  "frozen_at": "2026-09-11T13:48:14Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "working_copy": {
-    "how": "git archive <start> | tar -x; excludes removed; git init + one commit",
+    "how": "git archive <start> | tar -x; excludes removed; git init + one commit; frozen with verify.mjs --freeze before anything touches it",
     "tracked_files": 1215,
     "test_files": 40,
     "excludes": [
@@ -14,48 +14,93 @@
   "reference": {
     "regression_test_sha256": "d07b5248819ee265d3f30de8ed7ef4558ee3daab6c58fda9b47673779df623b4",
     "fix_patch_sha256": "282227ad00badea3e293af1a655477c0af88842e3063587bacffc569572b8705",
-    "verify_sha256": "dc85e2c3e391a5d61937c357869001622f74ca0d3bdf7180b305a84540dad280",
-    "dest": "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs"
+    "verify_sha256": "b7ecac5da6ac484cec828ca3148b2de45d1a004e5ba99cfc50fb30e88f863eb6",
+    "dest": "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs",
+    "acceptance_version": "repo-2026-09-11b"
   },
   "suite_at_start": {
-    "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
     "exit": 1,
-    "tests": 552,
-    "pass": 547,
+    "tests": 554,
+    "pass": 549,
     "fail": 3,
-    "failing_tests": [
-      "the recorded three-channel session yields recalled and injected, and no selected",
-      "the right-address asset cannot document the endpoint already in the prompt",
-      "方案 2 之后,资产源文件是占位符,正文里不再含判别值"
+    "cancelled": 0,
+    "failures": [
+      {
+        "name": "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the right-address asset cannot document the endpoint already in the prompt",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the recorded three-channel session yields recalled and injected, and no selected",
+        "file": "evaluation/provenance/build-early-events.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      }
     ],
-    "why": "the copy holds tracked files only; tests that read untracked artifacts fail here and are the baseline, not a regression"
+    "explained": true,
+    "problems": []
   },
   "suite_with_reference_fix": {
-    "tests": 559,
-    "pass": 554,
+    "files": 41,
+    "tests": 561,
+    "pass": 556,
     "fail": 3,
+    "cancelled": 0,
     "exit": 1,
-    "files": 40,
+    "explained": true,
+    "problems": [],
+    "state": "OK",
+    "why": null,
     "new_failures": [],
     "baseline_still_failing": [
-      "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
-      "the right-address asset cannot document the endpoint already in the prompt",
-      "the recorded three-channel session yields recalled and injected, and no selected"
+      {
+        "name": "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the right-address asset cannot document the endpoint already in the prompt",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the recorded three-channel session yields recalled and injected, and no selected",
+        "file": "evaluation/provenance/build-early-events.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      }
     ],
     "baseline_size": 3
   },
-  "known_hints_in_tracked_files": [
-    "evaluation/gate0/verify-capture.mjs",
-    "evaluation/gate0/verify-capture.test.mjs",
-    "evaluation/runner/memory-channel.test.mjs",
-    "evaluation/tasks/bridge-addr/verify.multi-target.test.mjs",
-    "evaluation/tasks/bridge-name/verify.test.mjs"
-  ],
+  "known_hints_in_tracked_files": {
+    "exit_line_spelled_Exit_Code": [
+      "evaluation/gate0/verify-capture.mjs",
+      "evaluation/gate0/verify-capture.test.mjs",
+      "evaluation/runner/memory-channel.test.mjs",
+      "evaluation/tasks/bridge-addr/verify.multi-target.test.mjs",
+      "evaluation/tasks/bridge-name/verify.test.mjs"
+    ],
+    "generic_curl_error_parser": [
+      "evaluation/gate0/verify-capture.mjs"
+    ],
+    "reading": "the copy already holds a correct implementation to refer to (evaluation/gate0/verify-capture.mjs reads `\\nExit Code: (-?\\d+)` and parses `curl: (N)` generically); the note's value is to shorten the search, not to be the only source of the answer. The review's first-choice alternative (curl 52/56 handling) is hinted by the same file, so the task keeps the exit-line defect and states this."
+  },
   "selfcheck": {
+    "seg0_exit": 0,
     "seg1_exit": 1,
     "seg2_exit": 0,
     "seg4_exit": 0,
     "expected": {
+      "seg0": 0,
       "seg1": 1,
       "seg2": 0,
       "seg4": 0

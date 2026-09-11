@@ -1,57 +1,52 @@
-working copy: /private/tmp/topic4-devloop-selfcheck.iiOk/repo
+working copy: /private/tmp/topic4-devloop-selfcheck.axAH/repo
 start commit 141c044be519e53bbfe2d1ef780632ae110a8136 (tree 631aa8559a847b34b7c169236411eecd29e1d16a); 1215 tracked files, 40 test files; excluded: evaluation/runner/runs, evaluation/tasks/exit-code-fix
 runs/ present in copy: no;  task dir present in copy: no
 
 ════════════════════════════════════════════════════════════════════
-【0】起点的套件基线:未改动的副本上全套测试(只含受版本控制的文件;读不到未受控工件的测试会失败,记为基线)
-suite at start: tests 552 pass 547 fail 3 (exit 1); baseline failing: ['the recorded three-channel session yields recalled and injected, and no selected', 'the right-address asset cannot document the endpoint already in the prompt', '方案 2 之后,资产源文件是占位符,正文里不再含判别值']
+【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)
+frozen 2026-09-11T13:48:07Z: start b1f71c5 (tree ff9b7b5), 40 test files → /private/tmp/topic4-devloop-selfcheck.axAH/start.json
+suite at start: tests 554 pass 549 fail 3 (exit 1); baseline failing: evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值; evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt; evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+exit 0 (expected 0 = 套件结果可解释)
 
 ════════════════════════════════════════════════════════════════════
 【1】起点 + 原版失败:在冻结起点跑验证器自带的参考回归测试
-verdict FAIL: the verifier's reference regression test does not pass (2 failing); the suite regresses: 2 test(s) fail that did not fail at the start (a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout; a non-zero exit status, as CodeBuddy spells it, is a failure); note: 3 test(s) failing at the start still fail (baseline, not a regression)
+verdict FAIL: the verifier's reference regression test does not pass (2 failing); the controlled suite regresses: 2 test(s) fail that did not fail at the start (evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs: a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout; evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs: a non-zero exit status, as CodeBuddy spells it, is a failure)
 reference test: tests 7 pass 5 fail 2
-    ✖ a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout (1.47675ms)
-    ✖ a non-zero exit status, as CodeBuddy spells it, is a failure (0.213292ms)
-    ✔ the lower-case spelling found in older records still reads (0.080708ms)
-    ✔ a successful call is unchanged: exit 0 with a code-0 envelope is ok (0.04675ms)
-    ✔ a refusal is unchanged: exit 0 with a non-zero envelope code is a failure (0.041083ms)
-    ✔ exit 0 with nothing to read stays unreadable, not a failure (0.036458ms)
-    ✔ a connection failure named in stderr is a failure whichever way the exit line is spelt (0.038834ms)
-    ℹ tests 7
-    ℹ pass 5
-    ℹ fail 2
-    ✖ failing tests:
-    ✖ a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout (1.47675ms)
-      AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
-    ✖ a non-zero exit status, as CodeBuddy spells it, is a failure (0.213292ms)
-      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+    not ok 1 - a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout
+      error: |-
+    not ok 2 - a non-zero exit status, as CodeBuddy spells it, is a failure
+      error: |-
+    ok 3 - the lower-case spelling found in older records still reads
+    ok 4 - a successful call is unchanged: exit 0 with a code-0 envelope is ok
+    ok 5 - a refusal is unchanged: exit 0 with a non-zero envelope code is a failure
+    ok 6 - exit 0 with nothing to read stays unreadable, not a failure
+    ok 7 - a connection failure named in stderr is a failure whichever way the exit line is spelt
 exit 1 (expected 1 = FAIL)
 
 ════════════════════════════════════════════════════════════════════
-【2】参考修复通过:同一副本打上 reference/fix.patch,同一测试
+【2】参考修复通过:同一副本打上 reference/fix.patch,同一测试;判决对照冻结起点
 patch applied:  1 file changed, 1 insertion(+), 1 deletion(-)
-verdict PASS: reference regression test and the whole suite pass on the changed copy (559 tests, 1 file(s) changed); note: 3 test(s) failing at the start still fail (baseline, not a regression)
+verdict PASS: reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing
 reference test: tests 7 pass 7 fail 0
-    ✔ a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout (0.681625ms)
-    ✔ a non-zero exit status, as CodeBuddy spells it, is a failure (0.139375ms)
-    ✔ the lower-case spelling found in older records still reads (0.051084ms)
-    ✔ a successful call is unchanged: exit 0 with a code-0 envelope is ok (0.088ms)
-    ✔ a refusal is unchanged: exit 0 with a non-zero envelope code is a failure (0.097708ms)
-    ✔ exit 0 with nothing to read stays unreadable, not a failure (0.038208ms)
-    ✔ a connection failure named in stderr is a failure whichever way the exit line is spelt (0.04025ms)
+compared with start b1f71c5 (frozen 2026-09-11T13:48:07Z); copy HEAD b1f71c5, commits after start 0
 diff: ['evaluation/tasks/bridge-addr/verify.mjs']  out_of_scope []  touched_verifier False  deleted_tests []
+attempts: ['none: no test file was added']
 exit 0 (expected 0 = PASS)
 
 ════════════════════════════════════════════════════════════════════
-【3】既有套件不回归:参考补丁下全套测试
-suite: 40 test files (baseline 40 + 1 reference), tests 559 pass 554 fail 3, exit 1
-new failures vs the start baseline: []; baseline failures still failing: ['方案 2 之后,资产源文件是占位符,正文里不再含判别值', 'the right-address asset cannot document the endpoint already in the prompt', 'the recorded three-channel session yields recalled and injected, and no selected']
-tests kept: baseline 40 files, missing []
+【3】既有套件不回归:受控套件(起点的测试内容)+ 参考测试;基线绑定(文件, 测试名)
+controlled suite: state OK; 41 test files (start 40 + 1 reference), tests 561 pass 556 fail 3 cancelled 0, exit 1, explained True
+new failures vs the frozen start: []
+baseline failures still failing (3 of 3):
+    evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值
+    evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt
+    evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+original tests: baseline 40 files, missing [], rewritten [], model-added []
 
 ════════════════════════════════════════════════════════════════════
 【4】判别值来源唯一:token-provenance 对笔记判别值
 OK   eval-tool-result-exit-line skl-pXLc38dex6Zt v1  sha256 d3d4dd1bd6a4…  value, version and content hash verified from Core (manage read)
-扫描来源 2341 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+扫描来源 2343 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
 
 OK   skl-pXLc38dex6Zt  token="bt-<value>"
 
