@@ -40,6 +40,12 @@
 非测试文件里的标记只列入 `checks.markers_elsewhere` 供复核,不算尝试。没加测试或测试没标记,各记一条
 "none: …" 的尝试,让采纳判定读到"未采纳"而不是"未知"。
 
+## 送达机制(冒烟观测)
+
+proxy 在系统提示里注入 `<skill_tools>`(如何 curl `skill_search` / `skill_view`)和 `<available_skills>`;
+后者对从未跑过的新 agent 是 "(none)",团队资产只在模型主动 `skill_search` 时送达。task.md 不提知识池,
+冒烟里模型一次也没检索:有笔记组是否"送达",按事件如实报,不靠改任务文本补。
+
 ## 验收命令
 
 ```bash
@@ -71,3 +77,9 @@ bash evaluation/tasks/exit-code-fix/selfcheck.sh
 | `fill-note.mjs` | 入池 / 更新 / 校验 / 来源唯一扫描;仓库只写 sha256 |
 | `tokens.json` / `pair.json` | 判别值哈希与身份记录 |
 | `conditions.json` | selfcheck 写出的冻结条件,含已知提示清单 |
+| `run-arm.sh` | 按组跑:`--arm no-note\|note\|smoke --n N`;开跑前读 Core 里笔记状态并拒绝不匹配的组;每次 `run-once.sh --task … --auto --fresh-consumer`;追加 `devloop-runs.json` |
+| `devloop-runs.json` | 闭环运行的正式清单(组、run_id、消费者、验收、尝试值、记忆通道);驱动日志 `.log` 不入库 |
+| `asset-pool-snapshot.json` | 本实验冻结的团队池(7 项;笔记 candidate);run-once 用它做送达/漂移判断 |
+| `confounders.watch` | 上下文里会泄答案的短语清单,每次运行记录是否在场 |
+| `write-back.mjs` | 回流:以该次消费者身份把会话贴给产品的 `/v3/skill/extract`,记录作者、来源会话、提取任务、出现的资产与实际状态 |
+| `report.mjs` | 由清单与运行记录生成 `REPORT.md`;结论句全由数据算出 |

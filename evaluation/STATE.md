@@ -8,8 +8,8 @@
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-11 晚(正式名单对齐、验收解析按四条边界重写并重判批次四) |
-| 测试 | evaluation 552;Core 122;proxy 24(2026-09-11,全 0 失败) |
+| 验证时间 | 2026-09-11 晚(第 5 件最小开发闭环:验证器按审阅 1–4 改、runner 接仓库型任务、冒烟通过、无/有笔记组进行中) |
+| 测试 | evaluation 578(2026-09-11 晚,全 0 失败;含 exit-code-fix 反例 10 + 单测 14);Core 122;proxy 24 |
 
 ## 第 1 件"新实验条件准备齐":已验收
 
@@ -44,6 +44,41 @@ tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文
    未读子集分别报、不作无偏/保守估计;atomic 足迹是冻结前漏检不是批次后状态。
 4. **第 9 次**单独一节:使用检测的真阴性;只关闭 REMAINING.md:94 的第 1 例。
 
+## 第 5 件"最小开发闭环":验证器与 runner 已验收,运行进行中
+
+任务 `evaluation/tasks/exit-code-fix/`(README 有全貌)。审阅 2026-09-11 的五项:
+
+1. 套件失败不得被误判 PASS:验证器固定 TAP 报告、退出码/失败计数/已解析失败项三者对账,
+   解释不完整 → ERROR;基线豁免绑定(文件, 测试名)。反例 `verify.counterexamples.test.mjs`
+   1a–1c 对 41d8620 的验证器失败(`counterexamples-before.txt`),现通过。
+2. 冻结起点贯穿到最终验收:`verify.mjs --freeze` 在模型启动前记副本起始提交、树、测试清单
+   (blob id)、测试内容 tar、套件自身结果;验收 diff 对照起始提交,受控套件跑原测试内容,
+   模型改写/新增的测试另记(反例 2a–2d)。
+3. 归因线索只取最终新增测试(新文件的名字/标题、加进已有文件的新标题)并关联实际写入调用
+   (最后一次 Write/Edit/重定向,不是首个提到标记的搜索);关联不上标 needs_review;diff 其他
+   位置的标记只列 `markers_elsewhere`(反例 3a–3c)。
+4. 副本里已有正确答案:`git grep` 确认首选候选(curl 52/56)同样被 `gate0/verify-capture.mjs`
+   给出通用解析,走次选改口径——"仓库内已有正确实现可参照,笔记的作用是缩短定位而非提供唯一
+   答案";两类提示清单在 `conditions.json`。
+5. 每次运行一个新消费者:`run-once.sh --fresh-consumer`(`fresh-consumer.mjs` 用消费者用户自己
+   的 key 建 agent,创建时足迹核对为 0;`prepare.sh` 切 proxy 强制身份并重启),每次运行写
+   `memory-channel.json`(读取次数、读回项、早于开跑、他 agent 的、无日期)。
+
+验收命令与实际输出:`bash evaluation/tasks/exit-code-fix/selfcheck.sh`(`selfcheck-output.txt`,
+【0】冻结 554/549/3 基线按文件列出、【1】FAIL 5/7、【2】PASS 7/7 对照冻结起点、【3】受控套件
+OK 0 新增失败 3/3 基线仍在、【4】判别值来源唯一 2343 处)。
+冒烟(不计样本)`20260911T135759Z-devloop-smoke`:新消费者 `agt-hnqxin11n9`,PASS,记忆通道
+0 次读取,池未漂移,0 条送达/采用事件(模型未主动 `skill_search`;proxy 注入的
+`<available_skills>` 对新 agent 为 "(none)",团队资产只经模型检索送达)。
+运行清单 `evaluation/tasks/exit-code-fix/devloop-runs.json`(驱动 `run-arm.sh`);报告由
+`report.mjs` 生成到 `REPORT.md`;回流 `write-back.mjs --run=<dir>`(产品 `/v3/skill/extract`,
+以该次消费者身份;两组跑完再做,避免中途改池)。
+
+**proxy 强制身份按运行切换(§10)**:每次运行前 `config.yaml.bak-<run_id>` 备份在同目录
+(gitignored),`consumer.json.proxy_switch` 记 sha256 前后与恢复命令;运行结束不自动切回,
+当前强制身份是最后一次运行的消费者。恢复到批次四消费者:
+`cp deploy/global-images/.proxy-config/config.yaml.bak-20260911T135759Z-devloop-smoke deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy`。
+
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
 1. **记忆通道未隔离(设计缺口,需决策)。** profiles/ 快照不覆盖 atomic 记忆
@@ -72,6 +107,12 @@ tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文
    按完成时间取最后(六次都是 wrong 最后完成 → FAIL)或"全部成功才 PASS"。任一种都不会
    把这六次判成 PASS。定了才能把批次三按新口径另报。
 3. `bridge-name` 场景的验收仍用旧解析(整段含标记),是否同步改。
+4. **开发闭环的送达**:task.md 按你的措辞只写"部分超时未被正确识别,定位并修复",不提团队
+   知识池;产品只经模型主动 `skill_search` 送达团队资产,冒烟里模型没检索。若要保证有笔记组
+   真的读到笔记,需在 task.md 加一句"团队经验以 skill 保存,可先检索"(两组同文)——这是任务
+   文本改动,等你点头;不改就按实际送达情况报。
+5. **笔记准入**是管理员动作(实验准备动作):`skl-pXLc38dex6Zt` v1 置 approved 的命令在会话
+   末尾给出;跑完有笔记组后再由管理员置回 candidate(或保留,报告注明)。
 
 ## 下一步(审阅 2026-09-11 定的顺序)
 

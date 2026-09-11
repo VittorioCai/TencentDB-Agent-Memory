@@ -17,6 +17,40 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-11T13:57:59Z",
       "recorded_at": "2026-09-11T14:00:27Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T140427Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T140427Z-devloop-no-note.aXZU/20260911T140427Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "consumer_agent_id": "agt-hn1pxo9rcm",
+      "verdict": "PASS",
+      "attempts": [
+        "none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T14:04:27Z",
+      "recorded_at": "2026-09-11T14:08:06Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T140806Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260911T140806Z-devloop-no-note.MN6i/20260911T140806Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "consumer_agent_id": "agt-hn7snfdspu",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T14:08:06Z",
+      "recorded_at": "2026-09-11T14:12:26Z"
     }
   ]
 }

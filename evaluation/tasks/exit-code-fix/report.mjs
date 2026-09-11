@@ -52,6 +52,7 @@ const rows = manifest.runs.map((r) => {
     attempts: verdict?.attempts ?? [],
     files: c.diff?.files?.map((f) => `${f.status} ${f.file}`) ?? null,
     reference: c.reference_test ? `${q(c.reference_test.pass)}/${q(c.reference_test.tests)}` : null,
+    reference_failing: c.reference_test?.failures ?? null,
     suite: c.suite ?? null, tests_kept: c.tests_kept ?? null, model_tests: c.model_tests ?? null, history: c.history ?? null,
     memory: run?.memory_channel ?? null, wb,
     acceptance_version: verdict?.acceptance_version ?? null,
@@ -87,12 +88,20 @@ for (const r of rows) {
 L.push("");
 L.push(`## 验收明细`);
 L.push("");
-L.push(`| run_id | 参考测试 | 受控套件 | 新增失败 | 基线失败仍在 | 原测试缺失 / 被改写 / 模型新增 | 验收理由 |`);
-L.push(`|---|---|---|---|---|---|---|`);
+L.push(`| run_id | 参考测试 | 参考测试失败项 | 受控套件 | 新增失败 | 基线失败仍在 | 原测试缺失 / 被改写 / 模型新增 | 验收理由 |`);
+L.push(`|---|---|---|---|---|---|---|---|`);
 for (const r of rows) {
   const s = r.suite, k = r.tests_kept;
-  L.push(`| ${r.run_id} | ${q(r.reference)} | ${q(s?.state)} | ${s ? q(s.new_failures?.length) : "?"} | ${s ? `${q(s.baseline_still_failing?.length)}/${q(s.baseline_size)}` : "?"} | ${k ? `${k.missing.length} / ${k.modified.length} / ${k.added.length}` : "?"} | ${(r.verdict?.reason ?? "?").replace(/\|/g, "\\|")} |`);
+  L.push(`| ${r.run_id} | ${q(r.reference)} | ${r.reference_failing === null ? "?" : r.reference_failing.length ? r.reference_failing.join("; ") : "无"} | ${q(s?.state)} | ${s ? q(s.new_failures?.length) : "?"} | ${s ? `${q(s.baseline_still_failing?.length)}/${q(s.baseline_size)}` : "?"} | ${k ? `${k.missing.length} / ${k.modified.length} / ${k.added.length}` : "?"} | ${(r.verdict?.reason ?? "?").replace(/\|/g, "\\|")} |`);
 }
+// what the reference demands beyond the task text, computed from the runs that failed it
+const refFails = rows.filter((r) => (r.reference_failing ?? []).length);
+L.push("");
+L.push(`参考测试(验证器自带,两组相同)共 7 例:大写退出行的超时(28)、大写退出行的非零退出码(52/56)、小写拼写仍可读、` +
+  `退出 0 + code 0 信封、退出 0 + 非零信封、退出 0 无输出保持不可读、stderr 里的连接失败。任务文本只写"部分超时未被正确识别";` +
+  `笔记正文明确提到 52。${refFails.length ? `本清单里 ${refFails.length} 次运行未过参考测试,失败项:${[...new Set(refFails.flatMap((r) => r.reference_failing))].join("; ")}` +
+  `——只改超时分支、没有按大写读一般退出码的修复,会在"非零退出码"一例上失败;这是参考测试的范围决定,两组同样适用,` +
+  `有笔记组若在这一例上通过,须考虑笔记对覆盖范围的提示。` : "本清单里没有运行未过参考测试。"}`);
 L.push("");
 L.push(`## 消费者与记忆隔离`);
 L.push("");
@@ -138,6 +147,8 @@ for (const s of [
   "小样本、单场景、单主体、单模型;采纳证据覆盖率 0.95(批次四)",
   "仓库内已有正确实现可参照:笔记的作用是缩短定位而非提供唯一答案;两组差异不能归于笔记",
   "模型自报测试结果不采信,验收只认验证器自带参考测试与起点测试原内容;模型新增的测试另记",
+  "参考测试要求大写退出行下的一般非零退出码(52/56)也判失败,任务文本只提超时;笔记正文提到 52——两组的功能验收相同,但笔记对覆盖范围有提示,有笔记组的 PASS 不能只归于'定位更快'",
+  "团队资产只在模型主动 skill_search 时送达;task.md 不提知识池,送达与否按事件如实报",
   "回流走产品的 /v3/skill/extract,提取内容由 Core 决定;是否产生资产、状态为何,以 write-back.json 为准",
 ]) L.push(`- ${s}`);
 L.push("");
