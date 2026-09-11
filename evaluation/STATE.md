@@ -71,7 +71,14 @@ OK 0 新增失败 3/3 基线仍在、【4】判别值来源唯一 2343 处)。
 0 次读取,池未漂移,0 条送达/采用事件(模型未主动 `skill_search`;proxy 注入的
 `<available_skills>` 对新 agent 为 "(none)",团队资产只经模型检索送达)。
 无笔记组(任务文本改动前,作废留档):`20260911T140427Z`(PASS,根因修复)、`20260911T140806Z`
-(FAIL,只改超时分支)。改动后的重跑、准入、有笔记组、置回、回流按 `devloop-runs.json` 的顺序记录。
+(FAIL,只改超时分支)。改动后重跑两次:`20260911T144347Z`、`20260911T144542Z` 均 PASS,模型各检索
+团队池 3/2 次,candidate 的笔记不在结果里。
+**有笔记组第一对作废**(`20260911T151132Z`、`20260911T151342Z`):笔记 `visibility: private`
+(skill/create 默认),bridge 检索不含别人的私有 skill;第 1 次相关查询 4 次都只返回四项 team 资产,
+第 2 次未检索;送达 0。配置缺陷,不是模型行为。已由作者身份置 team(`fill-note.mjs --fix-visibility`,
+记录 `visibility-fix.json`,内容哈希不变、仍 v1 approved),池重新快照(旧快照留作
+`asset-pool-snapshot.v1-note-private.json`),驱动加可见性守卫与 `--n 0` 短路(`seq 1 0` 倒数的缺陷
+让状态检查启动了那两次运行)。之后的有笔记组、置回、回流按 `devloop-runs.json` 的顺序记录。
 运行清单 `evaluation/tasks/exit-code-fix/devloop-runs.json`(驱动 `run-arm.sh`);报告由
 `report.mjs` 生成到 `REPORT.md`;回流 `write-back.mjs --run=<dir>`(产品 `/v3/skill/extract`,
 以该次消费者身份;两组跑完再做,避免中途改池)。
