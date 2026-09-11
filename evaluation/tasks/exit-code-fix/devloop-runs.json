@@ -171,6 +171,27 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-11T15:50:35Z",
       "recorded_at": "2026-09-11T15:51:49Z"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T184746Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T184746Z-devloop-note.MtWz/20260911T184746Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "b",
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631",
+      "consumer_agent_id": "agt-h05w3gsqab",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:47:46Z",
+      "recorded_at": "2026-09-11T18:49:19Z"
     }
   ],
   "task_text_versions": [
@@ -222,6 +243,16 @@
       "arm": "no-note",
       "n": 0,
       "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
+    },
+    {
+      "at": "2026-09-11T18:47:46Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 1,
+      "identity": "b",
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
     }
   ],
   "config_fixes": [
@@ -232,6 +263,12 @@
         "20260911T151132Z-devloop-note",
         "20260911T151342Z-devloop-note"
       ]
+    },
+    {
+      "at": "2026-09-11T18:59:00Z",
+      "what": "asset-pool-snapshot.json refreshed to the pool as read live by run 20260911T184746Z (note v2 approved team, 7 assets); the previous snapshot (note v1) kept as asset-pool-snapshot.v1-note-team.json",
+      "why": "after the rotation to v2 every run reported POOL DRIFT (version_changed v1→v2) against the frozen v1 snapshot; run 20260911T184746Z (task 1 on v2) was judged against the frozen v1 snapshot and its record says so (pool-drift.json)",
+      "affects": "runs after this time; exit-line-collect links to this file"
     }
   ],
   "rejudges": [

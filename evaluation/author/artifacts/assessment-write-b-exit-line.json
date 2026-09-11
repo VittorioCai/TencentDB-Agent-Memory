@@ -1,0 +1,135 @@
+{
+  "schema": "assessment-write-record-v2",
+  "at": "2026-09-11T18:20:29Z",
+  "assessment_file": "evaluation/author/artifacts/assessment-b-exit-line.json",
+  "asset_id": "skl-z0V6zwphUvhB",
+  "writer_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
+  "as_of": null,
+  "written": {
+    "schema": "author-assessment-summary-v2",
+    "competence": "medium",
+    "competence_as_said": "unknown",
+    "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
+    "assessed_at": "2026-09-11T18:10:05.835Z",
+    "evidence_cutoff": "2026-09-11T18:00:00.000Z",
+    "citations": 9,
+    "execution_claims": {
+      "success": 33,
+      "failure": 10,
+      "calls": 43,
+      "ledgers": {
+        "own_business": {
+          "success": 32,
+          "failure": 10
+        },
+        "others_on_assets": {
+          "success": 0,
+          "failure": 0
+        },
+        "own_transport": {
+          "success": 1,
+          "failure": 0
+        }
+      }
+    },
+    "asset_claim_check": {
+      "verdict": "silent",
+      "record_ids": [],
+      "strength": null
+    },
+    "asset_claim_as_said": "silent",
+    "author_user_id": "usr-4u07qc2kuj",
+    "asset_version": 1,
+    "content_hash": "2baf80fc66fffad7c500e4690589e62b",
+    "chain_complete": false,
+    "pack_sha256": "238738d1d154cae802ca4ba04fcf313dc19cdb9a56ac900ed7fd6555c401a1ad",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-b-exit-line.json"
+  },
+  "decision_after": {
+    "schema_version": "gate-decision-v2",
+    "rules_version": "gate-rules-2026-09-08f",
+    "asset_id": "skl-z0V6zwphUvhB",
+    "asset_version": 1,
+    "content_hash": "2baf80fc66fffad7c500e4690589e62b",
+    "decided_at": "2026-09-11T18:20:29.654Z",
+    "decision": "pending",
+    "status_target": "candidate",
+    "confidence": null,
+    "confidence_n": 0,
+    "evidence_policy": "trusted-only",
+    "reasons": [
+      "cold start: no outcome recorded for this asset yet; pending by default",
+      "no corrected(wrong/stale) record, so reject did not trigger",
+      "context-based assessment: author competence medium for \"reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it\"; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "validated": 0,
+        "corrected": 0,
+        "used": 0,
+        "cross_user_validated": 0,
+        "distinct_consumers": 0,
+        "distinct_tasks": 0,
+        "calls": 0,
+        "untrusted_ignored": 0,
+        "other_version": 0,
+        "unbound_ignored": 0,
+        "retracted_ignored": 0,
+        "same_call_ties": 0
+      },
+      "author": {
+        "user_id": "usr-4u07qc2kuj",
+        "validated": 0,
+        "corrected": 0,
+        "distinct_consumers": 0,
+        "recent_wrong_asset_ids": [],
+        "assessment": {
+          "schema": "author-assessment-summary-v2",
+          "competence": "medium",
+          "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
+          "assessed_at": "2026-09-11T18:10:05.835Z",
+          "evidence_cutoff": "2026-09-11T18:00:00.000Z",
+          "citations": 9,
+          "execution_claims": {
+            "success": 33,
+            "failure": 10,
+            "calls": 43,
+            "ledgers": {
+              "own_business": {
+                "success": 32,
+                "failure": 10
+              },
+              "others_on_assets": {
+                "success": 0,
+                "failure": 0
+              },
+              "own_transport": {
+                "success": 1,
+                "failure": 0
+              }
+            }
+          },
+          "asset_claim_check": {
+            "verdict": "silent",
+            "record_ids": [],
+            "strength": null
+          },
+          "author_user_id": "usr-4u07qc2kuj",
+          "asset_version": 1,
+          "content_hash": "2baf80fc66fffad7c500e4690589e62b",
+          "pack_sha256": "238738d1d154cae802ca4ba04fcf313dc19cdb9a56ac900ed7fd6555c401a1ad",
+          "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-b-exit-line.json",
+          "written_by": "usr-n3h5ewx4ja",
+          "written_at": "2026-09-11T18:20:29.600Z"
+        },
+        "assessment_ignored": null
+      }
+    },
+    "review_priority": "normal",
+    "reject_evidence_ids": [],
+    "reject_evidence_latest_at": null,
+    "evidence_as_of": null
+  },
+  "status_after": "candidate"
+}

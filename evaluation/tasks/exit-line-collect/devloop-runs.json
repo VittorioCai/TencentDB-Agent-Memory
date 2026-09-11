@@ -41,7 +41,9 @@
       ],
       "memory_channel_ok": true,
       "started_at": "2026-09-11T18:00:35Z",
-      "recorded_at": "2026-09-11T18:02:06Z"
+      "recorded_at": "2026-09-11T18:02:06Z",
+      "void": true,
+      "void_reason": "harness: this task directory had no tokens.json, so run-once.sh judged delivery and use with evaluation/attribution/artifacts/tokens.json (batch-4 values) and never looked for the note's value — no note event, no used event, no outcome, nothing synced to Core. The verdict (verifier) and the attempt markers are still on record; the run is not a sample. Fixed by linking tokens.json to the note's home (../exit-code-fix/tokens.json) before the re-runs."
     },
     {
       "arm": "no-note",
@@ -62,7 +64,9 @@
       ],
       "memory_channel_ok": true,
       "started_at": "2026-09-11T18:04:13Z",
-      "recorded_at": "2026-09-11T18:06:14Z"
+      "recorded_at": "2026-09-11T18:06:14Z",
+      "void": true,
+      "void_reason": "harness: this task directory had no tokens.json, so run-once.sh judged delivery and use with evaluation/attribution/artifacts/tokens.json (batch-4 values) and never looked for the note's value — no note event, no used event, no outcome, nothing synced to Core. The verdict (verifier) and the attempt markers are still on record; the run is not a sample. Fixed by linking tokens.json to the note's home (../exit-code-fix/tokens.json) before the re-runs."
     },
     {
       "arm": "no-note",
@@ -83,7 +87,162 @@
       ],
       "memory_channel_ok": true,
       "started_at": "2026-09-11T18:06:14Z",
-      "recorded_at": "2026-09-11T18:07:40Z"
+      "recorded_at": "2026-09-11T18:07:40Z",
+      "void": true,
+      "void_reason": "harness: this task directory had no tokens.json, so run-once.sh judged delivery and use with evaluation/attribution/artifacts/tokens.json (batch-4 values) and never looked for the note's value — no note event, no used event, no outcome, nothing synced to Core. The verdict (verifier) and the attempt markers are still on record; the run is not a sample. Fixed by linking tokens.json to the note's home (../exit-code-fix/tokens.json) before the re-runs."
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T184529Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T184529Z-devloop-note.k1Qz/20260911T184529Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h013oal8pr",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:45:29Z",
+      "recorded_at": "2026-09-11T18:46:34Z",
+      "void": true,
+      "void_reason": "harness: this task directory had no tokens.json, so run-once.sh judged delivery and use with evaluation/attribution/artifacts/tokens.json (batch-4 values) and never looked for the note's value — no note event, no used event, no outcome, nothing synced to Core. The verdict (verifier) and the attempt markers are still on record; the run is not a sample. Fixed by linking tokens.json to the note's home (../exit-code-fix/tokens.json) before the re-runs."
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T184634Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T184634Z-devloop-note.RrXC/20260911T184634Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h03w2w957t",
+      "verdict": "PASS",
+      "attempts": [
+        "none: collect-artifacts.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:46:34Z",
+      "recorded_at": "2026-09-11T18:47:46Z",
+      "void": true,
+      "void_reason": "harness: this task directory had no tokens.json, so run-once.sh judged delivery and use with evaluation/attribution/artifacts/tokens.json (batch-4 values) and never looked for the note's value — no note event, no used event, no outcome, nothing synced to Core. The verdict (verifier) and the attempt markers are still on record; the run is not a sample. Fixed by linking tokens.json to the note's home (../exit-code-fix/tokens.json) before the re-runs."
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T185010Z-devloop-note",
+      "exit": 2,
+      "dir": "/private/tmp/topic4-runs/20260911T185010Z-devloop-note.ABAP/20260911T185010Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h09w1egyxz",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": null,
+      "started_at": null,
+      "recorded_at": "2026-09-11T18:51:19Z",
+      "void": true,
+      "void_reason": "harness: resolve-tokens.mjs reads pair.json from the task directory (team and author agent for the manage read of the note's value); this directory had none → 'user_id: expected string, received null' → run-once.sh stopped before provenance, judgement and the Core sync. Verdict PASS and the marker in the added test are on record; no delivery/use/outcome event exists for it. Fixed by linking pair.json (and confounders.watch, asset-pool-snapshot.json) to the note's home."
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T185119Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T185119Z-devloop-note.SzIw/20260911T185119Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h1bt18emo7",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:51:19Z",
+      "recorded_at": "2026-09-11T18:53:37Z"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T185430Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T185430Z-devloop-note.Y1pC/20260911T185430Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h1g433x4jd",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:54:30Z",
+      "recorded_at": "2026-09-11T18:55:59Z"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260911T185811Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T185811Z-devloop-note.usdF/20260911T185811Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h1m9wf3gw2",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:58:11Z",
+      "recorded_at": "2026-09-11T18:59:27Z"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260911T185927Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T185927Z-devloop-note.yxvU/20260911T185927Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
+      "consumer_agent_id": "agt-h1pdy43iwu",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-78yk9r3bfrm"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T18:59:27Z",
+      "recorded_at": "2026-09-11T19:01:07Z"
     }
   ],
   "status_observations": [
@@ -116,6 +275,60 @@
       "n": 2,
       "identity": "c",
       "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:45:29Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:50:10Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:54:30Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 1,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    },
+    {
+      "at": "2026-09-11T18:58:11Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 2,
+      "identity": "c",
+      "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d"
+    }
+  ],
+  "config_fixes": [
+    {
+      "at": "2026-09-11T18:55:00Z",
+      "what": "evaluation/tasks/exit-line-collect/tokens.json → symlink to ../exit-code-fix/tokens.json (the note's home)",
+      "why": "run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; without it the judge fell back to the batch-4 token file",
+      "runs_voided": 5
+    },
+    {
+      "at": "2026-09-11T18:53:00Z",
+      "what": "pair.json, confounders.watch, asset-pool-snapshot.json → symlinks to ../exit-code-fix/ (the note's home)",
+      "why": "run-once.sh and resolve-tokens.mjs read these from $TASK_DIR; the first re-run note run died at resolve-tokens for the missing pair.json",
+      "runs_voided": 1
     }
   ]
 }

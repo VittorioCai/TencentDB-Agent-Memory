@@ -39,6 +39,11 @@ bash evaluation/tasks/exit-code-fix/selfcheck.sh > "$OUT/selfcheck.txt" 2>&1; e=
 SEG="$(tail -1 "$OUT/selfcheck.txt")"; S4="$(grep -oE '已出现于 \[[a-z]+\] [^ ]+' "$OUT/selfcheck.txt" | tr '\n' ' ')"
 row "selfcheck" "bash evaluation/tasks/exit-code-fix/selfcheck.sh" "$e" "seg0=0 seg1=1 seg2=0; seg4=1 after the loop (value in the records, burned; rotate before reuse)" "$SEG $S4"
 
+echo "[2b] second dev-loop task's verifier self-check (exit-line-collect; same verifier, its own task dir)"
+bash evaluation/tasks/exit-line-collect/selfcheck.sh > "$OUT/selfcheck-exit-line-collect.txt" 2>&1; e=$?
+SEG="$(tail -1 "$OUT/selfcheck-exit-line-collect.txt")"; S4="$(grep -oE '已出现于 \[[a-z]+\] [^ ]+' "$OUT/selfcheck-exit-line-collect.txt" | tr '\n' ' ')"
+row "selfcheck-exit-line-collect" "bash evaluation/tasks/exit-line-collect/selfcheck.sh" "$e" "seg0=0 seg1=1 seg2=0; seg4=1 after the loop (the note's v2 value is in the records, burned; rotate before reuse)" "$SEG $S4"
+
 echo "[3] batch-4 calibration reproduced from the re-judge copies"
 if compgen -G "$REJUDGE/20260910T23*" > /dev/null; then
   node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f --task=evaluation/tasks/bridge-addr --manifest=evaluation/gate/artifacts/batch4-runs.json --md="$OUT/CALIBRATION-reproduced.md" "$REJUDGE"/20260910T23*/ > "$OUT/calibrate.txt" 2>&1; e=$?
@@ -66,10 +71,21 @@ if compgen -G "$REJUDGE/20260910T23*" > /dev/null; then
   row "rejudge-diff" "rejudge-diff.mjs --before=runs --after=<copies> --manifest=batch4-runs.json" "$e" "exit 0, diff small (header only) vs REPARSE-DIFF-2026-09-11.md" "" "$d"
 fi
 
+echo "[5b] exit-line re-parse reproduced (the second task's fix on the main branch, measured on the 14 batch-4 captures)"
+OLDCA="evaluation/attribution/collect-artifacts.old-77959dc.tmp.mjs"; git show 77959dc:evaluation/attribution/collect-artifacts.mjs > "$OLDCA"
+node evaluation/attribution/reparse-exit-status.mjs --old="$OLDCA" --old-label=77959dc --md="$OUT/REPARSE-exitline-collect-reproduced.md" evaluation/runner/runs/20260910T23*/ > /dev/null 2>"$OUT/reparse-exitline.err"; e=$?; rm -f "$OLDCA"
+d="$(mddiff evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline-collect.md "$OUT/REPARSE-exitline-collect-reproduced.md" "$OUT/REPARSE-exitline-collect.diff")"
+row "reparse-exitline" "reparse-exit-status.mjs --old=<77959dc copy> <14 batch-4 runs>" "$e" "exit 0, diff 0 vs REPARSE-DIFF-2026-09-11-exitline-collect.md" "" "$d"
+
 echo "[6] dev-loop report reproduced"
 node evaluation/tasks/exit-code-fix/report.mjs --out="$OUT/REPORT-reproduced.md" > "$OUT/report.txt" 2>&1; e=$?
 d="$(mddiff evaluation/tasks/exit-code-fix/REPORT.md "$OUT/REPORT-reproduced.md" "$OUT/REPORT.diff")"
 row "devloop-report" "node evaluation/tasks/exit-code-fix/report.mjs" "$e" "exit 0, diff 0 vs REPORT.md" "" "$d"
+
+echo "[6b] second task's report reproduced"
+node evaluation/tasks/exit-line-collect/report.mjs --out="$OUT/REPORT-exit-line-collect-reproduced.md" > "$OUT/report-exit-line-collect.txt" 2>&1; e=$?
+d="$(mddiff evaluation/tasks/exit-line-collect/REPORT.md "$OUT/REPORT-exit-line-collect-reproduced.md" "$OUT/REPORT-exit-line-collect.diff")"
+row "devloop-report-2" "node evaluation/tasks/exit-line-collect/report.mjs" "$e" "exit 0, diff 0 vs exit-line-collect/REPORT.md" "" "$d"
 
 echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
@@ -95,8 +111,8 @@ for r in rows:
 def selfcheck_ok(r):
     n = r["note"] or ""
     return "seg0=0 seg1=1 seg2=0" in n and ("seg4=0" in n or "task:REPORT.md" in n or "devloop-runs.json" in n)
-bad = [r for r in rows if (r["step"] in ("suite", "devloop-report", "demo") and r["exit"] != 0) or (r["step"] == "selfcheck" and not selfcheck_ok(r))]
-repro = [r for r in rows if r.get("diff_lines") not in (None, 0) and r["step"] in ("calibration", "summary", "devloop-report")]
+bad = [r for r in rows if (r["step"] in ("suite", "devloop-report", "devloop-report-2", "demo", "reparse-exitline") and r["exit"] != 0) or (r["step"].startswith("selfcheck") and not selfcheck_ok(r))]
+repro = [r for r in rows if r.get("diff_lines") not in (None, 0) and r["step"] in ("calibration", "summary", "devloop-report", "devloop-report-2", "reparse-exitline")]
 bad_s = ", ".join(r["step"] for r in bad) or "无"
 repro_s = ", ".join(f"{r['step']} {r['diff_lines']} 行" for r in repro) or "无"
 L += ["", f"判决类步骤退出非 0:{len(bad)}({bad_s});生成报告与提交副本有差异的:{len(repro)}({repro_s})。", ""]

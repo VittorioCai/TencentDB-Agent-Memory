@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One command, six segments, one question each:
+# One command, seven segments, one question each:
 #
 #   1. What is in the asset pool, and who wrote it?
 #   2. With the gate off, what happens?
@@ -54,7 +54,7 @@ seg_begin() {
     *) echo "demo.sh: segment $n declared an unknown source '$src'" >&2; exit 2 ;;
   esac
   echo
-  echo "${C_B}[$n/6] $title${C_0}  $tag${note:+  ${C_DIM}$note${C_0}}"
+  echo "${C_B}[$n/7] $title${C_0}  $tag${note:+  ${C_DIM}$note${C_0}}"
   echo "${C_DIM}────────────────────────────────────────────────────────────${C_0}"
 }
 
@@ -265,6 +265,41 @@ PY
   fi
 }
 
+segment_devloop2() {
+  local m="$SCRIPT_DIR/tasks/exit-line-collect/devloop-runs.json" g="$SCRIPT_DIR/tasks/exit-code-fix/gate-evaluations.jsonl" t="$SCRIPT_DIR/tasks/exit-code-fix/tokens.json"
+  if [[ -f "$m" ]]; then
+    seg_begin 7 "Does the note transfer — same note, another file, another user; and the author's history" record "tasks/exit-line-collect/devloop-runs.json, gate-evaluations.jsonl, author/artifacts"
+    python3 - "$m" "$g" "$t" "$SCRIPT_DIR/author/artifacts" <<'PY2'
+import json, sys, os, glob
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+runs = d.get("runs") or []
+for r in runs:
+    kind = "void" if r.get("void") else ("sample" if r.get("sample") else "smoke")
+    print(f"      {r['arm']:<8} {kind:<6} {r['run_id']}  user {r.get('identity')}  note v{r.get('note_version_at_start')} {r.get('note_status_at_start')}  verdict {r.get('verdict')}  memory ok {r.get('memory_channel_ok')}")
+    for a in r.get("attempts") or []: print(f"               attempt: {a[:90]}")
+samples = [r for r in runs if r.get("sample") and not r.get("void")]
+print(f"      {len(samples)} sample run(s), {sum(1 for r in runs if r.get('void'))} voided")
+# the gate on the note's current version, as evaluated after the rotation
+hist = (json.load(open(sys.argv[3])).get("_history") or [])
+rot = hist[-1]["retired_at"] if hist else None
+evs = [json.loads(l) for l in open(sys.argv[2], encoding="utf-8") if l.strip()] if os.path.exists(sys.argv[2]) else []
+evs = [e for e in evs if not rot or e["at"] >= rot]
+for e in evs[-3:]:
+    on = (e.get("signals") or {}).get("online") or {}; au = (e.get("signals") or {}).get("author") or {}
+    a = au.get("assessment")
+    print(f"      gate {e['at'][11:19]} {'APPLY' if e.get('apply') else 'dry-run'}{' as_of ' + e['as_of'][11:16] if e.get('as_of') else ''}: {e.get('decision')} → {e.get('status_target')}; cross_user_validated {on.get('cross_user_validated')}, distinct_consumers {on.get('distinct_consumers')}, distinct_tasks {on.get('distinct_tasks')}; author assessment {a['competence'] if a else 'none'}{'; review priority ' + e['review_priority'] if e.get('review_priority') else ''}")
+for f in sorted(glob.glob(os.path.join(sys.argv[4], "assessment-write-*-exit-line.json"))):
+    try:
+        w = json.load(open(f)); s = w.get("written") or {}
+        print(f"      author assessment written: {os.path.basename(f)}  competence {s.get('competence')} (said {s.get('competence_as_said')})  claim {s.get('asset_claim_check', {}).get('verdict')}  cutoff {str(s.get('evidence_cutoff'))[:19]}")
+    except Exception as e: print(f"      {os.path.basename(f)}: unreadable ({e})")
+PY2
+    note "full report: node evaluation/tasks/exit-line-collect/report.mjs → REPORT.md; author: evaluation/author/README.md"
+  else
+    seg_begin 7 "Does the note transfer — the second dev-loop task" fixture "no second-task manifest"
+  fi
+}
+
 # ── main ─────────────────────────────────────────────────────────
 echo
 echo "${C_B}Trustworthy attribution — end-to-end demo${C_0}"
@@ -276,6 +311,7 @@ segment_attribution
 segment_gate_on
 segment_selfcheck
 segment_devloop
+segment_devloop2
 
 echo
 echo "${C_DIM}────────────────────────────────────────────────────────────${C_0}"

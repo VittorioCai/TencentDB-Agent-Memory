@@ -12,9 +12,16 @@
   task.json 决定起点、修复范围与参考测试落点。
 - 任务文本的第二段(团队经验以 skill 保存,动手前先检索一次)与第一任务逐字相同;第一段只描述症状。
 - 每次运行新建消费者(`run-once.sh --fresh-consumer`),默认在身份 c 下——一个没有任何记录的用户。
-- 笔记的家仍是 `../exit-code-fix/`(`tokens.json`、`fill-note.mjs`、`gate-*.mjs`);本任务不新增资产。
+- 笔记的家仍是 `../exit-code-fix/`(`tokens.json`、`fill-note.mjs`、`gate-*.mjs`);本任务不新增资产。本目录的 `tokens.json`
+  是指向它的符号链接:`run-once.sh` 从任务目录读 tokens.json 做判别值解析与送达 / 采用判定,没有它时判定器只认批次四的值——
+  2026-09-11 前五次运行(试跑、无笔记 ×2、有笔记 ×2)因此没有任何笔记事件,全部作废留档后重跑(见 `devloop-runs.json` 的
+  `void_reason` 与 `config_fixes`)。
   判别值在第一任务闭合时已进 git 历史(REPORT.md、devloop-runs.json),按规则视为烧毁,跑本任务前已轮换为 v2
   (`tokens.json._history` 记 v1 的哈希与退役原因)。新版本不继承准入:v2 从 candidate 起,证据从零计。
+
+- 会话绑定的产品任务实体:本任务有自己的实体 `task-h1k7xruuhb`(用户 c 于 2026-09-11 创建,`product-task.json`;task.json 的
+  `product_task_id`),`run-once.sh` 经 `prepare.sh` 把 proxy 强制身份的 task_id 切到它。闸门的 `distinct_tasks` 数的就是这个 id:
+  在它存在之前的运行都绑在第一任务的实体 `task-5e6xp4mrrw` 上(报告按实体分列,那些运行留作记录)。
 
 ## 不同的部分
 

@@ -1,0 +1,26 @@
+{
+  "at": "2026-09-11T18:56:57Z",
+  "op": "task/create",
+  "by": {
+    "user_id": "usr-8ypylzex49",
+    "role": "team member (identity c key)"
+  },
+  "code": 0,
+  "message": "ok",
+  "task": {
+    "task_id": "task-h1k7xruuhb",
+    "team_id": "team-5ezfoladb5",
+    "creator_user_id": "usr-8ypylzex49",
+    "title": "topic4 dev loop: exit-line-collect (collect-artifacts.mjs reads no exit status from real tool results)",
+    "description": "Second dev-loop task of the evaluation (evaluation/tasks/exit-line-collect). Its own task entity so that sessions and outcomes of this task are not recorded under the first task (task-5e6xp4mrrw): the gate counts distinct tasks by this id.",
+    "source_type": "manual",
+    "source_url": null,
+    "status": "running",
+    "auto_assign_floating_assets": false,
+    "risk_level": null,
+    "created_at": "2026-09-11T18:56:57.836Z",
+    "updated_at": "2026-09-11T18:56:57.836Z",
+    "metadata_json": "{}"
+  },
+  "why": "the proxy forces one task id per session (debugForceIdentity.task_id); every dev-loop run so far carried the first task's id, so the gate's distinct_tasks could never exceed 1 across the two tasks"
+}

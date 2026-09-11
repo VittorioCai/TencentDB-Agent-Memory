@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-09-11T17:57:22Z",
+  "frozen_at": "2026-09-11T18:54:06Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
@@ -96,11 +96,24 @@
     ],
     "reading": "the copy already holds a correct implementation to refer to (evaluation/gate0/verify-capture.mjs reads `\\nExit Code: (-?\\d+)`); the note's value is to shorten the search, not to be the only source of the answer. The note itself names bridge-addr/verify.mjs, not this file: applying it here is the transfer this task measures."
   },
+  "task_dir_links": {
+    "pair.json": "../exit-code-fix/pair.json",
+    "confounders.watch": "../exit-code-fix/confounders.watch",
+    "asset-pool-snapshot.json": "../exit-code-fix/asset-pool-snapshot.json"
+  },
+  "tokens_json": {
+    "link_target": "../exit-code-fix/tokens.json",
+    "sha256": "b0a3507252b1997aac69c8a1f97f56c994a33e321e7e1f69592df19e6bc56253",
+    "note": "skl-pXLc38dex6Zt",
+    "note_version": 2,
+    "token_sha256_prefix": "1e85dcf5dcf7",
+    "why": "run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; the link keeps one source of truth with the note's home"
+  },
   "selfcheck": {
     "seg0_exit": 0,
     "seg1_exit": 1,
     "seg2_exit": 0,
-    "seg4_exit": 0,
+    "seg4_exit": 1,
     "expected": {
       "seg0": 0,
       "seg1": 1,

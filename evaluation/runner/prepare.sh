@@ -111,6 +111,24 @@ open(path, "w", encoding="utf-8").write(new)
 PY
 }
 
+set_forced_task() {  # $1 = task id — the product task the session is bound to (debugForceIdentity.task_id)
+  python3 - "$CONFIG" "$1" <<'PY'
+import re, sys
+path, task = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+new, n = re.subn(r'(debugForceIdentity:\n(?:[ \t]+\w+:.*\n)*?[ \t]+task_id:[ \t]*)"[^"]*"',
+                 lambda m: m.group(1) + f'"{task}"', text, count=1, flags=re.M)
+if n != 1:
+    sys.exit("could not rewrite debugForceIdentity.task_id")
+open(path, "w", encoding="utf-8").write(new)
+PY
+}
+current_task() { python3 -c "
+import re,sys
+t=open('$CONFIG',encoding='utf-8').read()
+m=re.search(r'debugForceIdentity:\n(?:[ \t]+\w+:.*\n)*?[ \t]+task_id:[ \t]*\"([^\"]*)\"',t,re.M)
+print(m.group(1) if m else '?')"; }
+
 current_upstream() { python3 -c "
 import re,sys
 t=open('$CONFIG',encoding='utf-8').read()
@@ -251,7 +269,11 @@ PY
     # 2. route the proxy through it, and force the right agent
     set_yaml_upstream "$PROBE_UPSTREAM"
     set_forced_agent "$AGENT"
-    info "restarting proxy: upstream=$PROBE_UPSTREAM  agent=$AGENT"
+    # A dev-loop task with its own product task entity (task.json product_task_id, passed by
+    # run-once.sh as FRESH_CONSUMER_TASK) binds the session to that task; otherwise the task id
+    # pinned in the config stays (the first loop task's, task-5e6xp4mrrw, for everything before 2026-09-11 19:00Z).
+    if [[ -n "${FRESH_CONSUMER_TASK:-}" ]]; then set_forced_task "$FRESH_CONSUMER_TASK"; fi
+    info "restarting proxy: upstream=$PROBE_UPSTREAM  agent=$AGENT  task=$(current_task)"
     restart_proxy
     ok "proxy healthy, forced identity $AGENT — $WHO"
 

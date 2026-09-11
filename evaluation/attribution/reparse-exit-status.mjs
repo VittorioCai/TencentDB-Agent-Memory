@@ -60,9 +60,9 @@ for (const d of runDirs) {
 }
 const tot = (k) => rows.reduce((s, r) => s + (r[k] ?? 0), 0);
 const L = [];
-L.push(`# Re-parse of exit status — collect-artifacts.mjs exit-line fix on the main branch (${new Date().toISOString().replace(/\.\d+Z$/, "Z")})`);
+L.push(`# Re-parse of exit status — collect-artifacts.mjs exit-line fix on the main branch`);
 L.push(``);
-L.push(`Generated: \`node evaluation/attribution/reparse-exit-status.mjs --old=${opt("old-label") ?? opt("old")} <${runDirs.length} run dir(s)>\`. Old reader: \`outcomeOf\` as it was before the fix (${opt("old-label") ?? "file given with --old"}); new reader: the current \`evaluation/attribution/collect-artifacts.mjs\`. Tool results are taken once per tool call from each capture's last request.`);
+L.push(`Generated ${new Date().toISOString().replace(/\.\d+Z$/, "Z")}: \`node evaluation/attribution/reparse-exit-status.mjs --old=${opt("old-label") ?? opt("old")} <${runDirs.length} run dir(s)>\`. Old reader: \`outcomeOf\` as it was before the fix (${opt("old-label") ?? "file given with --old"}); new reader: the current \`evaluation/attribution/collect-artifacts.mjs\`. Tool results are taken once per tool call from each capture's last request.`);
 L.push(``);
 L.push(`| run | tool results | with an exit line | spelled \`Exit Code:\` | exit_code null before | null after | readings changed |`);
 L.push(`|---|---|---|---|---|---|---|`);

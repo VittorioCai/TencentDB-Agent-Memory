@@ -97,9 +97,18 @@ echo "exit $S4 (expected 0 = 全部 OK、零未扫描缺口)"
 # which is why the task keeps the exit-line defect and changes its wording.
 HINTS_EXIT="$(git -C "$REPO" grep -l 'Exit Code:' "$START" -- . | sed "s/^$START://" | tr '\n' ' ')"
 HINTS_CURL="$(git -C "$REPO" grep -l -F 'curl: \((\d+)\)' "$START" -- . | sed "s/^$START://" | tr '\n' ' ')"
-python3 - "$HERE/conditions.json" "$START" "$TREE" "$FILES" "$TESTS_BASE" "$(sha "$HERE/reference/regression.reference.mjs")" "$(sha "$HERE/reference/fix.patch")" "$(sha "$HERE/verify.mjs")" "$HINTS_EXIT" "$HINTS_CURL" "$WORK/start.json" "$WORK/seg2.json" "$S0" "$S1" "$S2" "$S4" <<'PY'
+# The note's token record must be reachable from THIS directory: run-once.sh reads $TASK_DIR/tokens.json
+# for resolve-tokens and the delivery/use judge. Its absence let five runs be judged without the note's
+# value (2026-09-11); the link to the note's home and what it resolves to are frozen here.
+TOKENS_LINK="$(readlink "$HERE/tokens.json" || echo "(not a link)")"; TOKENS_SHA="$(sha "$HERE/tokens.json")"
+# every other file run-once.sh / resolve-tokens.mjs read from the task dir is a link to the note's home too
+LINKS="$(for f in pair.json confounders.watch asset-pool-snapshot.json; do printf '%s→%s ' "$f" "$(readlink "$HERE/$f" 2>/dev/null || echo MISSING)"; done)"
+echo "task dir links: $LINKS"
+NOTE_SPEC="$(python3 -c "import json;t=json.load(open('$HERE/tokens.json'));k=[x for x in t if not x.startswith('_')][0];print(k, t[k]['version'], t[k]['token_sha256'][0][:12])")"
+echo "tokens.json → $TOKENS_LINK (sha256 ${TOKENS_SHA:0:12}…): note $NOTE_SPEC"
+python3 - "$HERE/conditions.json" "$START" "$TREE" "$FILES" "$TESTS_BASE" "$(sha "$HERE/reference/regression.reference.mjs")" "$(sha "$HERE/reference/fix.patch")" "$(sha "$HERE/verify.mjs")" "$HINTS_EXIT" "$HINTS_CURL" "$WORK/start.json" "$WORK/seg2.json" "$S0" "$S1" "$S2" "$S4" "$TOKENS_LINK" "$TOKENS_SHA" "$NOTE_SPEC" "$LINKS" <<'PY'
 import json,sys,datetime
-out,start,tree,files,tests,rt,rp,vf,hints_exit,hints_curl,startjson,seg2,s0,s1,s2,s4=sys.argv[1:17]
+out,start,tree,files,tests,rt,rp,vf,hints_exit,hints_curl,startjson,seg2,s0,s1,s2,s4,tokens_link,tokens_sha,note_spec,links=sys.argv[1:21]
 r=json.load(open(seg2)); st=json.load(open(startjson))
 task=json.load(open(out.replace("conditions.json","task.json")))
 import hashlib
@@ -113,6 +122,8 @@ doc={"frozen_at":datetime.datetime.now(datetime.timezone.utc).replace(microsecon
    "exit_line_spelled_Exit_Code":[h for h in hints_exit.split() if h],
    "generic_curl_error_parser":[h for h in hints_curl.split() if h],
    "reading":"the copy already holds a correct implementation to refer to (evaluation/gate0/verify-capture.mjs reads `\\nExit Code: (-?\\d+)`); the note's value is to shorten the search, not to be the only source of the answer. The note itself names bridge-addr/verify.mjs, not this file: applying it here is the transfer this task measures."},
+ "task_dir_links":dict(x.split("→",1) for x in links.split()),
+ "tokens_json":{"link_target":tokens_link,"sha256":tokens_sha,"note":note_spec.split()[0],"note_version":int(note_spec.split()[1]),"token_sha256_prefix":note_spec.split()[2],"why":"run-once.sh reads $TASK_DIR/tokens.json for resolve-tokens and the delivery/use judge; the link keeps one source of truth with the note's home"},
  "selfcheck":{"seg0_exit":int(s0),"seg1_exit":int(s1),"seg2_exit":int(s2),"seg4_exit":int(s4),"expected":{"seg0":0,"seg1":1,"seg2":0,"seg4":0}}}
 json.dump(doc,open(out,"w"),indent=2,ensure_ascii=False); open(out,"a").write("\n")
 print(f"\nconditions.json written ({out})")

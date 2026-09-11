@@ -151,7 +151,8 @@ if (( FRESH_CONSUMER )); then
   CFG_BEFORE="$(shasum -a 256 "$PROXY_CFG" | cut -c1-64)"
   CFG_BACKUP="$PROXY_CFG.bak-$RUN_ID"
   cp "$PROXY_CFG" "$CFG_BACKUP"
-  CONSUMER_AGENT="$FRESH_AGENT" FRESH_CONSUMER_AGENT="$FRESH_AGENT" bash "$EVAL/runner/prepare.sh" --identity "$IDENTITY" > "$RUN_DIR/prepare.log" 2>&1 \
+  PRODUCT_TASK="$(python3 -c "import json;print(json.load(open('$TASK_DIR/task.json')).get('product_task_id',''))" 2>/dev/null || true)"
+  CONSUMER_AGENT="$FRESH_AGENT" FRESH_CONSUMER_AGENT="$FRESH_AGENT" FRESH_CONSUMER_TASK="$PRODUCT_TASK" bash "$EVAL/runner/prepare.sh" --identity "$IDENTITY" > "$RUN_DIR/prepare.log" 2>&1 \
     || { cat "$RUN_DIR/prepare.log" >&2; die "could not switch the proxy to the fresh consumer $FRESH_AGENT (config backup: $CFG_BACKUP)"; }
   CFG_AFTER="$(shasum -a 256 "$PROXY_CFG" | cut -c1-64)"
   python3 - "$RUN_DIR/consumer.json" "$CFG_BEFORE" "$CFG_AFTER" "$CFG_BACKUP" "$PROXY_CFG" <<'PY'

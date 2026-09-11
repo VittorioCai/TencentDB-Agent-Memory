@@ -1,6 +1,6 @@
-# Re-parse of exit status — collect-artifacts.mjs exit-line fix on the main branch (2026-09-11T18:13:31Z)
+# Re-parse of exit status — collect-artifacts.mjs exit-line fix on the main branch
 
-Generated: `node evaluation/attribution/reparse-exit-status.mjs --old=77959dc <14 run dir(s)>`. Old reader: `outcomeOf` as it was before the fix (77959dc); new reader: the current `evaluation/attribution/collect-artifacts.mjs`. Tool results are taken once per tool call from each capture's last request.
+Generated 2026-09-11T18:46:17Z: `node evaluation/attribution/reparse-exit-status.mjs --old=77959dc <14 run dir(s)>`. Old reader: `outcomeOf` as it was before the fix (77959dc); new reader: the current `evaluation/attribution/collect-artifacts.mjs`. Tool results are taken once per tool call from each capture's last request.
 
 | run | tool results | with an exit line | spelled `Exit Code:` | exit_code null before | null after | readings changed |
 |---|---|---|---|---|---|---|

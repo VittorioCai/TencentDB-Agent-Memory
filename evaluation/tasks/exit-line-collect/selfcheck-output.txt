@@ -1,11 +1,11 @@
-working copy: /private/tmp/topic4-devloop-selfcheck.c995/repo
+working copy: /private/tmp/topic4-devloop-selfcheck.WVOj/repo
 start commit 141c044be519e53bbfe2d1ef780632ae110a8136 (tree 631aa8559a847b34b7c169236411eecd29e1d16a); 1215 tracked files, 40 test files; excluded: evaluation/runner/runs, evaluation/tasks/exit-code-fix, evaluation/tasks/exit-line-collect
 runs/ present in copy: no;  task dirs present in copy: exit-code-fix no, exit-line-collect no
 defect present at the start: 1 lower-case exit-line pattern(s) in evaluation/attribution/collect-artifacts.mjs
 
 ════════════════════════════════════════════════════════════════════
 【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)
-frozen 2026-09-11T17:57:16Z: copy commit ddb319f (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.c995/start.json
+frozen 2026-09-11T18:54:00Z: copy commit 6f044c8 (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.WVOj/start.json
 suite at start: tests 554 pass 549 fail 3 (exit 1); baseline failing: evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值; evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt; evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
 exit 0 (expected 0 = 套件结果可解释)
 
@@ -29,7 +29,7 @@ exit 1 (expected 1 = FAIL)
 patch applied:  1 file changed, 1 insertion(+), 1 deletion(-)
 verdict PASS: reference test passed (6/6); no new identified failure in the controlled suite (560 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing
 reference test: tests 6 pass 6 fail 0
-compared with start ddb319f (frozen 2026-09-11T17:57:16Z); copy HEAD ddb319f, commits after start 0
+compared with start 6f044c8 (frozen 2026-09-11T18:54:00Z); copy HEAD 6f044c8, commits after start 0
 diff: ['evaluation/attribution/collect-artifacts.mjs']  out_of_scope []  touched_verifier False  deleted_tests []
 attempts: ['none: no test file was added']
 exit 0 (expected 0 = PASS)
@@ -47,21 +47,25 @@ original tests: baseline 40 files, missing [], rewritten [], model-added []
 ════════════════════════════════════════════════════════════════════
 【4】判别值来源唯一:token-provenance 对笔记判别值(笔记的家在 exit-code-fix;本目录作为额外任务目录一并扫描)
 OK   eval-tool-result-exit-line skl-pXLc38dex6Zt v2  sha256 1e85dcf5dcf7…  value, version and content hash verified from Core (manage read)
-OK   skl-pXLc38dex6Zt visibility=team status=candidate  team-visible: the bridge's search can return it to a consumer
-扫描来源 2362 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+OK   skl-pXLc38dex6Zt visibility=team status=approved  team-visible: the bridge's search can return it to a consumer
+扫描来源 2363 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
 
-OK   skl-pXLc38dex6Zt  token="bt-<value>"
+BAD  skl-pXLc38dex6Zt  token="bt-<value>"
+       已出现于 [record] task:devloop-runs.json ×1
 
-全部干净
+1 个 token 不可用
 
 [extra task dir /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/tasks/exit-line-collect]
-扫描来源 8 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+扫描来源 18 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
 
-OK   skl-pXLc38dex6Zt  token="bt-<value>"
+BAD  skl-pXLc38dex6Zt  token="bt-<value>"
+       已出现于 [record] task:devloop-runs.json ×3
 
-全部干净
+1 个 token 不可用
 
-exit 0 (expected 0 = 全部 OK、零未扫描缺口)
+exit 1 (expected 0 = 全部 OK、零未扫描缺口)
+task dir links: pair.json→../exit-code-fix/pair.json confounders.watch→../exit-code-fix/confounders.watch asset-pool-snapshot.json→../exit-code-fix/asset-pool-snapshot.json 
+tokens.json → ../exit-code-fix/tokens.json (sha256 b0a3507252b1…): note skl-pXLc38dex6Zt 2 1e85dcf5dcf7
 
 conditions.json written (/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/tasks/exit-line-collect/conditions.json)
-结论:验证器四段全过,可以跑模型(exit-line-collect)
+结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1)

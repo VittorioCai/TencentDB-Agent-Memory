@@ -227,3 +227,37 @@ run-once 每次都同步了结果,`core-outcomes.json` 却是 trusted=0:`content
 前后的注册表比对与归档 key 里的 agent 段为准。apply 之前先确认作者先验有没有计入(Core 标 "reported,
 not used",只定 review_priority)、两次验证是不是跨人(消费者 user ≠ 作者 user)。教训:每一跳的证据要写进
 报告,闭合与否由记录里的时间戳与状态变化说,不由步骤跑没跑说。
+
+**身份 c 在 harness 里只写在注释里。**(2026-09-11 第二任务)
+`use-identity.sh` 的头注释列了 `c`,case 分支只有 `a|b`;`prepare.sh --identity c` 固定强制 C 的作者 agent,
+不认 run-once 新建的消费者。第二任务第一次试跑死在开跑前(作废留档)。教训:一个"支持的身份"要在
+每一处分支里都真的存在,试跑(§13)正是为抓这种事;新身份第一次跑必须先试跑一次不计样本。
+
+**写入作者评估会以 apply:true 重判,先准入后评估等于没准入。**(2026-09-11 第二任务)
+`write-assessment.sh` 写完评估让闸门 `gate/evaluate {apply:true}`,零证据的 v2 被规则判 pending,
+管理员刚置的 approved 被写回 candidate。处置:评估先写、准入后置,并在报告里按时间戳说明顺序。
+教训:任何"让闸门重读"的步骤都可能改状态;实验干预(准入)要放在所有会重判的操作之后,顺序写进命令清单。
+
+**证据包只查"作者资产上的结果",漏掉"作者作为消费者产生的结果"。**(2026-09-11 第二任务)
+B 有 32 次作为消费者被 harness 核实的 validated,证据包按 `owner_user_id` 只列 B 自己资产上的结果(0 条),
+B 的能力读成 unknown。加 `consumer_user_id` 查询后 own_business 32/10,读 medium(不产生 high)。
+教训:README 说有三本账,就要有三条查询;一本账为空时先问"查了没有",再问"真的没有"。
+
+**安全策略拦下的写入按 §14 交人,不换身份重试。**(2026-09-11 第二任务)
+以 B 的 key 调 `gate/submit` 被会话的安全分类器拒绝;没有改用别的 key 或让别的会话代跑,而是把命令原样
+交给用户执行并把拒绝记进报告。教训:被拒不等于"人工执行就允许",但人工执行确实是正式渠道;记录原因,
+把命令给人,继续做不依赖它的事。
+
+**闸门的 distinct_tasks 数的是产品任务实体,harness 把所有会话钉在同一个任务 id 上。**(2026-09-11 第二任务)
+两个评测任务、两个消费者用户跑完,闸门报 distinct_consumers 2、distinct_tasks 1:结果行的 task_id 来自 proxy
+强制身份里的 task_id,配置里钉死为第一任务的实体 task-5e6xp4mrrw,第二任务的会话也绑在它上面。处置:以用户 c
+为第二任务建产品任务实体(`product-task.json`),task.json 记 `product_task_id`,prepare.sh 按运行改写
+`debugForceIdentity.task_id`,重跑有笔记组;之前绑错实体的两次留作记录并在报告里按实体分列。教训:闸门读的每个
+计数字段都要追到它在产品里的来源;"两个任务"在评测目录里成立,在产品里未必成立,报告要写产品看到的那个。
+
+**任务目录缺一个文件,判定器就换一套值,不报错。**(2026-09-11 第二任务)
+`run-once.sh` 从任务目录读 tokens.json、pair.json、asset-pool-snapshot.json、confounders.watch;第二任务目录
+起初只有 task.json / task.md / verify.mjs / reference。缺 tokens.json 时判定器退回批次四的值(五次运行没有任何
+笔记事件);缺 pair.json 时 resolve-tokens 以 null user 读 Core 失败,运行在判定前中止。处置:四个文件做成指向
+笔记之家的符号链接,selfcheck 把链接目标冻进 conditions.json。教训:新任务目录先对照 harness 实际读取的文件清单
+(`grep -o '\$TASK_DIR/[^ ]*' run-once.sh`),缺一个就是一次作废;回退到别的值比报错更危险。
