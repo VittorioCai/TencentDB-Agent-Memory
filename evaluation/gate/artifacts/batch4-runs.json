@@ -1,0 +1,69 @@
+{
+  "batch": 4,
+  "pairs": 5,
+  "order": "interleaved off,on per pair",
+  "gate_baseline": "evaluation/gate/artifacts/gate_baseline_batch4.json",
+  "started_at": "2026-09-10T23:24:24Z",
+  "runs": [
+    {
+      "seq": 1,
+      "arm": "off",
+      "run_id": "20260910T232424Z-gate-off",
+      "exit": 0
+    },
+    {
+      "seq": 2,
+      "arm": "on",
+      "run_id": "20260910T232507Z-gate-on",
+      "exit": 0
+    },
+    {
+      "seq": 3,
+      "arm": "off",
+      "run_id": "20260910T232522Z-gate-off",
+      "exit": 0
+    },
+    {
+      "seq": 4,
+      "arm": "on",
+      "run_id": "20260910T232611Z-gate-on",
+      "exit": 0
+    },
+    {
+      "seq": 5,
+      "arm": "off",
+      "run_id": "20260910T232627Z-gate-off",
+      "exit": 1
+    },
+    {
+      "seq": 6,
+      "arm": "on",
+      "run_id": "20260910T232715Z-gate-on",
+      "exit": 0
+    },
+    {
+      "seq": 7,
+      "arm": "off",
+      "run_id": "20260910T232730Z-gate-off",
+      "exit": 0
+    },
+    {
+      "seq": 8,
+      "arm": "on",
+      "run_id": "20260910T232818Z-gate-on",
+      "exit": 0
+    },
+    {
+      "seq": 9,
+      "arm": "off",
+      "run_id": "20260910T232835Z-gate-off",
+      "exit": 0
+    },
+    {
+      "seq": 10,
+      "arm": "on",
+      "run_id": "20260910T232924Z-gate-on",
+      "exit": 0
+    }
+  ]
+}

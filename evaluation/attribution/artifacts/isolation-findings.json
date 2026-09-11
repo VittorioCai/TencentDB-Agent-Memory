@@ -1,10 +1,10 @@
 {
   "what": "由原始捕获复算得到的他源送达证据。原始记录未改动;本文件是派生产物,可用同一条命令重算。",
-  "generated_at": "2026-09-10T22:45:15.187Z",
+  "generated_at": "2026-09-10T23:30:32.916Z",
   "analysis_code": {
     "delivery-audit.mjs": "f1c69943b123",
     "adoption.mjs": "76b4788be935",
-    "calibrate-runs.mjs": "61c36ab19a9f",
+    "calibrate-runs.mjs": "5055eff4ef8f",
     "derive-isolation-findings.mjs": "d47923b988c2"
   },
   "runs": [
@@ -387,6 +387,166 @@
       "started_at": "2026-09-08T22:07:55Z",
       "capture_sha256": "305675fa5012076c38ec1c67c08a6c31648649dc84a1fc5f91562560ffcc886b",
       "verdict_sha256": "09289de5314830e10e02dabdc3551b786e77525a2db116142b5f27124f4e5e1c",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232209Z-trial-gate-off",
+      "started_at": "2026-09-10T23:22:09Z",
+      "capture_sha256": "65520b1315a07f2439c64278db423d1ffaa5ff78186bca87190d5e18433a137a",
+      "verdict_sha256": "e02431942aeb4089d23ba77c5a692fc4416ecc8ec512cd71f5d4616b772b09ef",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232305Z-trial-gate-on",
+      "started_at": "2026-09-10T23:23:05Z",
+      "capture_sha256": "16a42536dd8140155fb3cb3b8beba1e5b1a093d81478a7a780117ecd5eeccb33",
+      "verdict_sha256": "d8c02ace69306244f817dc05da9e79922308ae3f4b15a1d99d3e10740c8b6a6b",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232424Z-gate-off",
+      "started_at": "2026-09-10T23:24:24Z",
+      "capture_sha256": "928a00e22630d839a56ef13d05d70589efee9d0dcce5aaaaf60684f8697cb4cc",
+      "verdict_sha256": "cb475112a1df017d54dd7a7244671bab3cbf7e9b61b47d420c3d2f8020171df9",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232507Z-gate-on",
+      "started_at": "2026-09-10T23:25:07Z",
+      "capture_sha256": "3085e2b6f344166247add9d9385590242af6c71ad7d5224ce8ee3564eaa18fcd",
+      "verdict_sha256": "eed39e3c45df93e2f87cd6055943e21355a5d07d51bed535d343a26d3d2bdfdf",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232522Z-gate-off",
+      "started_at": "2026-09-10T23:25:22Z",
+      "capture_sha256": "dfdff5403bd6ff23d4a975fcae9addbb8fa03e0937cafc4b4d6e023ba0599189",
+      "verdict_sha256": "7573b3ad7073be5182858e5f62ae07e949b721358cce627a0c4e4de0abe3a18b",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232611Z-gate-on",
+      "started_at": "2026-09-10T23:26:11Z",
+      "capture_sha256": "1aba1ad39513c50f07e437f8ff05688dab6c03e1df37cc825dfbad17b5bba847",
+      "verdict_sha256": "487846bfa1df46d7aa88a05c2d7f50f23309fa1e4b3a813bb80f3b93853808b7",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232627Z-gate-off",
+      "started_at": "2026-09-10T23:26:27Z",
+      "capture_sha256": "9bb19b379faf3ba0fde2d1ed783b8ea012dd35cd8b51353a207c64b3855e1b8f",
+      "verdict_sha256": "d28592d40ce130df7765b11edb066dd20dc39f82bfcb3c8306de5347c34f1c7a",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232715Z-gate-on",
+      "started_at": "2026-09-10T23:27:15Z",
+      "capture_sha256": "aacc346d5f6c7dc28830c44775fee9a8ee9175455194be2468c82d409f9eec87",
+      "verdict_sha256": "24d62c8fcdf3157eb0d8b194cb74917016a9893e80449144e39dd7c83a18dc42",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232730Z-gate-off",
+      "started_at": "2026-09-10T23:27:30Z",
+      "capture_sha256": "3dcfb534187c651e5cba56595edfb5ac09173b6dab62e01c6610841ddebfa552",
+      "verdict_sha256": "4c8591b781157ad7978d98b919f05bdc121852ef06756b183b7346b3e13187eb",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232818Z-gate-on",
+      "started_at": "2026-09-10T23:28:18Z",
+      "capture_sha256": "d82e6d9618476272e135261c633cf1deb7e5d270c7a88bcfb84eefcc1408e7e9",
+      "verdict_sha256": "55f9c5458f28a4a29560af3a046a5f287b969ec89b07b17f4d1960ff19590cd8",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232835Z-gate-off",
+      "started_at": "2026-09-10T23:28:35Z",
+      "capture_sha256": "cbd1a2ccfdddba8f0a09eec51e436ed74e0687a56845bcc1b194266b7bf2ed58",
+      "verdict_sha256": "1e7d9cdbe257c4657cb16b7e3ed85b07de58c050fcca5f07b1ed6ec0ca73f103",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232924Z-gate-on",
+      "started_at": "2026-09-10T23:29:24Z",
+      "capture_sha256": "7f93e54f5e0484482dbde7a113ec46b540971a8ab0b3feea83113f2b8868718e",
+      "verdict_sha256": "56bd236098649d2b24d0c0f871ec2dad0e104d1cc46e76d5c4177e93d23297b4",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T231329Z-b4-prep",
+      "started_at": "2026-09-10T23:13:29Z",
+      "capture_sha256": "c4445ec10d819db3ea895d90d9340cbc967cab44a982bf7f302520f0559efe8f",
+      "verdict_sha256": "9fc173f18526ffb6ab62636ba44bec9dafb7b006014c89392e0d55d74275f0f5",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T231900Z-b4-prep",
+      "started_at": "2026-09-10T23:19:00Z",
+      "capture_sha256": "20ea04b0146565cced3b08eec389f279cc2ccbf6e2aee13e83f1070b0becdca9",
+      "verdict_sha256": "f50ed29516f00a64f93ab87cc96856885c24f4f7d95df8fc9ae638f90dfc15fe",
+      "capture_complete": true,
+      "isolation_recorded": "记录为已隔离",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232209Z-trial-gate-off",
+      "started_at": "2026-09-10T23:22:09Z",
+      "capture_sha256": "65520b1315a07f2439c64278db423d1ffaa5ff78186bca87190d5e18433a137a",
+      "verdict_sha256": "e02431942aeb4089d23ba77c5a692fc4416ecc8ec512cd71f5d4616b772b09ef",
+      "capture_complete": true,
+      "isolation_recorded": "记录为受污染",
+      "leak_confirmed": false,
+      "leaks": []
+    },
+    {
+      "run_id": "20260910T232305Z-trial-gate-on",
+      "started_at": "2026-09-10T23:23:05Z",
+      "capture_sha256": "16a42536dd8140155fb3cb3b8beba1e5b1a093d81478a7a780117ecd5eeccb33",
+      "verdict_sha256": "d8c02ace69306244f817dc05da9e79922308ae3f4b15a1d99d3e10740c8b6a6b",
       "capture_complete": true,
       "isolation_recorded": "记录为已隔离",
       "leak_confirmed": false,

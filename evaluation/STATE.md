@@ -7,112 +7,94 @@
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
-| 上次验证的实现提交 | 本文件所在提交的父提交 `380bdd4`;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | 2026-09-11(审阅四项修复、重新冻结与核对) |
-| 测试 | evaluation 491;Core 122;proxy 24(2026-09-11,全 0 失败) |
+| 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
+| 验证时间 | 2026-09-11(批次四跑完、收口、两处 harness 缺陷定位) |
+| 测试 | evaluation 519;Core 122;proxy 24(2026-09-11,全 0 失败) |
 
-## 待验收成果:第 1 件"新实验条件准备齐"
-
-**验收命令**
+## 第 1 件"新实验条件准备齐":已验收
 
 ```bash
 node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json
 ```
 
-**期望输出**:60 项全部 `PASS`,末行 `结论:条件一致,可以开试跑`,退出码 0。
+开批次前实际输出(`evaluation/gate/artifacts/batch4-conditions-check.txt`):61 PASS + 2 NOTE,
+退出 0。同时确认:`resolve-tokens.mjs` 从 Core 取回两条明文,sha256 与 tokens.json 一致;
+tokens.json 的 version 与内容哈希已同步到 v4(`--check` 里"Core 正文判别值哈希 == tokens.json"
+两条 PASS)。
 
-**实际输出**(2026-09-10T15:56Z,全文在 `evaluation/gate/artifacts/batch4-conditions-check.txt`):
-58 项 PASS,2 项 FAIL,退出码 1。
+## 第 2 件"正式对照":已跑完,报告在 `evaluation/runner/COMPARISON-2026-09-11.md`
 
-```
-FAIL  token bt-…(sha256 a97b5919…) 来源唯一且不可从部署推导
-      期望 "clean, not derivable"  实际 "clean=false … found_in=task:README.md,task:pair.json,task:tokens.json"
-FAIL  token bt-…(sha256 74a29c97…) 来源唯一且不可从部署推导
-      期望 "clean, not derivable"  实际 "clean=false … found_in=task:README.md,task:pair.json,task:tokens.json"
-```
+按"第 2 件的顺序"逐步:修通分析链 → `--check` 61/61 → gate-off 准备运行两次
+(`b4-prep`)→ `build-baseline` 冻结证据(source_runs = 两次准备运行)→ off/on 试跑一对
+16/16 → 交错正式 off/on 各五次(顺序在 `evaluation/gate/artifacts/batch4-runs.json`)→
+`collect-runs.sh` 收记录 → 报告。
 
-这两项是**设计问题**,不是配置问题:追踪值以明文写在这台机器上模型可读的文件里,冒烟运行
-已证明模型能读到它们。修法取决于"token 明文放哪"的决定(见需决策事项)。定了之后改造、
-重新冻结、再跑验收命令。
+结果一句话:gate-on 5/5 PASS、0 次见到被拒资产、0 次失败尝试;gate-off 4/5 PASS、5/5
+见到、3 次失败尝试、2 次 corrected;墙钟 47 → 15 s,prompt token 218k → 118k。准备运行
+在校准表里单列一行(证据基础,不是样本);`--check` 的"准备运行 ≠ 对照样本"PASS。
 
-**已关闭的阻塞**:资产准入。两条 v3 资产已是 `approved`,闸门判定未动(decided_at 仍为
-2026-09-09T21:19:51Z、decision pending),每条 revision 各 +2——与 `core-gate.sh --reset` 的
-两次写入(status、visibility)一致;由用户执行,执行会话未读取管理员密钥。
+**但 off 臂只有 3 个独立样本**:第 5、9 次在拨号前经 memory-bridge 读到了本批次更早会话
+写的结论(见下"记忆通道")。
 
-## 两条新要求已落地(2026-09-10)
+## 批次里发现的三处缺陷(都已定位,处置各不同)
 
-**试跑检查点是可运行的,不只是清单(§13)。**
+1. **记忆通道未隔离(设计缺口,需决策)。** profiles/ 快照不覆盖 atomic 记忆
+   (`vectors.db`、`records/`、`skill_buffer/`)和 `conversations/`;流水线在会话进行中
+   就写,模型经 `memory-bridge/v3/atomic/search`、`conversation/search|query` 读回。
+   第 9 次 gate-off 经 `conversation/query` 拿到 prep 1 整个会话含最终报告。gate-on 五次
+   都没读。已补检测:试跑检查点第 17 条"记忆通道"(`evaluation/runner/memory-channel.mjs`
+   + 测试 12 条),`--check` 新项"消费者 atomic 记忆足迹为空"(现在 139 行 / 16 会话目录,
+   FAIL)。**批次五之前要定隔离方案**,见需决策事项。
+2. **快照先于清理(harness,已修)。** `run-once.sh` 把整树 tar 取在 `MEM_EXPECT_EMPTY`
+   清理之前,还原时把残留装回,"运行后已回滚"检查点 10/10 FAIL;每次开跑起点仍是空基线
+   (guard 生效,`pre_run_cleared_files` 4–5)。已抽成 `evaluation/runner/lib/agent-memory.sh`
+   (先清理后快照),`agent-memory.test.mjs` 假 docker 跑真函数,先失败后 4/4。
+   **改动未经真实运行**:批次五准备运行前先跑一次 harness 冒烟(不进批次)。
+3. **一条命令拨两个目标,解析器只取第一个 URL、读一段合并结果(判定逻辑,待同意)。**
+   第 5 次 gate-off 记成"47318 timed out",实际 47318 code 0、8096 超时;按"最后一拨决定"
+   FAIL 仍成立,但反向顺序会把真 PASS 判 FAIL,且 wrong 的 trace 值丢失 → 采纳 unknown。
+   提案与先失败测试:`evaluation/tasks/bridge-addr/verify.multi-target.pending.mjs`
+   (不进套件),实际输出 `verify.multi-target.pending.txt`。同意后升 `rules_version`,
+   批次四按新口径另报,不改 `runs/`。
 
-```bash
-node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=evaluation/gate/artifacts/batch4-conditions.json
-```
+## 需决策事项
 
-11 条,按四组打分,每条给 PASS / FAIL / UNKN,不设兜底:
+1. **atomic / conversation 记忆的逐运行隔离方案**(批次五前置)。可选:
+   (a) 每次运行换全新 agent id(proxy `debugForceIdentity` 跟着改并重启,十次重启);
+   (b) 批次期间关闭该消费者的记忆生成(要找 proxy/Core 的开关,未查);
+   (c) Core 加按 agent 删 atomic/conversation 的管理接口(动产品代码,需团队管理员);
+   (d) 整库快照还原 `vectors.db`+`records/`+`conversations/`+`skill_buffer/`(会连带
+   别的 agent 的写入,不推荐)。执行会话倾向 (a) 或 (b),等用户定。
+2. **是否采纳"多目标命令"解析提案**(见缺陷 3)。同意 → 改 `verify.mjs`、升
+   `rules_version`、批次四另报一份;不同意 → 现状保留,报告里按现在的写法说明。
+3. 同类限制:含任务标记的 skill **搜索**被算成目标尝试(第 5 次第 7 条消息),是否收紧
+   `isTargetCommand`。与 2 一起定。
 
-- 条件一致性:run 目录 tokens.json 与任务目录一致;规则版本与清单一致;闸门臂已记录;
-  开跑状态符合该臂(off=两条 approved;on=按基线判定)。
-- 隔离:消费者身份==清单;起点==冻结的消费者基线哈希;运行后已回滚(还原后哈希==起点);
-  会话工作目录不是仓库且缓存为空。
-- 采集完整性:verifyCoverage 覆盖整段会话。
-- 实际采用:验收记录有目标尝试;**每次尝试都带回 trace 值(attempts[].value)**;
-  采纳判定对每条资产可判(非 unknown)。
+## 批次五之前必须做的事(按序)
 
-已在冒烟运行上跑过一次证明它工作:它正确判冒烟运行不合格(没有闸门臂、用的是旧
-tokens.json、早于 hash_restored),隔离与采用各项 PASS。"不能只看 PASS":末行结论与
-PASS/FAIL 无关,只看这 11 条。
-
-**报告按 (rules_version, 实验标识) 分组,旧批次单独一行(用实际输出证明)。**
-`calibrate-runs.mjs` 的主表现在是实验分组表:
-
-```
-| unrecorded · pre-batch (2026-09-05)        | 0/0/0/0 | ... | 0/6   |
-| unrecorded · pre-batch (frozen 2026-09-06) | 24/0/8/0 | ... | 32/32 |
-| gate-rules-2026-09-08f · batch3 (frozen)   | 20/0/9/0 | ... | 29/30 |
-| **cumulative**                             | 44/0/17/0 | ... | 61/68 |
-```
-
-批次四跑出来会是同一表里新的一行(`gate-rules-2026-09-08f · batch4`),不与 batch3
-合并。cumulative 跨规则跨实验,只描述历史,不替任何一行作证。全文见
-`evaluation/attribution/CALIBRATION.md`。
-
-## 阻塞
-
-- **token 明文在模型可读的磁盘上**(2026-09-10 冒烟运行发现,需决策):见"需决策事项"。
-
-## 冒烟运行 `20260910T154648Z-harness-smoke-v3`(不是样本,不进批次)
-
-目的:让 runner 的三处改动(空目录会话、消费者范围哈希、run.json 新字段)经过一次真实运行。
-条件:两条资产都是 candidate(闸门藏起),消费者 `agt-eiwlwrb0me`,记忆基线 0 个文件。
-
-**验证通过的检查点**:`session.cwd` 是 `/private/tmp/topic4-sessions/…`,不是仓库;开跑前项目缓存
-0 个文件;捕获的系统提示 `Working directory:` 与之一致;`consumer_scope.files_before` 0、哈希等于
-冻结值;`resolved-identity` 是新消费者;捕获完整;`attempts[].value` 两次都带追踪值,采纳判定
-两条都得出 true;run 目录 tokens.json 与任务目录一致;还原后新 agent 的 profile 目录不存在。
-
-**结果**:PASS,先拨 10.244.7.19:8096 带 `bt-…(sha256 a97b5919…)`,再拨 127.0.0.1:47318 带 `bt-…(sha256 74a29c97…)`。
-两条资产都不可读,模型却持有两条各自的追踪值。送达审计:两条都是 `delivered_from_other_source`,
-来源是第 24 轮 `cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json`。模型用 `lsof`
-从探针进程的 cwd 找到仓库。**闸门没有旁路;泄漏的是评测自己的记录文件。**
-
-**由此推翻的假设**:"会话在空目录里跑,仓库不可及"。有 shell 的模型能从进程表找到任何目录。
-`record` 类来源重新算作污染;验收命令在"token 来源唯一"上会失败,这是对的。
-
-**同时修掉的两处 harness 缺陷**:`hash_after` 被当作还原结果(现记 `hash_restored`);tokens.json
-的说明键混进资产列表(已移除并加过滤)。
+1. 定上面的决策 1(和 2、3)。
+2. `fill-traces.mjs` 换新 trace(v4 的已烧:明文在收进来的 `runs/` 记录和消费者残留里),
+   资产升 v5;用户跑 `core-gate.sh --reset` 恢复 approved(管理员密钥)。
+3. 新消费者或清空消费者(含 atomic/conversation,按决策 1);`--freeze` 记新的
+   `run-once.sh` 哈希与 atomic 足迹;`--check` 全过(现在 64 项:61 + 准备≠样本 +
+   atomic 足迹 + 文件未变项已含)。
+4. harness 冒烟一次(不进批次),看 `hash_restored == hash_before` 与记忆通道 PASS。
+5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
 ## 证据位置
 
 | 什么 | 在哪 |
 |---|---|
-| 批次四条件清单(冻结) | `evaluation/gate/artifacts/batch4-conditions.json` |
-| 批次四闸门基线 | `evaluation/gate/artifacts/gate_baseline_batch4.json`(无 v3 证据,判定 pending) |
-| 核对输出 | `evaluation/gate/artifacts/batch4-conditions-check.txt` |
-| 资产池快照(v3,含被闸门藏起的候选) | `evaluation/provenance/artifacts/asset-pool-snapshot.json`(不入库,由 `snapshot-assets.sh` 重生成) |
-| 场景记录 | `evaluation/tasks/bridge-addr/pair.json`(顶层已对齐 v3 与新消费者;`batch4` 块) |
-| 新 token | `evaluation/tasks/bridge-addr/tokens.json`(`adoption_fields: ["value"]`) |
-| 派生隔离审计 | `evaluation/attribution/artifacts/isolation-findings.json` |
-| 校准报告 | `evaluation/attribution/CALIBRATION.md`(生成) |
-| 旧批次原始记录 | `evaluation/runner/runs/`,未改动 |
+| 批次四对照报告 | `evaluation/runner/COMPARISON-2026-09-11.md`;表格 `summary-2026-09-11.md` |
+| 条件清单(冻结 2026-09-10T23:21:51Z) | `evaluation/gate/artifacts/batch4-conditions.json` |
+| 闸门基线(冻结 23:20:45Z,source_runs = 两次 b4-prep) | `evaluation/gate/artifacts/gate_baseline_batch4.json` |
+| 批次清单(顺序、退出码) | `evaluation/gate/artifacts/batch4-runs.json`;驱动日志 `batch4-runs.log`(本地,按 .gitignore 不入库)|
+| 核对输出 | `batch4-conditions-check.txt`(开批次前 61+2)、`batch4-conditions-check-post.txt`(批次后 53/9/2) |
+| 检查点输出 | `batch4-trial-gate-{off,on}.txt`(开批次前 16 条)、`batch4-formal-checkpoints.txt`、`batch4-prep-trial-checkpoints.txt`(17 条) |
+| 运行记录(不入库) | `evaluation/runner/runs/20260910T23*`,14 个目录;旧批次未改动 |
+| 校准报告(生成) | `evaluation/attribution/CALIBRATION.md`;派生隔离审计 `artifacts/isolation-findings.json` |
+| 场景记录 / token | `evaluation/tasks/bridge-addr/pair.json`(v4,`batch4` 块)、`tokens.json`(哈希形态) |
+| 待决提案 | `evaluation/tasks/bridge-addr/verify.multi-target.pending.{mjs,txt}` |
 
 ## 线上状态的受控记录(CLAUDE.md §10)
 
@@ -120,84 +102,26 @@ PASS/FAIL 无关,只看这 11 条。
 
 | 项 | 值 |
 |---|---|
-| 变更 | `sessionInit.debugForceIdentity.agent_id`:`agt-5e0y4l8a7a` → `agt-eiwlwrb0me` |
-| 备份 | `deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch`(同目录,受 .gitignore 保护,不进 Git) |
-| 备份 sha256 | `4453c5fd…`(全值在条件清单 `rollback.proxy_config.backup_sha256`) |
-| 当前 sha256 | `4b6309b4…`(条件清单 `proxy.config_sha256`) |
-| 差异 | 仅第 51 行 agent_id,已用 diff 核对 |
+| 变更 | `sessionInit.debugForceIdentity.agent_id` → `agt-giawngxum4`(2026-09-10T23:07:37Z 生效) |
+| 备份 | `config.yaml.orig-20260909-before-consumer-switch`(原始,sha256 `4453c5fd…`)、`config.yaml.bak-20260911-before-b3-switch`(切换前);同目录,受 .gitignore 保护 |
+| 当前 sha256 | `76428b8b…`(条件清单 `proxy.config_sha256`) |
 | 恢复命令 | `cp deploy/global-images/.proxy-config/config.yaml.orig-20260909-before-consumer-switch deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy` |
-| 验证命令 | `docker logs tdai-proxy 2>&1 \| grep -F '→ initialized' \| tail -1`(下一次会话应显示对应 agent) |
-| 生效核对 | 容器 StartedAt 2026-09-09T21:23:05Z ≥ 配置 mtime,已在核对项里 |
+| 验证命令 | `docker logs tdai-proxy 2>&1 \| grep -F '→ initialized' \| tail -1` |
 
-**Core 资产状态**:两条资产由 v2 升 v3(`/v3/skill/update`,expected_version 2),闸门判定未继承
-(candidate/pending,已实测)。回退方式:再发一次 update 写回 v2 正文会产生 v4,不能"降回";
-v2 正文在 git 历史(`4801803` 之前的 `assets/*.md`)。
+**Core 资产状态**:两条资产 v4;批次结束时 right `approved`、wrong `failed`(最后一次是
+gate-on)。恢复 approved 由用户跑 `core-gate.sh --reset --baseline …gate_baseline_batch4.json`。
 
-**新 agent** `agt-eiwlwrb0me`(owner usr-4u07qc2kuj,名 Topic4-Consumer-B2):记忆 profile 尚未
-生成,即空基线。不删。
+**消费者记忆**:profiles/ 下 `agt-giawngxum4` 现有 5 个残留文件(最后一次会话的迟到写入,
+下一次运行前由 guard 清);atomic/conversation 足迹 139 行 / 16 会话目录,**没有清理办法**
+(见需决策 1)。旧消费者 `agt-eiwlwrb0me` 不删。
 
-## token 明文放哪 —— 已决定并实现(方案 2)
+**运行记录暂存**:`/private/tmp/topic4-runs/` 只剩 `probe-capture.jsonl`;会话目录
+`/private/tmp/topic4-sessions/` 保留(含 23:05 那次被删掉的准备尝试 `20260910T230524Z-b4-prep.dqa0`,
+它的会话写了记忆,是 prep 1 读到的冻结前残留的来源)。
 
-用户定:方案 2(明文出仓库)。已实现,见提交 `9cfe802`:仓库只存 sha256;明文只在 Core
-的资产正文里;`fill-traces.mjs` 生成全新 trace 填进 Core(v4)、只把 sha256 写进
-`tokens.json`;`resolve-tokens.mjs` 分析时用作者密钥从 Core 取回校验;`adoption.mjs` 新增
-哈希模式;资产源文件是占位符。旧 bt- 值已进 git 历史即烧掉,换了全新值。方案 3 spike
-(见下)非阻塞。
+## 历史节(保留,已完成)
 
-## 到 60/60 的确切步骤(2026-09-11 更新)
-
-审阅四项已修(见提交):解析契约钉住(id、版本、内容哈希、token 哈希),走**管理读取**
-(`x-tdai-read-purpose: manage`),所以来源唯一、Core 正文校验、基线扫描在资产 candidate
-时也能做——`--check` 里这些项现在已 PASS。剩下三件:
-
-1. **(用户,管理员密钥)恢复 approved**——这是 gate-off 的实验干预(模型路径要能读到
-   两条资产),不是证据:
-   ```
-   bash evaluation/gate/core-gate.sh --reset --baseline evaluation/gate/artifacts/gate_baseline_batch4.json
-   ```
-2. **(执行会话)清出空消费者**:`agt-eiwlwrb0me` 被冒烟运行的记忆流水线污染成 4 个文件。
-   新建一个全新消费者,改 proxy `debugForceIdentity.agent_id` 指向它并重启,`--consumer=`
-   用新 id 重新冻结。检查项"消费者基线为空(files==0)"是硬要求,污染的消费者过不了。
-3. **(执行会话)重新冻结 + 核对**:
-   ```
-   node evaluation/runner/batch-conditions.mjs --freeze --batch=4 --consumer=<新消费者> --task=evaluation/tasks/bridge-addr
-   node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json
-   ```
-   期望 61/61、退出 0。
-
-当前实际(2026-09-11,全文 `evaluation/gate/artifacts/batch4-conditions-check.txt`):
-58/61,三项 FAIL 全对应上面 1、2:两条资产开跑前状态 candidate;消费者 4 个文件。
-
-## 第 2 件的顺序(2026-09-11 审阅纠正:证据在试跑之前)
-
-v4 基线现在没有结果证据,两条都是 pending;gate-on 一试跑就重判回 candidate,"错资产
-failed"的检查点不可能满足。所以顺序是:
-
-1. **修通分析链**(本轮已做):哈希清单经解析契约取明文;运行时 judge-hard/judge-outcome/
-   receipt 与分析时 runInput 同一契约;失败中止。
-2. **条件核对** `--check` 全过(见上节步骤)。
-3. **v4 准备运行**(gate-off,消费者读到两条资产,产生 validated / corrected 结果):
-   `run-once.sh --auto --gate off` 若干次;记录留在仓库外。
-4. **冻结真实证据与判定**:用 `build-baseline.mjs --runs=<准备运行> …` 生成
-   `gate_baseline_batch4.json` 的 events/decisions(`--freeze` 不再覆盖带证据的基线)。
-   此时 gate-on 臂才有"错资产 → failed"可判。
-5. **off/on 一对试跑**,逐条过检查点(**不能只看 PASS**):
-   ```
-   node evaluation/runner/batch-conditions.mjs --trial <run 目录> --conditions=…/batch4-conditions.json
-   ```
-   含:gate-on 被藏资产 hidden=true;响应模型名一致且等于冻结值;会话 cwd 无兄弟目录且
-   探针 cwd 不在仓库。
-6. **正式对照**:交错跑 off/on 各五次。批次结束、下次换 trace 之前,
-   `bash evaluation/runner/collect-runs.sh` 把记录搬进 runs/。
-7. 报告按 (rules_version, 实验标识) 分组,批次四单独一行,旧批次不合并。
-
-那条 `core-gate.sh --reset` 是已设计的 gate-off 干预(恢复 approved),不等于 v4 已有验证
-证据;证据只能来自第 3 步。
-
-## 方案 3 spike 结论(2026-09-10,≤1h,非阻塞)
-
-- 宿主装的 `codebuddy` 是 macOS 原生二进制(Mach-O arm64),进不了 Linux 容器。
-- 真实 CLI 是 npm 包 **`@tencent-ai/codebuddy-code` 2.148.0**,node 实现,**可以**进 Linux
-  容器;宿主上另有 **`sandbox-exec`** 可用(macOS 原生沙箱)。
-- 结论:方案 3 原则上可行,但本轮没有搭起来验证(容器内强制身份 + 经探针抓包未验)。
-  按约定带**威胁模型**上批次(见 `CALIBRATION.md` 的"威胁模型"节),方案 3 留作后续。
+- 冒烟运行 `20260910T154648Z-harness-smoke-v3`:证明有 shell 的模型能从进程表找到仓库并读
+  记录文件 → 记录/探针/会话全部出仓库,`record` 类来源算污染。
+- token 明文放哪:方案 2(仓库只存 sha256,明文只在 Core 正文)已实现并经 `--check` 验证。
+- 方案 3 spike(容器内跑 CLI):可行但未搭起来,非阻塞。

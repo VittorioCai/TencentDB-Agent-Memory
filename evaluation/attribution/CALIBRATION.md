@@ -17,14 +17,14 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
   --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
 ```
 
-生成于 2026-09-10T22:45:14.653Z。
+生成于 2026-09-10T23:30:26.501Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 61c36ab19a9f
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 5055eff4ef8f
 - **规则版本**:gate-rules-2026-09-08f
-- **数据范围**:35 次运行,2026-09-05T15:35:18Z → 2026-09-08T22:07:55Z
-- **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 2 项;隐藏状态未记录 6 项;捕获不完整 1 次
+- **数据范围**:51 次运行,2026-09-05T15:35:18Z → 2026-09-10T23:29:24Z
+- **未知项(全数据范围,非仅冻结组)**:送达说不清 6 项;采纳无证据 3 项;隐藏状态未记录 6 项;捕获不完整 1 次
 
 ## 判据
 
@@ -61,7 +61,9 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 | unrecorded · pre-batch (2026-09-05) | 0 | 0 | 0 | 0 | 0 | 6 | 0/6 | — |
 | unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 0 | 32/32 | 1 |
 | gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 9 | 0 | 1 | 0 | 29/30 | 1 |
-| **cumulative** | 44 | 0 | 17 | 0 | 1 | 6 | 61/68 | 1 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 20 | 0 | 7 | 1 | 0 | 0 | 28/28 | 0.964 |
+| gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 0 | 4/4 | 1 |
+| **cumulative** | 68 | 0 | 24 | 1 | 1 | 6 | 93/100 | 0.989 |
 
 An isolation failure is not a judging error: the asset was hidden and its
 content reached the model anyway, so calling it used was right and the
@@ -71,11 +73,11 @@ recorded — count for neither side; `rated/total` is how much of the batch
 measured anything. An arrival from an identified other source is NOT
 unsettled: the content did reach the model.
 
-**规则 gate-rules-2026-09-08f · 送达一致性**:可评 29/30,假阳性 0 个,假阴性 0 个,准确率 1。
+**规则 gate-rules-2026-09-08f · 送达一致性**:可评 61/62,假阳性 0 个,假阴性 1 个,准确率 0.984。
 
-这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。
+已经出现反例:假阳性 0 个、假阴性 1 个。反例的成因要逐条查清,不能只看比率。
 
-说不清的 1 项不计入分母(共 30 项,可评 29 项)。上面的比率只描述这 29 项;被排除的 1 项既没有算判对也没有算判错,它们是否恰好富含错误,这批数据答不了。
+说不清的 1 项不计入分母(共 62 项,可评 61 项)。上面的比率只描述这 61 项;被排除的 1 项既没有算判对也没有算判错,它们是否恰好富含错误,这批数据答不了。
 
 ## 实际使用(参考判定 = 采纳)
 
@@ -84,21 +86,23 @@ unsettled: the content did reach the model.
 | unrecorded · pre-batch (2026-09-05) | 4 | 0 | 0 | 0 | 2 | 4/6 | 1 | 0.667 |
 | unrecorded · pre-batch (frozen 2026-09-06) | 24 | 0 | 8 | 0 | 0 | 32/32 | 1 | 1 |
 | gate-rules-2026-09-08f · batch3 (frozen) | 20 | 0 | 10 | 0 | 0 | 30/30 | 1 | 1 |
-| **cumulative** | 48 | 0 | 18 | 0 | 2 | 66/68 | 1 | 0.971 |
+| gate-rules-2026-09-08f · batch4 (frozen) | 19 | 0 | 8 | 0 | 1 | 27/28 | 1 | 0.964 |
+| gate-rules-2026-09-08f · batch4-prep (evidence base, not a sample) (frozen) | 4 | 0 | 0 | 0 | 0 | 4/4 | 1 | 1 |
+| **cumulative** | 71 | 0 | 26 | 0 | 3 | 97/100 | 1 | 0.97 |
 
-**规则 gate-rules-2026-09-08f · 使用检测**:可评 30/30,假阳性 0 个,假阴性 0 个,准确率 1。
+**规则 gate-rules-2026-09-08f · 使用检测**:可评 61/62,假阳性 0 个,假阴性 0 个,准确率 1。
 
 这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。
 
-这一组 30 项全部可评,没有项被排除在分母之外。
+说不清的 1 项不计入分母(共 62 项,可评 61 项)。上面的比率只描述这 61 项;被排除的 1 项既没有算判对也没有算判错,它们是否恰好富含错误,这批数据答不了。
 
-**采纳证据的覆盖率是 1**,其中 0 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
+**采纳证据的覆盖率是 0.984**,其中 1 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
 
 **其中 0 个 TP 来自隔离失败的运行**(资产被藏起、内容经别的通道到达后被采用):(无)。这类 TP 说明"泄漏进来的东西被用了",不说明"闸门放行的东西被用了",不能与干净的 TP 混算。
 
 ### 收益不等于采纳
 
-采纳且奏效 15 项,采纳但未奏效 4 项,采纳而收益未知 1 项。
+采纳且奏效 30 项,采纳但未奏效 11 项,采纳而收益未知 2 项。
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 
 ## 独立性
@@ -106,9 +110,21 @@ unsettled: the content did reach the model.
 隔离**配置**(运行时有没有快照还原记忆)与内容**泄漏**(资产内容有没有从别处到达)是
 两件独立的事实。配置没记录,不能抹掉已经复算出来的泄漏证据;反过来也不行。
 
-**不是独立样本 1 次:**
+**不是独立样本 13 次:**
 
 - `20260908T075637Z-gate-on-core` —— 原始捕获复算确认内容由他源送达;隔离配置未记录;来源 /tmp/sop_scene.md
+- `20260910T232209Z-trial-gate-off` —— 运行记录标注了污染
+- `20260910T232424Z-gate-off` —— 运行记录标注了污染
+- `20260910T232507Z-gate-on` —— 运行记录标注了污染
+- `20260910T232522Z-gate-off` —— 运行记录标注了污染
+- `20260910T232611Z-gate-on` —— 运行记录标注了污染
+- `20260910T232627Z-gate-off` —— 运行记录标注了污染
+- `20260910T232715Z-gate-on` —— 运行记录标注了污染
+- `20260910T232730Z-gate-off` —— 运行记录标注了污染
+- `20260910T232818Z-gate-on` —— 运行记录标注了污染
+- `20260910T232835Z-gate-off` —— 运行记录标注了污染
+- `20260910T232924Z-gate-on` —— 运行记录标注了污染
+- `20260910T232209Z-trial-gate-off` —— 运行记录标注了污染
 
 
 **隔离配置未记录 29 次** —— 这些运行早于隔离改造,没有 `agent_memory` 字段。未记录不等于干净:它们既不能算独立样本,也没有证据说不是。这 29 次的捕获都经过了同一套他源送达复算,没有再查出泄漏;查不出不等于没有。

@@ -34,6 +34,7 @@ import { provenanceOf, isDerivableFromDeployment, readTextFilesUnder, sourcesFro
 import { verifyCoverage } from "../attribution/delivery-audit.mjs";
 import { adoptionFromAcceptance } from "../attribution/adoption.mjs";
 import { resolveTokens } from "../attribution/resolve-tokens.mjs";
+import { memoryItemsFromCapture, memoryResidue } from "./memory-channel.mjs";
 import { homedir } from "node:os";
 
 // 批次运行记录的根目录(仓库之外)。方案 2 补充二:运行记录不写进仓库,来源扫描
@@ -82,6 +83,19 @@ function memScopedFiles(agentId) {
 }
 function memScopedHash(agentId) {
   try { return sh(["exec", CONTAINER, "sh", "-c", `cd '${MEM_ROOT}' && find . -type f -path '*agent%3A${agentId}*' | LC_ALL=C sort | xargs -r sha256sum | sha256sum | cut -d' ' -f1`]); } catch { return "absent"; }
+}
+// atomic 记忆(vectors.db / records/*.jsonl / skill_buffer/)不在 profiles/ 下,run-once 的
+// 快照还原不覆盖它。2026-09-10 批次四:两次 gate-off 运行经 memory-bridge/v3/atomic/search
+// 读到了本批次其他会话写的结论。这里只读它的足迹:records 里点名消费者的行数,
+// skill_buffer 下消费者的会话目录数。读不到 → null,不当 0。
+function atomicFootprint(agentId) {
+  if (!agentId) return null;
+  const dataRoot = MEM_ROOT.replace(/\/profiles\/?$/, "");
+  try {
+    const lines = sh(["exec", CONTAINER, "sh", "-c", `cd '${dataRoot}' && cat records/*.jsonl 2>/dev/null | grep -c -F '${agentId}' || true`]);
+    const dirs = sh(["exec", CONTAINER, "sh", "-c", `cd '${dataRoot}' && find skill_buffer -type d -name '${agentId}' 2>/dev/null | while read d; do ls "$d" | wc -l; done | awk '{s+=$1} END {print s+0}'`]);
+    return { data_root: dataRoot, records_lines: Number(lines), buffer_sessions: Number(dirs) };
+  } catch { return null; }
 }
 function memSnapshotTo(path) {
   const buf = execFileSync("docker", ["exec", CONTAINER, "tar", "czf", "-", "-C", MEM_ROOT, "."], { stdio: ["ignore", "pipe", "ignore"], maxBuffer: 256 * 1024 * 1024 });
@@ -165,6 +179,7 @@ async function readLive(spec) {
     consumer_scope: { agent_id: spec.consumer_agent_id, sha256: memScopedHash(spec.consumer_agent_id), files: scoped.length },
     snapshot_files: memFiles.length,
   };
+  memory.atomic_footprint = atomicFootprint(spec.consumer_agent_id);
   const watch = existsSync(join(taskDir, "confounders.watch"))
     ? readFileSync(join(taskDir, "confounders.watch"), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"))
     : [];
@@ -570,6 +585,14 @@ async function check(args) {
       "该消费者已被冒烟运行污染;新建一个空消费者或清空其 profile,再重新冻结");
   }
   rows.push({ name: "整树记忆哈希 == 冻结值(仅提示:整树会被别的 agent 的迟到写入带漂)", ok: m.tree_sha256 === cm.tree_sha256 ? true : "note", expected: cm.tree_sha256?.slice(0, 12), actual: m.tree_sha256?.slice(0, 12) });
+  if (c.isolation?.require_empty_consumer) {
+    // atomic 记忆不在 profiles/ 下,快照还原不覆盖;空基线批次要求它也为空。
+    const af = m.atomic_footprint;
+    row("消费者 atomic 记忆足迹为空(records/*.jsonl 与 skill_buffer/;profile 快照不覆盖)",
+      af ? af.records_lines === 0 && af.buffer_sessions === 0 : null, "0 line(s), 0 session dir(s)",
+      af ? `${af.records_lines} line(s), ${af.buffer_sessions} session dir(s)` : "unknown(容器读不到)",
+      "atomic 记忆还没有逐运行隔离方案(见 STATE.md 需决策事项);批次四两次 gate-off 运行读到了批次内其他会话写的结论");
+  }
 
   for (const [id, a] of Object.entries(c.assets)) {
     const lp = live.provenance[id] ?? {};
@@ -723,6 +746,19 @@ function trialCheckpoints(runDir, c) {
   add("目录隔离", "会话 cwd 无兄弟目录", run.session?.sibling_dirs === 0, `sibling_dirs=${run.session?.sibling_dirs}`);
   add("目录隔离", "探针 cwd 不在仓库", run.session?.probe_cwd ? run.session?.probe_cwd_in_repository === false : null,
     `probe_cwd=${run.session?.probe_cwd ?? "(未记录)"}`);
+
+  // —— 记忆通道(2026-09-11,批次四发现)——
+  // profile 快照不覆盖 atomic 记忆。模型经 memory-bridge 读回的每一项都列出来;创建时间
+  // 早于本次运行开始的就是残留——冻结后的是本批次其他会话写的,冻结前的是批次前的。
+  let memRead = { reads: [], items: [], problems: [] };
+  try { memRead = memoryItemsFromCapture(readLines(join(dir, "capture.jsonl"))); } catch (e) { memRead.problems.push(e.message); }
+  const res = memoryResidue(memRead.items, run.started_at ?? null, { batch_started_at: c.frozen_at ?? null, own_session: run.conversation_id ?? null });
+  const nRes = res.residue?.length ?? null;
+  const memOk = memRead.problems.length ? null : nRes === null ? null : nRes > 0 ? false : (res.undated?.length ?? 0) > 0 ? null : true;
+  const firstRes = (res.residue ?? []).slice(0, 3).map((i) => `${i.id ?? "?"}@${i.created_at}`).join(", ");
+  add("记忆通道", "模型经 memory-bridge 读回的记忆项没有早于本次运行开始的", memOk,
+    memRead.problems.length ? `读回结果不可读:${memRead.problems.slice(0, 2).join("; ")}`
+      : `${memRead.reads.length} 次记忆读取,${memRead.items.length} 项回到模型;早于开跑或来自别的会话 ${nRes ?? "?"} 项(冻结后/批次内 ${res.from_this_batch?.length ?? "?"},冻结前 ${res.from_before_batch?.length ?? "?"},无日期无会话 ${res.undated?.length ?? "?"})${firstRes ? `:${firstRes}` : ""}`);
 
   return rows;
 }

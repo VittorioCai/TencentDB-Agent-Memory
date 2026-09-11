@@ -107,3 +107,36 @@ run-once 判定前经契约取明文写到仓库外临时文件,用完即删;两
 v4 基线没有结果证据,gate-on 一试跑就重判回 candidate,"错资产 failed"不可能满足。顺序改为:
 修通分析链 → 条件核对 → gate-off 准备运行产出结果 → build-baseline 冻结真实证据与判定 →
 off/on 试跑 → 正式对照。`--freeze` 遇到带 decisions/events 的基线一律保留。
+
+**快照要取自运行真正的起点:先清理,后 tar。**(2026-09-11 批次四)
+`run-once.sh` 先整树 tar、后按 `MEM_EXPECT_EMPTY` 清残留、再算 `hash_before`;结束时按 tar
+还原,把刚清掉的上一次会话迟到写入又装回去——"运行后已回滚"十次全 FAIL,而每次起点确实
+是空基线。证据:第 1 次 before-tar 里消费者文件的哈希 == `hash_restored`。快照/清理/还原
+现在在 `lib/agent-memory.sh`,顺序先清理后快照;测试用假 docker 跑真函数,先按旧顺序失败。
+教训:两个"开跑前"的动作之间也有顺序,记录状态的那一步必须在改状态的那一步之后。
+
+**profile 快照不是记忆的全部:atomic 与 conversation 存储另有通道。**(2026-09-11 批次四)
+记忆流水线在会话进行中把 work_fact/work_task/work_method 写进 vectors.db/records/skill_buffer,
+会话写进 conversations/;模型经 memory-bridge/v3/atomic/search、conversation/search|query
+读回。第 5、9 次 gate-off 拨号前读到了本批次更早会话写的"endpoint-a 超时、endpoint-b
+可用";第 9 次经 conversation/query 拿到 prep 1 整个会话。送达审计按"首次到达"判,两条
+trace 经正规 skill 读取先到,所以不报;派生隔离审计只算他源先到。补了检查点"记忆通道"
+(列出每条读回项,早于开跑或别的会话即残留)和 `--check` 的 atomic 足迹项。教训:
+"消费者基线为空"要对**每一层**记忆成立;审计问"谁先到"不等于问"还读到了什么"。
+
+**一条命令拨两个目标,解析器只取第一个 URL、读一段合并结果。**(2026-09-11 批次四第 5 次)
+`attempts()` 一条工具调用一个尝试,主机取命令里第一个目标 URL,结果从合并文本读;模型
+"先 b 后 a"一条命令跑完,记成"47318 timed out"。按"最后一拨决定"FAIL 碰巧成立,反向顺序
+会把真 PASS 判 FAIL,且第二个目标的 trace 值丢失、采纳变 unknown。这是判定改动,先取得
+同意再改:提案与先失败测试在 `verify.multi-target.pending.mjs`(不进套件)。教训:
+"一次工具调用 = 一次尝试"是个假设,模型的写法会打破它;结果不可分时记不可读,不猜。
+
+**批次收尾后 `--check` 该失败的项就得失败。**(2026-09-11)
+记录收进 `runs/`、残留落进消费者 profile 之后,trace 明文就在模型可读的磁盘上,"来源唯一"
+两项 FAIL 是设计在起作用:换 trace 之前不得再开批次。同理"文件未变 run-once.sh"在改了
+harness 之后 FAIL 属实,批次五重新冻结记新哈希。教训:批次后核对不是为了再拿一次全绿,
+是为了列出下一批之前必须做的事。
+
+**"送达一致性"表分不开"没用"和"漏判"。**(2026-09-11 批次四第 9 次)
+wrong 送达了、模型读了没拨,判定器说没用——按表的定义是 FN,实际判对了;使用表同一格是
+TN。教训:两张表一起读;报告里单独解释每个 FN 的来源,不让"FN=1"独自出现。

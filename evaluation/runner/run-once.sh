@@ -162,69 +162,19 @@ if [[ ( -n "$GATE" || -n "$ABLATE" ) && -z "${CAPTURE_FROM:-}" ]]; then
 fi
 
 # ── 0b. the agent's own memory, snapshotted ──────────────────────
-# L2 scene blocks and the L3 persona live under
-# profiles/<team|agent>/ and are the product's own memory of this agent.
-# They accumulate ACROSS runs: batch 3 found a scene block, written at
-# 07:56:30 in the middle of that batch's own 07:51–07:58 window, carrying
-# conclusions from earlier runs ("endpoint-b … outranks documented-but-silent
-# endpoint-a") and both scenario addresses. The model reached it through the
-# product's own `scenario/read`, so run five was reading what runs one to
-# four had taught it — the arm was not five independent samples.
-#
-# Snapshot before, restore after, and record the hash either way, so a run
-# either starts from the same memory as its siblings or says that it did not.
+# Guard, snapshot and rollback live in lib/agent-memory.sh, which is unit-tested
+# against a fake docker (agent-memory.test.mjs). The order is the lib's and it
+# matters: clear a late pipeline write first (MEM_EXPECT_EMPTY=1), THEN tar the
+# tree the run actually starts from. Batch 4 (2026-09-10) had it the other way
+# round — every run started empty because the guard worked, but every rollback
+# put the cleared residue back, so hash_restored never equalled hash_before.
 MEM_ROOT="${MEM_ROOT:-/data/tdai-memory/profiles}"
 MEM_SNAP="$RUN_DIR/agent-memory-before.tar.gz"
-mem_hash() {  # prints a stable hash of the agent memory tree, or "absent"
-  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
-    "cd '$MEM_ROOT' 2>/dev/null && find . -type f | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1" 2>/dev/null || echo absent
-}
-# The consumer's own share of that tree. The whole-tree hash drifts when the
-# memory pipeline writes to *another* agent's profile — measured 2026-09-08
-# 23:20Z, 73 minutes after the isolated batch, four files of the old consumer
-# rewritten — and those files never reach this run's model. Comparing start
-# points across a batch therefore uses this hash when it is recorded; the
-# whole-tree hash stays as the rollback check. The agent comes from MEM_AGENT,
-# else from the proxy's forced identity, which is what decides the session.
+# The agent comes from MEM_AGENT, else from the proxy's forced identity, which
+# is what decides the session.
 MEM_AGENT="${MEM_AGENT:-$(sed -n '/debugForceIdentity:/,/task_id/p' "$REPO_ROOT/deploy/global-images/.proxy-config/config.yaml" 2>/dev/null | sed -n 's/^ *agent_id: *"\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' | head -1)}"
-mem_hash_scoped() {  # hash of the files under the consumer's profile dir(s), "absent" if none
-  [[ -n "$MEM_AGENT" ]] || { echo absent; return; }
-  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
-    "cd '$MEM_ROOT' 2>/dev/null && find . -type f -path '*agent%3A$MEM_AGENT*' | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1" 2>/dev/null || echo absent
-}
-mem_files_scoped() {
-  [[ -n "$MEM_AGENT" ]] || { echo 0; return; }
-  docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c \
-    "cd '$MEM_ROOT' 2>/dev/null && find . -type f -path '*agent%3A$MEM_AGENT*' | wc -l | tr -d ' '" 2>/dev/null || echo 0
-}
-if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" ]]; then
-  if docker exec "${CORE_CONTAINER:-tdai-memory-core}" test -d "$MEM_ROOT" 2>/dev/null; then
-    docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$MEM_SNAP" 2>/dev/null \
-      && info "agent memory snapshotted ($(mem_hash | cut -c1-12)…)" \
-      || warn "could not snapshot agent memory; this run is not isolated from earlier ones"
-  else
-    warn "no agent memory tree at $MEM_ROOT — nothing to isolate"
-  fi
-fi
-# An empty-baseline batch (MEM_EXPECT_EMPTY=1): the consumer's profile must not
-# exist when the session starts. The memory pipeline writes the previous
-# session's consolidation minutes later — measured 13 min after the smoke run —
-# so it can land between two runs, after the earlier run's rollback. If it did,
-# clear the consumer's profile (its designed baseline is empty) and record how
-# many files were cleared; the trial checkpoint then judges hash_before against
-# the frozen empty baseline honestly instead of silently starting polluted.
-MEM_PRE_RUN_CLEARED=0
-if [[ "${MEM_EXPECT_EMPTY:-0}" == "1" && -n "$MEM_AGENT" ]]; then
-  n_before="$(mem_files_scoped)"
-  if (( n_before > 0 )); then
-    warn "consumer $MEM_AGENT has $n_before file(s) before the run (late pipeline write); clearing to the frozen empty baseline"
-    docker exec "${CORE_CONTAINER:-tdai-memory-core}" sh -c "cd '$MEM_ROOT' && rm -rf ./*agent%3A$MEM_AGENT*" 2>/dev/null || warn "could not clear the consumer profile"
-    MEM_PRE_RUN_CLEARED="$n_before"
-  fi
-fi
-MEM_HASH_BEFORE="$(mem_hash)"
-MEM_SCOPE_BEFORE="$(mem_hash_scoped)"; MEM_SCOPE_FILES_BEFORE="$(mem_files_scoped)"
-[[ -n "$MEM_AGENT" ]] && info "consumer $MEM_AGENT memory: $MEM_SCOPE_FILES_BEFORE file(s), $(cut -c1-12 <<<"$MEM_SCOPE_BEFORE")…"
+source "$EVAL/runner/lib/agent-memory.sh"
+mem_prepare
 
 # ── 1. the session ───────────────────────────────────────────────
 # The capture is produced by the observability probe sitting between proxy and
@@ -310,28 +260,11 @@ else
 fi
 
 # ── 1b. restore the agent's memory ───────────────────────────────
-# What the run wrote into the product's memory is kept beside the run (so it
-# can be read later) and then rolled back, so the next run starts where this
-# one did. Both hashes go into run.json: equal means the run changed nothing,
-# different means it did and the rollback is what keeps the arm comparable.
-MEM_HASH_AFTER="$(mem_hash)"
-MEM_SCOPE_AFTER="$(mem_hash_scoped)"; MEM_SCOPE_FILES_AFTER="$(mem_files_scoped)"
-if [[ "${ISOLATE_AGENT_MEMORY:-1}" == "1" && -s "$MEM_SNAP" ]]; then
-  docker exec "${CORE_CONTAINER:-tdai-memory-core}" tar czf - -C "$MEM_ROOT" . > "$RUN_DIR/agent-memory-after.tar.gz" 2>/dev/null || :
-  if docker exec -i "${CORE_CONTAINER:-tdai-memory-core}" sh -c "rm -rf '$MEM_ROOT'/* && tar xzf - -C '$MEM_ROOT'" < "$MEM_SNAP" 2>/dev/null; then
-    MEM_HASH_RESTORED="$(mem_hash)"
-    MEM_SCOPE_RESTORED="$(mem_hash_scoped)"
-    if [[ "$MEM_HASH_RESTORED" == "$MEM_HASH_BEFORE" ]]; then
-      [[ "$MEM_HASH_AFTER" == "$MEM_HASH_BEFORE" ]] \
-        && info "agent memory unchanged by this run" \
-        || info "agent memory was written during the run and has been rolled back"
-    else
-      warn "agent memory did not restore to its pre-run hash — later runs are NOT isolated from this one"
-    fi
-  else
-    warn "could not restore agent memory; later runs are NOT isolated from this one"
-  fi
-fi
+# lib/agent-memory.sh: hash after, keep what the run wrote beside the run
+# (agent-memory-after.tar.gz), roll back to the snapshot, hash again. The
+# variables land in run.json below: hash_after answers "what did the run
+# write", hash_restored answers "did the rollback succeed".
+mem_rollback
 
 # ── 2. the service's own records ─────────────────────────────────
 TOOL_CALLS="$RUN_DIR/tool-call-logs.jsonl"

@@ -1,0 +1,130 @@
+试跑检查点 — evaluation/runner/runs/20260910T231329Z-b4-prep
+(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)
+
+【条件一致性】
+  PASS  run 目录 tokens.json 与任务目录一致
+  PASS  规则版本与清单一致
+  PASS  闸门臂已记录(off/on)
+  PASS  开跑状态符合 off 臂
+【隔离】
+  PASS  消费者身份 == 清单消费者
+  PASS  起点 == 冻结的消费者基线
+  PASS  运行后已回滚(还原后哈希==起点)
+  PASS  会话工作目录不是仓库、缓存为空
+【采集完整性】
+  PASS  捕获覆盖整段会话(verifyCoverage)
+【实际采用】
+  PASS  验收记录有目标尝试
+  PASS  每次尝试都带回 trace 值(attempts[].value)
+  PASS  采纳判定对每条资产可判(非 unknown)
+【隐藏(gate-on)】
+  NOTE  被藏资产 hidden=true
+【模型一致】
+  PASS  响应里的服务模型名全部一致且等于冻结值
+【目录隔离】
+  PASS  会话 cwd 无兄弟目录
+  PASS  探针 cwd 不在仓库
+【记忆通道】
+  FAIL  模型经 memory-bridge 读回的记忆项没有早于本次运行开始的
+        5 次记忆读取,21 项回到模型;早于开跑或来自别的会话 15 项(冻结后/批次内 0,冻结前 15,无日期无会话 0):m_1789081556879_7a8dded2@2026-09-10T23:05:56.892Z, msg-45b1eb30478c@2026-09-10T23:05:36.530Z, msg-dc106e48c116@2026-09-10T23:05:44.390Z
+
+通过 16  未过 1  未知 0  / 共 17
+结论:检查点未全过,不开正式批次
+
+试跑检查点 — evaluation/runner/runs/20260910T231900Z-b4-prep
+(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)
+
+【条件一致性】
+  PASS  run 目录 tokens.json 与任务目录一致
+  PASS  规则版本与清单一致
+  PASS  闸门臂已记录(off/on)
+  PASS  开跑状态符合 off 臂
+【隔离】
+  PASS  消费者身份 == 清单消费者
+  PASS  起点 == 冻结的消费者基线
+  PASS  运行后已回滚(还原后哈希==起点)
+  PASS  会话工作目录不是仓库、缓存为空
+【采集完整性】
+  PASS  捕获覆盖整段会话(verifyCoverage)
+【实际采用】
+  PASS  验收记录有目标尝试
+  FAIL  每次尝试都带回 trace 值(attempts[].value)
+        2/3 带 value
+  PASS  采纳判定对每条资产可判(非 unknown)
+【隐藏(gate-on)】
+  NOTE  被藏资产 hidden=true
+【模型一致】
+  PASS  响应里的服务模型名全部一致且等于冻结值
+【目录隔离】
+  PASS  会话 cwd 无兄弟目录
+  PASS  探针 cwd 不在仓库
+【记忆通道】
+  PASS  模型经 memory-bridge 读回的记忆项没有早于本次运行开始的
+
+通过 16  未过 1  未知 0  / 共 17
+结论:检查点未全过,不开正式批次
+
+试跑检查点 — evaluation/runner/runs/20260910T232209Z-trial-gate-off
+(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)
+
+【条件一致性】
+  PASS  run 目录 tokens.json 与任务目录一致
+  PASS  规则版本与清单一致
+  PASS  闸门臂已记录(off/on)
+  PASS  开跑状态符合 off 臂
+【隔离】
+  PASS  消费者身份 == 清单消费者
+  PASS  起点 == 冻结的消费者基线
+  PASS  运行后已回滚(还原后哈希==起点)
+  PASS  会话工作目录不是仓库、缓存为空
+【采集完整性】
+  PASS  捕获覆盖整段会话(verifyCoverage)
+【实际采用】
+  PASS  验收记录有目标尝试
+  PASS  每次尝试都带回 trace 值(attempts[].value)
+  PASS  采纳判定对每条资产可判(非 unknown)
+【隐藏(gate-on)】
+  NOTE  被藏资产 hidden=true
+【模型一致】
+  PASS  响应里的服务模型名全部一致且等于冻结值
+【目录隔离】
+  PASS  会话 cwd 无兄弟目录
+  PASS  探针 cwd 不在仓库
+【记忆通道】
+  PASS  模型经 memory-bridge 读回的记忆项没有早于本次运行开始的
+
+通过 17  未过 0  未知 0  / 共 17
+结论:检查点全过,这一对可作为批次的凭据
+
+试跑检查点 — evaluation/runner/runs/20260910T232305Z-trial-gate-on
+(PASS/FAIL 不是检查点;这些是开正式批次前必须过的关)
+
+【条件一致性】
+  PASS  run 目录 tokens.json 与任务目录一致
+  PASS  规则版本与清单一致
+  PASS  闸门臂已记录(off/on)
+  PASS  开跑状态符合 on 臂
+【隔离】
+  PASS  消费者身份 == 清单消费者
+  PASS  起点 == 冻结的消费者基线
+  PASS  运行后已回滚(还原后哈希==起点)
+  PASS  会话工作目录不是仓库、缓存为空
+【采集完整性】
+  PASS  捕获覆盖整段会话(verifyCoverage)
+【实际采用】
+  PASS  验收记录有目标尝试
+  PASS  每次尝试都带回 trace 值(attempts[].value)
+  PASS  采纳判定对每条资产可判(非 unknown)
+【隐藏(gate-on)】
+  PASS  被藏资产开跑时 hidden=true(status=failed),不得 unknown
+【模型一致】
+  PASS  响应里的服务模型名全部一致且等于冻结值
+【目录隔离】
+  PASS  会话 cwd 无兄弟目录
+  PASS  探针 cwd 不在仓库
+【记忆通道】
+  PASS  模型经 memory-bridge 读回的记忆项没有早于本次运行开始的
+
+通过 17  未过 0  未知 0  / 共 17
+结论:检查点全过,这一对可作为批次的凭据
+
