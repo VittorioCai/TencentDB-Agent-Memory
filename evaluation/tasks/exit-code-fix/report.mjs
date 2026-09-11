@@ -213,6 +213,62 @@ else {
     : `闸门 decided_at 停在 ${last.gate?.decided_at}(decision ${last.gate?.decision}),evidence_revision ${first.evidence_revision} → ${last.evidence_revision}:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。`);
 }
 L.push("");
+// ── the extraction window and the pool snapshots around it (write-back provenance) ──
+const readJsonOpt = (n) => readJson(join(HERE, n));
+const sw = readJsonl(join(HERE, "extraction-switch.jsonl")) ?? [];
+const poolBefore = readJsonOpt("pool-before-extraction-on.json"), poolAfterWb = readJsonOpt("pool-after-writeback.json"), poolAfterOff = readJsonOpt("pool-after-extraction-off.json");
+const ids = (snap) => new Set((snap?.assets ?? []).map((a) => a.asset_id));
+const wbRows = rows.filter((r) => r.sample).map((r) => ({ run_id: r.run_id, consumer: r.consumer, wb: r.wb, attempts: [] }));
+L.push(`## 回流窗口、池快照与新资产的来源`);
+L.push("");
+if (!sw.length) L.push(`提取开关记录(extraction-switch.jsonl)尚无:提取未打开,四次写回只归档(见上表)。`);
+else {
+  L.push(`| 时间 | 开关 | 前 → 后 | 容器读回 | 配置 sha 前→后 | 备份 | ok |`);
+  L.push(`|---|---|---|---|---|---|---|`);
+  for (const o of sw) L.push(`| ${o.at} | ${o.switch} | ${o.before} → ${o.after} | ${o.container_reads} | ${String(o.sha256_before).slice(0, 8)}→${String(o.sha256_after).slice(0, 8)} | ${relative(REPO, o.backup)} | ${o.ok} |`);
+  const on = sw.filter((o) => o.switch === "on").map((o) => o.at), off = sw.filter((o) => o.switch === "off").map((o) => o.at);
+  L.push("");
+  L.push(`开关时间窗:开 ${on.join(", ") || "无"} → 关 ${off.join(", ") || "未关"}。四次写回的调用时间:` + rows.filter((r) => r.sample && r.wb).map((r) => `${r.run_id} ${r.wb.called_at}`).join("; ") + "。");
+}
+L.push("");
+const b = ids(poolBefore), a1 = ids(poolAfterWb), a2 = ids(poolAfterOff);
+const newAfterWb = poolAfterWb ? [...a1].filter((x) => !b.has(x)) : null;
+const newAfterOff = poolAfterOff ? [...a2].filter((x) => !b.has(x)) : null;
+const consumers = new Set(rows.filter((r) => r.sample).map((r) => r.consumer));
+const byId = (snap) => Object.fromEntries((snap?.assets ?? []).map((x) => [x.asset_id, x]));
+L.push(`池快照:开关前 ${poolBefore ? `${poolBefore.asset_count} 项(${poolBefore.pool_snapshot_at})` : "未拍"};写回后 ${poolAfterWb ? `${poolAfterWb.asset_count} 项(${poolAfterWb.pool_snapshot_at}),新增 ${newAfterWb.length}` : "未拍"};关闭后 ${poolAfterOff ? `${poolAfterOff.asset_count} 项(${poolAfterOff.pool_snapshot_at}),相对开关前新增 ${newAfterOff.length}` : "未拍"}。` +
+  (newAfterWb && newAfterWb.length ? ` 新增资产:` + newAfterWb.map((x) => { const r = byId(poolAfterWb)[x]; const mine = consumers.has(r?.producer_agent_id); return `${x} ${r?.name ?? ""} v${q(r?.version)} ${q(r?.status)} 作者 agent ${q(r?.producer_agent_id)}${mine ? "(本闭环消费者)" : "(不是本闭环的消费者!)"}`; }).join("; ") + `;来自本闭环四个消费者的 ${newAfterWb.filter((x) => consumers.has(byId(poolAfterWb)[x]?.producer_agent_id)).length}/${newAfterWb.length}。` : ""));
+L.push("");
+// ── the two confirmations before apply (review 2026-09-11 evening) ──
+const evals = readJsonl(join(HERE, "gate-evaluations.jsonl")) ?? [];
+const lastDry = [...evals].reverse().find((e) => !e.apply) ?? null;
+const applied = [...evals].reverse().find((e) => e.apply) ?? null;
+L.push(`## apply 之前的两项确认`);
+L.push("");
+if (!lastDry) L.push(`没有闸门试算记录(gate-evaluate.mjs --dry-run 未运行)。`);
+else {
+  const authorLine = (lastDry.reasons ?? []).find((x) => /^author /.test(x)) ?? null;
+  const ruleLine = (lastDry.reasons ?? []).find((x) => /^rule /.test(x)) ?? null;
+  const reportedNotUsed = authorLine ? /reported, not used/.test(authorLine) : null;
+  L.push(`**1. 作者先验有没有计入试算的 admit?** 试算(${lastDry.at})的判定理由:${(lastDry.reasons ?? []).map((x) => `"${x}"`).join(";")}。` +
+    (reportedNotUsed === true ? `作者那一行标注 "(reported, not used)":规则(${ruleLine ?? "?"})不读作者先验;作者信号只决定 review_priority(asset-gate.ts 371–387:近 30 天有被判 wrong 的资产 → high),不进 admit/reject 判定。因此 apply 的结果与试算一致,理由是 ${ruleLine ?? "?"}。`
+      : reportedNotUsed === false ? `作者那一行没有 "(reported, not used)" 标注:作者先验可能进入了判定,apply 结果可能与试算不符,须以 apply 记录为准。`
+      : `试算理由里没有作者行,无法判断作者先验是否计入。`));
+  const noteOwner = rows.map((r) => r.run?.consumer?.owner_user_id).filter(Boolean);
+  const ownerUser = (readJsonOpt("asset-pool-snapshot.json")?.assets ?? []).find((x) => x.asset_id === NOTE)?.producer_user_id ?? null;
+  const rel = rows.filter((r) => r.sample && r.arm === "note").map((r) => ({ run_id: r.run_id, consumer: r.consumer, user: r.run?.consumer?.owner_user_id ?? null, relation: r.run?.consumer?.owner_user_id && ownerUser ? (r.run.consumer.owner_user_id === ownerUser ? "same_user" : "cross_user") : "unknown" }));
+  L.push("");
+  L.push(`**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user ${q(ownerUser)};` + rel.map((x) => `${x.run_id} 消费者 ${x.consumer} 属 user ${q(x.user)} → ${x.relation}`).join(";") +
+    `。Core 试算信号 cross_user_validated ${q(lastDry.signals?.online?.cross_user_validated)}、distinct_consumers ${q(lastDry.signals?.online?.distinct_consumers)}(按 user 计:两个 agent 同属一个消费者用户)。` +
+    (rel.every((x) => x.relation === "cross_user") ? `两次都是跨人(作者用户 ≠ 消费者用户),"基于跨人验证 admit"成立;但只有一个消费者用户、一个任务。` : `不全是跨人:"基于跨人验证 admit"这句要改。`));
+}
+L.push("");
+if (evals.length) {
+  L.push(`闸门评估记录:`);
+  for (const e of evals) L.push(`- ${e.at} ${e.apply ? "APPLY" : "dry-run"}(${e.label}):decision ${q(e.decision)} → status_target ${q(e.status_target)};status ${q(e.status_before)} → ${q(e.status_after)};online validated ${q(e.signals?.online?.validated)} / corrected ${q(e.signals?.online?.corrected)} / cross_user_validated ${q(e.signals?.online?.cross_user_validated)} / untrusted_ignored ${q(e.signals?.online?.untrusted_ignored)}`);
+  if (applied) L.push(`apply 结果:status ${q(applied.status_before)} → ${q(applied.status_after)},与最后一次试算(${q(lastDry?.decision)})${applied.decision === lastDry?.decision ? "一致" : "不一致"}。`);
+  L.push("");
+}
 L.push(`## 不信模型自报:这些运行的实证`);
 L.push("");
 L.push(`本清单里已判决的 ${judged.length} 次运行中,${rewrote.length} 次改写了被测代码自己的测试文件(${[...new Set(rewrote.flatMap((r) => r.tests_kept.modified))].join(", ") || "无"});` +

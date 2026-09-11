@@ -15,7 +15,7 @@
  * explicit, recorded trigger for one session. If Core answers that extraction
  * is not wired, the record says so and nothing is invented.
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, renameSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -82,6 +82,11 @@ const body = {
 console.log(`write-back as consumer ${agentId} (user ${userId}), source session ${body.session_id ?? "(none)"}: ${capped.length} message(s) from ${messages.length} (${requests.length} request(s) in the capture)`);
 if (DRY) { console.log("dry run: nothing posted"); process.exit(0); }
 
+// an earlier attempt's record is kept beside the new one, never overwritten
+for (let n = 1; existsSync(join(runDir, "write-back.json")); n++) {
+  const kept = join(runDir, `write-back.attempt${n}.json`);
+  if (!existsSync(kept)) { renameSync(join(runDir, "write-back.json"), kept); console.log(`earlier record kept as ${kept}`); }
+}
 // the registry before, so what appears is attributable to this call
 const registry = async () => {
   const out = [];

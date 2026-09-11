@@ -70,6 +70,21 @@
 
 闸门 decided_at 停在 2026-09-11T11:25:46.115Z(decision pending),evidence_revision 2 → 6:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。
 
+## 回流窗口、池快照与新资产的来源
+
+提取开关记录(extraction-switch.jsonl)尚无:提取未打开,四次写回只归档(见上表)。
+
+池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 未拍;关闭后 未拍。
+
+## apply 之前的两项确认
+
+**1. 作者先验有没有计入试算的 admit?** 试算(2026-09-11T16:19:07Z)的判定理由:"rule admit: cross-person validated >= 1 (2 record(s)) and no corrected";"reported signals: 2 call(s) from 2 trusted row(s), 1 distinct task(s), 1 distinct consumer(s); none is a threshold";"2 row(s) on file are not trusted (not submitted by an admin or reviewer with call id, version and evidence) and were not read";"author usr-n68ea5ythq: 29 validated / 10 corrected on other assets (reported, not used)"。作者那一行标注 "(reported, not used)":规则(rule admit: cross-person validated >= 1 (2 record(s)) and no corrected)不读作者先验;作者信号只决定 review_priority(asset-gate.ts 371–387:近 30 天有被判 wrong 的资产 → high),不进 admit/reject 判定。因此 apply 的结果与试算一致,理由是 rule admit: cross-person validated >= 1 (2 record(s)) and no corrected。
+
+**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user usr-n68ea5ythq;20260911T154907Z-devloop-note 消费者 agt-hsv5hd4ys2 属 user usr-4u07qc2kuj → cross_user;20260911T155035Z-devloop-note 消费者 agt-hsylov19pn 属 user usr-4u07qc2kuj → cross_user。Core 试算信号 cross_user_validated 2、distinct_consumers 1(按 user 计:两个 agent 同属一个消费者用户)。两次都是跨人(作者用户 ≠ 消费者用户),"基于跨人验证 admit"成立;但只有一个消费者用户、一个任务。
+
+闸门评估记录:
+- 2026-09-11T16:19:07Z dry-run(before the write-back with extraction on (trusted rows 2)):decision admit → status_target approved;status candidate → candidate;online validated 2 / corrected 0 / cross_user_validated 2 / untrusted_ignored 2
+
 ## 不信模型自报:这些运行的实证
 
 本清单里已判决的 9 次运行中,7 次改写了被测代码自己的测试文件(evaluation/tasks/bridge-addr/verify.test.mjs);8 次模型自己的测试全绿(20260911T140427Z-devloop-no-note 22/22; 20260911T140806Z-devloop-no-note 22/22; 20260911T144347Z-devloop-no-note 22/22; 20260911T144542Z-devloop-no-note 22/22; 20260911T151132Z-devloop-note 22/22; 20260911T151342Z-devloop-note 22/22; 20260911T154907Z-devloop-note 3/3; 20260911T155035Z-devloop-note 3/3);1 次未记录模型自测(判据版本早于 repo-2026-09-11c)。验收器不看这些:受控套件跑起点测试的原内容,模型的测试只记不判。其中 1 次模型自测全绿而验收不是 PASS(20260911T140806Z-devloop-no-note:FAIL,参考测试失败项 a non-zero exit status, as CodeBuddy spells it, is a failure)——若当初采信模型自报"测试通过",这些运行会被判成通过。
