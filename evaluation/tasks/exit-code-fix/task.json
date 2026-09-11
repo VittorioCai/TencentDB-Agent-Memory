@@ -1,0 +1,9 @@
+{
+  "kind": "repo",
+  "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
+  "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
+  "archive_excludes": ["evaluation/runner/runs", "evaluation/tasks/exit-code-fix"],
+  "scope": ["evaluation/tasks/bridge-addr/", "evaluation/provenance/build-events.mjs", "evaluation/provenance/shell-requests.mjs"],
+  "reference_test_dest": "evaluation/tasks/bridge-addr/verify.exit-status.reference.test.mjs",
+  "note": "起点是缺陷提交 141c044(2026-09-11)。工作副本用 git archive 从该提交导出(只含受版本控制的文件,所以 evaluation/runner/runs/ 与本任务目录都不在副本里),再 git init 成单提交仓库,模型看不到之后的提交。"
+}

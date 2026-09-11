@@ -1,0 +1,11 @@
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,7 @@
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const exit = /(?:^|\n)Exit [Cc]ode:\s*(\d+)/.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };

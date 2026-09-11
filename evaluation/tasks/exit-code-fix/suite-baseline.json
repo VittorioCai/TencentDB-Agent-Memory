@@ -1,0 +1,13 @@
+{
+  "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
+  "exit": 1,
+  "tests": 552,
+  "pass": 547,
+  "fail": 3,
+  "failing_tests": [
+    "the recorded three-channel session yields recalled and injected, and no selected",
+    "the right-address asset cannot document the endpoint already in the prompt",
+    "方案 2 之后,资产源文件是占位符,正文里不再含判别值"
+  ],
+  "why": "the copy holds tracked files only; tests that read untracked artifacts fail here and are the baseline, not a regression"
+}

@@ -1,0 +1,7 @@
+{
+  "team_id": "team-5ezfoladb5",
+  "author_agent_id": "agt-5e4hna56j9",
+  "consumer_agent_id": null,
+  "task_id": "task-5e6xp4mrrw",
+  "note": "consumer_agent_id 在开跑前由 prepare 步骤填入:一个未跑过任何会话的新 agent(记忆各层为空)。"
+}
