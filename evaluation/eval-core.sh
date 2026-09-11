@@ -34,19 +34,22 @@
 #   bash evaluation/eval-core.sh status
 #   bash evaluation/eval-core.sh disable   # back to the stock image source
 #
-# --accept-image (2026-09-11, rule change agreed with the user): the parity
-# guard `image_dir_matches_prepatch` walks this branch's history of
-# MemoryCore/src/metadata and requires the image's directory to equal one of
-# those commits. The image is built upstream and holds the upstream
-# directory; every commit of ours that touched the directory already carries
-# the gate — the two can never match. It used to pass only because our
-# directory was already mounted (the guard returned early on the marker
-# file); after the containers were rebuilt it compared for the first time
-# and refused. With --accept-image <digest>, and only when the digest is the
-# container's actual image, that one guard is skipped as an explicit,
-# printed exception. The uncommitted-changes guard is untouched: what goes
-# live must still be traceable to a commit. Without the option nothing
-# changes.
+# --accept-image (2026-09-11, rule change agreed with the user; reasoning
+# corrected 2026-09-12): the parity guard `image_dir_matches_prepatch`
+# requires the image's src/metadata to equal a committed version of ours.
+# After the containers were rebuilt it compared for the first time (it used
+# to return early on our mounted marker file) and refused — correctly: the
+# image is built from a NEWER upstream than this branch's base (9 metadata
+# files carry the instance-upstream configuration, InstanceUpstreamConfig,
+# routes /v3/meta/instance-upstream/* and /v3/meta/user/bind-external, which
+# no commit of ours has), so the mount OVERWRITES those upstream additions at
+# runtime. That is what every batch-4 and dev-loop run actually ran on
+# (upstream-old + gate). With --accept-image <digest>, and only when the
+# digest is the container's actual image, the guard is skipped as an
+# explicit, printed exception: the overwrite is known, and what is
+# overwritten is upstream functionality no evaluation path touches. The
+# uncommitted-changes guard is untouched: what goes live must still be
+# traceable to a commit. Without the option nothing changes.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -177,7 +180,8 @@ case "$MODE" in
     if [[ -n "$ACCEPT_IMAGE" ]]; then
       image_digest_matches "$ACCEPT_IMAGE" \
         || die "--accept-image $ACCEPT_IMAGE is not the container's image (id $IMAGE_ID; repo digests: ${REPO_DIGESTS:-none}); nothing changed"
-      echo "[ok] 已接受镜像 $ACCEPT_IMAGE,守卫 image_dir_matches_prepatch 按显式例外跳过(容器镜像 id $IMAGE_ID;repo digest: ${REPO_DIGESTS:-none};镜像=上游原版,分支=原版+闸门)"
+      echo "[ok] 已接受镜像 $ACCEPT_IMAGE,守卫 image_dir_matches_prepatch 按显式例外跳过(容器镜像 id $IMAGE_ID;repo digest: ${REPO_DIGESTS:-none})"
+      echo "[ok] 明知覆盖:镜像的 src/metadata 比本分支基点新(上游实例上游配置等),挂载后运行时为本分支版本(上游旧版 + 闸门);已确认评测不经过被覆盖的功能"
     else
       image_dir_matches_prepatch || die "refusing to enable (or, once the image's directory has been inspected and is the upstream original: enable --accept-image $IMAGE_ID)"
     fi

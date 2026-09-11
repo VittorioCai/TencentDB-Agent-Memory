@@ -355,7 +355,7 @@ for (const s of [
   "笔记最终 approved 是闸门规则的判定(admit 基于 2 次 cross_user validated,但 distinct_consumers=1、distinct_tasks=1:跨人成立、独立性不成立);人工 approved 那段已置回,实验干预不算闸门批准",
   "后续不做:跨运行记忆隔离方案(要点已记:每次新 agent + 反证验证 + 查借入的 chat_memory)、并发最后一组维持 ERROR、bridge-name 不换解析;批次五不跑(4 次不可判源于 gate-off 下两条冲突约定并存,换 trace 重跑会复现)",
   "回流走产品的 /v3/skill/extract,提取内容由 Core 决定;是否产生资产、状态为何,以 write-back.json 为准",
-  "运行时镜像摘要在这些运行时没有冻结(2026-09-11 重建容器后发现);事后回填见 devloop-runs.json 的 config_fixes,自此 selfcheck 把容器镜像摘要冻进 conditions.json",
+  "运行时镜像摘要在这些运行时没有冻结,且运行时不是镜像原样:Core 的 src/metadata(9 个文件)与 4 个 gateway 文件被本分支挂载覆盖,镜像里更新的上游功能(实例上游配置)未生效,跑的是“上游旧版 + 闸门”;评测不经过这些功能,结论不受影响。回填与被覆盖清单见 devloop-runs.json 的 config_fixes;自 2026-09-11 起 selfcheck 把容器镜像摘要冻进 conditions.json",
 ]) L.push(`- ${s}`);
 L.push("");
 const md = L.join("\n") + "\n";

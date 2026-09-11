@@ -1,6 +1,6 @@
 # 开发闭环第二任务 `exit-line-collect`:运行报告(脚本生成)
 
-生成于 2026-09-11T21:57:12Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
+生成于 2026-09-11T22:03:32Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
 笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v2,仓库只存 sha256 1e85dcf5dcf7…);v1 于 2026-09-11T17:55:11Z 退役(值已进 git 历史),本任务所有运行都在 v2 上。
 判据版本:repo-2026-09-11d;起点提交 141c044(与 exit-code-fix 相同),任务文本 sha256 f32af00888d3…。
 
@@ -170,5 +170,5 @@
 - 两个任务共享起点提交与笔记,任务文本各自只描述症状;第二任务的症状描述(exit_code 总是 null)比第一任务更接近缺陷位置,迁移难度因此偏低
 - 样本各 2 次、单模型(deepseek-v4-flash)、单操作者;有笔记组的判别值是采用证据,不是收益证据
 - 副本里已有正确实现可参照;笔记缩短定位,不是唯一答案
-- 运行时镜像摘要在这些运行时没有冻结(2026-09-11 发现);事后回填见 devloop-runs.json 的 config_fixes,自此 selfcheck 把容器镜像摘要冻进 conditions.json
+- 运行时镜像摘要在这些运行时没有冻结,且运行时不是镜像原样:Core 的 src/metadata(9 个文件)与 4 个 gateway 文件被本分支挂载覆盖,镜像里更新的上游功能(实例上游配置)未生效,跑的是“上游旧版 + 闸门”;评测不经过这些功能,结论不受影响。回填与被覆盖清单见 devloop-runs.json 的 config_fixes;自 2026-09-11 起 selfcheck 把容器镜像摘要冻进 conditions.json
 - 闸门的 distinct_consumers=2 / distinct_tasks=2 是关系计数;两个用户由同一人操作,独立性不成立

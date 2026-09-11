@@ -275,6 +275,36 @@
       "what": "runtime image digests backfilled: core sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed (2026-09-07 build), proxy sha256:85d0360534bd39cb1160b2dcfe37dec25a6feb3d2de814af575ba98f77077f19",
       "why": "the conditions froze assets, tokens, consumer, proxy config, memory baseline and analysis-code hashes but not the images the containers ran; found 2026-09-11 after the containers were rebuilt. Not frozen at the time: the digests are what the containers run at the time of the backfill (upstream :latest re-pulled after a Docker clean-up); 'the same image during the runs' rests on the build date preceding the runs and the re-pull returning the same digest. From now on selfcheck.sh records runtime.* live in conditions.json.",
       "backfilled": true
+    },
+    {
+      "at": "2026-09-11T22:03:16Z",
+      "what": "runtime mount override recorded (correction of the 2026-09-11 backfill's reasoning)",
+      "detail": {
+        "metadata_files_overwritten_by_mount": [
+          "router/internal-meta-router.ts",
+          "router/v3-meta-router.ts",
+          "router/v3-meta-schemas.ts",
+          "service/metadata-service.ts",
+          "store/interface.ts",
+          "store/metadata-store.contract.ts",
+          "store/mongodb-adapter.ts",
+          "store/sqlite-adapter.ts",
+          "types.ts"
+        ],
+        "gateway_files_overwritten_by_mount": [
+          "gateway/skill-handlers.ts (19 lines from the branch base)",
+          "gateway/v2-router.ts (40)",
+          "gateway/server.ts (414, instance-related)",
+          "core/skill/skill-versioning.ts (2)"
+        ],
+        "upstream_features_not_in_effect_under_the_mount": [
+          "InstanceUpstreamConfig / /v3/meta/instance-upstream/{get,list,set,reset}",
+          "/v3/meta/user/{bind-external,find-by-external}"
+        ],
+        "evaluation_touches_them": false,
+        "recorded_at": "2026-09-11T22:03:16Z",
+        "note": "2026-09-12 改正:镜像 = 上游新版,分支 = 上游旧版 + 闸门;挂载覆盖了这些上游新增功能,运行时是分支版本。评测不经过这些功能,结论不受影响;当时该记而没记。"
+      }
     }
   ],
   "rejudges": [

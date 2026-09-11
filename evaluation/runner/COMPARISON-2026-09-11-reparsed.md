@@ -177,10 +177,12 @@ wrong 资产 `failed`(最后一次是 gate-on)、消费者 profile 残留四项(
 - v4 trace 明文已进过 git(旧报告与已删的待决测试文件里写了值),换新前不得再开批次。
 - `bridge-name` 场景的验收仍是旧解析(整段含标记),未随本次修改。
 
-- **运行时镜像摘要当时没有冻结**(2026-09-11 重建容器后发现):条件清单冻结了资产、token、消费者、proxy 配置、记忆基线、
-  分析代码哈希,没有冻 memory-core / proxy 的镜像摘要。事后回填(`batch4-conditions.json` 的 `runtime`,标明 backfilled):
-  容器现运行 `agentmemory/memory-core@sha256:55fec3a6…`(2026-09-07 构建),批次期间上游 `:latest` 未变的判断依据是重新拉取得到同一摘要,
-  不是当时的记录。
+- **运行时镜像摘要当时没有冻结,而且运行时不是镜像原样**(2026-09-11 重建容器后发现):条件清单冻结了资产、token、消费者、
+  proxy 配置、记忆基线、分析代码哈希,没有冻 memory-core / proxy 的镜像摘要。事后回填(`batch4-conditions.json` 的 `runtime`,
+  标明 backfilled):容器运行 `agentmemory/memory-core@sha256:55fec3a6…`(2026-09-07 构建),批次期间上游 `:latest` 未变的判断依据是
+  重新拉取得到同一摘要,不是当时的记录。批次期间 Core 的 `src/metadata`(9 个文件)与 4 个 gateway 文件被本分支挂载覆盖:镜像里
+  更新的上游功能(实例上游配置 `InstanceUpstreamConfig`、`/v3/meta/instance-upstream/*` 等)未生效,运行时是"上游旧版 + 闸门";
+  评测不经过这些功能(evaluation/ 无引用),结论不受影响,但当时该记而没记。
 
 ## 证据位置
 

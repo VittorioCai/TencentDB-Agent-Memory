@@ -522,6 +522,32 @@
     "proxy_image_created": "2026-09-07T09:27:27Z",
     "backfilled": true,
     "backfilled_at": "2026-09-11T21:55:36Z",
-    "note": "事后回填(2026-09-11 发现冻结遗漏镜像摘要时补),不是当时冻结的。取值是发现时容器实际运行的镜像(Docker 清理后重新拉取的上游 :latest);\"批次期间镜像相同\"的依据是:镜像构建于 2026-09-07(早于批次),重新拉取得到同一摘要(上游未更新),而不是当时的记录。"
+    "note": "事后回填(2026-09-11 发现冻结遗漏镜像摘要时补),不是当时冻结的。取值是发现时容器实际运行的镜像(Docker 清理后重新拉取的上游 :latest);\"批次期间镜像相同\"的依据是:镜像构建于 2026-09-07(早于批次),重新拉取得到同一摘要(上游未更新),而不是当时的记录。",
+    "mount_override": {
+      "metadata_files_overwritten_by_mount": [
+        "router/internal-meta-router.ts",
+        "router/v3-meta-router.ts",
+        "router/v3-meta-schemas.ts",
+        "service/metadata-service.ts",
+        "store/interface.ts",
+        "store/metadata-store.contract.ts",
+        "store/mongodb-adapter.ts",
+        "store/sqlite-adapter.ts",
+        "types.ts"
+      ],
+      "gateway_files_overwritten_by_mount": [
+        "gateway/skill-handlers.ts (19 lines from the branch base)",
+        "gateway/v2-router.ts (40)",
+        "gateway/server.ts (414, instance-related)",
+        "core/skill/skill-versioning.ts (2)"
+      ],
+      "upstream_features_not_in_effect_under_the_mount": [
+        "InstanceUpstreamConfig / /v3/meta/instance-upstream/{get,list,set,reset}",
+        "/v3/meta/user/{bind-external,find-by-external}"
+      ],
+      "evaluation_touches_them": false,
+      "recorded_at": "2026-09-11T22:03:16Z",
+      "note": "2026-09-12 改正:镜像 = 上游新版,分支 = 上游旧版 + 闸门;挂载覆盖了这些上游新增功能,运行时是分支版本。评测不经过这些功能,结论不受影响;当时该记而没记。"
+    }
   }
 }
