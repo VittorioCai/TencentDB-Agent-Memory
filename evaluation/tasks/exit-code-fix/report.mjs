@@ -40,7 +40,8 @@ const rows = manifest.runs.map((r) => {
   const early = d ? readJsonl(join(d, "early-events.jsonl")) : null;
   const used = d ? readJsonl(join(d, "used-events.jsonl")) : null;
   const outcomes = d ? readJsonl(join(d, "outcome-events.jsonl")) : null;
-  const wb = d ? readJson(join(d, "write-back.json")) : null;
+  // the write-back is recorded in the ORIGINAL run dir even when the verdict is read from a re-judged copy
+  const wb = (d ? readJson(join(d, "write-back.json")) : null) ?? (origDirOf(r) ? readJson(join(origDirOf(r), "write-back.json")) : null);
   const cost = d ? readJson(join(d, "cost.json")) : null;
   // what the model itself did with the team pool: skill_search calls and whether the note came back in any result
   const capture = d ? readJsonl(join(d, "capture.jsonl")) : null;
@@ -236,8 +237,16 @@ const newAfterWb = poolAfterWb ? [...a1].filter((x) => !b.has(x)) : null;
 const newAfterOff = poolAfterOff ? [...a2].filter((x) => !b.has(x)) : null;
 const consumers = new Set(rows.filter((r) => r.sample).map((r) => r.consumer));
 const byId = (snap) => Object.fromEntries((snap?.assets ?? []).map((x) => [x.asset_id, x]));
+// the registry row names the owner USER; the agent whose session buffer was archived is in the archive key's path
+const agentOfKey = (k) => (/\/(agt-[a-z0-9]+)\//.exec(String(k ?? "")) ?? [])[1] ?? null;
+const wbNew = rows.filter((r) => r.sample && r.wb).flatMap((r) => (r.wb.new_assets ?? []).map((a) => ({ ...a, run_id: r.run_id, consumer: r.consumer, consumer_user: r.run?.consumer?.owner_user_id ?? null, archive_agent: agentOfKey(r.wb.extract_response?.archive_key), task: r.wb.extract_response?.task_id ?? null })));
+const userOf = (a) => a.producer_user_id ?? a.owner_user_id ?? null;
+L.push(`写回记录里出现的新资产 ${wbNew.length} 项(每条写回调用前后比对注册表,以该次消费者用户的 key 读;注册表行只带 owner user,归档 key 的路径段给出被归档会话的 agent):` +
+  (wbNew.map((a) => `${a.asset_id} ${a.name ?? ""} v${q(a.version)} ${q(a.status)} owner user ${q(userOf(a))}${userOf(a) === a.consumer_user ? "(=该次消费者用户)" : "(≠该次消费者用户!)"},归档 agent ${q(a.archive_agent)}${a.archive_agent === a.consumer ? "(=该次消费者)" : "(≠!)"},提取任务 ${q(a.task)}`).join("; ") || "无") +
+  `。owner user 等于该次消费者用户的 ${wbNew.filter((a) => userOf(a) === a.consumer_user).length}/${wbNew.length};归档 agent 等于该次消费者的 ${wbNew.filter((a) => a.archive_agent === a.consumer).length}/${wbNew.length}。`);
+L.push("");
 L.push(`池快照:开关前 ${poolBefore ? `${poolBefore.asset_count} 项(${poolBefore.pool_snapshot_at})` : "未拍"};写回后 ${poolAfterWb ? `${poolAfterWb.asset_count} 项(${poolAfterWb.pool_snapshot_at}),新增 ${newAfterWb.length}` : "未拍"};关闭后 ${poolAfterOff ? `${poolAfterOff.asset_count} 项(${poolAfterOff.pool_snapshot_at}),相对开关前新增 ${newAfterOff.length}` : "未拍"}。` +
-  (newAfterWb && newAfterWb.length ? ` 新增资产:` + newAfterWb.map((x) => { const r = byId(poolAfterWb)[x]; const mine = consumers.has(r?.producer_agent_id); return `${x} ${r?.name ?? ""} v${q(r?.version)} ${q(r?.status)} 作者 agent ${q(r?.producer_agent_id)}${mine ? "(本闭环消费者)" : "(不是本闭环的消费者!)"}`; }).join("; ") + `;来自本闭环四个消费者的 ${newAfterWb.filter((x) => consumers.has(byId(poolAfterWb)[x]?.producer_agent_id)).length}/${newAfterWb.length}。` : ""));
+  (newAfterWb && newAfterWb.length ? ` 新增资产:` + newAfterWb.map((x) => { const r = byId(poolAfterWb)[x]; const mine = consumers.has(r?.producer_agent_id); return `${x} ${r?.name ?? ""} v${q(r?.version)} ${q(r?.status)} 作者 agent ${q(r?.producer_agent_id)}${mine ? "(本闭环消费者)" : "(不是本闭环的消费者!)"}`; }).join("; ") + `;来自本闭环四个消费者的 ${newAfterWb.filter((x) => consumers.has(byId(poolAfterWb)[x]?.producer_agent_id)).length}/${newAfterWb.length}。` : (poolAfterWb && wbNew.length ? ` 作者 key 拍的快照没有看到这 ${wbNew.length} 项:提取出的 skill 默认 visibility private、属消费者用户,作者的注册表列表不含它们(与笔记私有那次是同一机制);来源以每次写回前后的注册表比对为准。` : "")));
 L.push("");
 // ── the two confirmations before apply (review 2026-09-11 evening) ──
 const evals = readJsonl(join(HERE, "gate-evaluations.jsonl")) ?? [];

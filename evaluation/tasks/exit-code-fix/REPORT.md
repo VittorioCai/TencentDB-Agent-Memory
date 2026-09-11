@@ -76,9 +76,11 @@
 |---|---|---|---|---|---|---|
 | 2026-09-11T16:25:58Z | on | false → true | enabled:true | 66ebab0a→cdb5b484 | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T162547Z-before-extraction-on | true |
 
-开关时间窗:开 2026-09-11T16:25:58Z → 关 未关。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z。
+开关时间窗:开 2026-09-11T16:25:58Z → 关 未关。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z; 20260911T154907Z-devloop-note 2026-09-11T16:27:42Z; 20260911T155035Z-devloop-note 2026-09-11T16:28:03Z。
 
-池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 7 项(2026-09-11T16:28:23Z),新增 0;关闭后 未拍。
+写回记录里出现的新资产 10 项(每条写回调用前后比对注册表,以该次消费者用户的 key 读;注册表行只带 owner user,归档 key 的路径段给出被归档会话的 agent):skl-HJW3hVeUmdXj team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-isClIUZCR2nH codebuddy-tool-result-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-d9gLp1pxJFuK team-skill-bridge-http v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-uVUnsZwjjQmq eval-verifier-regression-fix-workflow v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-nyuzDt1y8wmt codebuddy-bash-tool-result-format v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-zxOrEOb022WE team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-706O31iXcvAU evaluation-repo-test-conventions v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-z0V6zwphUvhB codebuddy-tool-result-exit-line v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-NNeJq4zXYret confirm-fix-with-git-stash-baseline v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265; skl-47VVI0Hmdzz2 codebuddy-exit-status-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265。owner user 等于该次消费者用户的 10/10;归档 agent 等于该次消费者的 10/10。
+
+池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 7 项(2026-09-11T16:28:23Z),新增 0;关闭后 未拍。 作者 key 拍的快照没有看到这 10 项:提取出的 skill 默认 visibility private、属消费者用户,作者的注册表列表不含它们(与笔记私有那次是同一机制);来源以每次写回前后的注册表比对为准。
 
 ## apply 之前的两项确认
 
@@ -113,6 +115,8 @@
 |---|---|---|---|---|---|
 | 20260911T144347Z-devloop-no-note | agt-hpvaeml21e / usr-4u07qc2kuj | codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d | skill-extract-task-96a66940 (code 0) | skl-HJW3hVeUmdXj team-skill-bridge-search v1 candidate; skl-isClIUZCR2nH codebuddy-tool-result-parsing v1 candidate | Core extracted 2 asset(s); status as Core set it: candidate (admission is the administrator's step) |
 | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v / usr-4u07qc2kuj | codebuddy:9e6f612d-7bcd-456b-8157-7a8dc2be3432 | skill-extract-task-3656971c (code 0) | skl-d9gLp1pxJFuK team-skill-bridge-http v1 candidate; skl-uVUnsZwjjQmq eval-verifier-regression-fix-workflow v1 candidate; skl-nyuzDt1y8wmt codebuddy-bash-tool-result-format v1 candidate | Core extracted 3 asset(s); status as Core set it: candidate (admission is the administrator's step) |
+| 20260911T154907Z-devloop-note | agt-hsv5hd4ys2 / usr-4u07qc2kuj | codebuddy:bdec6479-e531-4224-baed-be42c686b567 | skill-extract-task-9d11533a (code 0) | skl-zxOrEOb022WE team-skill-bridge-search v1 candidate; skl-706O31iXcvAU evaluation-repo-test-conventions v1 candidate; skl-z0V6zwphUvhB codebuddy-tool-result-exit-line v1 candidate | Core extracted 3 asset(s); status as Core set it: candidate (admission is the administrator's step) |
+| 20260911T155035Z-devloop-note | agt-hsylov19pn / usr-4u07qc2kuj | codebuddy:fbbd6f35-dca2-4479-9e51-a16db7a38f15 | skill-extract-task-a58a9265 (code 0) | skl-NNeJq4zXYret confirm-fix-with-git-stash-baseline v1 candidate; skl-47VVI0Hmdzz2 codebuddy-exit-status-parsing v1 candidate | Core extracted 2 asset(s); status as Core set it: candidate (admission is the administrator's step) |
 
 ## 笔记的准入是实验干预,不是闸门批准
 
