@@ -91,6 +91,48 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-11T14:45:42Z",
       "recorded_at": "2026-09-11T14:48:33Z"
+    },
+    {
+      "arm": "note",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260911T151132Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T151132Z-devloop-note.i8SR/20260911T151132Z-devloop-note",
+      "note_status_at_start": "approved",
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631",
+      "consumer_agent_id": "agt-hq5ik0kr3g",
+      "verdict": "PASS",
+      "attempts": [
+        "none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T15:11:32Z",
+      "recorded_at": "2026-09-11T15:13:42Z",
+      "void": true,
+      "note_visibility_at_start": "private",
+      "void_reason": "the note was visibility=private (skill/create default) while the other pool assets are team; the bridge's search excludes other users' private skills — run 1 searched 4 times with relevant queries and got the four team assets, never the note; run 2 did not search; 0 delivery events. A configuration defect, not model behaviour; voided 2026-09-11T15:48:50Z, kept on file. Both runs were started by a --n 0 status check (seq 1 0 counts down; driver guarded since)."
+    },
+    {
+      "arm": "note",
+      "sample": false,
+      "seq": 0,
+      "run_id": "20260911T151342Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260911T151342Z-devloop-note.sAIP/20260911T151342Z-devloop-note",
+      "note_status_at_start": "approved",
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631",
+      "consumer_agent_id": "agt-hq84sw27hy",
+      "verdict": "PASS",
+      "attempts": [
+        "none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-11T15:13:42Z",
+      "recorded_at": "2026-09-11T15:16:34Z",
+      "void": true,
+      "note_visibility_at_start": "private",
+      "void_reason": "the note was visibility=private (skill/create default) while the other pool assets are team; the bridge's search excludes other users' private skills — run 1 searched 4 times with relevant queries and got the four team assets, never the note; run 2 did not search; 0 delivery events. A configuration defect, not model behaviour; voided 2026-09-11T15:48:50Z, kept on file. Both runs were started by a --n 0 status check (seq 1 0 counts down; driver guarded since)."
     }
   ],
   "task_text_versions": [
@@ -111,6 +153,23 @@
       "arm": "no-note",
       "n": 2,
       "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
+    },
+    {
+      "at": "2026-09-11T15:11:32Z",
+      "note_status": "approved",
+      "arm": "note",
+      "n": 0,
+      "task_md_sha256": "5107fc3ec3229d33b2acf646a476812cd1d96ffc83f809e5acf9939b28499631"
+    }
+  ],
+  "config_fixes": [
+    {
+      "at": "2026-09-11T15:48:50Z",
+      "what": "note visibility private → team (owner key, fill-note.mjs --fix-visibility; record visibility-fix.json); pool re-snapshotted (v1 kept as asset-pool-snapshot.v1-note-private.json)",
+      "voided_runs": [
+        "20260911T151132Z-devloop-note",
+        "20260911T151342Z-devloop-note"
+      ]
     }
   ]
 }

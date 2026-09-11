@@ -1,0 +1,29 @@
+{
+  "asset_id": "skl-pXLc38dex6Zt",
+  "at": "2026-09-11T15:48:16Z",
+  "by": {
+    "agent_id": "agt-5e4hna56j9",
+    "user_id": "usr-n68ea5ythq",
+    "role": "owner (author key)"
+  },
+  "before": {
+    "visibility": "private",
+    "status": "approved",
+    "version": 1,
+    "content_hash": "9ed211c2546c0db58a94d51a79eb442c",
+    "updated_at": "2026-09-11T15:11:32.008Z"
+  },
+  "after": {
+    "visibility": "team",
+    "status": "approved",
+    "version": 1,
+    "content_hash": "9ed211c2546c0db58a94d51a79eb442c",
+    "updated_at": "2026-09-11T15:48:16.665Z"
+  },
+  "changed": true,
+  "ok": true,
+  "message": "ok",
+  "command": "node evaluation/tasks/exit-code-fix/fill-note.mjs --fix-visibility",
+  "restore": "POST /v3/meta/asset/update {\"asset_id\":\"skl-pXLc38dex6Zt\",\"visibility\":\"private\"} with the owner key",
+  "why": "the bridge's search excludes other people's private skills; the note must be team-visible to be deliverable at all"
+}

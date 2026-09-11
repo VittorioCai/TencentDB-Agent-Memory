@@ -1,6 +1,6 @@
 # 开发闭环 `exit-code-fix`:运行报告(脚本生成)
 
-生成命令:`node evaluation/tasks/exit-code-fix/report.mjs`;数据范围:`evaluation/tasks/exit-code-fix/devloop-runs.json` 列出的 5 次运行(正式样本 2 次,冒烟 1 次,作废留档 2 次);
+生成命令:`node evaluation/tasks/exit-code-fix/report.mjs`;数据范围:`evaluation/tasks/exit-code-fix/devloop-runs.json` 列出的 7 次运行(正式样本 2 次,冒烟 1 次,作废留档 4 次);
 判据版本:repo-2026-09-11b, repo-2026-09-11c;笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v1,仓库只存 sha256 d3d4dd1bd6a4…)。
 
 ## 这份数字测的是什么,不是什么
@@ -12,13 +12,15 @@
 
 ## 每次运行
 
-| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |
+| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态/可见性 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | smoke(冒烟) | 20260911T135759Z-devloop-smoke | agt-hnqxin11n9 | agt-hnqxin11n9 | candidate | 1 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 未加 | 是 | 0 |
-| 1 | no-note(作废:任务文本改动前) | 20260911T140427Z-devloop-no-note | agt-hn1pxo9rcm | agt-hn1pxo9rcm | candidate | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
-| 2 | no-note(作废:任务文本改动前) | 20260911T140806Z-devloop-no-note | agt-hn7snfdspu | agt-hn7snfdspu | candidate | 2 | 否 | 无 | 0 / 0 | 无 | FAIL | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 1 | no-note(作废) | 20260911T140427Z-devloop-no-note | agt-hn1pxo9rcm | agt-hn1pxo9rcm | candidate | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 2 | no-note(作废) | 20260911T140806Z-devloop-no-note | agt-hn7snfdspu | agt-hn7snfdspu | candidate | 2 | 否 | 无 | 0 / 0 | 无 | FAIL | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
 | 1 | no-note | 20260911T144347Z-devloop-no-note | agt-hpvaeml21e | agt-hpvaeml21e | candidate | 3 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
 | 2 | no-note | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v | agt-hpyg3smf6v | candidate | 2 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 1 | note(作废) | 20260911T151132Z-devloop-note | agt-hq5ik0kr3g | agt-hq5ik0kr3g | approved/private | 4 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
+| 0 | note(作废) | 20260911T151342Z-devloop-note | agt-hq84sw27hy | agt-hq84sw27hy | approved/private | 0 | 否 | 无 | 0 / 0 | 无 | PASS | none: no test file was added; 1 test(s) added to existing file(s) carry no bt- marker | M evaluation/tasks/bridge-addr/verify.mjs; M evaluation/tasks/bridge-addr/verify.test.mjs | 22/22 | 是 | 0 |
 
 ## 验收明细
 
@@ -29,8 +31,14 @@
 | 20260911T140806Z-devloop-no-note | 6/7 | a non-zero exit status, as CodeBuddy spells it, is a failure | REGRESSED | 1 | 3/3 | 0 / 1 / 0 | the verifier's reference regression test does not pass (1 failing); note: the model changed 1 original test file(s) (evaluation/tasks/bridge-addr/verify.test.mjs); the controlled suite ran their original content; the model's own tests (1 added or rewritten file(s)): 22/22 pass (recorded, not a verdict input) |
 | 20260911T144347Z-devloop-no-note | 7/7 | 无 | OK | 0 | 3/3 | 0 / 1 / 0 | reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model changed 1 original test file(s) (evaluation/tasks/bridge-addr/verify.test.mjs); the controlled suite ran their original content; the model's own tests (1 added or rewritten file(s)): 22/22 pass (recorded, not a verdict input) |
 | 20260911T144542Z-devloop-no-note | 7/7 | 无 | OK | 0 | 3/3 | 0 / 1 / 0 | reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model changed 1 original test file(s) (evaluation/tasks/bridge-addr/verify.test.mjs); the controlled suite ran their original content; the model's own tests (1 added or rewritten file(s)): 22/22 pass (recorded, not a verdict input) |
+| 20260911T151132Z-devloop-note | 7/7 | 无 | OK | 0 | 3/3 | 0 / 1 / 0 | reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model changed 1 original test file(s) (evaluation/tasks/bridge-addr/verify.test.mjs); the controlled suite ran their original content; the model's own tests (1 added or rewritten file(s)): 22/22 pass (recorded, not a verdict input) |
+| 20260911T151342Z-devloop-note | 7/7 | 无 | OK | 0 | 3/3 | 0 / 1 / 0 | reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model changed 1 original test file(s) (evaluation/tasks/bridge-addr/verify.test.mjs); the controlled suite ran their original content; the model's own tests (1 added or rewritten file(s)): 22/22 pass (recorded, not a verdict input) |
 
-参考测试(验证器自带,两组相同)共 7 例:大写退出行的超时(28)、大写退出行的非零退出码(52/56)、小写拼写仍可读、退出 0 + code 0 信封、退出 0 + 非零信封、退出 0 无输出保持不可读、stderr 里的连接失败。**笔记正文列出了 52/56,而任务文本只描述超时;因此有笔记组在"非零退出码"一例上的通过,包含"笔记披露了验收覆盖范围"的成分,不能只记为定位更快。** 根因修复(退出行的标签按两种拼写读,一行正则)同时覆盖超时与非零退出码两类情形;只把超时分支改成认大写、不改退出码读取的修复是治标,会在"非零退出码"一例上失败。本清单里:参考测试 7/7(根因修复)4 次(smoke 20260911T135759Z-devloop-smoke; no-note作废 20260911T140427Z-devloop-no-note; no-note 20260911T144347Z-devloop-no-note; no-note 20260911T144542Z-devloop-no-note);只过超时、不过非零退出码(治标)1 次(no-note作废 20260911T140806Z-devloop-no-note);其他参考失败 0 次。
+参考测试(验证器自带,两组相同)共 7 例:大写退出行的超时(28)、大写退出行的非零退出码(52/56)、小写拼写仍可读、退出 0 + code 0 信封、退出 0 + 非零信封、退出 0 无输出保持不可读、stderr 里的连接失败。**笔记正文列出了 52/56,而任务文本只描述超时;因此有笔记组在"非零退出码"一例上的通过,包含"笔记披露了验收覆盖范围"的成分,不能只记为定位更快。** 根因修复(退出行的标签按两种拼写读,一行正则)同时覆盖超时与非零退出码两类情形;只把超时分支改成认大写、不改退出码读取的修复是治标,会在"非零退出码"一例上失败。本清单里:参考测试 7/7(根因修复)6 次(smoke 20260911T135759Z-devloop-smoke; no-note作废 20260911T140427Z-devloop-no-note; no-note 20260911T144347Z-devloop-no-note; no-note 20260911T144542Z-devloop-no-note; note作废 20260911T151132Z-devloop-note; note作废 20260911T151342Z-devloop-note);只过超时、不过非零退出码(治标)1 次(no-note作废 20260911T140806Z-devloop-no-note);其他参考失败 0 次。
+
+## 不信模型自报:这些运行的实证
+
+本清单里已判决的 7 次运行中,7 次改写了被测代码自己的测试文件(evaluation/tasks/bridge-addr/verify.test.mjs);6 次模型自己的测试全绿(20260911T140427Z-devloop-no-note 22/22; 20260911T140806Z-devloop-no-note 22/22; 20260911T144347Z-devloop-no-note 22/22; 20260911T144542Z-devloop-no-note 22/22; 20260911T151132Z-devloop-note 22/22; 20260911T151342Z-devloop-note 22/22);1 次未记录模型自测(判据版本早于 repo-2026-09-11c)。验收器不看这些:受控套件跑起点测试的原内容,模型的测试只记不判。其中 1 次模型自测全绿而验收不是 PASS(20260911T140806Z-devloop-no-note:FAIL,参考测试失败项 a non-zero exit status, as CodeBuddy spells it, is a failure)——若当初采信模型自报"测试通过",这些运行会被判成通过。
 
 ## 消费者与记忆隔离
 
@@ -41,6 +49,8 @@
 | 20260911T140806Z-devloop-no-note | agt-hn7snfdspu | 0/0/0 | fbfc8e76→f102ed3e | deploy/global-images/.proxy-config/config.yaml.bak-20260911T140806Z-devloop-no-note | 0 | 0 | 0 | 0 | 0 | 是 |
 | 20260911T144347Z-devloop-no-note | agt-hpvaeml21e | 0/0/0 | f102ed3e→b1610d43 | deploy/global-images/.proxy-config/config.yaml.bak-20260911T144347Z-devloop-no-note | 0 | 0 | 0 | 0 | 0 | 是 |
 | 20260911T144542Z-devloop-no-note | agt-hpyg3smf6v | 0/0/0 | b1610d43→5a1cc48f | deploy/global-images/.proxy-config/config.yaml.bak-20260911T144542Z-devloop-no-note | 0 | 0 | 0 | 0 | 0 | 是 |
+| 20260911T151132Z-devloop-note | agt-hq5ik0kr3g | 0/0/0 | 5a1cc48f→410fe42f | deploy/global-images/.proxy-config/config.yaml.bak-20260911T151132Z-devloop-note | 0 | 0 | 0 | 0 | 0 | 是 |
+| 20260911T151342Z-devloop-note | agt-hq84sw27hy | 0/0/0 | 410fe42f→8666e78e | deploy/global-images/.proxy-config/config.yaml.bak-20260911T151342Z-devloop-note | 0 | 0 | 0 | 0 | 0 | 是 |
 
 ## 新经验回流候选池
 
@@ -48,9 +58,16 @@
 
 ## 笔记的准入是实验干预,不是闸门批准
 
-笔记 skl-pXLc38dex6Zt 的闸门判定始终 pending;有笔记组之前由管理员置 approved 是实验准备动作,跑完即置回 candidate,报告不把它读作闸门批准;闸门判定待新经验回流(5e)后由证据驱动。驱动脚本每次调用记录的状态观测(1 条):2026-09-11T14:43:47Z candidate(no-note, n=2)。 最后一次观测为 candidate:已撤销。
+笔记 skl-pXLc38dex6Zt 的闸门判定始终 pending;有笔记组之前由管理员置 approved 是实验准备动作,跑完即置回 candidate,报告不把它读作闸门批准;闸门判定待新经验回流(5e)后由证据驱动。驱动脚本每次调用记录的状态观测(2 条):2026-09-11T14:43:47Z candidate(no-note, n=2); 2026-09-11T15:11:32Z approved(note, n=0)。 最后一次观测为 approved:尚未置回。
 
 任务文本改动 1 次:2026-09-11T14:42:48Z added: 本仓库所属团队把过往经验以 skill 形式保存在团队知识库中。动手之前先检索一次团队经验,有相关的就参考,没有就按自己的判断做。(原因:three runs with zero skill_search showed the injected skill_tools hint alone does not lead to a search; the sentence describes environment and workflow only, no defect information; same text for both arms;作废运行 20260911T140427Z-devloop-no-note, 20260911T140806Z-devloop-no-note)。
+配置修正 1 次:2026-09-11T15:48:50Z note visibility private → team (owner key, fill-note.mjs --fix-visibility; record visibility-fix.json); pool re-snapshotted (v1 kept as asset-pool-snapshot.v1-note-private.json)(作废运行 20260911T151132Z-devloop-note, 20260911T151342Z-devloop-note)。
+
+作废留档的运行(4):
+- 20260911T140427Z-devloop-no-note(no-note):task.md changed after this run (2026-09-11T14:42:48Z: the team-knowledge sentence was added, both arms alike); kept on file, not counted
+- 20260911T140806Z-devloop-no-note(no-note):task.md changed after this run (2026-09-11T14:42:48Z: the team-knowledge sentence was added, both arms alike); kept on file, not counted
+- 20260911T151132Z-devloop-note(note):the note was visibility=private (skill/create default) while the other pool assets are team; the bridge's search excludes other users' private skills — run 1 searched 4 times with relevant queries and got the four team assets, never the note; run 2 did not search; 0 delivery events. A configuration defect, not model behaviour; voided 2026-09-11T15:48:50Z, kept on file. Both runs were started by a --n 0 status check (seq 1 0 counts down; driver guarded since).
+- 20260911T151342Z-devloop-note(note):the note was visibility=private (skill/create default) while the other pool assets are team; the bridge's search excludes other users' private skills — run 1 searched 4 times with relevant queries and got the four team assets, never the note; run 2 did not search; 0 delivery events. A configuration defect, not model behaviour; voided 2026-09-11T15:48:50Z, kept on file. Both runs were started by a --n 0 status check (seq 1 0 counts down; driver guarded since).
 
 ## 计数(只描述这些运行)
 

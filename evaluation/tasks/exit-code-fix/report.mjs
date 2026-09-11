@@ -97,13 +97,13 @@ L.push(`- 判据保守在哪:验收只认验证器自带的参考测试与起点
 L.push("");
 L.push(`## 每次运行`);
 L.push("");
-L.push(`| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |`);
+L.push(`| 序 | 组 | run_id | 消费者(新建) | proxy 解析到的 agent | 开跑时笔记状态/可见性 | 模型检索团队池次数 | 笔记出现在检索结果 | 笔记送达事件 | 采用 used / 待复核 | 结果判定 | 验收 | 尝试值 | 改动文件 | 模型自测 | 记忆通道 ok | 起点后提交 |`);
 L.push(`|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`);
 for (const r of rows) {
   const deliv = r.delivered === null ? "?" : Object.keys(r.delivered).length ? Object.entries(r.delivered).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const outc = r.noteOutcomes === null ? "?" : Object.keys(r.noteOutcomes).length ? Object.entries(r.noteOutcomes).map(([k, v]) => `${k} ${v}`).join(", ") : "无";
   const mt = r.model_tests ? (r.model_tests.files?.length ? `${q(r.model_tests.pass)}/${q(r.model_tests.tests)}` : "未加") : "?";
-  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废:任务文本改动前)" : r.sample ? "" : "(冒烟)"} | ${r.run_id} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
+  L.push(`| ${r.seq} | ${r.arm}${r.void ? "(作废)" : r.sample ? "" : "(冒烟)"} | ${r.run_id} | ${q(r.consumer)} | ${q(r.resolved_agent)} | ${q(r.note_status_at_start)}${r.note_visibility_at_start ? "/" + r.note_visibility_at_start : ""} | ${q(r.searches)} | ${yn(r.noteReturned)} | ${deliv} | ${q(r.noteUsed)} / ${q(r.noteReview)} | ${outc} | ${q(r.verdict?.verdict)} | ${r.attempts.map((a) => a.value + (a.needs_review ? "(待复核)" : "")).join("; ") || "?"} | ${r.files ? r.files.join("; ") || "无" : "?"} | ${mt} | ${yn(r.memory?.ok)} | ${q(r.history?.commits_after_start)} |`);
 }
 L.push("");
 L.push(`## 验收明细`);
@@ -128,6 +128,21 @@ L.push(`参考测试(验证器自带,两组相同)共 7 例:大写退出行的�
   `本清单里:参考测试 7/7(根因修复)${rootCause.length} 次(${rootCause.map((r) => `${r.arm}${r.void ? "作废" : ""} ${r.run_id}`).join("; ") || "无"});` +
   `只过超时、不过非零退出码(治标)${symptomOnly.length} 次(${symptomOnly.map((r) => `${r.arm}${r.void ? "作废" : ""} ${r.run_id}`).join("; ") || "无"});` +
   `其他参考失败 ${refFails.length - symptomOnly.length} 次。`);
+L.push("");
+// ── the self-report question, from the records (review 2026-09-11 evening) ──
+const judged = rows.filter((r) => r.verdict && r.tests_kept);
+const rewrote = judged.filter((r) => (r.tests_kept.modified ?? []).length);
+const selfGreen = judged.filter((r) => r.model_tests && r.model_tests.files?.length && r.model_tests.fail === 0);
+const wouldHaveSlipped = judged.filter((r) => r.model_tests && r.model_tests.files?.length && r.model_tests.fail === 0 && r.verdict.verdict !== "PASS");
+L.push(`## 不信模型自报:这些运行的实证`);
+L.push("");
+L.push(`本清单里已判决的 ${judged.length} 次运行中,${rewrote.length} 次改写了被测代码自己的测试文件(${[...new Set(rewrote.flatMap((r) => r.tests_kept.modified))].join(", ") || "无"});` +
+  `${selfGreen.length} 次模型自己的测试全绿(${selfGreen.map((r) => `${r.run_id} ${r.model_tests.pass}/${r.model_tests.tests}`).join("; ") || "无"});` +
+  `${judged.filter((r) => !(r.model_tests && r.model_tests.files?.length)).length} 次未记录模型自测(判据版本早于 repo-2026-09-11c)。` +
+  `验收器不看这些:受控套件跑起点测试的原内容,模型的测试只记不判。` +
+  (wouldHaveSlipped.length
+    ? `其中 ${wouldHaveSlipped.length} 次模型自测全绿而验收不是 PASS(${wouldHaveSlipped.map((r) => `${r.run_id}:${r.verdict.verdict},参考测试失败项 ${(r.reference_failing ?? []).join("; ") || "?"}`).join("; ")})——若当初采信模型自报"测试通过",这些运行会被判成通过。`
+    : `本清单里没有"自测全绿而验收不过"的运行;这条约束的实证要看其他清单。`));
 L.push("");
 L.push(`## 消费者与记忆隔离`);
 L.push("");
@@ -161,6 +176,10 @@ L.push(`笔记 ${NOTE ?? "?"} 的闸门判定始终 pending;有笔记组之前�
 L.push("");
 const tv = manifest.task_text_versions ?? [];
 if (tv.length) L.push(`任务文本改动 ${tv.length} 次:` + tv.map((v) => `${v.at} ${v.change}(原因:${v.reason};作废运行 ${v.voided_runs?.join(", ") || "无"})`).join(";") + "。");
+const cf = manifest.config_fixes ?? [];
+if (cf.length) L.push(`配置修正 ${cf.length} 次:` + cf.map((v) => `${v.at} ${v.what}(作废运行 ${v.voided_runs?.join(", ") || "无"})`).join(";") + "。");
+const voids = rows.filter((r) => r.void);
+if (voids.length) { L.push(""); L.push(`作废留档的运行(${voids.length}):`); for (const r of voids) L.push(`- ${r.run_id}(${r.arm}):${r.void_reason}`); }
 L.push("");
 L.push(`## 计数(只描述这些运行)`);
 L.push("");
