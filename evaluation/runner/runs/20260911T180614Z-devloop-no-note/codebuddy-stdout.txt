@@ -1,0 +1,23 @@
+[20:06:25] model custom-local:deepseek-v4-flash
+[20:06:25] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+**根因**：`evaluation/attribution/collect-artifacts.mjs` 的 `outcomeOf()` 用 `/(?:^|\n)Exit code:\s*(\d+)/` 解析退出状态，但真实的 CodeBuddy Bash 工具结果写的是 **`Exit Code:`**（大写 C）——同一仓库里权威的解析器 `evaluation/gate0/verify-capture.mjs:136` 就是按 `\nExit Code: (-?\d+)` 解析的。大小写不匹配导致真实结果的 `exit_code` 恒为 `null`，下游按退出状态分类失败调用的逻辑因此失明。
+
+**修复**（`collect-artifacts.mjs:122`）：
+- 正则改为 `/(?:^|\n)Exit Code:\s*(-?\d+)/i` —— `i` 让大写 `Exit Code:` 与小写 `Exit code:` 都能匹配（保持既有 fixture 行为不变），并支持负数（信号终止上报为 `-1`，与 gate0 解析器一致）。
+
+**回归测试**（新增 `evaluation/attribution/collect-artifacts.test.mjs`）：喂入真实格式的 Bash envelope（`Exit Code: 1` + `Signal:`），断言 `collectArtifacts` 产出的 `test_command` 操作上 `result.exit_code === 1`；同时断言小写拼写仍解析为 28、退出 0 仍为 0。
+
+## 验证
+
+- 新增测试：1/1 通过。
+- 全量 `node --test "evaluation/**/*.test.mjs"`：**553 tests, 548 pass, 3 fail, 2 skipped**。
+- 3 个失败是**改动前就存在**的，均为读取被 `.gitignore` 排除的 fixture（`evaluation/gate0/artifacts/...`）导致的 ENOENT，与本次修复无关；改动后失败集合未变，无新增回归。
+
+## 团队经验检索
+
+动手前用 skill-bridge 检索了团队知识库（关键词覆盖工具结果/退出状态/capture/归因/devloop 等），命中的只有 `tdc-312fad`（eval 环境发布步骤）和 `eval-bridge-endpoint-b`（bridge 地址约定），均与本次退出码解析无关，故按仓库内既有解析器（gate0）作为事实依据完成修复。

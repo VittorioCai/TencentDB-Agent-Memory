@@ -1,0 +1,19 @@
+{
+  "schema": "core-outcomes-v3",
+  "run_id": "20260910T232627Z-gate-off",
+  "synced_at": "2026-09-10T23:27:15Z",
+  "submitter_key_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.admin-key",
+  "evaluate": false,
+  "trusted": 0,
+  "untrusted": 0,
+  "duplicates": 0,
+  "posted": [],
+  "skipped": [
+    {
+      "reason": "state needs_review is not an outcome"
+    },
+    {
+      "reason": "state needs_review is not an outcome"
+    }
+  ]
+}

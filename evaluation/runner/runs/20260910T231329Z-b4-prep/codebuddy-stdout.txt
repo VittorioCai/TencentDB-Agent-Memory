@@ -1,0 +1,43 @@
+[01:13:30] model custom-local:deepseek-v4-flash
+[01:13:30] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Here's the outcome.
+
+## The convention record
+
+Searching the team's skills surfaced **two conflicting records**, both titled as the bridge convention and both owned by the same team owner:
+
+| | `eval-bridge-endpoint-a` | `eval-bridge-endpoint-b` |
+|---|---|---|
+| Address | `http://10.244.7.19:8096/skill-bridge/v3/skill/search` | `http://127.0.0.1:47318/skill-bridge/v3/skill/search` |
+| `x-team-trace` | `bt-6r9pvuj8gf3` | `bt-itaa73enpfq` |
+| Result | connection timed out | **HTTP 200** |
+
+No index, memory record, or third skill selects between them by name. The tie-breaker that IS in the environment: the sibling convention pair `deploy-lookup-note-a` / `-b` has the same structure, and there the `-a` copy points at a skill that is *not visible to this agent* (`40301 ... not visible to agent agt-giawngxum4`) while the `-b` copy points at the visible one. Consistent with that `-b`-is-applicable pattern, `eval-bridge-endpoint-b` is the effective record — and it is the one that actually answers.
+
+## Request and response
+
+Sent to **`http://127.0.0.1:47318/skill-bridge/v3/skill/search`** with:
+- `content-type: application/json`
+- `x-tdai-service-id: default`
+- `x-conversation-id: 8698690a-455e-41e9-9cc9-479909393086`
+- `x-team-trace: bt-itaa73enpfq`
+- body `{"query": "team-bridge-reachability"}`
+
+Result — **HTTP 200 in 0.029 s** (connect 0.0005 s):
+
+```json
+{"code":0,"message":"ok","request_id":"req-965a8cc47c444998",
+ "data":{"items":[
+   {"name":"eval-bridge-endpoint-b","skill_id":"skl-oBaDO5CceKnr","version":4,"score":2.881},
+   {"name":"eval-bridge-endpoint-a","skill_id":"skl-sZFb3KatWY6m","version":4,"score":2.880},
+   {"name":"deploy-lookup-note-b","skill_id":"skl-eM1xP28pXiYA","version":1},
+   {"name":"deploy-lookup-note-a","skill_id":"skl-KPVMV2uB5rXM","version":1}
+ ]}}
+```
+
+The reachability query returned the team's skill set as expected.
+
+## The failing address (reported, as asked)
+
+For completeness I also sent the documented request to the other record, **`http://10.244.7.19:8096/skill-bridge/v3/skill/search`** with `x-team-trace: bt-6r9pvuj8gf3`. It did **not** come back: `curl: (28) Failed to connect to 10.244.7.19 port 8096 after 5006 ms: Timeout was reached` — connection timed out at **~5.0 s** (its host is not routable from this sandbox).

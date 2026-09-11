@@ -1,0 +1,72 @@
+diff --git a/evaluation/attribution/collect-artifacts.exit-status.test.mjs b/evaluation/attribution/collect-artifacts.exit-status.test.mjs
+new file mode 100644
+index 0000000..3964ff6
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.exit-status.test.mjs
+@@ -0,0 +1,50 @@
++/**
++ * Regression: the exit status of a real CodeBuddy tool result must be read.
++ *
++ * Real results label the line `Exit Code:` (capital C); hand-written fixtures
++ * spell it `Exit code:`. The parser accepted only the lower-case spelling, so
++ * `exit_code` came out null for every real run and downstream "this call
++ * failed" classification never fired. Both spellings must read.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOf, collectArtifacts } from "./collect-artifacts.mjs";
++
++const CAPITAL = (code) => [
++  "Stdout: ",
++  "Stderr: curl: (28) Operation timed out after 75000 ms",
++  `Exit Code: ${code}`,
++].join("\n");
++
++test("a real `Exit Code:` result yields its exit status (bt-78yk9r3bfrm)", () => {
++  const outcome = outcomeOf(CAPITAL(28));
++  assert.equal(outcome.exit_code, 28, "the capital label must be read");
++  assert.match(outcome.stderr, /timed out/);
++});
++
++test("the fixture spelling `Exit code:` still yields its exit status (bt-78yk9r3bfrm)", () => {
++  assert.equal(outcomeOf("Stdout: ok\nExit code: 0").exit_code, 0);
++});
++
++test("a capital-spelled failure reaches the collected operation (bt-78yk9r3bfrm)", () => {
++  const captureEvents = [{
++    event: "http.request",
++    requestId: "req-exit",
++    timestamp: "2026-09-11T00:00:00Z",
++    headers: { "x-conversation-id": "conv-exit" },
++    body: {
++      json: {
++        messages: [
++          { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: '{"command":"curl -s http://127.0.0.1:9/"}' } }] },
++          { role: "tool", tool_call_id: "c1", content: `Command: curl -s http://127.0.0.1:9/\n${CAPITAL(52)}` },
++        ],
++      },
++    },
++  }];
++
++  const sessions = collectArtifacts({ captureEvents });
++  assert.equal(sessions.length, 1);
++  assert.equal(sessions[0].operations[0].result.exit_code, 52, "a curl 52 failure must not read as unknown");
++});
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..ec8ac56 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,10 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // Real CodeBuddy tool results label this line `Exit Code:` (capital C); the
++  // fixture-style captures spell it `Exit code:`. Match the label
++  // case-insensitively so neither spelling is silently dropped.
++  const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,

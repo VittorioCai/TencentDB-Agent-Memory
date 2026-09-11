@@ -1,0 +1,119 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "078b9ce2-7460-49d7-9ede-b00d300b3edd",
+  "run_id": "20260911T180614Z-devloop-no-note",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-11T18:07:40Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 1,
+      "provided": 1,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:40Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 2 (score 0.52) for the query \"governance eval gate probe attribution devloop\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "capture_line",
+          "ref": "078b9ce2-7460-49d7-9ede-b00d300b3edd:call_00_fNV29ZZRGcOBWKT1n3Jt4418",
+          "detail": "skill:get-by-name answered at message 13; carrying content; version 1; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T18:07:40.108Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 2 (score 0.42) for the query \"governance eval gate probe attribution devloop\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-oBaDO5CceKnr",
+          "detail": "carried in a tool result inside the request the model received; present in 16 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-oBaDO5CceKnr",
+          "detail": "skill:search returned 2 candidate(s), this one at rank 2; present in 16 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T18:07:40.109Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

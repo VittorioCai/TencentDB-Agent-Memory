@@ -1,0 +1,141 @@
+{
+  "verdict": "PASS",
+  "reason": "reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model's own tests (1 added or rewritten file(s)): 3/3 pass (recorded, not a verdict input)",
+  "acceptance_version": "repo-2026-09-11c",
+  "attempts": [
+    {
+      "kind": "added_test",
+      "value": "bt-imczk9p69e3",
+      "file": "evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs",
+      "where": [
+        "file name",
+        "test title"
+      ],
+      "call_id": "call_00_KPRFvvOTwslSEGh2Z7gk0929",
+      "message_index": 39,
+      "written_via": "Bash",
+      "ok": true,
+      "why": "reference test passed on the changed copy",
+      "needs_review": false,
+      "review_why": null,
+      "evidence": [
+        "bt-imczk9p69e3 in the file name and test title of the added test file evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs",
+        "written by call call_00_KPRFvvOTwslSEGh2Z7gk0929 (Bash, message 39)"
+      ]
+    }
+  ],
+  "checks": {
+    "start": {
+      "commit": "6ed77b7306f94aff17856dbe90010c8f265c251b",
+      "tree": "ff9b7b5c046d734d4af86fde5c1b771163d60e16",
+      "frozen_at": "2026-09-11T15:49:19Z",
+      "test_files": 40
+    },
+    "history": {
+      "head": "6ed77b7306f94aff17856dbe90010c8f265c251b",
+      "commits_after_start": 0
+    },
+    "diff": {
+      "against": "6ed77b7306f94aff17856dbe90010c8f265c251b",
+      "files": [
+        {
+          "status": "A",
+          "file": "evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs"
+        },
+        {
+          "status": "M",
+          "file": "evaluation/tasks/bridge-addr/verify.mjs"
+        }
+      ],
+      "stat": ".../verify.exit-status.bt-imczk9p69e3.test.mjs     | 33 ++++++++++++++++++++++\n evaluation/tasks/bridge-addr/verify.mjs            |  4 ++-\n 2 files changed, 36 insertions(+), 1 deletion(-)",
+      "touched_verifier": false,
+      "out_of_scope": [],
+      "deleted_tests": [],
+      "diff_file": "/private/tmp/topic4-runs/20260911T154907Z-devloop-note.uS4B/20260911T154907Z-devloop-note/final.diff"
+    },
+    "tests_kept": {
+      "baseline": 40,
+      "missing": [],
+      "modified": [],
+      "added": [
+        "evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs"
+      ]
+    },
+    "model_tests": {
+      "files": [
+        "evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs"
+      ],
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "exit": 0,
+      "failures": [],
+      "note": "the model's own tests as it left them (added files and rewritten originals); recorded, not a verdict input"
+    },
+    "reference_test": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "exit": 0,
+      "explained": true,
+      "problems": [],
+      "failures": [],
+      "output": "TAP version 13\n# Subtest: a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout\nok 1 - a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout\n  ---\n  duration_ms: 0.96875\n  type: 'test'\n  ...\n# Subtest: a non-zero exit status, as CodeBuddy spells it, is a failure\nok 2 - a non-zero exit status, as CodeBuddy spells it, is a failure\n  ---\n  duration_ms: 0.140125\n  type: 'test'\n  ...\n# Subtest: the lower-case spelling found in older records still reads\nok 3 - the lower-case spelling found in older records still reads\n  ---\n  duration_ms: 0.051959\n  type: 'test'\n  ...\n# Subtest: a successful call is unchanged: exit 0 with a code-0 envelope is ok\nok 4 - a successful call is unchanged: exit 0 with a code-0 envelope is ok\n  ---\n  duration_ms: 0.081834\n  type: 'test'\n  ...\n# Subtest: a refusal is unchanged: exit 0 with a non-zero envelope code is a failure\nok 5 - a refusal is unchanged: exit 0 with a non-zero envelope code is a failure\n  ---\n  duration_ms: 0.096875\n  type: 'test'\n  ...\n# Subtest: exit 0 with nothing to read stays unreadable, not a failure\nok 6 - exit 0 with nothing to read stays unreadable, not a failure\n  ---\n  duration_ms: 0.036583\n  type: 'test'\n  ...\n# Subtest: a connection failure named in stderr is a failure whichever way the exit line is spelt\nok 7 - a connection failure named in stderr is a failure whichever way the exit line is spelt\n  ---\n  duration_ms: 0.038834\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 7\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 36.073792\n"
+    },
+    "suite": {
+      "files": 41,
+      "tests": 561,
+      "pass": 556,
+      "fail": 3,
+      "cancelled": 0,
+      "exit": 1,
+      "explained": true,
+      "problems": [],
+      "state": "OK",
+      "why": null,
+      "failures": [
+        {
+          "name": "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
+          "file": "evaluation/attribution/extract-tokens.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        },
+        {
+          "name": "the right-address asset cannot document the endpoint already in the prompt",
+          "file": "evaluation/attribution/extract-tokens.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        },
+        {
+          "name": "the recorded three-channel session yields recalled and injected, and no selected",
+          "file": "evaluation/provenance/build-early-events.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        }
+      ],
+      "new_failures": [],
+      "baseline_still_failing": [
+        {
+          "name": "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
+          "file": "evaluation/attribution/extract-tokens.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        },
+        {
+          "name": "the right-address asset cannot document the endpoint already in the prompt",
+          "file": "evaluation/attribution/extract-tokens.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        },
+        {
+          "name": "the recorded three-channel session yields recalled and injected, and no selected",
+          "file": "evaluation/provenance/build-early-events.test.mjs",
+          "type": "test",
+          "failure_type": "testCodeFailure"
+        }
+      ],
+      "baseline_size": 3
+    },
+    "markers_elsewhere": []
+  }
+}

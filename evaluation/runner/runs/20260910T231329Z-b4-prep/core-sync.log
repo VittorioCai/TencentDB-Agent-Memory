@@ -1,0 +1,8 @@
+[01:14:45] reading 2 baseline asset(s) …
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=approved   visibility=team     gate=pending confidence=None
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=pending confidence=None
+posted=1 trusted=1 skipped=4
+[ok] 20260910T231329Z-b4-prep: outcomes recorded in Core → /private/tmp/topic4-runs/20260910T231329Z-b4-prep.GgsN/20260910T231329Z-b4-prep/core-outcomes.json
+[01:14:46] after:
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=approved   visibility=team     gate=pending confidence=None
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=pending confidence=None

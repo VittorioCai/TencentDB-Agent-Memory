@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-h1bt18emo7",
+  "started_at": "2026-09-11T18:51:19Z",
+  "own_session": "f8e3386b-a143-4042-ad6b-5e9be9bf4a85",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

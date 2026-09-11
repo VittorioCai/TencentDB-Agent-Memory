@@ -1,0 +1,44 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-11T14:08:06.208Z",
+  "system_prompt": {
+    "chars": 22229,
+    "sha1": "008c72789370ee11185217ea902824b6b3e7be42"
+  },
+  "profile_memory": {
+    "present": false
+  },
+  "available_skills": {
+    "names": [],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-pXLc38dex6Zt",
+      "skl-KPVMV2uB5rXM",
+      "skl-eM1xP28pXiYA",
+      "skl-MyrdnecjeYSb",
+      "skl-ImeA29HL3Djj",
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "eval-tool-result-exit-line",
+      "deploy-lookup-note-a",
+      "deploy-lookup-note-b",
+      "tdc-312fad",
+      "eval-bridge-endpoint-c",
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": [
+    "Exit Code:",
+    "Exit \\[Cc\\]ode",
+    "case-insensitive",
+    "exit.status",
+    "exit-status",
+    "outcomeOfAttempt"
+  ]
+}

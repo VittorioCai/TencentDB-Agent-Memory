@@ -1,0 +1,65 @@
+# 资产使用回执 — 运行 20260910T232209Z-trial-gate-off · 会话 18e731e1 · 任务 task-5e6xp4mrrw · 2026-09-10T23:23:05Z
+
+本次应用 2 项团队资产
+- Skill：eval-bridge-endpoint-a — its value bt-6r9pvuj8gf3 was used in tool call call_00_S6d5K4hLGaxYHJ0zp9Q77285 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:22:59Z), so the content explains the failure (timed out)
+- Skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_01_vmMd6J0vxeDMzhn5egrT6136 (message 7); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已通过相关测试验证
+- 1 项被证明错误——已采用，且它引出的调用因其内容而失败
+- 2 项仅作为背景参考（取回或提供），效果待验证
+
+✗ eval-bridge-endpoint-a  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已纠错——已采用，且它引出的调用因其内容而失败
+    为何提供       offered at rank 2 of 4 (score 0.36) for the query "skill bridge address convention reach HTTP"
+    影响         its value bt-6r9pvuj8gf3 was used in tool call call_00_S6d5K4hLGaxYHJ0zp9Q77285 (message 7) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:22:59Z), so the content explains the failure (timed out)
+    作用点        tool_call
+    相关测试 verify.mjs: dial 10.244.7.19:8096 (call_00_S6d5K4hLGaxYHJ0zp9Q77285) 失败
+    证据
+      verify_result   20260910T232209Z-trial-gate-off:verify.mjs:call=call_00_S6d5K4hLGaxYHJ0zp9Q77285:ok=false  — the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and timed out; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:22:59Z), so the content explains the failure (timed out)
+      tool_arg        request(4f9869ef-486d-4b35-8d4d-5d350f9bf9e4):msg[7]:call_00_S6d5K4hLGaxYHJ0zp9Q77285:arguments  — token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 7
+      capture_line    18e731e1-7280-4c6f-a46a-6759a44d9c87:call_00_Cg6QTKIj7uGRVccxyQay5218  — skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap
+    闸门(Core) 待定 · 尚无跨人结果 · 复核优先级 中 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+    风险         闸门待定: cold start: no outcome recorded for this asset yet; pending by default
+    风险         冲突: supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run
+
+✓ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 4 (score 0.36) for the query "skill bridge address convention reach HTTP"
+    影响         its value bt-itaa73enpfq was used in tool call call_01_vmMd6J0vxeDMzhn5egrT6136 (message 7); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_01_vmMd6J0vxeDMzhn5egrT6136) 通过
+    证据
+      verify_result   20260910T232209Z-trial-gate-off:verify.mjs:call=call_01_vmMd6J0vxeDMzhn5egrT6136:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(4f9869ef-486d-4b35-8d4d-5d350f9bf9e4):msg[7]:call_01_vmMd6J0vxeDMzhn5egrT6136:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 7
+      capture_line    18e731e1-7280-4c6f-a46a-6759a44d9c87:call_01_WQdLPOoW3CQfiLjU8h9B2606  — skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+    闸门(Core) 待定 · 尚无跨人结果 · 复核优先级 高 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+    风险         闸门待定: cold start: no outcome recorded for this asset yet; pending by default
+    风险         复核优先级高: author usr-n68ea5ythq has 1 other asset(s) judged wrong within 30 days (skl-sZFb3KatWY6m); review priority: high
+    风险         冲突: supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 4 (score 3.72e-6) for the query "skill bridge address convention reach HTTP"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 4 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 3; present in 4 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 4 of 4 (score 3.72e-6) for the query "skill bridge address convention reach HTTP"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 4 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 4; present in 4 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

@@ -1,0 +1,81 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.exit-status.bt-78yk9r3bfrm.test.mjs b/evaluation/tasks/bridge-addr/verify.exit-status.bt-78yk9r3bfrm.test.mjs
+new file mode 100644
+index 0000000..ede0999
+--- /dev/null
++++ b/evaluation/tasks/bridge-addr/verify.exit-status.bt-78yk9r3bfrm.test.mjs
+@@ -0,0 +1,61 @@
++/**
++ * Regression test for reading the exit-status line of a CodeBuddy tool result.
++ *
++ * CodeBuddy spells the label `Exit Code:` (capital C); the pattern in
++ * `outcomeOfAttempt` accepted only `Exit code:`. A curl that timed out with
++ * stderr suppressed (`-s` without `-S`) shows nothing else — no `curl: (28)`
++ * prose — so the timeout fell through to "outcome not readable" and the run was
++ * scored ERROR instead of FAIL.
++ *
++ * Team note: eval-tool-result-exit-line (marker bt-78yk9r3bfrm).
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { verify, outcomeOfAttempt, FAIL, TASK_MARKER } from "./verify.mjs";
++
++const TARGET = "http://127.0.0.1:47318/skill-bridge/v3/skill/search";
++
++/** A silent curl prints no `curl: (N)` prose — only the exit line. */
++const silent = (code) =>
++  `Command: curl -s -X POST ${TARGET}\nStdout: \nStderr: \nExit Code: ${code}`;
++
++test("bt-78yk9r3bfrm: `Exit Code: 28` with no prose is read as timed out", () => {
++  assert.deepEqual(outcomeOfAttempt(silent(28)), { ok: false, why: "timed out" });
++});
++
++test("bt-78yk9r3bfrm: `Exit Code: 52` is a failure, not an unreadable outcome", () => {
++  assert.deepEqual(outcomeOfAttempt(silent(52)), { ok: false, why: "exit 52" });
++});
++
++test("bt-78yk9r3bfrm: the lower-case spelling still works", () => {
++  assert.deepEqual(outcomeOfAttempt("Stdout: \nStderr: \nExit code: 28"), {
++    ok: false,
++    why: "timed out",
++  });
++});
++
++// the reported symptom: a silent timeout was scored ERROR ("could not be read")
++// instead of FAIL.
++test("bt-78yk9r3bfrm: a silent timeout yields FAIL, not ERROR", () => {
++  const command = `curl -s -X POST ${TARGET} -d '{"query":"${TASK_MARKER}"}'`;
++  const messages = [
++    { role: "user", content: "do the task" },
++    {
++      role: "assistant",
++      tool_calls: [{ id: "c0", function: { name: "Bash", arguments: JSON.stringify({ command }) } }],
++    },
++    { role: "tool", tool_call_id: "c0", content: silent(28) },
++  ];
++  const r = verify([{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-05T12:00:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: { json: { messages } },
++  }]);
++
++  assert.equal(r.verdict, FAIL);
++  assert.match(r.reason, /timed out/);
++});
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..5d12544 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,8 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy spells the label `Exit Code:` (capital C); accept either spelling.
++  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };

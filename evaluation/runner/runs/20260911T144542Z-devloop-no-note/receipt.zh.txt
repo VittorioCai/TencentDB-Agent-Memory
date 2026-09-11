@@ -1,0 +1,65 @@
+# 资产使用回执 — 运行 20260911T144542Z-devloop-no-note · 会话 9e6f612d · 任务 task-5e6xp4mrrw · 2026-09-11T14:48:33Z
+
+本次应用 5 项团队资产
+- 资产未声明： — 已取回——正文已读取，采用未成立
+- Skill：deploy-lookup-note-a — 已取回——正文已读取，采用未成立
+- Skill：tdc-312fad — 已取回——正文已读取，采用未成立
+- Skill：eval-bridge-endpoint-b — 已取回——正文已读取，采用未成立
+- Skill：eval-bridge-endpoint-a — 已取回——正文已读取，采用未成立
+
+效果状态
+- 5 项仅作为背景参考（取回或提供），效果待验证
+
+○   v?  skill
+    来源         unknown  (unknown)
+    类型         资产未声明
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-11 22:45:58.645:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-11 22:46:01.331:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-11 22:46:01.352:skill-bridge:search  — the capture never saw this call
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 3 time(s) without any evidence of use
+    风险         低置信: author  has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.320:skill-bridge:get-by-name  — request names skl-KPVMV2uB5rXM; the capture never saw the response
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ tdc-312fad  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.348:skill-bridge:get-by-name  — request names skl-MyrdnecjeYSb; the capture never saw the response
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.266:skill-bridge:get-by-name  — request names skl-oBaDO5CceKnr; the capture never saw the response
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-a  v4  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.299:skill-bridge:get-by-name  — request names skl-sZFb3KatWY6m; the capture never saw the response
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

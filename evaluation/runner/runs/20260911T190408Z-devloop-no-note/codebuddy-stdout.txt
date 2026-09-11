@@ -1,0 +1,40 @@
+[21:04:19] model custom-local:deepseek-v4-flash
+[21:04:19] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。团队 skill 检索无相关结果(两次查询均为空),按自身判断定位修复。
+
+## 原因
+
+`evaluation/attribution/collect-artifacts.mjs:124` 的 `outcomeOf` 用
+
+```js
+/(?:^|\n)Exit code:\s*(\d+)/
+```
+
+匹配退出状态,只认小写 `code`。而真实的 CodeBuddy Bash 工具结果信封是大写 `Exit Code:`,且位置在 `Stderr:` 之后(`evaluation/gate0/verify-capture.test.mjs:33`、`verify-capture.mjs:136` 记录的真实抓包形状):
+
+```
+Command: ...
+Stdout: ...
+Stderr: ...
+Exit Code: 28
+Signal: (none)
+```
+
+所以正则永不命中,`exit_code` 恒为 `null`,下游按退出状态分类失败调用的逻辑失效。
+
+## 改动
+
+1. `evaluation/attribution/collect-artifacts.mjs`(仅此文件)
+   - 退出状态正则改为 `/(?:^|\n)Exit [Cc]ode:\s*(-?\d+)/`,同时兼容真实大写信封与旧的合成小写格式(含负号退出码)。已验证旧正则对真实信封返回 `null`、新正则返回 `28`。
+
+2. 新增 `evaluation/attribution/collect-artifacts.test.mjs`(回归测试)
+   - 真实 CodeBuddy 信封:`Exit Code: 28` → `exit_code: 28`,`Exit Code: 0` → `0`
+   - 保留旧小写信封兼容:`Exit code: 1` → `1`
+   - 端到端:经 `collectArtifacts` 确认 `operation.result.exit_code === 28`
+
+## 测试结果
+
+`node --test 'evaluation/**/*.test.mjs'`:通过数 547 → 550(+3 新增),无新增失败。
+
+有 3 条失败是**改动前就存在**的环境问题,与本次修复无关:它们读取被 `.gitignore` 排除、仓库中不存在的真实抓包 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`(`ENOENT`)。改动前后失败集合完全一致(diff 为空)。

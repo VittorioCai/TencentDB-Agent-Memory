@@ -1,0 +1,140 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "1fb3e260-6e9d-42b8-9375-cd9f641c194c",
+  "run_id": "20260910T232818Z-gate-on",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-10T23:28:35Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 0,
+      "provided": 2,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 3 (score 0.36) for the query \"bridge address convention skill endpoint\"",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-itaa73enpfq was used in tool call call_00_6BmnYTPWq3XBy2wYZwPW5532 (message 6); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T232818Z-gate-on:verify.mjs:call=call_00_6BmnYTPWq3XBy2wYZwPW5532:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(7204bf30-d125-4c72-9635-f0f10691cc16):msg[6]:call_00_6BmnYTPWq3XBy2wYZwPW5532:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 5, before this operation at message 6"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "1fb3e260-6e9d-42b8-9375-cd9f641c194c:call_00_U3uv3XMf8ui662bVwM9m3430",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_00_6BmnYTPWq3XBy2wYZwPW5532)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "admit",
+        "rules_version": "gate-rules-2026-09-08f",
+        "decided_at": "2026-09-10T23:28:18.985Z",
+        "review_priority": null,
+        "applied": true,
+        "evidence_confidence": 1,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 3.72e-6) for the query \"bridge address convention skill endpoint\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-eM1xP28pXiYA",
+          "detail": "carried in a tool result inside the request the model received; present in 6 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-eM1xP28pXiYA",
+          "detail": "skill:search returned 3 candidate(s), this one at rank 2; present in 6 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 3.72e-6) for the query \"bridge address convention skill endpoint\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-KPVMV2uB5rXM",
+          "detail": "carried in a tool result inside the request the model received; present in 6 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-KPVMV2uB5rXM",
+          "detail": "skill:search returned 3 candidate(s), this one at rank 3; present in 6 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    }
+  ]
+}

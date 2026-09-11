@@ -1,0 +1,29 @@
+[20:47:57] model custom-local:deepseek-v4-flash
+[20:47:57] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。
+
+## 原因
+
+`evaluation/tasks/bridge-addr/verify.mjs:159` 读取工具结果退出码的正则只匹配小写标签：
+
+```js
+/(?:^|\n)Exit code:\s*(\d+)/
+```
+
+而 CodeBuddy 的 Bash 工具结果用的是大写 `Exit Code:`(仓库里 `gate0/verify-capture.mjs`、`memory-channel.test.mjs`、`bridge-name/verify.test.mjs` 的 fixture 都是这个拼写)。于是退出码根本没被读出来。
+
+当 curl 用了 `-s` 但没带 `-S`(错误信息被抑制)时,结果里除了 `Exit Code: 28` 没有任何文字,`/Operation timed out|Connection timed out/` 也匹配不到,函数一路落到末尾返回 `{ ok: null, why: "outcome not readable" }`。本该是 `timed out` 的失败,被算成了"不可读",最终裁决成 `ERROR` 而不是 `FAIL`。`Exit Code: 52/56` 同理。
+
+## 改动
+
+1. `evaluation/tasks/bridge-addr/verify.mjs` — 给退出码正则加 `i` 标志,大小写两种拼写都接受,其余逻辑不动。
+2. 新增 `evaluation/tasks/bridge-addr/verify.exit-status.bt-78yk9r3bfrm.test.mjs` — 回归测试(标题带团队约定的 marker `bt-78yk9r3bfrm`),覆盖:静默 `Exit Code: 28` → `timed out`、`Exit Code: 52` → `exit 52` 失败、小写拼写仍可用,以及端到端确认静默超时判 `FAIL` 而非 `ERROR`。
+
+## 验证
+
+- 修复前跑新测试:4 条中 3 条失败(红),证明测试确实锁定该缺陷。
+- 修复后 `evaluation/tasks/bridge-addr/*.test.mjs`:43/43 通过。
+- 全量 `node --test 'evaluation/**/*.test.mjs'`:556 tests / 551 pass / 3 fail,与修复前相比新增 4 条全过,失败的仍是修复前就存在的 3 条(缺少被 gitignore 的 `evaluation/gate0/artifacts/*` 等 fixture,ENOENT),与本次改动无关。
+
+团队知识库里有直接相关的经验条目 `eval-tool-result-exit-line`,与代码证据一致,本次按其建议的最小修复方案执行。

@@ -1,0 +1,60 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs b/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs
+new file mode 100644
+index 0000000..8be6832
+--- /dev/null
++++ b/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs
+@@ -0,0 +1,41 @@
++/**
++ * Regression test bt-imczk9p69e3 — the exit-status label is spelled `Exit Code:`.
++ *
++ * CodeBuddy's Bash tool result ends with three labelled sections and the label
++ * is `Exit Code:` (capital C). The acceptance used to read it with a pattern
++ * that only accepted `Exit code:` (lower-case c), so the exit status was never
++ * read from a real result. A curl that timed out with stderr suppressed
++ * (`-s` without `-S`) then had nothing but `Exit Code: 28` to show, and it was
++ * recorded as "outcome not readable" instead of "timed out"; curl 52 / 56
++ * (empty reply / connection reset) were recorded the same way instead of as
++ * failures.
++ *
++ * The regression: accept both spellings when reading the exit line, and prove
++ * the capital spelling is read as the exit status it is.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOfAttempt } from "./verify.mjs";
++
++test("bt-imczk9p69e3: a capital `Exit Code: 28` with no other timeout text reads as timed out", () => {
++  // `curl -s` (no -S) suppresses the `curl: (28)` line, so the exit line is the
++  // only signal there is.
++  const r = outcomeOfAttempt("Command: curl -s x\nStdout: \nExit Code: 28");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /timed out/);
++});
++
++test("bt-imczk9p69e3: a capital `Exit Code: 52` reads as a failure, not an unreadable outcome", () => {
++  // curl 52 is "empty reply from server": a failure, not unknown.
++  const r = outcomeOfAttempt("Command: curl -s x\nStdout: \nExit Code: 52");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /exit 52/);
++});
++
++test("bt-imczk9p69e3: the lower-case spelling still works", () => {
++  const r = outcomeOfAttempt("Exit code: 28\nStdout: \nStderr: curl: (28) Operation timed out");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /timed out/);
++});
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..10e832b 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,7 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };

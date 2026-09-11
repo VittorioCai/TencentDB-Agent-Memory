@@ -1,0 +1,25 @@
+[20:46:45] model custom-local:deepseek-v4-flash
+[20:46:45] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。
+
+## 改了什么
+
+**`evaluation/attribution/collect-artifacts.mjs:135`** — `outcomeOf()` 读取退出状态的标签正则从只认小写 `Exit code:` 改为大小写不敏感匹配:`/(?:^|\n)Exit code:\s*(\d+)/i`。其余逻辑(return 结构、stderr、下游字段)完全未动。
+
+**新增 `evaluation/attribution/collect-artifacts.test.mjs`** — 回归测试,覆盖:
+- 大写 `Exit Code: 28 / 52 / 0` 能读出数字而非 `null`
+- 小写 `Exit code: 7` 仍旧可读
+- 无退出行时保持 `null`(行为不变)
+- 端到端:`collectArtifacts` 把退出状态落到 operation 的 `result.exit_code` 上
+
+## 为什么
+
+真实 CodeBuddy Bash 工具结果的信封结尾是 `Stdout: … / Stderr: … / Exit Code: 0`——标签是**大写 C**。而 `outcomeOf` 的正则写死了 `Exit code:`(小写 c),对真实结果永远匹配不上,于是 `exit_code` 一直是 `null`,下游按退出状态分类失败调用的逻辑就全部退化成"读不到结果"(例如 `curl -s` 抑制 stderr、只有 `Exit Code: 28` 可看时会超时,却无法识别为超时)。
+
+动手前检索了团队知识库,命中经验条目 `eval-tool-result-exit-line`,记录的正是这一根因(329 个真实结果无一例外都是大写 `Exit Code:`),并建议"标签大小写不敏感,其余不变"。我把它应用到了任务指明的 `collect-artifacts.mjs`。经验里提到的 `tasks/bridge-addr/verify.mjs` 是同类问题的另一处,不在本次报障范围内,未改动。
+
+## 验证
+
+- 新测试:`4 pass / 0 fail`
+- 全量 `node --test 'evaluation/**/*.test.mjs'`:`556 tests / 551 pass / 3 fail`。这 3 条失败与修复无关,是基线就存在的缺失 fixture(`evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl` 等不存在导致的 ENOENT),修复前后数量与用例完全一致。

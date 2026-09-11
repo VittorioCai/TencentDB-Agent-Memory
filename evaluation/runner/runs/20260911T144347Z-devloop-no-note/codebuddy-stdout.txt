@@ -1,0 +1,28 @@
+[16:43:58] model custom-local:deepseek-v4-flash
+[16:43:58] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 原因
+
+`evaluation/tasks/bridge-addr/verify.mjs:159` 的 `outcomeOfAttempt` 用**区分大小写**的正则读退出码:
+
+```js
+/(?:^|\n)Exit code:\s*(\d+)/     // 只匹配小写 c
+```
+
+但 CodeBuddy 工具结果里这一行是大写 C —— `Exit Code: 28`（见 `evaluation/gate0/verify-capture.mjs:121` 与 `gate0/verify-capture.test.mjs:33` 记录的稳定格式 `...\nStdout: ...\nStderr: ...\nExit Code: N\nSignal: (none)`，同仓库 `gate0/verify-capture.mjs:136` 用的正是 `Exit Code`）。
+
+于是 `exitCode` 读成 `null`，28 这个信号丢失。如果 stderr 恰好是 `curl: (28) Resolving timed out …`（或空），也匹配不上兜底短语 `Operation timed out|Connection timed out`；stdout 又为空 → 落到函数末尾，返回 `{ok:null, why:"outcome not readable"}`。这些超时就被记成“不可读”，验收给 ERROR 而不是 FAIL。小写写法碰巧能过，所以只是“部分”超时中招。
+
+## 改动
+
+1. `evaluation/tasks/bridge-addr/verify.mjs:159` — 退出码正则加 `i`，大写/小写 `Exit Code` 都读得到。退出码是 `outcomeOfAttempt` 里唯一始终存在的信号，现在 curl 的 28 一定被识别为 `timed out` 失败。
+2. `evaluation/tasks/bridge-addr/verify.test.mjs` — 新增回归测试：用大写 `Exit Code: 28` 且 stderr 为 `Resolving timed out` 的 CodeBuddy 形态结果，断言 `outcomeOfAttempt` 返回 `{ok:false, why:"timed out"}`，且整条会话判定为 `FAIL`（修复前是 `ok:null` / `ERROR`）。
+
+## 验证
+
+- `node --test evaluation/tasks/bridge-addr/*.test.mjs` → 40 passed, 0 failed（修复前 39，新增 1 条）。
+- `node --test 'evaluation/**/*.test.mjs'` → 553 tests, 548 passed, 3 failed。这 3 条在 `provenance/build-early-events.test.mjs` 与 `attribution/extract-tokens.test.mjs`，因本 checkout 缺少 fixture（如 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`）而失败；我已 stash 掉本次改动复跑确认它们**修复前就失败**，与本改动无关。桥接验收相关套件全绿。
+
+说明：动手前检索了团队 skill（命中 `eval-bridge-endpoint-b` 等，均为“如何访问 skill bridge”的约定，与本 bug 无关），格式依据取自仓库内 `gate0` 的稳定约定文档。

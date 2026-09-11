@@ -1,0 +1,9 @@
+[20:58:12] probe already running (pid 97176)
+[20:58:12] restarting proxy: upstream=http://host.docker.internal:18097  agent=agt-h1m9wf3gw2  task=task-h1k7xruuhb
+[ok] proxy healthy, forced identity agt-h1m9wf3gw2 — fresh consumer under user c (dev loop)
+[ok] core auto-extraction already off
+[ok] CodeBuddy key switched to identity c
+
+  Ready. Start a fresh CodeBuddy session — the skill listing runs once at
+  session init, so an already-open session records no candidates.
+  Then: bash evaluation/runner/run-once.sh --label <name> --identity c

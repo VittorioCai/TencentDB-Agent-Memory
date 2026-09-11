@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-h10fmja5kp",
+  "started_at": "2026-09-11T19:06:05Z",
+  "own_session": "3453a35c-5664-46ab-9b5f-3c7cfa2d43ae",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

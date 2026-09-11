@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-hsylov19pn",
+  "started_at": "2026-09-11T15:50:35Z",
+  "own_session": "fbbd6f35-dca2-4479-9e51-a16db7a38f15",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

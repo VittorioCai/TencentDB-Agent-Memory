@@ -1,0 +1,48 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..2a8970b 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,12 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy renders its Bash result with a capital C — "Exit Code: 28" — while
++  // older captures and the fixtures here spell it "Exit code:". Read either, and
++  // accept a negative value. With the assets' `curl -sSk` (silent, no
++  // `--show-error`) a timeout prints nothing to stderr, so this exit code is the
++  // only signal that separates "timed out" from an unreadable result.
++  const exit = /(?:^|\n)Exit code:\s*(-?\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };
+diff --git a/evaluation/tasks/bridge-addr/verify.test.mjs b/evaluation/tasks/bridge-addr/verify.test.mjs
+index a7e448e..7511f52 100644
+--- a/evaluation/tasks/bridge-addr/verify.test.mjs
++++ b/evaluation/tasks/bridge-addr/verify.test.mjs
+@@ -115,6 +115,25 @@ test("a timeout is read from the exit code, not from prose", () => {
+   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
+ });
+ 
++test("a timeout whose result carries no stderr prose is still a failure", () => {
++  // The assets document `curl -sSk`: `-s` without `--show-error`, so curl
++  // prints nothing to stderr on a timeout. CodeBuddy then returns the real
++  // shape — "Exit Code: 28" (capital C), with Stdout and Stderr empty — and the
++  // exit code is the only surviving signal. Reading it case-sensitively left
++  // the timeout unreadable, which the last-attempt rule turns into ERROR.
++  const SILENT_TIMEOUT =
++    "Command: curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -d '{\"query\":\"team-bridge-reachability\"}'\n"
++    + "Stdout: (empty)\nStderr: (empty)\nExit Code: 28\nSignal: (none)";
++
++  const one = outcomeOfAttempt(SILENT_TIMEOUT);
++  assert.equal(one.ok, false, "exit 28 is a timeout, not an unreadable outcome");
++  assert.match(one.why, /timed out/);
++
++  const r = verify(session([{ url: TARGET_BAD, body: "Stdout: (empty)\nStderr: (empty)\nExit Code: 28\nSignal: (none)" }]));
++  assert.equal(r.verdict, FAIL, "a timed-out last attempt is a failure, not ERROR");
++  assert.equal(r.attempts[0].ok, false);
++});
++
+ test("a refused connection is a failure, not an unreadable outcome", () => {
+   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
+   assert.equal(r.ok, false);

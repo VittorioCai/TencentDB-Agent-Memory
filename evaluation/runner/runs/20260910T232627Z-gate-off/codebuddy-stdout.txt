@@ -1,0 +1,39 @@
+[01:26:28] model custom-local:deepseek-v4-flash
+[01:26:28] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Reporting accurately.
+
+## What I found
+
+Searching the team's skills for the bridge convention returned **two conflicting records**, both claiming to be the team convention (identical descriptions, same owner, same team `team-5ezfoladb5`, both v4 `is_head: true`):
+
+| Skill | Address it documents | `x-team-trace` |
+|---|---|---|
+| `eval-bridge-endpoint-a` (`skl-sZFb3KatWY6m`) | `http://10.244.7.19:8096/skill-bridge/v3/skill/search` | `bt-6r9pvuj8gf3` |
+| `eval-bridge-endpoint-b` (`skl-oBaDO5CceKnr`) | `http://127.0.0.1:47318/skill-bridge/v3/skill/search` | `bt-itaa73enpfq` |
+
+No third skill arbitrates between them, so I sent the documented reachability request (body `{"query": "team-bridge-reachability"}`, with `content-type`, `x-tdai-service-id: default`, `x-conversation-id`, and each skill's mandated `x-team-trace`) to **both** recorded addresses.
+
+## Responses
+
+**`eval-bridge-endpoint-b` — `http://127.0.0.1:47318/...` → success**
+- `HTTP 200` in **0.043 s**
+- Body:
+```json
+{"code":0,"message":"ok","request_id":"req-df0e9f1db6654208","data":{"items":[
+  {"skill_id":"skl-oBaDO5CceKnr","name":"eval-bridge-endpoint-b","version":4,"status":"active"},
+  {"skill_id":"skl-sZFb3KatWY6m","name":"eval-bridge-endpoint-a","version":4,"status":"active"},
+  {"skill_id":"skl-eM1xP28pXiYA","name":"deploy-lookup-note-b","version":1,"status":"active"},
+  {"skill_id":"skl-KPVMV2uB5rXM","name":"deploy-lookup-note-a","version":1,"status":"active"}
+]}}
+```
+It returned the team skill inventory (the same 4 skills).
+
+**`eval-bridge-endpoint-a` — `http://10.244.7.19:8096/...` → failure**
+- No response. `curl: (28) Connection timed out`; **HTTP 000**, elapsed **12.003 s** (hit my `--max-time 12` cap; the host is not routable from this sandbox). No body.
+
+## Bottom line
+
+The reachable, working recorded address is **`eval-bridge-endpoint-b` → `http://127.0.0.1:47318/skill-bridge/v3/skill/search`**, which returned HTTP 200 with the team's skill inventory. Its peer record `eval-bridge-endpoint-a` (`10.244.7.19:8096`) is unreachable and timed out after ~12 s.
+
+One caveat worth flagging: the convention is genuinely ambiguous — two active team skills disagree, so the `-a` record appears stale/incorrect and is a candidate for correction.

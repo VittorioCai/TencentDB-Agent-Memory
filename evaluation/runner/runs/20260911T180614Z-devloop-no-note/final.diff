@@ -1,0 +1,76 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..32c6b6d 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,12 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // Real CodeBuddy Bash results write `Exit Code:` (capital C, as
++  // evaluation/gate0/verify-capture.mjs parses); fixtures and other tools write
++  // `Exit code:`. Match either, and a negative code (a signal kill is reported
++  // as `-1`) — a case-sensitive `Exit code:` left every real result's exit_code
++  // null, which is what broke failure classification downstream.
++  const code = /(?:^|\n)Exit Code:\s*(-?\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,
+diff --git a/evaluation/attribution/collect-artifacts.test.mjs b/evaluation/attribution/collect-artifacts.test.mjs
+new file mode 100644
+index 0000000..ca1b592
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.test.mjs
+@@ -0,0 +1,52 @@
++/**
++ * Regression: the exit status of a real CodeBuddy Bash result must reach the
++ * operation list.
++ *
++ * A real result writes `Exit Code:` (capital C) — see
++ * evaluation/gate0/verify-capture.mjs, which parses the same envelope. The
++ * collector matched only the lowercase `Exit code:`, so on real captures every
++ * `result.exit_code` was null and anything classifying failed calls by exit
++ * status saw no failures at all.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { collectArtifacts, outcomeOf } from "./collect-artifacts.mjs";
++
++function capture(messages) {
++  return [{
++    event: "http.request",
++    requestId: "req-exit",
++    timestamp: "2026-09-11T00:00:00Z",
++    headers: { "x-conversation-id": "conv-exit" },
++    body: { json: { messages } },
++  }];
++}
++
++const call = (id, command) => ({
++  role: "assistant",
++  tool_calls: [{ id, function: { name: "Bash", arguments: JSON.stringify({ command }) } }],
++});
++const result = (id, content) => ({ role: "tool", tool_call_id: id, content });
++
++test("a real Bash result's `Exit Code:` is read into the operation's exit_code", () => {
++  const envelope = "Command: npm test\n"
++    + "Stdout: 1 failing\n"
++    + "Stderr: (empty)\n"
++    + "Exit Code: 1\n"
++    + "Signal: (none)";
++
++  const sessions = collectArtifacts({
++    captureEvents: capture([call("c1", "npm test"), result("c1", envelope)]),
++  });
++  const op = sessions[0].operations.find((o) => o.kind === "test_command");
++
++  assert.ok(op, "the check command was collected");
++  assert.equal(op.result.exit_code, 1, "exit_code comes from `Exit Code:`, not null");
++
++  // The same reader keeps accepting the lowercase spelling the existing
++  // fixtures use, and still reports a clean run as 0.
++  assert.equal(outcomeOf("Exit code: 28\nStderr: timed out").exit_code, 28);
++  assert.equal(outcomeOf("Exit Code: 0\nSignal: (none)").exit_code, 0);
++});

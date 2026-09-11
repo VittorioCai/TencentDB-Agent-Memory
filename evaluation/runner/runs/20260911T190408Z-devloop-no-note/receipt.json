@@ -1,0 +1,72 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "317a7ce6-8644-4ef1-aa3c-3ba0a2963df1",
+  "run_id": "20260911T190408Z-devloop-no-note",
+  "task_id": "task-h1k7xruuhb",
+  "generated_at": "2026-09-11T19:06:05Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 1,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "",
+      "name": "",
+      "asset_type": "skill",
+      "version": null,
+      "updated_at": null,
+      "category": "not_declared",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "",
+        "relation": "unknown"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-12 03:04:24.032:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-12 03:04:25.913:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 2 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author  has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T19:06:04.529Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

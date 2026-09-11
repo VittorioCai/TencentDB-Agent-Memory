@@ -1,0 +1,88 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "fbbd6f35-dca2-4479-9e51-a16db7a38f15",
+  "run_id": "20260911T155035Z-devloop-note",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-11T15:51:49Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-pXLc38dex6Zt",
+      "name": "eval-tool-result-exit-line",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-11T15:48:16Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 1 (score 3.95) for the query \"CodeBuddy 工具结果 超时 识别 失败 解析 verify\"",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "relation": "cross_user"
+      },
+      "impact": "used in tool call call_00_NkcZfb0Uq36JNewscK1e8738 (message 20); the call succeeded and the run's acceptance passed",
+      "target_type": "test_action",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260911T155035Z-devloop-note:verify.mjs:call=call_00_NkcZfb0Uq36JNewscK1e8738:ok=true",
+          "detail": "the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(7a82aaec-c196-4c73-99b5-dae97b2c0877):msg[18]:call_00_FyIgEjn7omrGZtlb2DKJ4738:arguments",
+          "detail": "token bt-imczk9p69e3; content of v1 entered the context at message 6, before this operation at message 18"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "fbbd6f35-dca2-4479-9e51-a16db7a38f15:call_00_FL2QfGJByrNdlQrM22pI4418",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 1; no service-side row recorded it — telemetry gap"
+        },
+        {
+          "kind": "test_command",
+          "ref": "request(f37aff64-5369-4bf1-9732-606e0fef5c32):msg[20]:call_00_NkcZfb0Uq36JNewscK1e8738:arguments",
+          "detail": "token bt-imczk9p69e3; content of v1 entered the context at message 6, before this operation at message 20"
+        },
+        {
+          "kind": "diff_hunk",
+          "ref": "diff:evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs:1-41",
+          "detail": "token bt-imczk9p69e3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "verify_result",
+          "ref": "20260911T155035Z-devloop-note:verify.mjs:call=call_00_FyIgEjn7omrGZtlb2DKJ4738:ok=n/a",
+          "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: attempt ? (call_00_NkcZfb0Uq36JNewscK1e8738)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": 0.583,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "admit",
+        "rules_version": null,
+        "decided_at": "2026-09-11T15:51:49.433Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

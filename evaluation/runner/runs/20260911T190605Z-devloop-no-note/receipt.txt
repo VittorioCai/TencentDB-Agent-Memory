@@ -1,0 +1,46 @@
+# Receipt — run 20260911T190605Z-devloop-no-note · session 3453a35c · task task-h1k7xruuhb · 2026-09-11T19:07:45Z
+
+applied 1 team asset(s)
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 3 (score 1.33e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    evidence
+      capture_line    3453a35c-5664-46ab-9b5f-3c7cfa2d43ae:call_01_hwEUPTS1T2Fmf6e7OayS8069  — skill:get-by-name answered at message 32; carrying content; version 1; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 1 of 3 (score 1.33e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 43 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 1; present in 43 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq  (cross_user)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 3 (score 1.16e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    evidence
+      session_message capture:tool_result:skl-oBaDO5CceKnr  — carried in a tool result inside the request the model received; present in 43 captured turn(s)
+      bridge_row      capture:skill:search:skl-oBaDO5CceKnr  — skill:search returned 3 candidate(s), this one at rank 3; present in 43 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T190605Z-devloop-no-note.lZ4c/20260911T190605Z-devloop-no-note/receipt.json

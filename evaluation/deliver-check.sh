@@ -44,6 +44,15 @@ bash evaluation/tasks/exit-line-collect/selfcheck.sh > "$OUT/selfcheck-exit-line
 SEG="$(tail -1 "$OUT/selfcheck-exit-line-collect.txt")"; S4="$(grep -oE '已出现于 \[[a-z]+\] [^ ]+' "$OUT/selfcheck-exit-line-collect.txt" | tr '\n' ' ')"
 row "selfcheck-exit-line-collect" "bash evaluation/tasks/exit-line-collect/selfcheck.sh" "$e" "seg0=0 seg1=1 seg2=0; seg4=1 after the loop (the note's v2 value is in the records, burned; rotate before reuse)" "$SEG $S4"
 
+echo "[2c] re-judge copies: regenerate when absent (a clean clone has none; same command as the report head, runs/ untouched)"
+if ! compgen -G "$REJUDGE/20260910T23*" > /dev/null; then
+  mkdir -p "$REJUDGE"
+  node evaluation/attribution/rejudge-runs.mjs --out="$REJUDGE" --task=evaluation/tasks/bridge-addr evaluation/runner/runs/20260910T23*/ > "$OUT/rejudge-regenerate.txt" 2>&1; e=$?
+  row "rejudge-regenerate" "rejudge-runs.mjs --out=$REJUDGE --task=evaluation/tasks/bridge-addr runs/20260910T23*/" "$e" "exit 0; 14 copies written (only when they were absent)" "$(ls -d "$REJUDGE"/20260910T23* 2>/dev/null | wc -l | tr -d ' ') copies"
+else
+  row "rejudge-regenerate" "(skipped: copies already at $REJUDGE)" 0 "copies present" "$(ls -d "$REJUDGE"/20260910T23* | wc -l | tr -d ' ') copies"
+fi
+
 echo "[3] batch-4 calibration reproduced from the re-judge copies"
 if compgen -G "$REJUDGE/20260910T23*" > /dev/null; then
   node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f --task=evaluation/tasks/bridge-addr --manifest=evaluation/gate/artifacts/batch4-runs.json --md="$OUT/CALIBRATION-reproduced.md" "$REJUDGE"/20260910T23*/ > "$OUT/calibrate.txt" 2>&1; e=$?

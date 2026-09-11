@@ -1,0 +1,34 @@
+[17:50:46] model custom-local:deepseek-v4-flash
+[17:50:46] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。已先检索团队知识库,命中一条高度相关的经验 skill `eval-tool-result-exit-line`,其中直接指出根因和应补的回归测试,按其指引实施。
+
+## 改了什么
+
+**1. `evaluation/tasks/bridge-addr/verify.mjs:159`(唯一逻辑改动)**
+
+```diff
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+```
+
+**2. 新增回归测试** `evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs`,用例标题带标记 `bt-imczk9p69e3`,覆盖:
+- `Exit Code: 28`(大写、无其它超时文本)→ "timed out"
+- `Exit Code: 52` → 失败(`exit 52`),而非不可读
+- 小写 `Exit code:` 仍然可用
+
+## 为什么
+
+CodeBuddy 的 Bash 工具结果固定以 `Exit Code:`(大写 C)标注退出码。`outcomeOfAttempt` 的正则只接受小写 `Exit code:`,所以从未真正读到过退出码:
+- `curl -s`(未加 `-S`)超时时 stderr 被抑制,结果里只剩 `Exit Code: 28`,退出码读不到 → 既非 timeout 也无 output → 被记为 `outcome not readable`(`ok: null`),最后落到 `ERROR` 而不是 `FAIL`;
+- curl 52/56(空回复/连接重置)同理被记成不可读,而非失败。
+
+改为对标签大小写不敏感,两种拼写都能读到退出状态,其余逻辑不动。
+
+## 验证
+
+- bridge-addr 全部测试:42/42 通过。
+- 全量 `node --test evaluation/**/*.test.mjs`:555 用例,550 通过。
+- 回退本次改动后同一命令为 548 通过 / 5 失败 —— 差额正好是新增回归里的 2 条正确性用例;证明改动修好了目标问题。
+
+剩余 3 条失败(`extract-tokens.test.mjs`、`build-early-events.test.mjs` 等)在改动前后一致,原因是缺少 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`(该目录在本仓库中不存在,属预先存在的环境/数据缺失),与本次修复无关,故未改动。

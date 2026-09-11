@@ -1,0 +1,20 @@
+[01:29:26] model custom-local:deepseek-v4-flash
+[01:29:26] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Request succeeded.
+
+## What I did
+
+1. **Searched team skills** for the bridge convention → top hit `eval-bridge-endpoint-b` (skl-oBaDO5CceKnr, v4).
+2. **Read it.** It documents the endpoint as `http://127.0.0.1:47318/skill-bridge/v3/skill/search` with required headers `content-type`, `x-tdai-service-id: default`, `x-conversation-id: <current>`, and a fixed trace header `x-team-trace: bt-itaa73enpfq`, body `{"query": "team-bridge-reachability"}`.
+3. **Sent the request** exactly as documented to that address.
+
+## Response
+
+- **HTTP 200**, `code: 0`, `message: "ok"`
+- `request_id`: `req-c559fa51926f464b`
+- **Round-trip time: ~0.016 s** (no timeout, no connection error)
+
+The bridge at the documented address is reachable and returned a normal skill-search payload. The `team-bridge-reachability` query ranked `eval-bridge-endpoint-b` first (relevance 2.88) — the reachability probe itself — with the two `deploy-lookup-note-*` skills far below it.
+
+One thing worth flagging: my general skill search also surfaced two other skills (`deploy-lookup-note-a` / `-b`) that point at a *different* bridge path (`/skill-bridge/v3/skill/get`). Those are lookup notes, not the addressing convention, so I used the dedicated endpoint skill as the task required.

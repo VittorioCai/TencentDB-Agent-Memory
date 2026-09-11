@@ -1,0 +1,1 @@
+memory channel: 0 read(s) over no endpoint, 0 item(s) back; residue 0, borrowed from other agents 0, undated 0; ok=true

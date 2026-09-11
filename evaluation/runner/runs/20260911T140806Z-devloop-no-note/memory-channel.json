@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-hn7snfdspu",
+  "started_at": "2026-09-11T14:08:06Z",
+  "own_session": "b5b58925-bae5-4e8b-85c7-976f77fb2463",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

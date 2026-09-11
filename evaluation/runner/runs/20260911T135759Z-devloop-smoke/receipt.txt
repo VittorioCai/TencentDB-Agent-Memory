@@ -1,0 +1,11 @@
+# Receipt — run 20260911T135759Z-devloop-smoke · session 8f73aa9d · task task-5e6xp4mrrw · 2026-09-11T14:00:27Z
+
+applied 0 team asset(s)
+
+effect status
+- no team assets appeared in this run
+
+no team assets appeared in this run
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T135759Z-devloop-smoke.TJyK/20260911T135759Z-devloop-smoke/receipt.json

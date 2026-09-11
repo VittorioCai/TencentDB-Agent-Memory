@@ -1,0 +1,35 @@
+[20:04:24] model custom-local:deepseek-v4-flash
+[20:04:24] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。
+
+## 根因
+
+`outcomeOf()` 用 `/(?:^|\n)Exit code:\s*(\d+)/` 匹配退出状态，但真实的 CodeBuddy Bash 结果信封（`evaluation/gate0/verify-capture.mjs:113-130` 记录了其稳定形状）是这样拼写的：
+
+```
+Command: curl ...
+Stdout: {"code":0,...}
+Stderr: (empty)
+Exit Code: 0          ← 大写 C，且在 Stderr 之后
+Signal: (none)
+```
+
+大小写不匹配 → `code` 恒为 null → 清单里 `exit_code` 恒为 null。同一处还有第二个 bug：`stderr` 用 `[\s\S]*$` 匹配到结尾，会把 `Exit Code:` / `Signal:` 一起吞进 stderr。
+
+## 改了什么
+
+`evaluation/attribution/collect-artifacts.mjs:122` 的 `outcomeOf`：
+- `Exit Code:` 改为大小写不敏感匹配（`/i`），同时兼容旧 fixture 的小写 `Exit code:`；并允许负退出码。
+- `stderr` 用前瞻 `(?=\n(?:Exit Code|Signal):|$)` 截断到下一个尾段，不再把退出状态/信号行读成 stderr；`(empty)` 归一为空串。
+
+`evaluation/attribution/collect-artifacts.test.mjs`（新增）两条回归：用真实信封走完整的 `collectArtifacts` 路径，断言操作清单里 `exit_code` 为 0 / 28；并断言 `(empty)` 与 curl 错误文本的 stderr 不再包含尾段。
+
+## 验证
+
+- 修复前复现：真实信封 → `{"exit_code":null,"stderr":"(empty)\nExit Code: 0\nSignal: (none)"}`；修复后 → `{"exit_code":0,"stderr":""}`，失败用例 → `{"exit_code":28,"stderr":"curl: (28) ..."}`。
+- `node --test "evaluation/**/*.test.mjs"`：**554 tests / 549 pass / 3 fail / 2 skipped**。基线为 552/547/3/2 —— 新增 2 条全过，3 个失败与基线完全相同，均为仓库缺失 `evaluation/gate0/artifacts/` fixture 导致的环境性失败，与本次改动无关。
+
+## 关于团队经验检索
+
+按要求先检索了团队知识库（3 组关键词）。只返回了无关的干扰项：`deploy-lookup-note-a/b`（部署清单笔记）和 `eval-bridge-endpoint-b`（写的是 bridge 端口 47318，与本会话实际可用的 8096 不符），均与退出状态解析无关，故未参考，按自己判断修复。

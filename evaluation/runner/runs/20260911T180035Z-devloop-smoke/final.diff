@@ -1,0 +1,93 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..8ebc230 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,19 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // A real CodeBuddy Bash result labels this section `Exit Code:` (capital C):
++  //
++  //   Command: node --test
++  //   Stdout: …
++  //   Stderr: (empty)
++  //   Exit Code: 0
++  //   Signal: (none)
++  //
++  // Matching only the lowercase spelling found the section in hand-written
++  // fixtures but never in a captured result, so `exit_code` came back null for
++  // every real call and the downstream "failed call" classification never
++  // fired. The flag keeps the older lowercase spelling working too.
++  const code = /(?:^|\n)Exit code:\s*(-?\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,
+diff --git a/evaluation/attribution/collect-artifacts.test.mjs b/evaluation/attribution/collect-artifacts.test.mjs
+new file mode 100644
+index 0000000..453f25a
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.test.mjs
+@@ -0,0 +1,62 @@
++/**
++ * Regression: the collector must read the exit status out of a *real* CodeBuddy
++ * Bash result.
++ *
++ * The envelope is stable and labels its sections with initials: a real capture
++ * looks like
++ *
++ *   Command: node --test
++ *   Stdout: …
++ *   Stderr: (empty)
++ *   Exit Code: 0
++ *   Signal: (none)
++ *
++ * — note `Exit Code`, capital C. The reader used to match only the lowercase
++ * `Exit code:` spelling, which is what hand-written fixtures happened to use.
++ * So in a real run `exit_code` was always null and the downstream logic that
++ * classifies a failed call by its exit status never saw a failure. These cases
++ * pin the real spelling, and pin that it still reaches the collected operation.
++ */
++import test from "node:test";
++import assert from "node:assert/strict";
++
++import { collectArtifacts, outcomeOf } from "./collect-artifacts.mjs";
++
++/** One assistant Bash call and its result, in the real captured shape. */
++function capture(resultText) {
++  return [{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-04T13:30:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: {
++      json: {
++        messages: [
++          {
++            role: "assistant",
++            tool_calls: [{ id: "c1", function: { name: "Bash", arguments: '{"command":"node --test"}' } }],
++          },
++          { role: "tool", tool_call_id: "c1", content: resultText },
++        ],
++      },
++    },
++  }];
++}
++
++test("outcomeOf reads the capitalised `Exit Code` a real result carries", () => {
++  assert.equal(outcomeOf("Command: x\nStdout: hi\nStderr: (empty)\nExit Code: 0\nSignal: (none)").exit_code, 0);
++  assert.equal(outcomeOf("Command: x\nStdout: \nStderr: timed out\nExit Code: 28\nSignal: (none)").exit_code, 28);
++});
++
++test("the older lowercase spelling still reads, and no status is still null", () => {
++  assert.equal(outcomeOf("Exit code: 0").exit_code, 0);
++  assert.equal(outcomeOf("Stdout: hi, no status section").exit_code, null);
++});
++
++test("a captured operation carries the exit status into its result", () => {
++  const ok = collectArtifacts({ captureEvents: capture("Command: node --test\nStdout: pass\nStderr: (empty)\nExit Code: 0\nSignal: (none)") });
++  const failed = collectArtifacts({ captureEvents: capture("Command: node --test\nStdout: \nStderr: fail\nExit Code: 1\nSignal: (none)") });
++
++  assert.equal(ok[0].operations[0].result.exit_code, 0);
++  assert.equal(failed[0].operations[0].result.exit_code, 1);
++});

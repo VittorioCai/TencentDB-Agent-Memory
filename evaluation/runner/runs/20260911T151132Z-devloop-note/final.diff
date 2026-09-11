@@ -1,0 +1,45 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..b59053f 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,11 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy's Bash result spells this `Exit Code:` (capital C); a shell capture
++  // may spell it `Exit code:`. Read either, or curl's exit 28 is never seen and a
++  // timeout whose stderr is not one of the two phrases below falls through to
++  // "unreadable" instead of failing.
++  const exit = /(?:^|\n)Exit Code:\s*(-?\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };
+diff --git a/evaluation/tasks/bridge-addr/verify.test.mjs b/evaluation/tasks/bridge-addr/verify.test.mjs
+index a7e448e..bcf4f70 100644
+--- a/evaluation/tasks/bridge-addr/verify.test.mjs
++++ b/evaluation/tasks/bridge-addr/verify.test.mjs
+@@ -115,6 +115,23 @@ test("a timeout is read from the exit code, not from prose", () => {
+   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
+ });
+ 
++test("a CodeBuddy result whose timeout stderr is not a known phrase is a failure, not unreadable", () => {
++  // CodeBuddy spells the section header `Exit Code:`. The reader matched only
++  // lowercase `Exit code`, so curl's exit 28 was never seen and a timeout whose
++  // stderr did not carry "Operation timed out"/"Connection timed out" (DNS
++  // timeouts say "Resolving timed out") fell through to ok: null and scored ERROR.
++  const result = [
++    "Command: curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -d '{\"query\":\"team-bridge-reachability\"}'",
++    "Stdout: (empty)",
++    "Stderr: curl: (28) Resolving timed out after 20001 milliseconds",
++    "Exit Code: 28",
++    "Signal: (none)",
++  ].join("\n");
++  const a = outcomeOfAttempt(result);
++  assert.equal(a.ok, false);
++  assert.match(a.why, /timed out/);
++});
++
+ test("a refused connection is a failure, not an unreadable outcome", () => {
+   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
+   assert.equal(r.ok, false);

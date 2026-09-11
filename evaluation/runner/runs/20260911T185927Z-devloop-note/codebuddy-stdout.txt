@@ -1,0 +1,36 @@
+[20:59:37] model custom-local:deepseek-v4-flash
+[20:59:37] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。
+
+## 检索团队经验
+
+用 skill_search 找到直接相关的团队经验 `eval-tool-result-exit-line`(标记 `bt-78yk9r3bfrm`):真实 CodeBuddy Bash 工具结果的退出状态行拼写是 **`Exit Code:`(大写 C)**,而解析代码只认小写 `Exit code:`,导致真实结果永远读不到退出码。这正是本任务的现象。
+
+## 改了什么
+
+**1. `evaluation/attribution/collect-artifacts.mjs:124`(修复)**
+
+```js
+- const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++ const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+```
+
+`outcomeOf()` 给标签加了 `i` 标志,同时接受 `Exit Code:`(真实拼写)和小写 `Exit code:`(旧信封)。其余逻辑(stderr 提取等)保持不变。
+
+**2. `evaluation/attribution/collect-artifacts.test.mjs`(新增回归测试)**
+
+5 条用例:大写 `Exit Code: 28` → 28、小写 `Exit code: 7` → 7、大写 `Exit Code: 0` → 0、无退出行 → null,以及一条走完整 `collectArtifacts` 管线的集成用例(断言 `operation.result.exit_code === 28`)。首条用例标题带上团队标记 `bt-78yk9r3bfrm`。
+
+## 为什么
+
+真实结果文本是 `... \nExit Code: 28`,原正则只匹配小写 c,所以 `exit_code` 恒为 `null`,下游按退出状态分类失败调用的逻辑失效。修复只放宽标签大小写,不改变其它行为。
+
+## 验证
+
+- `node --test evaluation/attribution/collect-artifacts.test.mjs` → 5/5 通过。
+- 全量 `node --test 'evaluation/**/*.test.mjs'` → 557 项,552 通过、3 失败、2 跳过。
+- 回退源码改动后同一套件 → 6 失败,多出的 3 条正是新增大写拼写用例(证明它们是有效回归测试)。
+- 剩余 3 条失败均为 `ENOENT: evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`(仓库中缺失的 fixture),与本次改动无关,改动前后都存在。
+
+只改了上述两个文件;`bridge-addr/verify.mjs`、`bridge-name/verify.mjs` 存在同类拼写问题,但不属于本任务范围,未改动。

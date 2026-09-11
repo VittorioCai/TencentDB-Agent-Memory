@@ -1,0 +1,40 @@
+[17:13:53] model custom-local:deepseek-v4-flash
+[17:13:53] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+bridge-addr 套件 36/36 通过。任务完成，下面是最终说明。
+
+## 改了什么、为什么
+
+### 根因
+
+`evaluation/tasks/bridge-addr/verify.mjs` 的 `outcomeOfAttempt` 用这个正则读退出码：
+
+```js
+const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);   // 旧：大小写敏感，只认小写 c
+```
+
+但 CodeBuddy 真实渲染的 Bash 工具结果里，这一段是 **`Exit Code:`（大写 C）**，小写拼法只出现在手写 fixture 中。大小写敏感直接导致真实结果一条都没匹配上。
+
+后果：一次超时的调用，如果 stderr 里没有 curl 自己的文字（例如 `Stdout: (empty)` / `Stderr: (empty)` / `Exit Code: 28`），就既不命中退出码、也不命中 `Operation timed out` 文字，一路落到末尾的
+
+```js
+return { ok: null, why: "outcome not readable" };
+```
+
+于是被判成 `ok: null`（不可读 → 整轮 ERROR），而不是 `ok: false`（失败 → FAIL）。这正是报告里"超时被记成不可读"的现象。
+
+### 修改
+
+1. **`evaluation/tasks/bridge-addr/verify.mjs`** — `outcomeOfAttempt` 的退出码正则加 `i` 标志，同时匹配 CodeBuddy 的 `Exit Code:` 和 fixture 的 `Exit code:`，并补了注释说明为何。`evaluation/gate0/verify-capture.mjs` 里 `parseBashToolResult` 用的是 `/\nExit Code: (-?\d+)/`（大写），是该真实拼写的权威旁证。
+
+2. **`evaluation/tasks/bridge-addr/verify.test.mjs`** — 新增一条回归测试 `a CodeBuddy timeout is a failure, not an unreadable outcome`：用真实信封形状 `Stdout: (empty)\nStderr: (empty)\nExit Code: 28\nSignal: (none)`，断言 `outcomeOfAttempt(...).ok === false` 且 `why` 命中 `timed out`，并通过完整 `verify()` 断言整轮判定为 `FAIL`、该 attempt `ok: false`。这条测试在修复前会失败（拿到 `ok:null` / ERROR），修复后通过。
+
+### 验证
+
+- `evaluation/tasks/bridge-addr/` 下两个测试文件：**36/36 通过**（此前 35/35，净增 1 条回归测试）。
+- 全量 `evaluation` 套件对比：干净 HEAD 下 552 tests / 547 pass / 3 fail；修复后 553 tests / 548 pass / 3 fail。**多过的正是这条回归测试**。
+- 那 3 条失败是既有问题，与本次修改无关：它们引用一个未被跟踪、也不存在的文件 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`（`git stash` 后在干净 HEAD 上表现完全相同）。我没有动它们，因为超出本任务范围。
+
+### 关于团队经验检索
+
+按任务要求，动手前用 `skill_search` 检索了两次团队知识库（关键词分别覆盖 CodeBuddy 工具结果/超时/验收器，以及超时/失败/评测），两次都返回空 `{"items":[]}`，没有相关团队 skill，因此按自己的判断完成，符合任务给出的条件。

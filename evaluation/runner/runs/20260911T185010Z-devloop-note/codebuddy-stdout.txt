@@ -1,0 +1,31 @@
+[20:50:20] model custom-local:deepseek-v4-flash
+[20:50:20] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 团队经验检索
+
+检索到一条直接相关的团队 skill `eval-tool-result-exit-line`(v2):真实 CodeBuddy Bash 工具结果用 `Exit Code:`(大写 C),而验收/解析代码只认 `Exit code:`(小写 c),导致退出状态永远读不到。修复方式:读退出行时对标签大小写不敏感,其余不变,并补一条大写拼写的回归测试。该 skill 记的正是本次同类故障。
+
+## 原因
+
+`evaluation/attribution/collect-artifacts.mjs:124` 的 `outcomeOf()`:
+
+```js
+const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
+```
+
+只匹配小写 `Exit code:`,但真实工具结果拼的是大写 `Exit Code:`,所以每条真实结果的 `exit_code` 都是 `null`。
+
+## 改动
+
+1. `evaluation/attribution/collect-artifacts.mjs:124` — 正则加 `i` 标志,同时接受 `Exit Code:` 与 `Exit code:`(其余逻辑不动)。
+2. 新增回归测试 `evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs`,用例标题带团队 marker `bt-78yk9r3bfrm`,覆盖:大写拼写在 `outcomeOf` 与完整 `collectArtifacts` 链路里都读出退出码、小写拼写仍兼容。
+
+## 验证
+
+- 新测试:未修复时失败(0 pass / 1 fail),修复后通过。
+- `evaluation/attribution/chain.test.mjs` + 新测试:6 pass / 0 fail。
+- 全量 `evaluation/**/*.test.mjs`:553 项中 548 通过,3 项失败——均为读取 gitignored 且未生成的 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl` 造成的 `ENOENT`,与本次改动无关、改动前即存在。
+
+只改了必要文件:一个修复文件 + 一个新增测试文件。

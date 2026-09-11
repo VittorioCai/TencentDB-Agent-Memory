@@ -1,0 +1,87 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..7812baf 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -118,10 +118,17 @@ function messagesOf(body) {
+   return out;
+ }
+ 
+-/** Exit status and stderr, read out of a shell tool result envelope. */
++/**
++ * Exit status and stderr, read out of a shell tool result envelope.
++ *
++ * A real CodeBuddy result labels the line `Exit Code:` (capital C) — every
++ * result in the batch-4 records spells it that way. The label is matched
++ * case-insensitively so both the real spelling and the lower-case one the
++ * fixtures used are read.
++ */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,
+diff --git a/evaluation/attribution/collect-artifacts.test.mjs b/evaluation/attribution/collect-artifacts.test.mjs
+new file mode 100644
+index 0000000..b188a3c
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.test.mjs
+@@ -0,0 +1,57 @@
++/**
++ * Regression: the exit status of a real CodeBuddy tool result must be read.
++ *
++ * Real results spell the line `Exit Code:` (capital C). The reader used to
++ * match only `Exit code:`, so every real result came back with `exit_code:
++ * null` and anything downstream that classifies a call by its exit status
++ * (a curl that timed out with stderr suppressed has nothing else to show)
++ * silently lost its signal.
++ *
++ * The label is taken case-insensitively, so both spellings read the same and
++ * nothing else about the outcome changes.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOf, collectArtifacts } from "./collect-artifacts.mjs";
++
++// Shaped like a real result envelope: the three labelled sections and the
++// capital-C label.
++const envelope = (exit, label = "Exit Code") =>
++  `Command: curl -s http://127.0.0.1:8096/skill-bridge/v3/skill/get\n`
++  + `Stdout: \nStderr: \n${label}: ${exit}\nSignal: (none)`;
++
++test("a real result's capital `Exit Code:` yields the exit status, not null", () => {
++  assert.equal(outcomeOf(envelope(28)).exit_code, 28);
++  assert.equal(outcomeOf(envelope(52)).exit_code, 52);
++  assert.equal(outcomeOf(envelope(0)).exit_code, 0);
++});
++
++test("the lower-case `Exit code:` spelling reads the same", () => {
++  assert.equal(outcomeOf(envelope(7, "Exit code")).exit_code, 7);
++});
++
++test("a result with no exit line stays null", () => {
++  assert.equal(outcomeOf("Command: echo hi\nStdout: hi").exit_code, null);
++});
++
++test("collectArtifacts carries the exit status onto the operation", () => {
++  const captureEvents = [{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-04T13:30:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: {
++      json: {
++        messages: [
++          { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
++          { role: "tool", tool_call_id: "c1", content: envelope(28) },
++        ],
++      },
++    },
++  }];
++
++  const [session] = collectArtifacts({ captureEvents });
++  assert.equal(session.operations[0].result.exit_code, 28);
++});

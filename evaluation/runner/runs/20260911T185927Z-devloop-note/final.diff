@@ -1,0 +1,80 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..2322f2a 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,10 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy spells the label `Exit Code:` (capital C), while some older
++  // envelopes use `Exit code:`. Match the label case-insensitively so a real
++  // tool result's status is read instead of silently becoming null.
++  const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,
+diff --git a/evaluation/attribution/collect-artifacts.test.mjs b/evaluation/attribution/collect-artifacts.test.mjs
+new file mode 100644
+index 0000000..06b4885
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.test.mjs
+@@ -0,0 +1,58 @@
++/**
++ * Regression for reading the exit status out of a real CodeBuddy tool result.
++ *
++ * CodeBuddy's Bash tool spells the label `Exit Code:` — capital C. The parser
++ * here used to accept only `Exit code:`, so every real result read back as
++ * `exit_code: null` and downstream classification by exit status silently
++ * stopped working. The team experience note that pinned this down is
++ * `eval-tool-result-exit-line` (marker `bt-78yk9r3bfrm`).
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOf, collectArtifacts } from "./collect-artifacts.mjs";
++
++const REAL_RESULT = [
++  "Command: curl -sSk http://127.0.0.1:8096/health",
++  "Stdout: ",
++  "Stderr: curl: (28) Connection timed out after 12003 milliseconds",
++  "Exit Code: 28",
++  "Signal: (none)",
++].join("\n");
++
++test("outcomeOf reads the real `Exit Code:` spelling (bt-78yk9r3bfrm)", () => {
++  assert.equal(outcomeOf(REAL_RESULT).exit_code, 28);
++});
++
++test("outcomeOf still reads the older lower-case spelling", () => {
++  assert.equal(outcomeOf("Stdout: \nStderr: bad\nExit code: 7").exit_code, 7);
++});
++
++test("outcomeOf reads a real zero exit as 0, not null", () => {
++  assert.equal(outcomeOf("Stdout: ok\nStderr: \nExit Code: 0").exit_code, 0);
++});
++
++test("outcomeOf reports null only when there is no exit line", () => {
++  assert.equal(outcomeOf("Stdout: ok\nStderr: ").exit_code, null);
++});
++
++test("collectArtifacts carries the real exit status onto the operation", () => {
++  const captureEvents = [{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-04T13:30:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: {
++      json: {
++        messages: [
++          { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: '{"command":"curl -sSk http://127.0.0.1:8096/health"}' } }] },
++          { role: "tool", tool_call_id: "c1", content: REAL_RESULT },
++        ],
++      },
++    },
++  }];
++
++  const [session] = collectArtifacts({ captureEvents });
++  assert.equal(session.operations[0].result.exit_code, 28);
++});

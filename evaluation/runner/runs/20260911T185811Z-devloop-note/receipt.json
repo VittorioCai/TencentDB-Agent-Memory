@@ -1,0 +1,78 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "a100708d-a990-4186-964e-6d0c6131a874",
+  "run_id": "20260911T185811Z-devloop-note",
+  "task_id": "task-h1k7xruuhb",
+  "generated_at": "2026-09-11T18:59:26Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-pXLc38dex6Zt",
+      "name": "eval-tool-result-exit-line",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-11T18:44:05Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 1 (score 1.54) for the query \"collect-artifacts exit_code 工具结果 退出状态 归因\"",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-78yk9r3bfrm was used in tool call call_00_hnMQhIVj58bS6Lu9pHse9735 (message 24); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260911T185811Z-devloop-note:verify.mjs:call=call_00_hnMQhIVj58bS6Lu9pHse9735:ok=true",
+          "detail": "the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(9c25358e-bcdc-47bf-9e30-d443f4cab77f):msg[24]:call_00_hnMQhIVj58bS6Lu9pHse9735:arguments",
+          "detail": "token bt-78yk9r3bfrm; content of v2 entered the context at message 6, before this operation at message 24"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "a100708d-a990-4186-964e-6d0c6131a874:call_00_t5JsTSBHekbIFOFPPSF42124",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        },
+        {
+          "kind": "diff_hunk",
+          "ref": "diff:evaluation/attribution/collect-artifacts.exit-status.test.mjs:1-50",
+          "detail": "token bt-78yk9r3bfrm; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: attempt ? (call_00_hnMQhIVj58bS6Lu9pHse9735)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": 0.583,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "admit",
+        "rules_version": null,
+        "decided_at": "2026-09-11T18:59:26.506Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

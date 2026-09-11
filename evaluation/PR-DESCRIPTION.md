@@ -34,6 +34,14 @@
    变为全部可读,used 事件按代码事实不受影响,`REPARSE-DIFF-2026-09-11-exitline-collect.md`)。
 7. **demo** `bash evaluation/demo.sh --plain`:7 段(第 7 段:第二任务与作者维度),`evaluation/demo-output.txt`。
 
+## 原始记录在分支里(2026-09-12 起)
+
+审阅发现干净克隆里没有批次四与开发闭环的任何运行目录,"每个数字可从原始记录重算"当时不成立。现已把 14 个批次四目录
+(`evaluation/runner/runs/20260910T23*`)与 23 个闭环目录(`20260911T1*-devloop-*`,含作废运行)强制加入分支,每目录只排除
+`capture-before.jsonl`(运行前探针残留,无脚本读取;哈希在 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);
+入库前按 `.env` 与三把用户密钥的真实值逐文件扫描,无命中(捕获里的 user-key 头本来就是 `[REDACTED]`)。批次四的重判副本不入库,
+`deliver-check.sh` 发现缺失会用报告开头的同一命令重生成。
+
 ## 验收命令与输出
 
 | 命令 | 期望 | 实际输出 |

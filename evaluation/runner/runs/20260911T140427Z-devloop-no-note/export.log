@@ -1,0 +1,6 @@
+[16:08:02] ClickHouse http://127.0.0.1:8123  db=context_proxy  window=last 30 MINUTE
+[ok] 96 row(s) -> /private/tmp/topic4-runs/20260911T140427Z-devloop-no-note.aXZU/20260911T140427Z-devloop-no-note/tool-call-logs-all.jsonl
+[16:08:02] distribution:
+   ┌─kind─────────┬─bridge_source─┬──n─┬─ok_2xx─┐
+1. │ model_intent │               │ 96 │      0 │
+   └──────────────┴───────────────┴────┴────────┘

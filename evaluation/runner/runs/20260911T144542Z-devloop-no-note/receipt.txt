@@ -1,0 +1,67 @@
+# Receipt — run 20260911T144542Z-devloop-no-note · session 9e6f612d · task task-5e6xp4mrrw · 2026-09-11T14:48:33Z
+
+applied 5 team asset(s)
+- not declared by the asset： — fetched — body retrieved; use not established
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+- skill：tdc-312fad — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-a — fetched — body retrieved; use not established
+
+effect status
+- 5 background only (fetched or provided), effect unverified
+
+○   v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-11 22:45:58.645:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-11 22:46:01.331:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-11 22:46:01.352:skill-bridge:search  — the capture never saw this call
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 3 time(s) without any evidence of use
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.320:skill-bridge:get-by-name  — request names skl-KPVMV2uB5rXM; the capture never saw the response
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ tdc-312fad  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.348:skill-bridge:get-by-name  — request names skl-MyrdnecjeYSb; the capture never saw the response
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.266:skill-bridge:get-by-name  — request names skl-oBaDO5CceKnr; the capture never saw the response
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-a  v4  skill
+    from       usr-n68ea5ythq  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-11 22:47:08.299:skill-bridge:get-by-name  — request names skl-sZFb3KatWY6m; the capture never saw the response
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T144542Z-devloop-no-note.SRHU/20260911T144542Z-devloop-no-note/receipt.json

@@ -1,0 +1,49 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..1b7fbb0 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,11 +156,17 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
++  // A timeout is decided by the exit code before anything else. The tool writes
++  // the label as `Exit Code:`; the older fixtures wrote `Exit code:`. A call
++  // killed at the tool level comes back with an empty stderr, so the prose
++  // fallback below has nothing to match on and the label has to read either way
++  // — otherwise such a call falls through to "outcome not readable".
++  const timedOut = /(?:^|\n)Exit [Cc]ode:\s*28\b/.test(s)
++    || /Operation timed out|Connection timed out/.test(s);
++  if (timedOut) return { ok: false, why: "timed out" };
++
+   const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+-  if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+-    return { ok: false, why: "timed out" };
+-  }
+   if (exitCode !== null && exitCode !== 0) return { ok: false, why: `exit ${exitCode}` };
+   if (/Could not resolve host|Connection refused|Failed to connect/.test(s)) {
+     return { ok: false, why: "could not connect" };
+diff --git a/evaluation/tasks/bridge-addr/verify.test.mjs b/evaluation/tasks/bridge-addr/verify.test.mjs
+index a7e448e..4bd3df2 100644
+--- a/evaluation/tasks/bridge-addr/verify.test.mjs
++++ b/evaluation/tasks/bridge-addr/verify.test.mjs
+@@ -115,6 +115,19 @@ test("a timeout is read from the exit code, not from prose", () => {
+   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
+ });
+ 
++test("a timeout whose only surviving signal is the exit code is a failure, not an unreadable outcome", () => {
++  // The real CodeBuddy shape writes `Exit Code:` with a capital C, and a call
++  // killed at the tool level comes back with an empty Stderr. Neither the
++  // lowercase label nor the timeout prose matches, so this used to fall through
++  // to "outcome not readable" — a timed-out call escaped as unknown.
++  const r = outcomeOfAttempt(
++    "Command: curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search -d '{\"query\":\"team-bridge-reachability\"}'\n"
++    + "Stdout: \nStderr: \nExit Code: 28\nSignal: (none)",
++  );
++  assert.equal(r.ok, false);
++  assert.equal(r.why, "timed out");
++});
++
+ test("a refused connection is a failure, not an unreadable outcome", () => {
+   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
+   assert.equal(r.ok, false);

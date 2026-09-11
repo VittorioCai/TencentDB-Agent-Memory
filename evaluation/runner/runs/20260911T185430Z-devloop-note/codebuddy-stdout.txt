@@ -1,0 +1,32 @@
+[20:54:41] model custom-local:deepseek-v4-flash
+[20:54:41] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。
+
+## 改了什么
+
+**`evaluation/attribution/collect-artifacts.mjs:124`** — 把 `outcomeOf` 里读退出状态的正则加上 `i` 标志:
+
+```js
+const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+```
+
+**新增 `evaluation/attribution/collect-artifacts.test.mjs`** — 5 条回归测试,均带团队约定的可检索标记 `bt-78yk9r3bfrm`。
+
+## 为什么
+
+真实 CodeBuddy 的 Bash 工具结果里退出状态那一行的标签是大写 C 的 `Exit Code:`,而原来的正则只认小写 `Exit code:`。于是真实 capture 里永远匹配不上,`exit_code` 一律为 `null`,下游按退出状态(28 超时 / 52 空回复 / 56 连接重置等)分类失败调用的逻辑全部失效。改成大小写不敏感后两种拼写都能读到,其余逻辑一律不动。
+
+这个结论来自动手前检索到的团队 skill `eval-tool-result-exit-line`(记录了 batch-4 的 329 条工具结果全部拼作 `Exit Code:`,以及"还原标签大小写不敏感 + 为大写拼写补回归测试"的处理方式)。skill 里给出的具体落点(`verify.mjs` 及其测试路径)是那处同类 bug 的,不是本任务的目标文件;我把它的通用结论应用到了本任务的 `collect-artifacts.mjs`,回归测试放在目标文件旁边并沿用了 skill 要求的测试标记。
+
+## 验证
+
+- 新增测试单独跑:5/5 通过。
+- 全量 `node --test`(evaluation 下所有 `*.test.mjs`):
+  - 修复前 552 tests / 547 pass / 3 fail / 2 skip
+  - 修复后 557 tests / 552 pass / 3 fail / 2 skip
+
+新增 5 条全部通过,无任何新增失败。剩余 3 条失败是**改动前就存在**的,原因是 `evaluation/gate0/artifacts/`(被 `.gitignore:74` 忽略的 capture 数据)在本环境中缺失,与本次修复无关:
+
+- `extract-tokens.test.mjs` 的 2 条
+- `build-early-events.test.mjs` 的 1 条

@@ -1,0 +1,43 @@
+{
+  "run_id": "20260911T144347Z-devloop-no-note",
+  "called_at": "2026-09-11T16:26:56Z",
+  "author": {
+    "agent_id": "agt-hpvaeml21e",
+    "user_id": "usr-4u07qc2kuj",
+    "team_id": "team-5ezfoladb5",
+    "key_file": "deploy/global-images/.topic4-user-key-b"
+  },
+  "source_session": "codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d",
+  "task_id": "task-5e6xp4mrrw",
+  "messages_posted": 80,
+  "messages_total": 80,
+  "extract_response": {
+    "code": 0,
+    "message": "ok",
+    "task_id": "skill-extract-task-96a66940",
+    "archive_key": "skill_buffer/usr-4u07qc2kuj/team-5ezfoladb5/agt-hpvaeml21e/codebuddy:c2525241-ba87-4736-85cc-1a67b7ffaf6d/data-1789144016708.jsonl",
+    "archived_at_ms": 1789144016708
+  },
+  "new_assets": [
+    {
+      "asset_id": "skl-HJW3hVeUmdXj",
+      "name": "team-skill-bridge-search",
+      "version": 1,
+      "status": "candidate",
+      "producer_agent_id": null,
+      "producer_user_id": "usr-4u07qc2kuj",
+      "created_at": "2026-09-11T16:27:20.230Z"
+    },
+    {
+      "asset_id": "skl-isClIUZCR2nH",
+      "name": "codebuddy-tool-result-parsing",
+      "version": 1,
+      "status": "candidate",
+      "producer_agent_id": null,
+      "producer_user_id": "usr-4u07qc2kuj",
+      "created_at": "2026-09-11T16:27:20.226Z"
+    }
+  ],
+  "decision": "Core extracted 2 asset(s); status as Core set it: candidate (admission is the administrator's step)",
+  "waited_seconds": 25
+}

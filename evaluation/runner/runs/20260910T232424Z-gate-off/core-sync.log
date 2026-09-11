@@ -1,0 +1,8 @@
+[01:25:06] reading 2 baseline asset(s) …
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=admit confidence=1
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=approved   visibility=team     gate=reject confidence=0
+posted=2 trusted=2 skipped=0
+[ok] 20260910T232424Z-gate-off: outcomes recorded in Core → /private/tmp/topic4-runs/20260910T232424Z-gate-off.PyRA/20260910T232424Z-gate-off/core-outcomes.json
+[01:25:07] after:
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=admit confidence=1
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=approved   visibility=team     gate=reject confidence=0

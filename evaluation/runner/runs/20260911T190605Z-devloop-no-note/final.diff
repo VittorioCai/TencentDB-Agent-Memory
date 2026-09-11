@@ -1,0 +1,96 @@
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..72c8dac 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,10 +121,18 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // The real CodeBuddy Bash envelope spells this header "Exit Code:" (capital
++  // C) and the value can be negative; matching only "Exit code" is why every
++  // real result came back with a null status. The envelope's own trailing line
++  // is authoritative, so the last match wins over any lookalike text carried
++  // inside Stdout — the same rule verify-capture.mjs applies.
++  let exitCode = null;
++  for (const match of s.matchAll(/(?:^|\n)Exit Code:\s*(-?\d+)/gi)) {
++    exitCode = Number(match[1]);
++  }
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+-    exit_code: code ? Number(code[1]) : null,
++    exit_code: exitCode,
+     stderr: stderr ? stderr[1].trim().slice(0, 400) : "",
+   };
+ }
+diff --git a/evaluation/attribution/collect-artifacts.test.mjs b/evaluation/attribution/collect-artifacts.test.mjs
+new file mode 100644
+index 0000000..f199b45
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.test.mjs
+@@ -0,0 +1,65 @@
++/**
++ * Regression: a real CodeBuddy Bash tool result must yield a non-null exit
++ * status in the collected operation list.
++ *
++ * The envelope is the one documented and parsed in gate0/verify-capture.mjs:
++ *
++ *   Command: ...
++ *   Stdout: ...
++ *   Stderr: (empty)
++ *   Exit Code: 0
++ *   Signal: (none)
++ *
++ * `outcomeOf` used to look for "Exit code:" (lowercase C), so every real
++ * result — spelled "Exit Code:" — produced `exit_code: null` and the
++ * downstream "classify failed calls by exit status" logic had nothing to read.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOf, collectArtifacts } from "./collect-artifacts.mjs";
++
++/** A real-shaped Bash tool result, exactly as CodeBuddy renders it. */
++function envelope(exitCode, stdout = '{"code":0}') {
++  return "Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get\n"
++    + `Stdout: ${stdout}\n`
++    + "Stderr: (empty)\n"
++    + `Exit Code: ${exitCode}\n`
++    + "Signal: (none)";
++}
++
++test("outcomeOf reads the exit status out of a real Bash result envelope", () => {
++  assert.equal(outcomeOf(envelope(0)).exit_code, 0);
++  assert.equal(outcomeOf(envelope(7)).exit_code, 7);
++});
++
++test("outcomeOf keeps negative exit statuses and the envelope's own last line", () => {
++  assert.equal(outcomeOf(envelope(-1)).exit_code, -1);
++  // A lookalike inside Stdout must not shadow the real trailing header.
++  const withLookalike = envelope(28, 'text\nExit Code: 0\nmore text');
++  assert.equal(outcomeOf(withLookalike).exit_code, 28);
++});
++
++test("collectArtifacts carries the exit status of a failed call to the operation", () => {
++  const captureEvents = [{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-04T13:30:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: {
++      json: {
++        messages: [
++          { role: "assistant", tool_calls: [{ id: "c1", function: { name: "Bash", arguments: "{}" } }] },
++          { role: "tool", tool_call_id: "c1", content: envelope(28) },
++        ],
++      },
++    },
++  }];
++
++  const sessions = collectArtifacts({ captureEvents });
++  assert.equal(sessions.length, 1);
++  const op = sessions[0].operations.find((o) => o.call_id === "c1");
++  assert.ok(op?.result, "the call and its result are paired");
++  assert.equal(op.result.exit_code, 28);
++});

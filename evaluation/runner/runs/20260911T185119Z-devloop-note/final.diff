@@ -1,0 +1,87 @@
+diff --git a/evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs b/evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs
+new file mode 100644
+index 0000000..20bef5c
+--- /dev/null
++++ b/evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs
+@@ -0,0 +1,62 @@
++/**
++ * Regression: the exit-status line of a real CodeBuddy shell result is spelled
++ * `Exit Code:` — capital C — while `outcomeOf` only accepted `Exit code:`. A
++ * real result therefore reported `exit_code: null` for every operation, and
++ * the downstream "did this call fail / time out" classification had nothing to
++ * key on: a curl that timed out with stderr suppressed (`Exit Code: 28`, no
++ * other readable text) looked exactly like a call that produced nothing.
++ *
++ * Case-insensitive matching on the label is the fix. Team experience note:
++ * `eval-tool-result-exit-line`. The marker `bt-78yk9r3bfrm` is kept in the
++ * test titles so the finding can be located later.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { collectArtifacts, outcomeOf } from "./collect-artifacts.mjs";
++
++test("reads the exit status from the capitalised Exit Code label (bt-78yk9r3bfrm)", () => {
++  // The capital spelling is what real results carry. A timed-out curl with
++  // stderr suppressed shows nothing but this line.
++  assert.equal(outcomeOf("Stdout: \nStderr: \nExit Code: 28").exit_code, 28);
++  // A non-zero, non-timeout failure must be read too.
++  assert.equal(outcomeOf("Stdout: \nExit Code: 52").exit_code, 52);
++  // Success is 0, not null.
++  assert.equal(outcomeOf("Stdout: ok\nExit Code: 0").exit_code, 0);
++  // The lower-case spelling used by older fixtures keeps working.
++  assert.equal(outcomeOf("Stdout: ok\nExit code: 7").exit_code, 7);
++});
++
++test("the collected operation list carries the exit status (bt-78yk9r3bfrm)", () => {
++  // End to end through collectArtifacts: this is the "操作清单" whose
++  // exit_code was always null on real captures.
++  const captureEvents = [{
++    event: "http.request",
++    requestId: "req-1",
++    timestamp: "2026-09-11T00:00:00Z",
++    headers: { "x-conversation-id": "conv-1" },
++    body: {
++      json: {
++        messages: [
++          {
++            role: "assistant",
++            tool_calls: [{
++              id: "c1",
++              function: { name: "Bash", arguments: '{"command":"curl -s http://127.0.0.1:47318/health"}' },
++            }],
++          },
++          {
++            role: "tool",
++            tool_call_id: "c1",
++            content: "Command: curl -s http://127.0.0.1:47318/health\nStdout: \nStderr: \nExit Code: 28",
++          },
++        ],
++      },
++    },
++  }];
++
++  const [session] = collectArtifacts({ captureEvents });
++  assert.equal(session.operations.length, 1);
++  assert.equal(session.operations[0].result.exit_code, 28);
++});
+diff --git a/evaluation/attribution/collect-artifacts.mjs b/evaluation/attribution/collect-artifacts.mjs
+index bc05d65..162a17f 100644
+--- a/evaluation/attribution/collect-artifacts.mjs
++++ b/evaluation/attribution/collect-artifacts.mjs
+@@ -121,7 +121,13 @@ function messagesOf(body) {
+ /** Exit status and stderr, read out of a shell tool result envelope. */
+ export function outcomeOf(resultText) {
+   const s = String(resultText ?? "");
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // The label is capitalised in real results — `Exit Code: 0` — while older
++  // fixtures spell it `Exit code:`. Match the label case-insensitively so a
++  // real result's status is read instead of silently dropped to null; without
++  // this every operation looks like it has no exit status, and a timed-out
++  // curl (`Exit Code: 28`, nothing else readable) is indistinguishable from a
++  // call that produced nothing at all.
++  const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const stderr = /(?:^|\n)Stderr:\s*([\s\S]*)$/.exec(s);
+   return {
+     exit_code: code ? Number(code[1]) : null,

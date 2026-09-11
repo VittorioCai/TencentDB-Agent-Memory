@@ -1,0 +1,297 @@
+[
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-KPVMV2uB5rXM",
+    "asset_type": "skill",
+    "asset_name": "deploy-lookup-note-a",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-8ypylzex49 has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-8ypylzex49",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": null,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-eM1xP28pXiYA",
+    "asset_type": "skill",
+    "asset_name": "deploy-lookup-note-b",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-8ypylzex49 has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-8ypylzex49",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": null,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-MyrdnecjeYSb",
+    "asset_type": "skill",
+    "asset_name": "tdc-312fad",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-8ypylzex49 has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-8ypylzex49",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": null,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-ImeA29HL3Djj",
+    "asset_type": "skill",
+    "asset_name": "eval-bridge-endpoint-c",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-n68ea5ythq has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": null,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-oBaDO5CceKnr",
+    "asset_type": "skill",
+    "asset_name": "eval-bridge-endpoint-b",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-n68ea5ythq has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "agent_id": "agt-5e4hna56j9",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": true,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "skl-sZFb3KatWY6m",
+    "asset_type": "skill",
+    "asset_name": "eval-bridge-endpoint-a",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default",
+      "no corrected record, so reject did not trigger",
+      "author confidence not computable: usr-n68ea5ythq has no cross-person outcomes; review priority: normal"
+    ],
+    "evidence_refs": [],
+    "signals": {
+      "online": {
+        "fetched": 0,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 0,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "usr-n68ea5ythq",
+        "agent_id": "agt-5e4hna56j9",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": true,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  },
+  {
+    "schema_version": "gate-decision-v1",
+    "asset_id": "",
+    "decided_at": "2026-09-11T18:02:05.894Z",
+    "decision": "pending",
+    "reasons": [
+      "fetched 4 time(s) without any evidence of use",
+      "no corrected record, so reject did not trigger",
+      "reported signals: task ids not recorded on the events, so generalisation is not measurable here, 1 distinct consumer(s); neither is a threshold at this stage",
+      "author confidence not computable: unknown author has no cross-person outcomes"
+    ],
+    "evidence_refs": [
+      {
+        "event_id": "evt-95331a583a9f",
+        "state": "fetched",
+        "relation": "unknown"
+      },
+      {
+        "event_id": "evt-9d2702a477c0",
+        "state": "fetched",
+        "relation": "unknown"
+      },
+      {
+        "event_id": "evt-3d883ecddf69",
+        "state": "fetched",
+        "relation": "unknown"
+      },
+      {
+        "event_id": "evt-28f17eff7260",
+        "state": "fetched",
+        "relation": "unknown"
+      }
+    ],
+    "signals": {
+      "online": {
+        "fetched": 4,
+        "used_hard": 0,
+        "used_soft": 0,
+        "validated": 0,
+        "corrected": 0,
+        "distinct_actors": 1,
+        "distinct_tasks": 0,
+        "cross_user_validated": 0
+      },
+      "author": {
+        "user_id": "",
+        "confidence": null,
+        "computable": false,
+        "distinct_tasks": 0
+      },
+      "offline": {
+        "retrieval_rank_mean": null,
+        "has_concrete_values": null,
+        "duplicate_of": null
+      }
+    },
+    "is_decoy": false,
+    "expected_decision": null
+  }
+]

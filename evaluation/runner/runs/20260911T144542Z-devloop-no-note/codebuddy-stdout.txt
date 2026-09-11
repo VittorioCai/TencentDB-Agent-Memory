@@ -1,0 +1,26 @@
+[16:45:53] model custom-local:deepseek-v4-flash
+[16:45:53] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 改了什么
+
+**根因**：`outcomeOfAttempt`（`evaluation/tasks/bridge-addr/verify.mjs:159`）用**区分大小写的小写**正则读退出码：
+
+```js
+/(?:^|\n)Exit code:\s*(\d+)/
+```
+
+但 CodeBuddy 的 Bash 工具结果实际写的是 `Exit Code:`（大写 C）——`evaluation/gate0/verify-capture.mjs:121` 明确记录了该格式且注明"stable across both captures"。所以真实抓包里退出码**永远读不出来**。此时只有 stderr 恰好含 `Operation timed out`/`Connection timed out` 这两个固定短语的超时才被判失败；其余超时（例如仓库里真实出现过的 `curl: (28) Couldn't connect to server`）会一路落到末尾，被记成 `{ok:null, why:"outcome not readable"}`——于是验收把 FAIL 误判为 ERROR。
+
+**修复**：把该正则改成大小写不敏感（`/…Exit Code:…/i`），既读得进 `Exit Code:`，也不影响测试里已有的 `Exit code:`。这样退出码 28（超时）以及任何非零退出码都会被正确判为失败。
+
+**回归测试**：在 `verify.test.mjs` 新增一条，用真实 CodeBuddy 结果格式（`Exit Code: 28` + `Couldn't connect to server`、空 stdout）断言判决为 FAIL 且 `why` 为 `timed out`。已确认：修复前该测试失败（`ok` 为 `null`，即"不可读"），修复后通过。
+
+## 验证
+
+- `bridge-addr` 两个测试文件：**36/36 通过**（原 35 + 新 1）。
+- 全量 `evaluation/**/*.test.mjs`：**548 通过 / 3 失败**。这 3 条是**改动前就存在的**环境性失败（同一原因：被 `.gitignore:74` 忽略的 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl` 未生成），与本次修复无关；改动前后均为 3 条失败。
+- 改动范围：仅 `verify.mjs` 与 `verify.test.mjs` 两个文件，未触碰其他代码。
+
+## 团队经验检索
+
+先检索了团队知识库（多组中英文关键词）。命中的 skill 都是本任务场景的资产/约定（`eval-bridge-endpoint-b` 记录 bridge 地址、`deploy-lookup-note-a/b`、`tdc-312fad` 属 `bridge-name` 场景），**没有**与"verify.mjs 工具结果解析/超时判定"直接相关的经验，故按自身判断处理。

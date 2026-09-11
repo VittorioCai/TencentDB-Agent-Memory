@@ -1,0 +1,30 @@
+[17:49:19] model custom-local:deepseek-v4-flash
+[17:49:19] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 改了什么
+
+**1. 修复** `evaluation/tasks/bridge-addr/verify.mjs:159`
+
+```diff
+- const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++ const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+```
+
+加 `i` 标志,让退出码标签大小写不敏感,同时接受 `Exit Code:` 和 `Exit code:`。
+
+**2. 新增回归测试** `evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs`(标题带团队标记 `bt-imczk9p69e3`),覆盖三种情况:`Exit Code: 28`(无其它超时文本)→ `timed out`;`Exit Code: 52` → 失败而非不可读;小写 `Exit code:` 仍正常。
+
+## 为什么
+
+`outcomeOfAttempt` 用正则从工具结果里读退出码,而真实 CodeBuddy 结果的标签是 `Exit Code:`(大写 C,仓库自己的 `evaluation/gate0/verify-capture.mjs:136` 也是这么读的)。旧正则只认小写 `Exit code:`,于是:
+
+- 用 `curl -s -m <timeout>`(只 `-s` 不带 `-S`)超时时,stderr 被抑制,结果里**只剩** `Exit Code: 28`,没有 `curl: (28)`/`Operation timed out` 之类文本;
+- 退出码读成 `null`,后续判空,最终落到 `{ ok: null, why: "outcome not readable" }`,被记成"不可读"(ERROR)而不是超时(FAIL);
+- curl 52 / 56 等同理,退出码读不到就被当成不可读。
+
+大小写不敏感后,这些退出码被正常读出:28 → `timed out`,其它非 0 → `exit N`,均正确判为失败。已有行为(小写拼写、空输出仍为不可读等)不变。
+
+## 测试
+
+- `evaluation/tasks/bridge-addr/` 下 4 个测试文件:**42 passed / 0 failed**(原 39 + 新增 3)。
+- 全量 `node --test 'evaluation/**/*.test.mjs'`:550 passed,3 failed。这 3 个失败是**改动前就存在**的,原因是读取 gitignore 的、由 harness 生成的缺失夹具 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`(ENOENT),与本次改动无关。

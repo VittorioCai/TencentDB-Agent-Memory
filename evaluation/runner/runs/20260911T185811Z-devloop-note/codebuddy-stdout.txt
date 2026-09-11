@@ -1,0 +1,19 @@
+[20:58:22] model custom-local:deepseek-v4-flash
+[20:58:22] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+**根因**：`evaluation/attribution/collect-artifacts.mjs:124` 的 `outcomeOf()` 用 `/(?:^|\n)Exit code:\s*(\d+)/` 读取退出状态,只接受小写 `c` 的 `Exit code:`。而真实的 CodeBuddy 工具结果里这一行拼作 `Exit Code:`(大写 C),所以每次都匹配失败,`exit_code` 恒为 `null`,下游按退出状态分类失败的逻辑失效。
+
+**改动**（只改必要文件）：
+1. `evaluation/attribution/collect-artifacts.mjs` — 给该正则加 `i`,大小写不敏感地匹配标签 `Exit Code:` / `Exit code:`,其余逻辑与行为不变(`Stderr:` 读取、截断、`null` 语义均保持)。
+2. 新增回归测试 `evaluation/attribution/collect-artifacts.exit-status.test.mjs`,覆盖三条:真实大写拼写 `Exit Code: 28` 能读出退出码、小写拼写仍可用、大写拼写的失败码(52)能一路传到 `collectArtifacts` 产出的 operation 上(不再读作未知)。用例标题带团队约定的检索标记 `bt-78yk9r3bfrm`。
+
+**团队经验参考**：动手前检索到 skill `eval-tool-result-exit-line`,它记录了同样的结论——真实结果一律是 `Exit Code:` 大写、应大小写不敏感地接受两种拼写,并补大写拼写的回归测试。本修复采纳了这两点;skill 里给的是另一个模块(`bridge-addr/verify.mjs`)的落点,与本任务的 `collect-artifacts.mjs` 无关,故测试落在 attribution 目录下。
+
+## 测试结果
+
+- 新增回归测试:3/3 通过。
+- 全量 `evaluation` 下 `*.test.mjs`:555 tests,550 pass,3 fail。3 个失败在改动前后完全一致(HEAD 基线为 552 tests / 547 pass / 3 fail),均与本修复无关——`extract-tokens.test.mjs` 2 个 + `build-early-events.test.mjs` 1 个(依赖缺失的 fixture,如不存在的 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`)。本次改动为净增 3 个通过用例,无新增失败,已有行为不变。

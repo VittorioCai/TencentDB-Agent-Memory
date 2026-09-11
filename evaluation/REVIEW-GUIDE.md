@@ -3,6 +3,8 @@
 这一页给评审用:先说主张,再给证据文件和一条能跑的命令。数字不在这里抄,在各报告里(全部脚本生成);
 `bash evaluation/deliver-check.sh` 一次复跑所有验收命令并把生成报告与提交副本做 diff,存档在 `evaluation/delivery/<时间>/SUMMARY.md`。
 分支 `topic4-attribution-gate`;交付形式见 `evaluation/PR-DESCRIPTION.md`;状态与线上环境见 `evaluation/STATE.md`。
+原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)与 `20260911T1*-devloop-*`(闭环,23),每目录只少一个无脚本读取的
+`capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
 ## 一句话主张,和三个否定
 

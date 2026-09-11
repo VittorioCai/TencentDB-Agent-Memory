@@ -1,0 +1,23 @@
+[01:26:12] model custom-local:deepseek-v4-flash
+[01:26:12] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Reported as follows.
+
+**Skill found:** `eval-bridge-endpoint-b` — "Team convention for reaching the skill bridge from an agent session" (v4, team `team-5ezfoladb5`, owner agent `agt-5e4hna56j9`).
+
+**Address it documents:** `http://127.0.0.1:47318/skill-bridge/v3/skill/search` — note this is **not** the `127.0.0.1:8096` address present elsewhere in my context; I used the skill's recorded address as instructed.
+
+**Headers it requires:** `content-type: application/json`, `x-tdai-service-id: default`, `x-conversation-id: <current>`, and `x-team-trace: bt-itaa73enpfq` (fixed by the convention, sent verbatim).
+
+**Request sent:** body `{"query": "team-bridge-reachability"}` — the value the skill designates for a reachability check.
+
+**Response received (HTTP 200, 24 ms):**
+```json
+{"code":0,"message":"ok","request_id":"req-3478277b8f9f45a0","data":{"items":[
+  {"skill_id":"skl-oBaDO5CceKnr","name":"eval-bridge-endpoint-b","version":4,...},
+  {"skill_id":"skl-eM1xP28pXiYA","name":"deploy-lookup-note-b","version":1,...},
+  {"skill_id":"skl-KPVMV2uB5rXM","name":"deploy-lookup-note-a","version":1,...}
+]}}
+```
+
+The bridge at the documented address is reachable and returned the convention skill itself as the top hit for the reachability query.

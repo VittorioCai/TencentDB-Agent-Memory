@@ -1,0 +1,37 @@
+[16:08:17] model custom-local:deepseek-v4-flash
+[16:08:17] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+**`evaluation/tasks/bridge-addr/verify.mjs`** — `outcomeOfAttempt`(155 行起)
+
+把超时判定从"先取小写标签的 exit code"改成独立、大小写兼容的检测:
+
+```js
+const timedOut = /(?:^|\n)Exit [Cc]ode:\s*28\b/.test(s)
+  || /Operation timed out|Connection timed out/.test(s);
+if (timedOut) return { ok: false, why: "timed out" };
+```
+
+**`evaluation/tasks/bridge-addr/verify.test.mjs`** — 增加一条回归测试,复现真实 CodeBuddy 结果格式(大写 `Exit Code: 28`、空 `Stderr`、带 `Signal: (none)`),断言 `{ok:false, why:"timed out"}`。
+
+## 为什么
+
+**根因**:原代码用 `/(?:^|\n)Exit code:\s*(\d+)/` 读退出码,只认小写 `code`;真实 CodeBuddy 结果写的是 `Exit Code:`(大写 C)。平时超时靠 prose 兜底(`Operation timed out|Connection timed out`)还能命中,但一次被工具层直接杀掉的调用返回的是空 `Stdout` + 空 `Stderr` + `Exit Code: 28`,两条路都匹配不上,于是落到函数末尾 `{ok:null, why:"outcome not readable"}` —— 超时被记成"不可读"。
+
+**为什么只针对超时这一处做大小写兼容,而不是把整个退出码正则改成 `[Cc]ode`**:后者会波及既有分类。真实结果都是大写,一旦通用分支开始读大写退出码,会抢在连接失败/HTTP 判定之前:
+
+- 大写 `Exit Code: 7` + `Failed to connect` 会从 `"could not connect"` 变成 `"exit 7"`;
+- 大写 `Exit Code: 22` + `HTTP_CODE: 500` 会从 `"http 500"` 变成 `"exit 22"`。
+
+而下游 `evaluation/attribution/judge-outcome.mjs:44` 的 `REACHABILITY = new Set(["timed out", "could not connect"])` 依赖这些 `why` 字符串来判定"资产内容能否解释这次失败"。改动它们会把本可归因的可达性失败降级为 `needs_review`,属于用户要求避免的行为变化。所以最小改动只补上超时信号这一条,`28` 用 `\b` 限定避免 `280` 误判。
+
+## 验证结果
+
+- `node --test evaluation/tasks/bridge-addr/*.test.mjs`:**40 pass / 0 fail**(原 39 + 新增 1)。
+- 全量 `node --test evaluation/**/*.test.mjs`:**553 tests, 548 pass, 3 fail, 2 skipped**;其中 3 个失败在改动前就存在(缺失 `gate0-threechannel-capture.jsonl` 等 fixture / 占位符资产),stash 掉本次改动后基线为 **552 tests, 547 pass, 3 fail, 2 skipped**,失败集合完全一致 —— 本次改动只新增 1 条通过的测试,未改变任何既有结果。
+- 边界探测确认:真实超时→`timed out`(修复),大写拒连仍为 `could not connect`,HTTP 500 仍为 `http 500`,空输出仍为 `no output`(不误判为失败)。
+
+`evaluation/tasks/bridge-name/verify.mjs:52` 存在同样的只认小写问题,但按"只改必要的文件"未触碰。

@@ -1,0 +1,124 @@
+{
+  "run_id": "20260911T190605Z-devloop-no-note",
+  "label": "devloop-no-note",
+  "task": "exit-line-collect",
+  "identity": "c",
+  "conversation_id": "3453a35c-5664-46ab-9b5f-3c7cfa2d43ae",
+  "resolved_identity": {
+    "agent_id": "agt-h10fmja5kp",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-8ypylzex49",
+    "task_id": "task-h1k7xruuhb"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "auto_extraction_enabled": false,
+  "agent_memory": {
+    "root": "/data/tdai-memory/profiles",
+    "hash_before": "c183fc8a4be722542b20244594c9c657de4e8f086ab39a77358ddcbf9114cb0d",
+    "hash_after": "9b02163f06f5194fa9df72d4663ae82eb9144f980958b36dfde84d527f202c57",
+    "hash_restored": "c183fc8a4be722542b20244594c9c657de4e8f086ab39a77358ddcbf9114cb0d",
+    "written_during_run": true,
+    "isolated": true,
+    "consumer_scope": {
+      "agent_id": "agt-h10fmja5kp",
+      "hash_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_after": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_restored": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files_before": 0,
+      "pre_run_cleared_files": 0,
+      "files_after": 0
+    }
+  },
+  "session": {
+    "cwd": "/private/tmp/topic4-sessions/20260911T190605Z-devloop-no-note.roUJ/session",
+    "codebuddy_project_dir": "/Users/vittoriocai/.codebuddy/projects/private-tmp-topic4-sessions-20260911T190605Z-devloop-no-note.roUJ-session",
+    "project_cache_files_before": 0,
+    "cwd_is_repository": false,
+    "sibling_dirs": 0,
+    "probe_cwd": "/private/tmp/topic4-probe",
+    "probe_cwd_in_repository": false
+  },
+  "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
+  "started_at": "2026-09-11T19:06:05Z",
+  "gate": {
+    "mode": null,
+    "hidden": [],
+    "baseline_frozen_at": null,
+    "mechanism": null,
+    "visibility_at_start": null,
+    "status_at_start": null,
+    "all_verified": null
+  },
+  "core_outcomes": null,
+  "verdict": "PASS",
+  "repo_task": {
+    "kind": "repo",
+    "source_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
+    "copy_commit": "8a8895ea3e8a5de93ffac2e1b03747a1365db0c7",
+    "start_tree": "ff9b7b5c046d734d4af86fde5c1b771163d60e16",
+    "frozen_at": "2026-09-11T19:06:15Z",
+    "test_files_at_start": 40,
+    "suite_at_start": {
+      "tests": 554,
+      "pass": 549,
+      "fail": 3,
+      "explained": true
+    },
+    "working_copy": "/private/tmp/topic4-sessions/20260911T190605Z-devloop-no-note.roUJ/session",
+    "final_diff": "final.diff",
+    "files_changed": [
+      "evaluation/attribution/collect-artifacts.mjs",
+      "evaluation/attribution/collect-artifacts.test.mjs"
+    ],
+    "commits_after_start": 0,
+    "acceptance_version": "repo-2026-09-11d"
+  },
+  "consumer": {
+    "agent_id": "agt-h10fmja5kp",
+    "name": "Topic4-Consumer-20260911T190605Z-devloop-no-note",
+    "owner_user_id": "usr-8ypylzex49",
+    "team_id": "team-5ezfoladb5",
+    "identity": "c",
+    "key_file": "deploy/global-images/.topic4-user-key-c",
+    "created_at": "2026-09-11T19:06:05Z",
+    "footprint_at_creation": {
+      "profile_files": 0,
+      "records_lines": 0,
+      "buffer_sessions": 0
+    },
+    "note": "one consumer per run; created with the consumer user's own key; the proxy's debugForceIdentity is switched to it by prepare.sh and recorded by run-once.sh",
+    "proxy_switch": {
+      "config": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml",
+      "sha256_before": "790cce56312ffdaff821abc1de72d835dac25b5d4212b0359dd4c1afe5dc4542",
+      "sha256_after": "77f112814acb8acbfd8148f2b9d2c5ae3d9a3729a41b0ab78f183af79e84a2cf",
+      "backup": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml.bak-20260911T190605Z-devloop-no-note",
+      "restore": "cp /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml.bak-20260911T190605Z-devloop-no-note /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
+      "verify": "docker logs tdai-proxy 2>&1 | grep -F '\u2192 initialized' | tail -1"
+    }
+  },
+  "memory_channel": {
+    "reads": 0,
+    "items": 0,
+    "residue": 0,
+    "borrowed_from_other_agents": 0,
+    "undated": 0,
+    "ok": true
+  },
+  "context_confounders": {
+    "profile_memory_present": false,
+    "l3_watch_hits": null,
+    "l3_sha1": null,
+    "non_pool_skills_in_listing": 0,
+    "non_pool_skill_reads": 0
+  },
+  "counts": {
+    "capture.jsonl": 46,
+    "tool-call-logs.jsonl": 37,
+    "candidate-log.jsonl": 24,
+    "events.jsonl": 1,
+    "early-events.jsonl": 6,
+    "used-events.jsonl": 0,
+    "outcome-events.jsonl": 0
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide"
+}

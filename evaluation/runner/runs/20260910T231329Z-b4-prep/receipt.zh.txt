@@ -1,0 +1,82 @@
+# 资产使用回执 — 运行 20260910T231329Z-b4-prep · 会话 8698690a · 任务 task-5e6xp4mrrw · 2026-09-10T23:14:46Z
+
+本次应用 5 项团队资产
+- Skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_01_fuAe0AiywNMrk4rqBDsi1718 (message 25); the call succeeded and the run's acceptance passed
+- Skill：eval-bridge-endpoint-a — its value bt-6r9pvuj8gf3 was used in tool call call_00_k1oyA0gHyiqc5LEwJm2d6121 (message 17)
+- Skill：deploy-lookup-note-b — 已取回——正文已读取，采用未成立
+- Skill：deploy-lookup-note-a — 已取回——正文已读取，采用未成立
+- Skill：tdc-312fad — 已取回——正文已读取，采用未成立
+
+效果状态
+- 1 项已通过相关测试验证
+- 1 项已采用，结果未关联到具体调用
+- 3 项仅作为背景参考（取回或提供），效果待验证
+
+✓ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 4 (score 0.36) for the query "bridge address convention skill server endpoint"
+    影响         its value bt-itaa73enpfq was used in tool call call_01_fuAe0AiywNMrk4rqBDsi1718 (message 25); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_01_fuAe0AiywNMrk4rqBDsi1718) 通过
+    证据
+      verify_result   20260910T231329Z-b4-prep:verify.mjs:call=call_01_fuAe0AiywNMrk4rqBDsi1718:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_01_fuAe0AiywNMrk4rqBDsi1718:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 25
+      tool_arg        request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 17
+      capture_line    8698690a-455e-41e9-9cc9-479909393086:call_01_UHQ4bCa2VtepRHzKHW2M3095  — skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+      tool_arg        request(e5a3bb0c-f1e5-4fa8-ba0c-f3130114e215):msg[20]:call_01_U7p5EI0myp0FilNNozxl1843:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 20
+      verify_result   20260910T231329Z-b4-prep:verify.mjs:call=call_00_k1oyA0gHyiqc5LEwJm2d6121:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+      verify_result   20260910T231329Z-b4-prep:verify.mjs:call=call_01_U7p5EI0myp0FilNNozxl1843:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+    闸门(Core) 待定 · 尚无跨人结果 · 复核优先级 高 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+    风险         闸门待定: cold start: no outcome recorded for this asset yet; pending by default
+    风险         复核优先级高: author usr-n68ea5ythq has 1 other asset(s) judged wrong within 30 days (skl-sZFb3KatWY6m); review priority: high
+    风险         非最新版: v4 was used; the pool's head is v3
+    风险         冲突: supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run
+
+● eval-bridge-endpoint-a  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已采用——硬证据，结果未关联到具体调用
+    为何提供       offered at rank 2 of 4 (score 0.36) for the query "bridge address convention skill server endpoint"
+    影响         its value bt-6r9pvuj8gf3 was used in tool call call_00_k1oyA0gHyiqc5LEwJm2d6121 (message 17)
+    作用点        tool_call
+    证据
+      tool_arg        request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments  — token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 17
+      capture_line    8698690a-455e-41e9-9cc9-479909393086:call_00_HNyPNyHtYtiXPs7SzXEA4320  — skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap
+      tool_arg        request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_00_uPII2ezTMD1xUoIgiCER3030:arguments  — token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 25
+      verify_result   20260910T231329Z-b4-prep:verify.mjs:call=call_00_k1oyA0gHyiqc5LEwJm2d6121:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+      verify_result   20260910T231329Z-b4-prep:verify.mjs:call=call_00_uPII2ezTMD1xUoIgiCER3030:ok=false  — the call it fed could not connect, but the address dialled (10.244.7.19:8096) is not the asset's value; the failure is not tied to its content (could not connect)
+    闸门(Core) 待定 · 尚无跨人结果 · 复核优先级 中 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+    风险         闸门待定: cold start: no outcome recorded for this asset yet; pending by default
+    风险         非最新版: v4 was used; the pool's head is v3
+    风险         冲突: supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run
+
+○ deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 3 of 4 (score 3.72e-6) for the query "bridge address convention skill server endpoint"
+    证据
+      capture_line    8698690a-455e-41e9-9cc9-479909393086:call_02_B1nBUo0gMUDJF0r5GWlh6663  — skill:get-by-name answered at message 16; carrying content; version 1; no service-side row recorded it — telemetry gap
+    闸门：无判定 · 作者尚无跨人验证
+
+○ deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 4 of 4 (score 3.72e-6) for the query "bridge address convention skill server endpoint"
+    证据
+      capture_line    8698690a-455e-41e9-9cc9-479909393086:call_01_AukxdRnRU3QNUyUTTCQQ0480  — skill:get-by-name answered at message 15; carrying content; version 1; no service-side row recorded it — telemetry gap
+    闸门：无判定 · 作者尚无跨人验证
+
+○ tdc-312fad  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 5 of 5 (score 1.45e-6) for the query "which bridge endpoint applies authoritative supersedes convention a or b"
+    证据
+      capture_line    8698690a-455e-41e9-9cc9-479909393086:call_00_WCCsjlIiBWXRW3xgDFpr8570  — skill:get-by-name answered at message 14; carrying content; version 1; no service-side row recorded it — telemetry gap
+    闸门：无判定 · 作者尚无跨人验证
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

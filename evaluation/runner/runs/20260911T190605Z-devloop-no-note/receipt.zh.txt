@@ -1,0 +1,44 @@
+# 资产使用回执 — 运行 20260911T190605Z-devloop-no-note · 会话 3453a35c · 任务 task-h1k7xruuhb · 2026-09-11T19:07:45Z
+
+本次应用 1 项团队资产
+- Skill：deploy-lookup-note-a — 已取回——正文已读取，采用未成立
+
+效果状态
+- 3 项仅作为背景参考（取回或提供），效果待验证
+
+○ deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 2 of 3 (score 1.33e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    证据
+      capture_line    3453a35c-5664-46ab-9b5f-3c7cfa2d43ae:call_01_hwEUPTS1T2Fmf6e7OayS8069  — skill:get-by-name answered at message 32; carrying content; version 1; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 1 of 3 (score 1.33e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 43 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 1; present in 43 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 3 (score 1.16e-6) for the query "parse exit status tool result exit_code collect artifacts"
+    证据
+      session_message capture:tool_result:skl-oBaDO5CceKnr  — carried in a tool result inside the request the model received; present in 43 captured turn(s)
+      bridge_row      capture:skill:search:skl-oBaDO5CceKnr  — skill:search returned 3 candidate(s), this one at rank 3; present in 43 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

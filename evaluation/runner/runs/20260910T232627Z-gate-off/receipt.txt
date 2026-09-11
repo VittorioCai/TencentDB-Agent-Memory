@@ -1,0 +1,60 @@
+# Receipt — run 20260910T232627Z-gate-off · session 6524654b · task task-5e6xp4mrrw · 2026-09-10T23:27:15Z
+
+applied 2 team asset(s)
+- skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+- skill：eval-bridge-endpoint-a — its value bt-6r9pvuj8gf3 was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+
+effect status
+- 2 used, outcome not tied to a call
+- 2 background only (fetched or provided), effect unverified
+
+● eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     used — hard evidence, outcome not tied to a call
+    why offered offered at rank 1 of 4 (score 0.36) for the query "bridge address convention skill search endpoint"
+    impact     its value bt-itaa73enpfq was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+    target     tool_call
+    evidence
+      tool_arg        request(180646b6-c85c-4c8d-8281-627ccac4a969):msg[10]:call_00_qitA9lGDUjEoxP4ADzJ69247:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 10
+      capture_line    6524654b-1928-4a45-9087-1e1fb98c126d:call_01_cY0bBTYBQgITuekWaVTV4481  — skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+      verify_result   20260910T232627Z-gate-off:verify.mjs:call=call_00_qitA9lGDUjEoxP4ADzJ69247:ok=false  — the call it fed dialled 127.0.0.1:47318 — the asset's own value (bt-itaa73enpfq) — and timed out, but an independent probe reached 127.0.0.1:47318 (harness probe at run time, 2026-09-10T23:27:14Z); the model's failure was environmental, not the content (timed out)
+    gate (Core) admit · evidence confidence 1 · rules gate-rules-2026-09-08f · not applied (gate off for this run)
+
+● eval-bridge-endpoint-a  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     used — hard evidence, outcome not tied to a call
+    why offered offered at rank 2 of 4 (score 0.36) for the query "bridge address convention skill search endpoint"
+    impact     its value bt-6r9pvuj8gf3 was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+    target     tool_call
+    evidence
+      tool_arg        request(180646b6-c85c-4c8d-8281-627ccac4a969):msg[10]:call_00_qitA9lGDUjEoxP4ADzJ69247:arguments  — token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 10
+      capture_line    6524654b-1928-4a45-9087-1e1fb98c126d:call_00_8Zgc7Kji1C6t8O8yeYgY2077  — skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap
+      verify_result   20260910T232627Z-gate-off:verify.mjs:call=call_00_qitA9lGDUjEoxP4ADzJ69247:ok=false  — the call it fed timed out, but the address dialled (127.0.0.1:47318) is not the asset's value; the failure is not tied to its content (timed out)
+    gate (Core) reject · evidence confidence 0 · rules gate-rules-2026-09-08f · not applied (gate off for this run)
+    risk       gate_rejected: rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-10T23:14:33.107Z by usr-4u07qc2kuj)
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 4 (score 5.36e-6) for the query "bridge address convention skill search endpoint"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 5 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 3; present in 5 captured turn(s)
+    gate: no decision · no cross-person validation yet
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 4 of 4 (score 5.36e-6) for the query "bridge address convention skill search endpoint"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 5 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 4; present in 5 captured turn(s)
+    gate: no decision · no cross-person validation yet
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260910T232627Z-gate-off.qCuR/20260910T232627Z-gate-off/receipt.json

@@ -1,0 +1,17 @@
+{
+  "added": [],
+  "removed": [],
+  "version_changed": [
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "frozen_version": 3,
+      "live_version": 4
+    },
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "frozen_version": 3,
+      "live_version": 4
+    }
+  ],
+  "drifted": true
+}

@@ -1,0 +1,44 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..48b441b 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,11 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy renders this section as `Exit Code:` (capital C); the lowercase
++  // spelling is only what hand-written fixtures use. Matching case-sensitively
++  // missed every real result, and a timeout whose stderr carried no curl prose
++  // then fell through to `ok: null` — read as "unreadable" instead of failed.
++  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };
+diff --git a/evaluation/tasks/bridge-addr/verify.test.mjs b/evaluation/tasks/bridge-addr/verify.test.mjs
+index a7e448e..4bb43e6 100644
+--- a/evaluation/tasks/bridge-addr/verify.test.mjs
++++ b/evaluation/tasks/bridge-addr/verify.test.mjs
+@@ -115,6 +115,22 @@ test("a timeout is read from the exit code, not from prose", () => {
+   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
+ });
+ 
++test("a CodeBuddy timeout is a failure, not an unreadable outcome", () => {
++  // The regression: CodeBuddy labels the section `Exit Code:` (capital C) and
++  // renders empty sections as `(empty)`. The parser matched only lowercase
++  // `Exit code:`, so a timeout whose stderr carried no curl prose — only the
++  // exit code — fell through to `ok: null` and scored the run ERROR instead of
++  // FAIL. The `Exit Code: 28` here is curl's own timeout status.
++  const body = "Stdout: (empty)\nStderr: (empty)\nExit Code: 28\nSignal: (none)";
++  const outcome = outcomeOfAttempt(`Command: curl x\n${body}`);
++  assert.equal(outcome.ok, false);
++  assert.match(outcome.why, /timed out/);
++
++  const r = verify(session([{ url: TARGET_BAD, body }]));
++  assert.equal(r.verdict, FAIL);
++  assert.equal(r.attempts[0].ok, false);
++});
++
+ test("a refused connection is a failure, not an unreadable outcome", () => {
+   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
+   assert.equal(r.ok, false);

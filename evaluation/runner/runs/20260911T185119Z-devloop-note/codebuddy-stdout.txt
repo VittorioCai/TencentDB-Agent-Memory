@@ -1,0 +1,27 @@
+[20:51:29] model custom-local:deepseek-v4-flash
+[20:51:29] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+**`evaluation/attribution/collect-artifacts.mjs:124`** — 一处修复:
+
+```diff
+-  const code = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  const code = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+```
+
+**新增** `evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs` — 回归测试:大写 `Exit Code: 28 / 52 / 0`、小写旧写法仍可用,以及一条经 `collectArtifacts` 的端到端断言(操作清单里的 `result.exit_code` 不再为 null)。
+
+## 为什么
+
+`outcomeOf` 用大小写敏感的 `Exit code:` 读取退出状态行。真实的 CodeBuddy 工具结果拼的是 `Exit Code:`(大写 C),所以正则匹配不到,`exit_code` 恒为 `null`;一个 stderr 被抑制的超时 curl(`Exit Code: 28`,结果里没有别的可读文本)因此和"什么都没返回"无法区分,下游按退出状态分类失败/超时的逻辑就失效了。
+
+动手前检索到团队 skill `eval-tool-result-exit-line`(batch-4 的 329 条工具结果),它确认了根因就是大写 `Exit Code:` 标签、并给出的修复方向就是"标签大小写不敏感、其余不变"。我把这条结论套用到本任务实际报障的 `collect-artifacts.mjs`(skill 举的 `bridge-addr/verify.mjs` 是同类缺陷的另一个实例,不在本次范围,未改)。大小写不敏感只在原有小写行为上"多接受"大写写法,旧行为不变。
+
+## 测试结果
+
+`node --test "evaluation/**/*.test.mjs"`:554 项,549 通过,3 项失败 —— 这 3 项是**改动前就存在**的失败(baseline 同样 3 项),原因是仓库里 `evaluation/gate0/artifacts/` 目录从未提交,测试读取 `gate0-threechannel-capture.jsonl` 报 ENOENT,与本次修复无关。新增的 2 项全部通过,无新增失败。
+
+（备注:同样的 `/(?:^|\n)Exit code:.../` 小写敏感写法还出现在 `evaluation/tasks/bridge-addr/verify.mjs:159` 和 `evaluation/tasks/bridge-name/verify.mjs:52`。它们不在本任务指定的文件范围内,按"只改必要的文件"未改动;如果需要我可以另行处理。)

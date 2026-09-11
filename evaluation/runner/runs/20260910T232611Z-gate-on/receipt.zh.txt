@@ -1,0 +1,44 @@
+# 资产使用回执 — 运行 20260910T232611Z-gate-on · 会话 84132b25 · 任务 task-5e6xp4mrrw · 2026-09-10T23:26:27Z
+
+本次应用 1 项团队资产
+- Skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_00_imhNSW9JlXPaBxA4lCAY1590 (message 6); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已通过相关测试验证
+- 2 项仅作为背景参考（取回或提供），效果待验证
+
+✓ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 3 (score 0.36) for the query "skill bridge address convention endpoint"
+    影响         its value bt-itaa73enpfq was used in tool call call_00_imhNSW9JlXPaBxA4lCAY1590 (message 6); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: dial 127.0.0.1:47318 (call_00_imhNSW9JlXPaBxA4lCAY1590) 通过
+    证据
+      verify_result   20260910T232611Z-gate-on:verify.mjs:call=call_00_imhNSW9JlXPaBxA4lCAY1590:ok=true  — the call it fed succeeded (code 0) and the run's acceptance passed (code 0)
+      tool_arg        request(a9a03e89-3e34-4e02-b6f5-674e43396639):msg[6]:call_00_imhNSW9JlXPaBxA4lCAY1590:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 5, before this operation at message 6
+      capture_line    84132b25-3b93-462b-94ff-fd70277e4d38:call_00_6oqwrdCsrP2domH9dqls4312  — skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap
+    闸门(Core) 准入 · 证据置信度 1 · 规则 gate-rules-2026-09-08f
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 2 of 3 (score 3.72e-6) for the query "skill bridge address convention endpoint"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 4 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 2; present in 4 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 3 (score 3.72e-6) for the query "skill bridge address convention endpoint"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 4 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 3 candidate(s), this one at rank 3; present in 4 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

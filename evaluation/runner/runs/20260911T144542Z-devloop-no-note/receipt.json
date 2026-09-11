@@ -1,0 +1,261 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "9e6f612d-7bcd-456b-8157-7a8dc2be3432",
+  "run_id": "20260911T144542Z-devloop-no-note",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-11T14:48:33Z",
+  "summary": {
+    "applied_count": 5,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 5,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "",
+      "name": "",
+      "asset_type": "skill",
+      "version": null,
+      "updated_at": null,
+      "category": "not_declared",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "",
+        "relation": "unknown"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:45:58.645:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:46:01.331:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:46:01.352:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 3 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author  has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T14:48:32.701Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:47:08.320:skill-bridge:get-by-name",
+          "detail": "request names skl-KPVMV2uB5rXM; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T14:48:32.701Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:40Z",
+      "category": "skill",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:47:08.348:skill-bridge:get-by-name",
+          "detail": "request names skl-MyrdnecjeYSb; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T14:48:32.701Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:29:25Z",
+      "category": "skill",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:47:08.266:skill-bridge:get-by-name",
+          "detail": "request names skl-oBaDO5CceKnr; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T14:48:32.701Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:29:25Z",
+      "category": "skill",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 22:47:08.299:skill-bridge:get-by-name",
+          "detail": "request names skl-sZFb3KatWY6m; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T14:48:32.701Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

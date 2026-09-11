@@ -1,0 +1,45 @@
+[15:58:11] model custom-local:deepseek-v4-flash
+[15:58:11] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Here's what I changed and why.
+
+## Root cause
+
+`outcomeOfAttempt` in `evaluation/tasks/bridge-addr/verify.mjs` read the process exit code with a **case-sensitive lowercase** pattern:
+
+```js
+/(?:^|\n)Exit code:\s*(\d+)/
+```
+
+But CodeBuddy renders its Bash tool result as `Exit Code: 28` — capital `C` (this is the real shape, also parsed that way in `evaluation/gate0/verify-capture.mjs:136`). So `exitCode` stayed `null`.
+
+That alone wouldn't always matter, because the next check falls back to stderr prose (`/Operation timed out|Connection timed out/`). But the scenario's assets instruct the model to use **`curl -sSk`** (`assets/consumer-skill-v2.md:20`, `v3.md:26`) — `-s` *without* `--show-error`, so curl suppresses its error text. A real timeout therefore arrives as:
+
+```
+Command: curl -sSk ... --max-time 75 ...
+Stdout: (empty)
+Stderr: (empty)
+Exit Code: 28
+Signal: (none)
+```
+
+With no exit code read and no prose to match, the attempt fell through to `{ ok: null, why: "outcome not readable" }` — and since it's the last attempt, `verify()` returned **ERROR instead of FAIL**. Timeouts that happened to use `-sS` kept their stderr text and were still caught, which is why only *some* timed-out calls were misrecorded.
+
+## Fix
+
+`evaluation/tasks/bridge-addr/verify.mjs:159` — made the exit-code pattern case-insensitive and tolerant of a negative value (matching real CodeBuddy output and the `(-?\d+)` parser in gate0):
+
+```js
+const exit = /(?:^|\n)Exit code:\s*(-?\d+)/i.exec(s);
+```
+
+## Regression test
+
+Added `"a timeout whose result carries no stderr prose is still a failure"` to `verify.test.mjs`. It feeds the real CodeBuddy shape (`Exit Code: 28`, empty Stdout/Stderr) and asserts `outcomeOfAttempt(...).ok === false / "timed out"`, and that `verify()` returns **FAIL**, not ERROR. I confirmed it fails without the fix (1 fail) and passes with it.
+
+## Test results
+
+- Target suites (`verify.test.mjs`, `verify.multi-target.test.mjs`, `bridge-name/verify.test.mjs`): **40/40 pass** (was 39; +1 new test).
+- Full `evaluation/**/*.test.mjs`: 553 tests, 548 pass, **3 pre-existing failures** unrelated to this change — all from the gitignored `evaluation/gate0/artifacts/*.jsonl` being absent in this snapshot (`extract-tokens.test.mjs`, `build-early-events.test.mjs`). I verified the same 3 fail on a clean checkout, so my change neither caused nor masked them.
+
+Only two files touched: `verify.mjs` (the fix) and `verify.test.mjs` (the regression test).

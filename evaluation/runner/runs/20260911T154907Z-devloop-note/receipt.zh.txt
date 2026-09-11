@@ -1,0 +1,74 @@
+# 资产使用回执 — 运行 20260911T154907Z-devloop-note · 会话 bdec6479 · 任务 task-5e6xp4mrrw · 2026-09-11T15:50:35Z
+
+本次应用 1 项团队资产
+- Skill：eval-tool-result-exit-line — used in tool call call_00_KPRFvvOTwslSEGh2Z7gk0929 (message 39); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已通过相关测试验证
+- 4 项仅作为背景参考（取回或提供），效果待验证
+
+✓ eval-tool-result-exit-line  v1  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 5 (score 3.98) for the query "CodeBuddy tool result timeout verification eval gate"
+    影响         used in tool call call_00_KPRFvvOTwslSEGh2Z7gk0929 (message 39); the call succeeded and the run's acceptance passed
+    作用点        test_action
+    相关测试 verify.mjs: attempt ? (call_00_KPRFvvOTwslSEGh2Z7gk0929) 通过
+    证据
+      verify_result   20260911T154907Z-devloop-note:verify.mjs:call=call_00_KPRFvvOTwslSEGh2Z7gk0929:ok=true  — the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy)
+      tool_arg        request(55bfa5d9-8bb1-4c32-82f1-837cb9fed906):msg[37]:call_00_RHmV4S1O5LcgS05ZIxxI6538:arguments  — token bt-imczk9p69e3; content of v1 entered the context at message 6, before this operation at message 37
+      capture_line    bdec6479-e531-4224-baed-be42c686b567:call_00_ks9IyVbyXuY7Qe8lnuOw8014  — skill:get-by-name answered at message 6; carrying content; version 1; no service-side row recorded it — telemetry gap
+      test_command    request(9572ac62-0815-46c5-87a6-c8d33597c020):msg[39]:call_00_KPRFvvOTwslSEGh2Z7gk0929:arguments  — token bt-imczk9p69e3; content of v1 entered the context at message 6, before this operation at message 39
+      diff_hunk       diff:evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs:1-33  — token bt-imczk9p69e3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch
+      verify_result   20260911T154907Z-devloop-note:verify.mjs:call=call_00_RHmV4S1O5LcgS05ZIxxI6538:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+    闸门 准入 · 作者置信度 0.583
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 2 of 5 (score 0.48) for the query "CodeBuddy tool result timeout verification eval gate"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 5 candidate(s), this one at rank 2; present in 21 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 5 (score 0.48) for the query "CodeBuddy tool result timeout verification eval gate"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 5 candidate(s), this one at rank 3; present in 21 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· tdc-312fad  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 5 of 5 (score 1.87e-6) for the query "CodeBuddy tool result timeout verification eval gate"
+    证据
+      session_message capture:tool_result:skl-MyrdnecjeYSb  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-MyrdnecjeYSb  — skill:search returned 5 candidate(s), this one at rank 5; present in 21 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 4 of 5 (score 0.41) for the query "CodeBuddy tool result timeout verification eval gate"
+    证据
+      session_message capture:tool_result:skl-oBaDO5CceKnr  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-oBaDO5CceKnr  — skill:search returned 5 candidate(s), this one at rank 4; present in 21 captured turn(s)
+    闸门 待定 · 作者置信度 0.583
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

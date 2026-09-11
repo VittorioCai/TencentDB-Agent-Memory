@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-09-10T23:26:25Z",
+  "source": "harness probe at run time",
+  "timeout_ms": 5000,
+  "targets": {
+    "127.0.0.1:47318": {
+      "ok": true,
+      "why": "tcp connect ok",
+      "elapsed_ms": 1,
+      "checked_at": "2026-09-10T23:26:25Z",
+      "source": "harness probe at run time",
+      "timeout_ms": 5000
+    }
+  }
+}

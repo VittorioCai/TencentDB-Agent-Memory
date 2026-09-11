@@ -1,0 +1,9 @@
+[17:50:34] reading 2 baseline asset(s) …
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=admit confidence=1
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=failed     visibility=team     gate=reject confidence=0
+posted=1 trusted=0 skipped=1
+WARNING: untrusted rows: evt-ddc9d2404f13: no content_hash (the asset carries one)
+[ok] 20260911T154907Z-devloop-note: outcomes recorded in Core → /private/tmp/topic4-runs/20260911T154907Z-devloop-note.uS4B/20260911T154907Z-devloop-note/core-outcomes.json
+[17:50:35] after:
+  skl-oBaDO5CceKnr  eval-bridge-endpoint-b     status=approved   visibility=team     gate=admit confidence=1
+  skl-sZFb3KatWY6m  eval-bridge-endpoint-a     status=failed     visibility=team     gate=reject confidence=0

@@ -1,0 +1,11 @@
+# Receipt — run 20260911T140806Z-devloop-no-note · session b5b58925 · task task-5e6xp4mrrw · 2026-09-11T14:12:26Z
+
+applied 0 team asset(s)
+
+effect status
+- no team assets appeared in this run
+
+no team assets appeared in this run
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T140806Z-devloop-no-note.MN6i/20260911T140806Z-devloop-no-note/receipt.json

@@ -1,0 +1,8 @@
+[01:29:23] ClickHouse http://127.0.0.1:8123  db=context_proxy  window=last 30 MINUTE
+[ok] 222 row(s) -> /private/tmp/topic4-runs/20260910T232835Z-gate-off.IryB/20260910T232835Z-gate-off/tool-call-logs-all.jsonl
+[01:29:23] distribution:
+   ┌─kind─────────┬─bridge_source─┬───n─┬─ok_2xx─┐
+1. │ bridge_call  │ skill-bridge  │ 100 │     95 │
+2. │ bridge_call  │ memory-bridge │  11 │     11 │
+3. │ model_intent │               │ 111 │      0 │
+   └──────────────┴───────────────┴─────┴────────┘

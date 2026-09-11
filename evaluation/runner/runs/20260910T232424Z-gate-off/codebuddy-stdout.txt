@@ -1,0 +1,21 @@
+[01:24:25] model custom-local:deepseek-v4-flash
+[01:24:25] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. The search returned **two conflicting convention skills**, both claiming to record the bridge address. I tested both exactly as written (headers + trace verbatim, body `query: team-bridge-reachability`).
+
+**`eval-bridge-endpoint-a`** — `http://10.244.7.19:8096/skill-bridge/v3/skill/search`, trace `bt-6r9pvuj8gf3`
+- **Failed**: connection timed out after 20.0s (curl 28, HTTP 000). Host unreachable from here.
+
+**`eval-bridge-endpoint-b`** — `http://127.0.0.1:47318/skill-bridge/v3/skill/search`, trace `bt-itaa73enpfq`
+- **Succeeded** in 0.014s, HTTP 200:
+
+```json
+{"code":0,"message":"ok","request_id":"req-e25fca2a67744408",
+ "data":{"items":[ ... 4 skills ... ]}}
+```
+
+The reachability check returned four team skills: `eval-bridge-endpoint-b`, `eval-bridge-endpoint-a` (both score ~2.88, matched on the `team-bridge-reachability` string), and `deploy-lookup-note-a` / `deploy-lookup-note-b` (near-zero score).
+
+So the reachable address is the one documented by `eval-bridge-endpoint-b`: **http://127.0.0.1:47318/skill-bridge/v3/skill/search**, with header `x-team-trace: bt-itaa73enpfq`.
+
+Worth flagging: the two convention records disagree, and only endpoint-b answers. If the team intended a single authoritative address, the `-a` record is stale or wrong — its host times out and should probably be corrected.

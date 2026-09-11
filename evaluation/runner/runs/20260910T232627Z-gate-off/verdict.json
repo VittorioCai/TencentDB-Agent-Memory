@@ -1,0 +1,28 @@
+{
+  "verdict": "FAIL",
+  "reason": "the final attempt at 127.0.0.1:47318 failed (timed out) despite 0 earlier success(es)",
+  "attempts": [
+    {
+      "session_key": "6524654b-1928-4a45-9087-1e1fb98c126d",
+      "call_id": "call_00_PKZFbXgRf8oWADa0Z7uM9271",
+      "message_index": 7,
+      "host": "127.0.0.1",
+      "port": "8096",
+      "value": "",
+      "endpoint": "skill:search",
+      "ok": null,
+      "why": "outcome not readable"
+    },
+    {
+      "session_key": "6524654b-1928-4a45-9087-1e1fb98c126d",
+      "call_id": "call_00_qitA9lGDUjEoxP4ADzJ69247",
+      "message_index": 10,
+      "host": "127.0.0.1",
+      "port": "47318",
+      "value": "bt-itaa73enpfq",
+      "endpoint": "skill:search",
+      "ok": false,
+      "why": "timed out"
+    }
+  ]
+}

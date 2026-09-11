@@ -1,0 +1,23 @@
+# Receipt — run 20260911T184529Z-devloop-note · session a30fed59 · task task-5e6xp4mrrw · 2026-09-11T18:46:34Z
+
+applied 1 team asset(s)
+- not declared by the asset： — fetched — body retrieved; use not established
+
+effect status
+- 1 background only (fetched or provided), effect unverified
+
+○   v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-12 02:45:45.250:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-12 02:45:45.268:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-12 02:45:46.947:skill-bridge:get-by-name  — the capture never saw this call
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 3 time(s) without any evidence of use
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T184529Z-devloop-note.k1Qz/20260911T184529Z-devloop-note/receipt.json

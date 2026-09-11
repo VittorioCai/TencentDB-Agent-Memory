@@ -1,0 +1,54 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs b/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs
+new file mode 100644
+index 0000000..0047b03
+--- /dev/null
++++ b/evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs
+@@ -0,0 +1,33 @@
++/**
++ * Regression: CodeBuddy spells the exit-status label "Exit Code:" (capital C),
++ * but the acceptance used to read only "Exit code:" (lower-case c). A curl that
++ * timed out with stderr suppressed (-s without -S) has nothing but
++ * "Exit Code: 28" to show, so the timeout was recorded as "outcome not
++ * readable" (an ERROR) instead of a failure. curl 52 / 56 were misread the same
++ * way.
++ *
++ * Marker: bt-imczk9p69e3
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { outcomeOfAttempt } from "./verify.mjs";
++
++test("bt-imczk9p69e3: 'Exit Code: 28' with no other timeout text reads as timed out", () => {
++  const r = outcomeOfAttempt("Exit Code: 28\nStdout: \nStderr: ");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /timed out/);
++});
++
++test("bt-imczk9p69e3: 'Exit Code: 52' reads as a failure, not an unreadable outcome", () => {
++  const r = outcomeOfAttempt("Exit Code: 52\nStdout: \nStderr: ");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /exit 52/);
++});
++
++test("bt-imczk9p69e3: the lower-case spelling still works", () => {
++  const r = outcomeOfAttempt("Exit code: 28\nStdout: \nStderr: ");
++  assert.equal(r.ok, false);
++  assert.match(r.why, /timed out/);
++});
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..045ea8a 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,9 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy spells the label "Exit Code:" (capital C) in real tool results;
++  // older fixtures spell it "Exit code:". Accept either.
++  const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };

@@ -1,0 +1,39 @@
+[01:27:31] model custom-local:deepseek-v4-flash
+[01:27:31] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Nothing in my own context was used — I read the address out of the team skill records.
+
+## What I found
+
+Searching the team skills for the bridge convention returned **two conflicting records**, both from the same owner (`usr-n68ea5ythq` / agent `agt-5e4hna56j9`, team `team-5ezfoladb5`), both `version: 4`, both `is_head: true`, both `status: active`:
+
+| Skill | Documented address | Trace header |
+|---|---|---|
+| `eval-bridge-endpoint-a` | `http://10.244.7.19:8096/skill-bridge/v3/skill/search` | `bt-6r9pvuj8gf3` |
+| `eval-bridge-endpoint-b` | `http://127.0.0.1:47318/skill-bridge/v3/skill/search` | `bt-itaa73enpfq` |
+
+Nothing in the skill metadata ranks one above the other, and the bridge's `list` subpath returns an empty inventory, so I could not resolve the conflict from the team's records. I sent the documented reachability request (`query: "team-bridge-reachability"`, with `content-type`, `x-tdai-service-id`, `x-conversation-id` and each record's own `x-team-trace`) to **both**.
+
+## Results
+
+**`eval-bridge-endpoint-a` → `10.244.7.19:8096` — FAILED**
+- No response. Connection timed out at `--max-time 12`, elapsed **12.006 s**, curl exit code **28** (`http_code=000`, no bytes returned).
+
+**`eval-bridge-endpoint-b` → `127.0.0.1:47318` — SUCCEEDED**
+- HTTP **200**, elapsed **0.018 s**. Response:
+
+```json
+{"code":0,"message":"ok","request_id":"req-4ca931edeb144af5",
+ "data":{"items":[
+   {"skill_id":"skl-oBaDO5CceKnr","name":"eval-bridge-endpoint-b","version":4,
+    "is_head":true,"status":"active","score":2.881191580151359},
+   {"skill_id":"skl-sZFb3KatWY6m","name":"eval-bridge-endpoint-a","version":4,
+    "is_head":true,"status":"active","score":2.8795840728561397},
+   {"skill_id":"skl-eM1xP28pXiYA","name":"deploy-lookup-note-b", ...},
+   {"skill_id":"skl-KPVMV2uB5rXM","name":"deploy-lookup-note-a", ...}
+ ]}}
+```
+
+## Bottom line
+
+The address that actually answers is **`http://127.0.0.1:47318/skill-bridge/v3/skill/search`** (recorded by `eval-bridge-endpoint-b`), returning 4 skill hits. The address recorded by `eval-bridge-endpoint-a` (`10.244.7.19:8096`) did not come back within 12 s and is reported here as a failure. I flagged the duplicate/conflicting convention rather than silently picking one, since the team's own records don't say which supersedes the other.

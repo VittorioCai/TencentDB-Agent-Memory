@@ -1,0 +1,27 @@
+# 资产使用回执 — 运行 20260911T185927Z-devloop-note · 会话 3275bd93 · 任务 task-h1k7xruuhb · 2026-09-11T19:01:07Z
+
+本次应用 1 项团队资产
+- Skill：eval-tool-result-exit-line — its value bt-78yk9r3bfrm was used in tool call call_00_Lf2EC7uc1RWloW24iwxR5255 (message 33); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已通过相关测试验证
+
+✓ eval-tool-result-exit-line  v2  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 1 (score 2.02) for the query "CodeBuddy 工具结果 退出状态 exit_code 解析 capture 归因"
+    影响         its value bt-78yk9r3bfrm was used in tool call call_00_Lf2EC7uc1RWloW24iwxR5255 (message 33); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: attempt ? (call_00_Lf2EC7uc1RWloW24iwxR5255) 通过
+    证据
+      verify_result   20260911T185927Z-devloop-note:verify.mjs:call=call_00_Lf2EC7uc1RWloW24iwxR5255:ok=true  — the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy)
+      tool_arg        request(528b0aae-83ff-4d85-b023-6795dbe8a8cc):msg[33]:call_00_Lf2EC7uc1RWloW24iwxR5255:arguments  — token bt-78yk9r3bfrm; content of v2 entered the context at message 9, before this operation at message 33
+      capture_line    3275bd93-af94-4799-80d5-d23a79936d4d:call_00_O6KP7HF9QwRuexVwTRtv7099  — skill:get-by-name answered at message 9; carrying content; version 2; no service-side row recorded it — telemetry gap
+      tool_arg        request(30e5c32d-64b1-4d0a-af39-be24ed18c310):msg[49]:call_00_3x5sdtewNgqBrA4rCkW45599:arguments  — token bt-78yk9r3bfrm; content of v2 entered the context at message 9, before this operation at message 49
+      tool_arg        request(b3bfcfed-1fe4-4306-912d-4620b2b123c9):msg[19]:call_00_OgGgYeA1ehhEcZpbYbIY5025:arguments  — token bt-78yk9r3bfrm; the token appears in a search command — the model was looking for it, not using it
+      diff_hunk       diff:evaluation/attribution/collect-artifacts.test.mjs:1-58  — token bt-78yk9r3bfrm; the token first reached the model at message 9 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch
+      verify_result   20260911T185927Z-devloop-note:verify.mjs:call=call_00_3x5sdtewNgqBrA4rCkW45599:ok=n/a  — the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it
+    闸门 准入 · 作者置信度 0.583
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

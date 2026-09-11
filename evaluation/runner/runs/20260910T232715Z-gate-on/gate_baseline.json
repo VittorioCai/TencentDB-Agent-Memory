@@ -1,0 +1,1163 @@
+{
+  "schema_version": "gate-baseline-v1",
+  "frozen_at": "2026-09-10T23:20:45Z",
+  "pool_snapshot_at": "2026-09-10T23:16:01Z",
+  "team_id": "team-5ezfoladb5",
+  "source_runs": [
+    {
+      "run_id": "20260910T231329Z-b4-prep",
+      "label": "b4-prep",
+      "verdict": "PASS",
+      "started_at": "2026-09-10T23:13:29Z",
+      "outcome_source": "outcome-events.jsonl",
+      "event_ids": [
+        "evt-32f22b56db6e",
+        "evt-aa259ade7864",
+        "evt-5519bbf07790",
+        "evt-d260a01c159c",
+        "evt-a1135229e814",
+        "evt-3aa2079212d6",
+        "evt-030b41d1c8fb",
+        "evt-bca788f2203a",
+        "evt-c05bd7d427a2",
+        "evt-be64334e8496",
+        "evt-7b97530f461e",
+        "evt-5f7f87f33b2b",
+        "evt-fce0a0d5d018",
+        "evt-f7ed33b8639b",
+        "evt-28866c7c84dc"
+      ]
+    },
+    {
+      "run_id": "20260910T231900Z-b4-prep",
+      "label": "b4-prep",
+      "verdict": "PASS",
+      "started_at": "2026-09-10T23:19:00Z",
+      "outcome_source": "outcome-events.jsonl",
+      "event_ids": [
+        "evt-12193fdc7b18",
+        "evt-16e9801cd18f",
+        "evt-1c148924ace0",
+        "evt-c5bc960e7ca4",
+        "evt-73142f8ee60c",
+        "evt-9031e975e5b9"
+      ]
+    }
+  ],
+  "event_count": 21,
+  "by_state": {
+    "fetched": 7,
+    "used": 7,
+    "needs_review": 3,
+    "corrected": 2,
+    "validated": 2
+  },
+  "assets": {
+    "skl-oBaDO5CceKnr": {
+      "name": "eval-bridge-endpoint-b",
+      "version": 4,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "baseline_visibility": "team",
+      "visibility_source": "enter-pool.sh contract (not read at freeze time)"
+    },
+    "skl-sZFb3KatWY6m": {
+      "name": "eval-bridge-endpoint-a",
+      "version": 4,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "baseline_visibility": "team",
+      "visibility_source": "enter-pool.sh contract (not read at freeze time)"
+    }
+  },
+  "decisions": [
+    {
+      "schema_version": "gate-decision-v1",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "decided_at": "2026-09-10T23:20:45Z",
+      "decision": "admit",
+      "reasons": [
+        "rule admit: cross_user validated >= 1 (2 record(s)) and no corrected",
+        "reported signals: 1 distinct task(s), 1 distinct consumer(s); neither is a threshold at this stage",
+        "author confidence 0.5 (2 validated, 2 corrected, prior 0.5: neutral 0.5: no other author has cross-person outcomes)"
+      ],
+      "evidence_refs": [
+        {
+          "event_id": "evt-28866c7c84dc",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-be64334e8496",
+          "state": "used",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-9031e975e5b9",
+          "state": "validated",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-c5bc960e7ca4",
+          "state": "used",
+          "relation": "cross_user"
+        }
+      ],
+      "signals": {
+        "online": {
+          "fetched": 2,
+          "used_hard": 4,
+          "used_soft": 0,
+          "validated": 2,
+          "corrected": 0,
+          "distinct_actors": 1,
+          "distinct_tasks": 1,
+          "cross_user_validated": 2
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "agent_id": "agt-5e4hna56j9",
+          "confidence": 0.5,
+          "computable": true,
+          "distinct_tasks": 1
+        },
+        "offline": {
+          "retrieval_rank_mean": null,
+          "has_concrete_values": null,
+          "duplicate_of": null
+        }
+      },
+      "is_decoy": false,
+      "expected_decision": null
+    },
+    {
+      "schema_version": "gate-decision-v1",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "decided_at": "2026-09-10T23:20:45Z",
+      "decision": "reject",
+      "reasons": [
+        "rule reject: a corrected record exists (reason=wrong, 2 record(s)) — the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and could not connect; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:14:39Z), so the content explains the failure (could not connect)",
+        "reported signals: task ids not recorded on the events, so generalisation is not measurable here, 1 distinct consumer(s); neither is a threshold at this stage",
+        "author confidence 0.5 (2 validated, 2 corrected, prior 0.5: neutral 0.5: no other author has cross-person outcomes)"
+      ],
+      "evidence_refs": [
+        {
+          "event_id": "evt-5f7f87f33b2b",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-030b41d1c8fb",
+          "state": "used",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-73142f8ee60c",
+          "state": "corrected",
+          "relation": "cross_user"
+        },
+        {
+          "event_id": "evt-1c148924ace0",
+          "state": "used",
+          "relation": "cross_user"
+        }
+      ],
+      "signals": {
+        "online": {
+          "fetched": 2,
+          "used_hard": 3,
+          "used_soft": 0,
+          "validated": 0,
+          "corrected": 2,
+          "distinct_actors": 1,
+          "distinct_tasks": 0,
+          "cross_user_validated": 0
+        },
+        "author": {
+          "user_id": "usr-n68ea5ythq",
+          "agent_id": "agt-5e4hna56j9",
+          "confidence": 0.5,
+          "computable": true,
+          "distinct_tasks": 1
+        },
+        "offline": {
+          "retrieval_rank_mean": null,
+          "has_concrete_values": null,
+          "duplicate_of": null
+        }
+      },
+      "is_decoy": false,
+      "expected_decision": null
+    }
+  ],
+  "events": [
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-32f22b56db6e",
+      "state": "fetched",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "asset_type": "skill",
+      "asset_name": "deploy-lookup-note-a",
+      "asset_version": 1,
+      "asset_created_at": "2026-09-07T11:01:27Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 15,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_01_AukxdRnRU3QNUyUTTCQQ0480",
+          "detail": "skill:get-by-name answered at message 15; carrying content; version 1; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-aa259ade7864",
+      "state": "fetched",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-eM1xP28pXiYA",
+      "asset_type": "skill",
+      "asset_name": "deploy-lookup-note-b",
+      "asset_version": 1,
+      "asset_created_at": "2026-09-07T11:01:27Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 16,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_02_B1nBUo0gMUDJF0r5GWlh6663",
+          "detail": "skill:get-by-name answered at message 16; carrying content; version 1; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-5519bbf07790",
+      "state": "fetched",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 6,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_01_UHQ4bCa2VtepRHzKHW2M3095",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-d260a01c159c",
+      "state": "fetched",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 5,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_00_HNyPNyHtYtiXPs7SzXEA4320",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-a1135229e814",
+      "state": "fetched",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-MyrdnecjeYSb",
+      "asset_type": "skill",
+      "asset_name": "tdc-312fad",
+      "asset_version": 1,
+      "asset_created_at": "2026-09-07T11:01:27Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-8ypylzex49",
+      "producer_agent_id": "",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 14,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_00_WCCsjlIiBWXRW3xgDFpr8570",
+          "detail": "skill:get-by-name answered at message 14; carrying content; version 1; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-3aa2079212d6",
+      "state": "used",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:00.509Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 17"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_00_HNyPNyHtYtiXPs7SzXEA4320",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-d260a01c159c"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-030b41d1c8fb",
+      "state": "used",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:33.107Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_00_uPII2ezTMD1xUoIgiCER3030:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_00_uPII2ezTMD1xUoIgiCER3030:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 25"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_00_HNyPNyHtYtiXPs7SzXEA4320",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-d260a01c159c"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-bca788f2203a",
+      "state": "used",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:00.509Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 17"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_01_UHQ4bCa2VtepRHzKHW2M3095",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-5519bbf07790"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-c05bd7d427a2",
+      "state": "used",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:12.862Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(e5a3bb0c-f1e5-4fa8-ba0c-f3130114e215):msg[20]:call_01_U7p5EI0myp0FilNNozxl1843:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(e5a3bb0c-f1e5-4fa8-ba0c-f3130114e215):msg[20]:call_01_U7p5EI0myp0FilNNozxl1843:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 20"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_01_UHQ4bCa2VtepRHzKHW2M3095",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-5519bbf07790"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-be64334e8496",
+      "state": "used",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:33.107Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_01_fuAe0AiywNMrk4rqBDsi1718:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_01_fuAe0AiywNMrk4rqBDsi1718:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 25"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "8698690a-455e-41e9-9cc9-479909393086:call_01_UHQ4bCa2VtepRHzKHW2M3095",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-5519bbf07790"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-7b97530f461e",
+      "state": "needs_review",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:00.509Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231329Z-b4-prep:verify.mjs:call=call_00_k1oyA0gHyiqc5LEwJm2d6121:ok=n/a",
+          "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 17"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-3aa2079212d6"
+      ],
+      "metadata": {
+        "call_id": "call_00_k1oyA0gHyiqc5LEwJm2d6121",
+        "attempt": null,
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-5f7f87f33b2b",
+      "state": "corrected",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:33.107Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_00_uPII2ezTMD1xUoIgiCER3030:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231329Z-b4-prep:verify.mjs:call=call_00_uPII2ezTMD1xUoIgiCER3030:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and could not connect; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:14:39Z), so the content explains the failure (could not connect)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_00_uPII2ezTMD1xUoIgiCER3030:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 25"
+        }
+      ],
+      "corrected_reason": "wrong",
+      "parent_event_ids": [
+        "evt-030b41d1c8fb"
+      ],
+      "metadata": {
+        "call_id": "call_00_uPII2ezTMD1xUoIgiCER3030",
+        "attempt": {
+          "host": "10.244.7.19",
+          "port": "8096",
+          "ok": false,
+          "why": "could not connect",
+          "message_index": 25
+        },
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-fce0a0d5d018",
+      "state": "needs_review",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:00.509Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231329Z-b4-prep:verify.mjs:call=call_00_k1oyA0gHyiqc5LEwJm2d6121:ok=n/a",
+          "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(878133b6-3dd8-48ce-894a-6b2a8cff9e4d):msg[17]:call_00_k1oyA0gHyiqc5LEwJm2d6121:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 17"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-bca788f2203a"
+      ],
+      "metadata": {
+        "call_id": "call_00_k1oyA0gHyiqc5LEwJm2d6121",
+        "attempt": null,
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-f7ed33b8639b",
+      "state": "needs_review",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:12.862Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(e5a3bb0c-f1e5-4fa8-ba0c-f3130114e215):msg[20]:call_01_U7p5EI0myp0FilNNozxl1843:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231329Z-b4-prep:verify.mjs:call=call_01_U7p5EI0myp0FilNNozxl1843:ok=n/a",
+          "detail": "the token appeared in an operation that was not an acceptance attempt, so no outcome can be tied to it"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(e5a3bb0c-f1e5-4fa8-ba0c-f3130114e215):msg[20]:call_01_U7p5EI0myp0FilNNozxl1843:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 20"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-c05bd7d427a2"
+      ],
+      "metadata": {
+        "call_id": "call_01_U7p5EI0myp0FilNNozxl1843",
+        "attempt": null,
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-28866c7c84dc",
+      "state": "validated",
+      "session_key": "8698690a-455e-41e9-9cc9-479909393086",
+      "run_id": "20260910T231329Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:14:33.107Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T14:57:47Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_01_fuAe0AiywNMrk4rqBDsi1718:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231329Z-b4-prep:verify.mjs:call=call_01_fuAe0AiywNMrk4rqBDsi1718:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(353e788a-ba82-43a6-8f3b-4f049503502c):msg[25]:call_01_fuAe0AiywNMrk4rqBDsi1718:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 25"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-be64334e8496"
+      ],
+      "metadata": {
+        "call_id": "call_01_fuAe0AiywNMrk4rqBDsi1718",
+        "attempt": {
+          "host": "127.0.0.1",
+          "port": "47318",
+          "ok": true,
+          "why": "code 0",
+          "message_index": 25
+        },
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-12193fdc7b18",
+      "state": "fetched",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 6,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_01_3ib183pgRwNeYDv4emFH2011",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-16e9801cd18f",
+      "state": "fetched",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": null,
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "content_delivered": true,
+      "context_entry_index": 5,
+      "evidence_tier": null,
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": null,
+      "target_ref": null,
+      "proof_refs": [
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_00_MjG0K6TmXJwR5OsPrOZd6869",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": []
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-1c148924ace0",
+      "state": "used",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:19:31.333Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_00_FI2aJ4XoAaYrmwQX9Lcy1653:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_00_FI2aJ4XoAaYrmwQX9Lcy1653:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 14"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_00_MjG0K6TmXJwR5OsPrOZd6869",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-16e9801cd18f"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-c5bc960e7ca4",
+      "state": "used",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:19:31.333Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_01_eSOItk96r0dvlCjonfaW0576:arguments",
+      "proof_refs": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_01_eSOItk96r0dvlCjonfaW0576:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 14"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_01_3ib183pgRwNeYDv4emFH2011",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-12193fdc7b18"
+      ]
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-73142f8ee60c",
+      "state": "corrected",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:19:31.333Z",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-a",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_00_FI2aJ4XoAaYrmwQX9Lcy1653:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231900Z-b4-prep:verify.mjs:call=call_00_FI2aJ4XoAaYrmwQX9Lcy1653:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and could not connect; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:19:37Z), so the content explains the failure (could not connect)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_00_FI2aJ4XoAaYrmwQX9Lcy1653:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 14"
+        }
+      ],
+      "corrected_reason": "wrong",
+      "parent_event_ids": [
+        "evt-1c148924ace0"
+      ],
+      "metadata": {
+        "call_id": "call_00_FI2aJ4XoAaYrmwQX9Lcy1653",
+        "attempt": {
+          "host": "10.244.7.19",
+          "port": "8096",
+          "ok": false,
+          "why": "could not connect",
+          "message_index": 14
+        },
+        "run_verdict": "PASS"
+      }
+    },
+    {
+      "schema_version": "provenance-v1",
+      "event_id": "evt-9031e975e5b9",
+      "state": "validated",
+      "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+      "run_id": "20260910T231900Z-b4-prep",
+      "task_id": "task-5e6xp4mrrw",
+      "occurred_at": "2026-09-10T23:19:31.333Z",
+      "asset_id": "skl-oBaDO5CceKnr",
+      "asset_type": "skill",
+      "asset_name": "eval-bridge-endpoint-b",
+      "asset_version": 4,
+      "asset_created_at": "2026-09-05T10:14:40Z",
+      "pool_snapshot_at": "2026-09-10T23:16:01Z",
+      "excluded_by_snapshot": false,
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "actor_user_id": "usr-4u07qc2kuj",
+      "actor_agent_id": "agt-giawngxum4",
+      "relation": "cross_user",
+      "observation": "wire_only",
+      "evidence_tier": "hard",
+      "bridge_source": "",
+      "executed_endpoint": "skill:get-by-name",
+      "upstream_status": 0,
+      "target_type": "tool_call",
+      "target_ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_01_eSOItk96r0dvlCjonfaW0576:arguments",
+      "proof_refs": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231900Z-b4-prep:verify.mjs:call=call_01_eSOItk96r0dvlCjonfaW0576:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_01_eSOItk96r0dvlCjonfaW0576:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 14"
+        }
+      ],
+      "corrected_reason": null,
+      "parent_event_ids": [
+        "evt-c5bc960e7ca4"
+      ],
+      "metadata": {
+        "call_id": "call_01_eSOItk96r0dvlCjonfaW0576",
+        "attempt": {
+          "host": "127.0.0.1",
+          "port": "47318",
+          "ok": true,
+          "why": "code 0",
+          "message_index": 14
+        },
+        "run_verdict": "PASS"
+      }
+    }
+  ],
+  "note": "Batch 4 baseline. Evidence from two gate-off preparation runs labelled b4-prep (the evidence base; not comparison samples). Same rules as batch 3; new tokens (trace header, sha256 only in the repo), consumer agt-giawngxum4, assets at v4.",
+  "batch": 4,
+  "rules_version": "gate-rules-2026-09-08f",
+  "decisions_at_freeze": {
+    "skl-oBaDO5CceKnr": {
+      "decision": "admit",
+      "status": "approved",
+      "rules_version": "gate-rules-2026-09-08f"
+    },
+    "skl-sZFb3KatWY6m": {
+      "decision": "reject",
+      "status": "failed",
+      "rules_version": "gate-rules-2026-09-08f"
+    }
+  },
+  "scope_note": "assets/decisions 收窄到场景两条;reset/apply 只改这两条。其余团队资产不在本实验里。"
+}

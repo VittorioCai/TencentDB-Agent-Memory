@@ -1,0 +1,46 @@
+# Receipt — run 20260911T144347Z-devloop-no-note · session c2525241 · task task-5e6xp4mrrw · 2026-09-11T14:45:42Z
+
+applied 1 team asset(s)
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 3 (score 0.41) for the query "CodeBuddy tool result timeout unreadable evaluation verify"
+    evidence
+      capture_line    c2525241-ba87-4736-85cc-1a67b7ffaf6d:call_01_of7PYeryAbAhVb8vgzQf3541  — skill:get-by-name answered at message 10; carrying content; version 4; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 1 of 3 (score 0.48) for the query "CodeBuddy tool result timeout unreadable evaluation verify"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 1; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (cross_user)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 2 of 3 (score 0.48) for the query "CodeBuddy tool result timeout unreadable evaluation verify"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 3 candidate(s), this one at rank 2; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260911T144347Z-devloop-no-note.07Wt/20260911T144347Z-devloop-no-note/receipt.json

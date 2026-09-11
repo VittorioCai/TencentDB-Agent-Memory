@@ -1,0 +1,49 @@
+diff --git a/evaluation/tasks/bridge-addr/verify.mjs b/evaluation/tasks/bridge-addr/verify.mjs
+index 2a2d8d1..20b018c 100644
+--- a/evaluation/tasks/bridge-addr/verify.mjs
++++ b/evaluation/tasks/bridge-addr/verify.mjs
+@@ -156,7 +156,12 @@ export function outcomeOfAttempt(resultText) {
+   const { output } = splitCommandAndOutput(resultText);
+   const s = String(resultText ?? "");
+ 
+-  const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
++  // CodeBuddy's Bash tool writes the exit line as `Exit Code:` (capital C; see
++  // gate0/verify-capture.mjs). Match case-insensitively: a case-sensitive
++  // lowercase pattern silently reads no exit code at all, so a curl (28) whose
++  // stderr lacks the exact "operation/connection timed out" phrasing fell
++  // through to "outcome not readable" instead of FAIL.
++  const exit = /(?:^|\n)Exit Code:\s*(\d+)/i.exec(s);
+   const exitCode = exit ? Number(exit[1]) : null;
+   if (exitCode === 28 || /Operation timed out|Connection timed out/.test(s)) {
+     return { ok: false, why: "timed out" };
+diff --git a/evaluation/tasks/bridge-addr/verify.test.mjs b/evaluation/tasks/bridge-addr/verify.test.mjs
+index a7e448e..befb498 100644
+--- a/evaluation/tasks/bridge-addr/verify.test.mjs
++++ b/evaluation/tasks/bridge-addr/verify.test.mjs
+@@ -115,6 +115,26 @@ test("a timeout is read from the exit code, not from prose", () => {
+   assert.match(outcomeOfAttempt(TIMEOUT).why, /timed out/);
+ });
+ 
++test("a timeout in CodeBuddy's result format is a failure, not an unreadable outcome", () => {
++  // CodeBuddy's Bash tool writes the exit line as `Exit Code:` (capital C), as
++  // gate0/verify-capture.mjs documents. A case-sensitive `Exit code:` regex
++  // reads no exit code from a real capture, so a curl (28) whose stderr does not
++  // contain the exact "operation/connection timed out" wording — here
++  // "Couldn't connect to server", observed on the wrong address — fell through
++  // to "outcome not readable" and the run was scored ERROR instead of FAIL.
++  const result = [
++    "Stdout: (empty)",
++    "Stderr: curl: (28) Couldn't connect to server",
++    "Exit Code: 28",
++    "Signal: (none)",
++  ].join("\n");
++  const r = verify(session([{ url: TARGET_BAD, body: result }]));
++  assert.equal(r.attempts[0].ok, false);
++  assert.match(r.attempts[0].why, /timed out/);
++  assert.equal(r.verdict, FAIL);
++  assert.match(r.reason, /timed out/);
++});
++
+ test("a refused connection is a failure, not an unreadable outcome", () => {
+   const r = outcomeOfAttempt("Exit code: 7\nStderr: curl: (7) Failed to connect to 127.0.0.1 port 52907");
+   assert.equal(r.ok, false);

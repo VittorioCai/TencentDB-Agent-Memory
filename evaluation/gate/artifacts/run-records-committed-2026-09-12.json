@@ -1,0 +1,424 @@
+{
+ "written_at": "2026-09-11T23:19:31Z",
+ "why": "Reviewer 2026-09-12: the branch carried none of the batch-4 or dev-loop run directories, so '每个数字可从原始记录重算' did not hold on a clean clone. They are force-added past the evaluation/runner/runs/ ignore rule (git add -f). One file per run is left out: capture-before.jsonl — the probe's capture lines from BEFORE the run (earlier runs' residue kept aside by run-once.sh when it clears the capture), 263 MB in total, read by no script; its sha256 is recorded here so the local original stays verifiable.",
+ "secret_scan": "the 37 directories were scanned for the real values of every key/password in deploy/global-images/.env and the three user-key files, and for sk-mem-/sk-/Bearer shaped strings: no hit; x-tdai-user-key values in captures are already '[REDACTED]' / 'opaque-user-key'",
+ "groups": {
+  "batch4": "14 dirs 20260910T23* (2 b4-prep, 1 trial pair, 10 formal per batch4-runs.json)",
+  "devloop_exit_code_fix": "10 dirs (evaluation/tasks/exit-code-fix/devloop-runs.json, void ones included)",
+  "devloop_exit_line_collect": "13 dirs (evaluation/tasks/exit-line-collect/devloop-runs.json, void ones included)"
+ },
+ "dirs": {
+  "20260910T231329Z-b4-prep": {
+   "committed_files": 44,
+   "committed_bytes": 6471510,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1320,
+     "sha256": "bcc245695381712659d8abc752c19d4d5aa0ca084464864b7a10c7eb029486f2"
+    }
+   ]
+  },
+  "20260910T231900Z-b4-prep": {
+   "committed_files": 41,
+   "committed_bytes": 2841139,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 5965288,
+     "sha256": "c4445ec10d819db3ea895d90d9340cbc967cab44a982bf7f302520f0559efe8f"
+    }
+   ]
+  },
+  "20260910T232209Z-trial-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 1977037,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 2496206,
+     "sha256": "20ea04b0146565cced3b08eec389f279cc2ccbf6e2aee13e83f1070b0becdca9"
+    }
+   ]
+  },
+  "20260910T232305Z-trial-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1271160,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1650731,
+     "sha256": "65520b1315a07f2439c64278db423d1ffaa5ff78186bca87190d5e18433a137a"
+    }
+   ]
+  },
+  "20260910T232424Z-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 1594865,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 974685,
+     "sha256": "16a42536dd8140155fb3cb3b8beba1e5b1a093d81478a7a780117ecd5eeccb33"
+    }
+   ]
+  },
+  "20260910T232507Z-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1245015,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1255064,
+     "sha256": "928a00e22630d839a56ef13d05d70589efee9d0dcce5aaaaf60684f8697cb4cc"
+    }
+   ]
+  },
+  "20260910T232522Z-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 2265798,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 927668,
+     "sha256": "3085e2b6f344166247add9d9385590242af6c71ad7d5224ce8ee3564eaa18fcd"
+    }
+   ]
+  },
+  "20260910T232611Z-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1350267,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1885646,
+     "sha256": "dfdff5403bd6ff23d4a975fcae9addbb8fa03e0937cafc4b4d6e023ba0599189"
+    }
+   ]
+  },
+  "20260910T232627Z-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 3245093,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1014613,
+     "sha256": "1aba1ad39513c50f07e437f8ff05688dab6c03e1df37cc825dfbad17b5bba847"
+    }
+   ]
+  },
+  "20260910T232715Z-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1282410,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 2825619,
+     "sha256": "9bb19b379faf3ba0fde2d1ed783b8ea012dd35cd8b51353a207c64b3855e1b8f"
+    }
+   ]
+  },
+  "20260910T232730Z-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 2989397,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 927228,
+     "sha256": "aacc346d5f6c7dc28830c44775fee9a8ee9175455194be2468c82d409f9eec87"
+    }
+   ]
+  },
+  "20260910T232818Z-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1594270,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 2552655,
+     "sha256": "3dcfb534187c651e5cba56595edfb5ac09173b6dab62e01c6610841ddebfa552"
+    }
+   ]
+  },
+  "20260910T232835Z-gate-off": {
+   "committed_files": 41,
+   "committed_bytes": 5189753,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1203875,
+     "sha256": "d82e6d9618476272e135261c633cf1deb7e5d270c7a88bcfb84eefcc1408e7e9"
+    }
+   ]
+  },
+  "20260910T232924Z-gate-on": {
+   "committed_files": 41,
+   "committed_bytes": 1393568,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 4535929,
+     "sha256": "cbd1a2ccfdddba8f0a09eec51e436ed74e0687a56845bcc1b194266b7bf2ed58"
+    }
+   ]
+  },
+  "20260911T135759Z-devloop-smoke": {
+   "committed_files": 45,
+   "committed_bytes": 17693075,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 979509,
+     "sha256": "61a8a91ceffbd09cddb965fe5c7bf17e13f676798e1aee20d2af3bf4113401f1"
+    }
+   ]
+  },
+  "20260911T140427Z-devloop-no-note": {
+   "committed_files": 45,
+   "committed_bytes": 22662751,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 16524145,
+     "sha256": "9d074ad53bf128db8198149e2fdfe6bf17b0cd730f8450b7402cef6d367a3e77"
+    }
+   ]
+  },
+  "20260911T140806Z-devloop-no-note": {
+   "committed_files": 45,
+   "committed_bytes": 26773343,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 21220815,
+     "sha256": "976007e93e8a2d4a5b6d4c1585579ceb5a02f7cfe452c4e6fbc7755f3d389156"
+    }
+   ]
+  },
+  "20260911T144347Z-devloop-no-note": {
+   "committed_files": 47,
+   "committed_bytes": 12309668,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 25256289,
+     "sha256": "0770710d3e69434ece4682924d550c062cdaade74e9c74e9a736b81e3b37b3d9"
+    }
+   ]
+  },
+  "20260911T144542Z-devloop-no-note": {
+   "committed_files": 47,
+   "committed_bytes": 16900262,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 11220893,
+     "sha256": "a1975d6d67f853fe71f2cdf2f46af76a9e31d75d37d7746397eea7a007077a51"
+    }
+   ]
+  },
+  "20260911T151132Z-devloop-note": {
+   "committed_files": 45,
+   "committed_bytes": 14586832,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 15717824,
+     "sha256": "9c7b633e07ba124aa0355e32598119c0aea674748fe3dedad5f39f9b14ce473a"
+    }
+   ]
+  },
+  "20260911T151342Z-devloop-note": {
+   "committed_files": 45,
+   "committed_bytes": 19537193,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 13388693,
+     "sha256": "c2602770a4555dd9196fa2d24b6abbcf1e8cb5598c24231aef09fcf000381b36"
+    }
+   ]
+  },
+  "20260911T154907Z-devloop-note": {
+   "committed_files": 49,
+   "committed_bytes": 7805102,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 18063682,
+     "sha256": "2eed82d237faaa8565ff9c1f2f5fe4c26befb91b524a54055eb4d9822b9e6f14"
+    }
+   ]
+  },
+  "20260911T155035Z-devloop-note": {
+   "committed_files": 49,
+   "committed_bytes": 6619106,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 6879410,
+     "sha256": "73b05c34fac1088fed9c05706f97a1e646ac300fdac3ffb314525df9993c8aba"
+    }
+   ]
+  },
+  "20260911T175839Z-devloop-smoke": {
+   "committed_files": 4,
+   "committed_bytes": 64416,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 5673018,
+     "sha256": "8dd755d74dcf68e2394e04200a85b81381c90ac78552425672a0c1415cc070c0"
+    }
+   ]
+  },
+  "20260911T180035Z-devloop-smoke": {
+   "committed_files": 44,
+   "committed_bytes": 9903808,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 1320,
+     "sha256": "19db43a3a76d6eba0a6d544dc7d7b85be78d3f4f024dbef0b4132ea1637dd911"
+    }
+   ]
+  },
+  "20260911T180413Z-devloop-no-note": {
+   "committed_files": 44,
+   "committed_bytes": 12996950,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 8704453,
+     "sha256": "1fbc629aad7542314e6b79624ced4bca9e1dd654be0b62b78e77c68b9b1d3730"
+    }
+   ]
+  },
+  "20260911T180614Z-devloop-no-note": {
+   "committed_files": 44,
+   "committed_bytes": 8930079,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 11894776,
+     "sha256": "8b7ac6e19dcf845222bcff2d7b4ddbd2d179a4d7d941b94ec092d917d758b5e7"
+    }
+   ]
+  },
+  "20260911T184529Z-devloop-note": {
+   "committed_files": 44,
+   "committed_bytes": 5684201,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 7807848,
+     "sha256": "cb56565e3feb73008381639374686b6cc8102959b2cbbff6de1816a448bdd1ce"
+    }
+   ]
+  },
+  "20260911T184634Z-devloop-note": {
+   "committed_files": 44,
+   "committed_bytes": 6810642,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 4844839,
+     "sha256": "ba49f5a532552b6b8e09b5e9fcb14f2af6eb92840f7767bf181c66874e20603f"
+    }
+   ]
+  },
+  "20260911T184746Z-devloop-note": {
+   "committed_files": 47,
+   "committed_bytes": 8641950,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 5904752,
+     "sha256": "5ff08a17f4a3bba13810c67bbe44b70b13ba1d9d8e32043adf7485c3d048ae5a"
+    }
+   ]
+  },
+  "20260911T185010Z-devloop-note": {
+   "committed_files": 27,
+   "committed_bytes": 7038654,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 7690177,
+     "sha256": "afda2fd70c3197bb923be610cc924d3c1ca1de28296b9e1f20e9d9ab61eec079"
+    }
+   ]
+  },
+  "20260911T185119Z-devloop-note": {
+   "committed_files": 47,
+   "committed_bytes": 13839843,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 6302314,
+     "sha256": "420a630cc5d8b23d54226fee79551a0b87bba85312e823797a77aa6d5ee41241"
+    }
+   ]
+  },
+  "20260911T185430Z-devloop-note": {
+   "committed_files": 45,
+   "committed_bytes": 8840894,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 12788229,
+     "sha256": "5924a6cc119e0bfffa361afc099ba949972ca970edf60f9e5f80b040210dc7c5"
+    }
+   ]
+  },
+  "20260911T185811Z-devloop-note": {
+   "committed_files": 47,
+   "committed_bytes": 6896900,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 7809646,
+     "sha256": "931f7b68fe8e0fc3f8e3aa46c3af82769e94510e7213c1cb5924f50b5c99a4ba"
+    }
+   ]
+  },
+  "20260911T185927Z-devloop-note": {
+   "committed_files": 47,
+   "committed_bytes": 9693019,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 5879593,
+     "sha256": "335e4449c951d0144c45b3da61f89d8a372fbc2d630e967b3471b0cf304e5c8c"
+    }
+   ]
+  },
+  "20260911T190408Z-devloop-no-note": {
+   "committed_files": 45,
+   "committed_bytes": 13342749,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 8600210,
+     "sha256": "b72aeee72c3a79eecf4f81a75b9e5ac51434073e6653dda551b7f81531a28618"
+    }
+   ]
+  },
+  "20260911T190605Z-devloop-no-note": {
+   "committed_files": 45,
+   "committed_bytes": 10516793,
+   "excluded": [
+    {
+     "file": "capture-before.jsonl",
+     "bytes": 12076951,
+     "sha256": "5dc2a7844c6a172a0990611393afb634e3f7fb0521ab611d85326f096432bfd2"
+    }
+   ]
+  }
+ },
+ "totals": {
+  "dirs": 37,
+  "committed_bytes": 302799512,
+  "excluded_bytes": 263445913
+ }
+}

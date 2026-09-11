@@ -1,0 +1,248 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "f7a731fd-6b92-402e-a2be-eac7f0beb63e",
+  "run_id": "20260910T231900Z-b4-prep",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-10T23:19:44Z",
+  "summary": {
+    "applied_count": 2,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 0,
+      "provided": 3,
+      "corrected": 1,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:29Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 4 (score 0.36) for the query \"skill bridge address convention endpoint\"",
+      "status": "corrected",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-6r9pvuj8gf3 was used in tool call call_00_FI2aJ4XoAaYrmwQX9Lcy1653 (message 14) and the call failed: the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and could not connect; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:19:37Z), so the content explains the failure (could not connect)",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231900Z-b4-prep:verify.mjs:call=call_00_FI2aJ4XoAaYrmwQX9Lcy1653:ok=false",
+          "detail": "the call it fed dialled 10.244.7.19:8096 — the asset's own value (bt-6r9pvuj8gf3) — and could not connect; an independent probe also failed to reach it (timed out, harness probe at run time, 2026-09-10T23:19:37Z), so the content explains the failure (could not connect)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_00_FI2aJ4XoAaYrmwQX9Lcy1653:arguments",
+          "detail": "token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 14"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_00_MjG0K6TmXJwR5OsPrOZd6869",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 10.244.7.19:8096 (call_00_FI2aJ4XoAaYrmwQX9Lcy1653)",
+          "passed": false
+        }
+      ],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no outcome recorded for this asset yet; pending by default"
+        },
+        {
+          "kind": "conflict",
+          "detail": "supplied 10.244.7.19:8096 to skill:search while eval-bridge-endpoint-b (skl-oBaDO5CceKnr) supplied 127.0.0.1:47318 to the same slot in this run"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "pending",
+        "rules_version": "gate-rules-2026-09-08f",
+        "decided_at": "2026-09-10T21:36:25.590Z",
+        "review_priority": "normal",
+        "applied": false,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 4 (score 0.36) for the query \"skill bridge address convention endpoint\"",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-itaa73enpfq was used in tool call call_01_eSOItk96r0dvlCjonfaW0576 (message 14); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T231900Z-b4-prep:verify.mjs:call=call_01_eSOItk96r0dvlCjonfaW0576:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(895092ab-b2c9-4f5b-a6b4-11d963635196):msg[14]:call_01_eSOItk96r0dvlCjonfaW0576:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 14"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "f7a731fd-6b92-402e-a2be-eac7f0beb63e:call_01_3ib183pgRwNeYDv4emFH2011",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_01_eSOItk96r0dvlCjonfaW0576)",
+          "passed": true
+        }
+      ],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no outcome recorded for this asset yet; pending by default"
+        },
+        {
+          "kind": "review_priority_high",
+          "detail": "author usr-n68ea5ythq has 1 other asset(s) judged wrong within 30 days (skl-sZFb3KatWY6m); review priority: high"
+        },
+        {
+          "kind": "conflict",
+          "detail": "supplied 127.0.0.1:47318 to skill:search while eval-bridge-endpoint-a (skl-sZFb3KatWY6m) supplied 10.244.7.19:8096 to the same slot in this run"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "pending",
+        "rules_version": "gate-rules-2026-09-08f",
+        "decided_at": "2026-09-10T21:36:25.609Z",
+        "review_priority": "high",
+        "applied": false,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 4 (score 3.72e-6) for the query \"skill bridge address convention endpoint\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-eM1xP28pXiYA",
+          "detail": "carried in a tool result inside the request the model received; present in 20 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-eM1xP28pXiYA",
+          "detail": "skill:search returned 4 candidate(s), this one at rank 3; present in 20 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 4 of 4 (score 3.72e-6) for the query \"skill bridge address convention endpoint\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-KPVMV2uB5rXM",
+          "detail": "carried in a tool result inside the request the model received; present in 20 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-KPVMV2uB5rXM",
+          "detail": "skill:search returned 4 candidate(s), this one at rank 4; present in 20 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:40Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 5 of 5 (score 2.90e-6) for the query \"duplicate endpoint a and b deprecate retire\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-MyrdnecjeYSb",
+          "detail": "carried in a tool result inside the request the model received; present in 3 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-MyrdnecjeYSb",
+          "detail": "skill:search returned 5 candidate(s), this one at rank 5; present in 3 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    }
+  ]
+}

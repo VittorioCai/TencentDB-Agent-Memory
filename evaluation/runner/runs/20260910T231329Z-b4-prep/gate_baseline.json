@@ -1,0 +1,52 @@
+{
+  "schema_version": "gate-baseline-v1",
+  "batch": 4,
+  "frozen_at": "2026-09-10T23:13:28.517Z",
+  "pool_snapshot_at": "2026-09-10T14:57:47Z",
+  "team_id": "team-5ezfoladb5",
+  "rules_version": "gate-rules-2026-09-08f",
+  "code_commit": "7b9c3f4",
+  "source_runs": [],
+  "event_count": 0,
+  "by_state": {},
+  "events": [],
+  "decisions": [],
+  "assets": {
+    "skl-sZFb3KatWY6m": {
+      "name": "eval-bridge-endpoint-a",
+      "version": 4,
+      "content_hash": "c0566d8595d65ddaaa5add8ff1ef69de",
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "baseline_visibility": "team",
+      "visibility_source": "read from /v3/meta/asset/get at freeze time"
+    },
+    "skl-oBaDO5CceKnr": {
+      "name": "eval-bridge-endpoint-b",
+      "version": 4,
+      "content_hash": "91d3869cc76132508cc02169f5187c49",
+      "producer_user_id": "usr-n68ea5ythq",
+      "producer_agent_id": "agt-5e4hna56j9",
+      "baseline_visibility": "team",
+      "visibility_source": "read from /v3/meta/asset/get at freeze time"
+    }
+  },
+  "decisions_at_freeze": {
+    "skl-sZFb3KatWY6m": {
+      "status": "approved",
+      "decision": "pending",
+      "confidence": null,
+      "rules_version": "gate-rules-2026-09-08f",
+      "evidence": []
+    },
+    "skl-oBaDO5CceKnr": {
+      "status": "approved",
+      "decision": "pending",
+      "confidence": null,
+      "rules_version": "gate-rules-2026-09-08f",
+      "evidence": []
+    }
+  },
+  "evidence_base": "none — the assets are at a new version and no outcome is bound to it yet. Preparation runs must record v3 outcomes before the gate-on arm can decide anything but pending.",
+  "note": "Batch 4 baseline. Same rules as batch 3 (gate-rules-2026-09-08f); new tokens (trace header), new consumer, assets at v4. Frozen by batch-conditions.mjs --freeze; conditions in evaluation/gate/artifacts/batch4-conditions.json."
+}

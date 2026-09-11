@@ -1,0 +1,17 @@
+[21:06:15] model custom-local:deepseek-v4-flash
+[21:06:15] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 做了什么、为什么
+
+**根因**：`evaluation/attribution/collect-artifacts.mjs` 的 `outcomeOf()` 用 `/(?:^|\n)Exit code:\s*(\d+)/` 提取退出状态,而真实的 CodeBuddy Bash 工具结果封装头是 **`Exit Code:`(大写 C)**,且值可能为负。仓库里同一个封装早已在 `evaluation/gate0/verify-capture.mjs:131` 被正确解析(`/\nExit Code: (-?\d+)(?:\n|$)/g`),`collect-artifacts.mjs` 的拼写与之不一致,所以每个真实结果的 `exit_code` 都是 `null`,下游按退出状态分类失败调用的逻辑失效。
+
+**改了什么(只改 1 个文件 + 加 1 个回归测试)**
+- `collect-artifacts.mjs:122` `outcomeOf`:把 `Exit code` 改为匹配真实封装 `Exit Code:`,用 `i` 兼容旧的宽松拼写(不改变原有行为),支持负值 `-?\d+`,并取**最后一次**匹配 —— 与 `verify-capture.mjs` 的规则一致,避免 Stdout 正文里的同名文本覆盖真正的尾部状态行。
+- 新增 `evaluation/attribution/collect-artifacts.test.mjs`:3 条回归测试,分别覆盖真实封装读出 0/7、负值与 Stdout 内伪造行不遮蔽、以及 `collectArtifacts` 端到端把失败调用的 `exit_code` 带到 operation 上。
+
+**团队经验检索**:先按要求检索了 skill bridge,返回的都是与本任务无关的条目(`deploy-lookup-note-a/b` 是别的部署清单任务、`eval-bridge-endpoint-b` 是 bridge 端点约定),无 exit-status 相关经验,故按仓库既有解析器(`verify-capture.mjs`)的规则处理。
+
+**测试结果**
+- 新增 3 条测试全部通过。
+- 全量 `node --test 'evaluation/**/*.test.mjs'`:修复前 547 pass / 3 fail,修复后 **550 pass / 3 fail**(+3 即新增用例)。
+- 那 3 条失败与本次改动无关且修复前后完全一致:都是缺少文件 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl` 导致的 `ENOENT`(该 fixture 未包含在本仓库快照中)。

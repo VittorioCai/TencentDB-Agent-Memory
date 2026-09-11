@@ -1,0 +1,86 @@
+{
+  "run_id": "20260910T232507Z-gate-on",
+  "label": "gate-on",
+  "task": "bridge-addr",
+  "identity": "b",
+  "conversation_id": "5cac523d-0121-4e6e-9d19-3a15a687595e",
+  "resolved_identity": {
+    "agent_id": "agt-giawngxum4",
+    "team_id": "team-5ezfoladb5",
+    "user_id": "usr-4u07qc2kuj",
+    "task_id": "task-5e6xp4mrrw"
+  },
+  "resolved_identity_source": "proxy session-init log",
+  "auto_extraction_enabled": false,
+  "agent_memory": {
+    "root": "/data/tdai-memory/profiles",
+    "hash_before": "3912716affb6df6f3e88dc62ff64e8b7642ffa59cf61b2bca06fd630b4756e14",
+    "hash_after": "015d87853a33f347874c242ce4064ee70c4e3bd89feee98f34afbf5a9da3416c",
+    "hash_restored": "2dc9fa127c5ee5502ffa48df8092513bdd26c53499cbccd41cd4dd9b4c38cacb",
+    "written_during_run": true,
+    "isolated": false,
+    "consumer_scope": {
+      "agent_id": "agt-giawngxum4",
+      "hash_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_after": "7abadab63ee4b52259d3d463fd5d89710878e32c356e8502e1b9ac281d306790",
+      "hash_restored": "c492e1777c3a3f9b64c1497d389150d75d44cbd3194763c51f2caf10049c5f7d",
+      "files_before": 0,
+      "pre_run_cleared_files": 4,
+      "files_after": 3
+    }
+  },
+  "session": {
+    "cwd": "/private/tmp/topic4-sessions/20260910T232507Z-gate-on.r9zj/session",
+    "codebuddy_project_dir": "/Users/vittoriocai/.codebuddy/projects/private-tmp-topic4-sessions-20260910T232507Z-gate-on.r9zj-session",
+    "project_cache_files_before": 0,
+    "cwd_is_repository": false,
+    "sibling_dirs": 0,
+    "probe_cwd": "/private/tmp/topic4-probe",
+    "probe_cwd_in_repository": false
+  },
+  "auto_extraction_source": "deploy/global-images/.memory-core-config/tdai-gateway.yaml skill.extraction.enabled",
+  "started_at": "2026-09-10T23:25:07Z",
+  "gate": {
+    "mode": "on",
+    "hidden": [],
+    "baseline_frozen_at": "2026-09-10T23:20:45Z",
+    "mechanism": "core-status",
+    "visibility_at_start": {
+      "skl-oBaDO5CceKnr": "team",
+      "skl-sZFb3KatWY6m": "team"
+    },
+    "status_at_start": {
+      "skl-oBaDO5CceKnr": "approved",
+      "skl-sZFb3KatWY6m": "failed"
+    },
+    "all_verified": true,
+    "core_decisions": {
+      "skl-oBaDO5CceKnr": "admit",
+      "skl-sZFb3KatWY6m": "reject"
+    }
+  },
+  "core_outcomes": {
+    "posted": 1,
+    "skipped": 0,
+    "synced_at": "2026-09-10T23:25:21Z",
+    "evaluate": false
+  },
+  "verdict": "PASS",
+  "context_confounders": {
+    "profile_memory_present": false,
+    "l3_watch_hits": null,
+    "l3_sha1": null,
+    "non_pool_skills_in_listing": 0,
+    "non_pool_skill_reads": 0
+  },
+  "counts": {
+    "capture.jsonl": 8,
+    "tool-call-logs.jsonl": 6,
+    "candidate-log.jsonl": 39,
+    "events.jsonl": 1,
+    "early-events.jsonl": 6,
+    "used-events.jsonl": 1,
+    "outcome-events.jsonl": 1
+  },
+  "note": "verdict ERROR means the run could not be judged, not that it failed; it stays in the denominator so a collection failure cannot hide"
+}

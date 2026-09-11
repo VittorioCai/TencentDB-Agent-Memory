@@ -1,0 +1,58 @@
+# 资产使用回执 — 运行 20260911T180035Z-devloop-smoke · 会话 a7f93c0f · 任务 task-5e6xp4mrrw · 2026-09-11T18:02:06Z
+
+本次应用 1 项团队资产
+- 资产未声明： — 已取回——正文已读取，采用未成立
+
+效果状态
+- 4 项仅作为背景参考（取回或提供），效果待验证
+
+○   v?  skill
+    来源         unknown  (unknown)
+    类型         资产未声明
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-12 02:00:53.099:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-12 02:00:55.617:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-12 02:00:55.620:skill-bridge:search  — the capture never saw this call
+      bridge_row      tool_call_logs:2026-09-12 02:00:58.340:skill-bridge:search  — the capture never saw this call
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 4 time(s) without any evidence of use
+    风险         低置信: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 1 of 3 (score 1.33e-6) for the query "CodeBuddy tool result exit code 格式"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 16 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 1; present in 16 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 2 of 3 (score 1.33e-6) for the query "CodeBuddy tool result exit code 格式"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 16 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 3 candidate(s), this one at rank 2; present in 16 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 3 (score 1.16e-6) for the query "CodeBuddy tool result exit code 格式"
+    证据
+      session_message capture:tool_result:skl-oBaDO5CceKnr  — carried in a tool result inside the request the model received; present in 16 captured turn(s)
+      bridge_row      capture:skill:search:skl-oBaDO5CceKnr  — skill:search returned 3 candidate(s), this one at rank 3; present in 16 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

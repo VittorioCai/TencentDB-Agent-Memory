@@ -1,0 +1,36 @@
+[17:11:43] model custom-local:deepseek-v4-flash
+[17:11:43] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 原因
+
+`verify.mjs` 的 `outcomeOfAttempt` 从结果文本里读退出码时用的是小写 `Exit code:`：
+
+```js
+const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);
+```
+
+而 CodeBuddy 的 Bash 工具结果固定是大写 `Exit Code:`（`evaluation/gate0/verify-capture.mjs:121` 的格式说明与解析器都用大写）。结果：对真实 CodeBuddy 结果，退出码**永远读不到**。于是"是否超时"只剩一条判据——stderr 里是否恰好出现 `Operation timed out` / `Connection timed out`。像 DNS 超时这种 `curl: (28) Resolving timed out after …` 的 stderr 两条都不含，就落到末尾的 `ok: null`（"outcome not readable"），`verify` 因此报 ERROR 而不是 FAIL——正是"部分超时被记成不可读"。
+
+## 改动
+
+`evaluation/tasks/bridge-addr/verify.mjs:159` — 大小写不敏感地匹配两种写法，并兼容可选负号：
+
+```js
+const exit = /(?:^|\n)Exit Code:\s*(-?\d+)/i.exec(s);
+```
+
+这样 curl 退出码 28 无论 stderr 措辞如何都会被识别为 `timed out`，不再依赖 prose。"不可读"语义保持不变（真正无退出码、无 HTTP 码、无 envelope 的空输出仍是 `ok: null`）。
+
+`evaluation/tasks/bridge-addr/verify.test.mjs` — 新增回归测试：一条 CodeBuddy 格式的结果，`Exit Code: 28` 且 stderr 为 `curl: (28) Resolving timed out …`，断言 `outcomeOfAttempt` 返回 `ok: false / timed out`，而非 `null`。
+
+## 验证
+
+- 回归测试在旧 `verify.mjs` 下失败、在新版下通过（已用 `git stash` 双向验证）。
+- `verify.test.mjs` + `verify.multi-target.test.mjs`：36/36 通过。
+- 全量 `node --test $(find evaluation -name '*.test.mjs')`（须从仓库根运行，测试用仓库根相对路径）：553 项，548 通过，3 失败。这 3 项失败来自缺失的 `.gitignore` 产物 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`（`attribution/extract-tokens.test.mjs`、`provenance/build-early-events.test.mjs`）；我在**未打补丁的原始树**上复跑同样 3 失败，确认与本次改动无关。想全绿需要生成该 artifact。
+
+## 团队经验检索
+
+按流程先检索了团队 skill：命中 `eval-bridge-endpoint-b`（讲 skill bridge 的 host/port 约定）以及若干 deploy 失败记录，均与这个结果解析 bug 无关，故按自身判断处理。
+
+改动仅限上述两个文件。

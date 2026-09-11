@@ -188,13 +188,13 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 |---|---|
 | 批次四对照报告(新口径) | `evaluation/runner/COMPARISON-2026-09-11-reparsed.md`;表格 `summary-2026-09-11-reparsed{,-noread}.md`;校准 `attribution/CALIBRATION-batch4-reparsed-2026-09-11.md`;差异 `attribution/REPARSE-DIFF-2026-09-11.md` |
 | 旧口径(保留) | `evaluation/runner/COMPARISON-2026-09-11.md`(顶部有取代说明)、`summary-2026-09-11.md`、`attribution/CALIBRATION.md`(名单已对齐)、`CALIBRATION-2026-09-11-as-committed-ef22463.md` |
-| 重判副本(仓库外,可重生成) | `/private/tmp/topic4-rejudge/2026-09-11/<run_id>/`,命令在新报告开头 |
+| 重判副本(仓库外,可重生成) | `/private/tmp/topic4-rejudge/2026-09-11/<run_id>/`,命令在新报告开头;2026-09-12 起 `deliver-check.sh` 发现副本缺失会先用同一命令重生成(干净克隆也能复算) |
 | 条件清单(冻结 2026-09-10T23:21:51Z) | `evaluation/gate/artifacts/batch4-conditions.json` |
 | 闸门基线(冻结 23:20:45Z,source_runs = 两次 b4-prep) | `evaluation/gate/artifacts/gate_baseline_batch4.json` |
 | 批次清单(顺序、退出码) | `evaluation/gate/artifacts/batch4-runs.json`;驱动日志 `batch4-runs.log`(本地,按 .gitignore 不入库)|
 | 核对输出 | `batch4-conditions-check.txt`(开批次前 61+2)、`batch4-conditions-check-post.txt`(批次后 53/9/2);2026-09-12 起 `--check` 多出运行时行,对旧清单按设计 FAIL:`core 容器镜像摘要 == 冻结值`(冻结的 55fec… 本身是重建后的回填,历史摘要未知)、`闸门来源 == 冻结值`(冻结 mount,现 image);`core 闸门在线上`、`镜像构建提交的 MemoryCore 树 == HEAD` PASS |
 | 检查点输出 | `batch4-trial-gate-{off,on}.txt`(开批次前 16 条)、`batch4-formal-checkpoints.txt`、`batch4-prep-trial-checkpoints.txt`(17 条) |
-| 运行记录(不入库) | `evaluation/runner/runs/20260910T23*`,14 个目录;旧批次未改动 |
+| 运行记录(**2026-09-12 入库**,审阅裁定) | `evaluation/runner/runs/20260910T23*` 14 个目录 + `20260911T1*-devloop-*` 23 个目录,强制加入(ignore 规则仍在);每目录只排除 `capture-before.jsonl`(运行前探针残留,无脚本读取,263 MB),其 sha256 在 `gate/artifacts/run-records-committed-2026-09-12.json`;入库前按 .env 与三把用户密钥的真实值扫描,无命中;旧批次未改动 |
 | 校准报告(生成) | `evaluation/attribution/CALIBRATION.md`;派生隔离审计 `artifacts/isolation-findings.json` |
 | 场景记录 / token | `evaluation/tasks/bridge-addr/pair.json`(v4,`batch4` 块)、`tokens.json`(哈希形态) |
 | 多目标解析测试 | `evaluation/tasks/bridge-addr/verify.multi-target.test.mjs`、`evaluation/provenance/shell-requests.test.mjs`(待决提案文件已删,已进套件) |

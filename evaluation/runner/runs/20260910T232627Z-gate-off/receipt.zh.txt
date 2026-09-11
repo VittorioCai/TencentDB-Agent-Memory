@@ -1,0 +1,58 @@
+# 资产使用回执 — 运行 20260910T232627Z-gate-off · 会话 6524654b · 任务 task-5e6xp4mrrw · 2026-09-10T23:27:15Z
+
+本次应用 2 项团队资产
+- Skill：eval-bridge-endpoint-b — its value bt-itaa73enpfq was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+- Skill：eval-bridge-endpoint-a — its value bt-6r9pvuj8gf3 was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+
+效果状态
+- 2 项已采用，结果未关联到具体调用
+- 2 项仅作为背景参考（取回或提供），效果待验证
+
+● eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已采用——硬证据，结果未关联到具体调用
+    为何提供       offered at rank 1 of 4 (score 0.36) for the query "bridge address convention skill search endpoint"
+    影响         its value bt-itaa73enpfq was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+    作用点        tool_call
+    证据
+      tool_arg        request(180646b6-c85c-4c8d-8281-627ccac4a969):msg[10]:call_00_qitA9lGDUjEoxP4ADzJ69247:arguments  — token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 10
+      capture_line    6524654b-1928-4a45-9087-1e1fb98c126d:call_01_cY0bBTYBQgITuekWaVTV4481  — skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+      verify_result   20260910T232627Z-gate-off:verify.mjs:call=call_00_qitA9lGDUjEoxP4ADzJ69247:ok=false  — the call it fed dialled 127.0.0.1:47318 — the asset's own value (bt-itaa73enpfq) — and timed out, but an independent probe reached 127.0.0.1:47318 (harness probe at run time, 2026-09-10T23:27:14Z); the model's failure was environmental, not the content (timed out)
+    闸门(Core) 准入 · 证据置信度 1 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+
+● eval-bridge-endpoint-a  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已采用——硬证据，结果未关联到具体调用
+    为何提供       offered at rank 2 of 4 (score 0.36) for the query "bridge address convention skill search endpoint"
+    影响         its value bt-6r9pvuj8gf3 was used in tool call call_00_qitA9lGDUjEoxP4ADzJ69247 (message 10)
+    作用点        tool_call
+    证据
+      tool_arg        request(180646b6-c85c-4c8d-8281-627ccac4a969):msg[10]:call_00_qitA9lGDUjEoxP4ADzJ69247:arguments  — token bt-6r9pvuj8gf3; content of v4 entered the context at message 5, before this operation at message 10
+      capture_line    6524654b-1928-4a45-9087-1e1fb98c126d:call_00_8Zgc7Kji1C6t8O8yeYgY2077  — skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap
+      verify_result   20260910T232627Z-gate-off:verify.mjs:call=call_00_qitA9lGDUjEoxP4ADzJ69247:ok=false  — the call it fed timed out, but the address dialled (127.0.0.1:47318) is not the asset's value; the failure is not tied to its content (timed out)
+    闸门(Core) 拒绝 · 证据置信度 0 · 规则 gate-rules-2026-09-08f · 未应用（本次闸门关闭）
+    风险         闸门拒绝: rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-10T23:14:33.107Z by usr-4u07qc2kuj)
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 4 (score 5.36e-6) for the query "bridge address convention skill search endpoint"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 5 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 3; present in 5 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (cross_user)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 4 of 4 (score 5.36e-6) for the query "bridge address convention skill search endpoint"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 5 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 4; present in 5 captured turn(s)
+    闸门：无判定 · 作者尚无跨人验证
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

@@ -1,0 +1,81 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "912f0559-b36e-4f1e-a094-9ec89f5f10cb",
+  "run_id": "20260911T185430Z-devloop-note",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-11T18:55:59Z",
+  "summary": {
+    "applied_count": 1,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 1,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-pXLc38dex6Zt",
+      "name": "eval-tool-result-exit-line",
+      "asset_type": "skill",
+      "version": 2,
+      "updated_at": "2026-09-11T18:44:05Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 1 (score 1.54) for the query \"exit code 工具结果 capture 归因 artifact 解析\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-78yk9r3bfrm was used in tool call call_00_wFQ86d95Szp0AQZgfwbP6195 (message 44), but the token appears in a search command — the model was looking for it, not using it",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(b79b406e-8248-4f60-ad29-1b355ee2c410):msg[44]:call_00_wFQ86d95Szp0AQZgfwbP6195:arguments",
+          "detail": "token bt-78yk9r3bfrm; the token appears in a search command — the model was looking for it, not using it"
+        },
+        {
+          "kind": "diff_hunk",
+          "ref": "diff:evaluation/attribution/collect-artifacts.test.mjs:1-74",
+          "detail": "token bt-78yk9r3bfrm; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "912f0559-b36e-4f1e-a094-9ec89f5f10cb:call_00_wfyKNS8Y8Sx38XJZiKkg1595",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "needs_review",
+          "detail": "token bt-78yk9r3bfrm; the token appears in a search command — the model was looking for it, not using it"
+        },
+        {
+          "kind": "gate_pending",
+          "detail": "needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-11T18:55:59.413Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

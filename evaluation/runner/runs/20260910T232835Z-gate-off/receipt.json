@@ -1,0 +1,201 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "0320e82f-c456-464b-a7de-b1b9b478bffc",
+  "run_id": "20260910T232835Z-gate-off",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-10T23:29:24Z",
+  "summary": {
+    "applied_count": 5,
+    "by_status": {
+      "validated": 1,
+      "used": 0,
+      "fetched": 4,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 4 (score 0.36) for the query \"skill bridge address convention URL endpoint\"",
+      "status": "validated",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": "its value bt-itaa73enpfq was used in tool call call_00_BPgzETEjmuu2buoBdhjy9729 (message 24); the call succeeded and the run's acceptance passed",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "verify_result",
+          "ref": "20260910T232835Z-gate-off:verify.mjs:call=call_00_BPgzETEjmuu2buoBdhjy9729:ok=true",
+          "detail": "the call it fed succeeded (code 0) and the run's acceptance passed (code 0)"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(92a0a7d2-bdde-4b4c-95d9-70b87b46dbae):msg[24]:call_00_BPgzETEjmuu2buoBdhjy9729:arguments",
+          "detail": "token bt-itaa73enpfq; content of v4 entered the context at message 6, before this operation at message 24"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "0320e82f-c456-464b-a7de-b1b9b478bffc:call_01_zGHNK8TN8zqfO6WGqlO90447",
+          "detail": "skill:get-by-name answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [
+        {
+          "command": "verify.mjs: dial 127.0.0.1:47318 (call_00_BPgzETEjmuu2buoBdhjy9729)",
+          "passed": true
+        }
+      ],
+      "risks": [],
+      "gate_decision": "admit",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "admit",
+        "rules_version": "gate-rules-2026-09-08f",
+        "decided_at": "2026-09-10T23:28:18.985Z",
+        "review_priority": null,
+        "applied": false,
+        "evidence_confidence": 1,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 4 (score 3.72e-6) for the query \"skill bridge address convention URL endpoint\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 07:29:11.240:skill-bridge:get-by-name",
+          "detail": "request names skl-eM1xP28pXiYA; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 4 of 4 (score 3.72e-6) for the query \"skill bridge address convention URL endpoint\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 07:29:11.220:skill-bridge:get-by-name",
+          "detail": "request names skl-KPVMV2uB5rXM; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-MyrdnecjeYSb",
+      "name": "tdc-312fad",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:40Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 5 of 5 (score 1.45e-6) for the query \"which bridge endpoint to use a or b decide\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-11 07:29:13.851:skill-bridge:get",
+          "detail": "request names skl-MyrdnecjeYSb; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [],
+      "gate_decision": null,
+      "author_confidence": null,
+      "gate": null
+    },
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:29Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 4 (score 0.36) for the query \"skill bridge address convention URL endpoint\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "capture_line",
+          "ref": "0320e82f-c456-464b-a7de-b1b9b478bffc:call_00_iBjA475PXA2OdA2w7sDu9468",
+          "detail": "skill:get-by-name answered at message 5; carrying content; version 4; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_rejected",
+          "detail": "rule reject: a corrected outcome exists (reason=wrong, 2 record(s); first 2026-09-10T23:14:33.107Z by usr-4u07qc2kuj)"
+        }
+      ],
+      "gate_decision": "reject",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "core-status",
+        "decision": "reject",
+        "rules_version": "gate-rules-2026-09-08f",
+        "decided_at": "2026-09-10T23:28:19.050Z",
+        "review_priority": null,
+        "applied": false,
+        "evidence_confidence": 0,
+        "author_assessment": null
+      }
+    }
+  ]
+}

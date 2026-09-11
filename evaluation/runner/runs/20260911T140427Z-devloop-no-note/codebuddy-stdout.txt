@@ -1,0 +1,49 @@
+[16:04:39] model custom-local:deepseek-v4-flash
+[16:04:39] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 改了什么、为什么
+
+### 根因
+
+`evaluation/tasks/bridge-addr/verify.mjs` 的 `outcomeOfAttempt` 用一条**大小写敏感**的正则读进程退出码：
+
+```js
+const exit = /(?:^|\n)Exit code:\s*(\d+)/.exec(s);   // 只认小写 "Exit code:"
+```
+
+但真实 CodeBuddy 工具结果是**大写** `Exit Code:` —— 这一点由同仓库的参照实现证实：
+
+- `evaluation/gate0/verify-capture.mjs:136` → `/\nExit Code: (-?\d+)(?:\n|$)/`
+- `evaluation/gate0/verify-capture.test.mjs:33` → `...\nExit Code: ${exitCode}\nSignal: (none)`
+
+所以真实结果里的 `Exit Code: 28` 读不出来，`exitCode` 变成 `null`。此时若 stderr 不含 `Operation timed out` / `Connection timed out` 这类字样（例如 `curl: (28) SSL connection timeout`、或仅 `(28)`），四路信号全部落空，函数一路走到末尾：
+
+```js
+return { ok: null, why: "outcome not readable" };
+```
+
+超时因此被记成"不可读"（`ok: null`），既非 PASS 也非 FAIL —— 与你描述的"部分超时被记成不可读"完全吻合。既有测试没抓到它，是因为 `verify.test.mjs` 的超时夹具恰好写的是小写 `Exit code: 28`，掩盖了这个不一致。
+
+### 改动（仅 2 个文件，均属 `bridge-addr`）
+
+1. `verify.mjs:159` —— 正则加 `i` 标志，大小写都能读：
+   ```js
+   const exit = /(?:^|\n)Exit code:\s*(\d+)/i.exec(s);
+   ```
+   于是 `Exit Code: 28` → `exitCode === 28` → 返回 `{ ok: false, why: "timed out" }`。加 `i` 同时保留了旧小写格式的读取能力，已有行为不变。
+
+2. `verify.test.mjs` —— 新增回归测试 `a real Exit Code line is read even when the stderr carries no timeout prose`：构造真实信封（大写 `Exit Code: 28` + 不含 timeout 措辞的 stderr + 空 stdout），断言 `ok === false`、`why === "timed out"`，并显式断言不再是 `"outcome not readable"`。
+
+我**临时回退**该正则验证过这条测试确实会失败（`tests 1, pass 0, fail 1`），确认它能真正捕获这个 bug，随后恢复修复。
+
+### 测试结果
+
+- `node --test tasks/bridge-addr/*.test.mjs`：**40 pass / 0 fail**（原 39，新增 1 条）。
+- 全量 `node --test 'evaluation/**/*.test.mjs'`：
+  - 改前基线：552 tests / 547 pass / **3 fail**
+  - 改后：553 tests / 548 pass / **3 fail**
+  - 同一 3 条失败在改动前后完全一致，根因是缺失生成物 `evaluation/gate0/artifacts/gate0-threechannel-capture.jsonl`（`attribution/extract-tokens.test.mjs` 读取），属环境/预存在问题，与本次修复无关；改动净效果是 **+1 条通过的测试，失败集合不变**。
+
+### 顺带发现（未改）
+
+同类小写正则在 `evaluation/tasks/bridge-name/verify.mjs:52` 和 `evaluation/attribution/collect-artifacts.mjs:124` 也存在，属其他场景。按"只改必要的文件"的要求本次未动，供你决定是否另开修复。

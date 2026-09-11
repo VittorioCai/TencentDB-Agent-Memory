@@ -1,0 +1,198 @@
+{
+  "frozen_at": "2026-09-11T18:45:40Z",
+  "start_commit": "9fb69dfd0823855d98c090e4be80478b0149ad26",
+  "start_tree": "ff9b7b5c046d734d4af86fde5c1b771163d60e16",
+  "source_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
+  "test_files": [
+    {
+      "file": "deploy/global-images/start-memory-core.test.mjs",
+      "blob": "c437a8e93eddd316f1ab69877732242966c79db9"
+    },
+    {
+      "file": "evaluation/attribution/calibrate-runs.test.mjs",
+      "blob": "b96b6f0b5eb504d0807fea7a51c81e8d07ea0c38"
+    },
+    {
+      "file": "evaluation/attribution/calibration-ground-truth.test.mjs",
+      "blob": "40dcdc93ebbec75dbacb90fd79ec565b49bed144"
+    },
+    {
+      "file": "evaluation/attribution/calibration-reachability.test.mjs",
+      "blob": "6eb19bd0260e13c9bc38a66dfc6009de68b2c914"
+    },
+    {
+      "file": "evaluation/attribution/calibration-report.test.mjs",
+      "blob": "56d444c3fe78ba2ae064eca0712e957251e110b9"
+    },
+    {
+      "file": "evaluation/attribution/calibration.test.mjs",
+      "blob": "3b81e6de0b316d4918bfd5b85b7cecb685bf3d94"
+    },
+    {
+      "file": "evaluation/attribution/chain.test.mjs",
+      "blob": "98117601b1fc7c4acc48a28fcac3d0f04849d83a"
+    },
+    {
+      "file": "evaluation/attribution/delivery-audit.test.mjs",
+      "blob": "bf5b79a9fd784e10b2d60929f776ec7062617b09"
+    },
+    {
+      "file": "evaluation/attribution/extract-tokens.test.mjs",
+      "blob": "f75bfc89b4fd546ee3e878147ac0d67e02ee0c41"
+    },
+    {
+      "file": "evaluation/attribution/judge-hard.test.mjs",
+      "blob": "8f1ff728ef76c6c20731c4d9e0014fac9d317a25"
+    },
+    {
+      "file": "evaluation/attribution/judge-outcome.test.mjs",
+      "blob": "40ed3ae375f9c09b6a115b9c3083a7c95d6c4072"
+    },
+    {
+      "file": "evaluation/attribution/resolve-tokens.test.mjs",
+      "blob": "8e0464a79d898394a6a7920fadf6f370a8ab45f8"
+    },
+    {
+      "file": "evaluation/author/build-evidence-pack.test.mjs",
+      "blob": "b94db0662521b9b4fa9121e93cc8a88afa4014c3"
+    },
+    {
+      "file": "evaluation/author/check-citations.test.mjs",
+      "blob": "f6f7b024f651ab7bb558bae8b830136aa51d4986"
+    },
+    {
+      "file": "evaluation/calibration/contributed.test.mjs",
+      "blob": "d0321a1259e296582706fbc82becfb68298026bd"
+    },
+    {
+      "file": "evaluation/calibration/loo.test.mjs",
+      "blob": "9465e4ec76cd7a01b6eff65fde7aef758da4e21b"
+    },
+    {
+      "file": "evaluation/contracts/validate.test.mjs",
+      "blob": "41a49d015f6c1d53743614f1f486c96a07ef9bdc"
+    },
+    {
+      "file": "evaluation/gate/author-confidence.test.mjs",
+      "blob": "6834fcc57d6fb8866ed0b45969288aa2cd37ad01"
+    },
+    {
+      "file": "evaluation/gate/build-baseline.test.mjs",
+      "blob": "e4aedb6f43624402f499300c38b5548dfd2ab76d"
+    },
+    {
+      "file": "evaluation/gate/decide.test.mjs",
+      "blob": "e3802818ac07a60c783ef1d95ccff6d81796f5a7"
+    },
+    {
+      "file": "evaluation/gate/plan-visibility.test.mjs",
+      "blob": "a1902e793bc3edee3c58ba4479d7af540a68ddde"
+    },
+    {
+      "file": "evaluation/gate0/proxy-observability-probe.test.mjs",
+      "blob": "c76ddf7235b35a3d1131b14ff28e5c273f6a95e8"
+    },
+    {
+      "file": "evaluation/gate0/verify-capture.test.mjs",
+      "blob": "397279468c8623d2dd71548651b6a8bc314a70b2"
+    },
+    {
+      "file": "evaluation/provenance/build-early-events.test.mjs",
+      "blob": "a055c4ae4aeafe7ceb41f8d0a6134a33a6d228b1"
+    },
+    {
+      "file": "evaluation/provenance/build-events.test.mjs",
+      "blob": "19fe7bac06a1f319858c384d4c7ae495b446c45a"
+    },
+    {
+      "file": "evaluation/provenance/shell-requests.test.mjs",
+      "blob": "4ff321c5b9630a2669fcc2ff83cf1a5d44ceadd1"
+    },
+    {
+      "file": "evaluation/provenance/stamp-events.test.mjs",
+      "blob": "9c1fd23055ce6595b975bf74bc6822e982c261a5"
+    },
+    {
+      "file": "evaluation/receipt/build-receipt.test.mjs",
+      "blob": "a760401984c90f5ded30dcaeb3ede43d64c1f065"
+    },
+    {
+      "file": "evaluation/runner/agent-memory.test.mjs",
+      "blob": "4274672efe3b28dce93175e9bacb58fb71b4a4f9"
+    },
+    {
+      "file": "evaluation/runner/batch-conditions.test.mjs",
+      "blob": "7e61a6b5da94af736bbd5ee22eb446f65d33790c"
+    },
+    {
+      "file": "evaluation/runner/context-confounders.test.mjs",
+      "blob": "e206aa5d24b671631968677f9c5d6e06eed607d1"
+    },
+    {
+      "file": "evaluation/runner/cost.test.mjs",
+      "blob": "eeb34e3e5e1a7bd90e36362933de2b11cf5ef60c"
+    },
+    {
+      "file": "evaluation/runner/isolation-check.test.mjs",
+      "blob": "1b551c776855a23459e3fd99e7ab2e770dbafced"
+    },
+    {
+      "file": "evaluation/runner/memory-channel.test.mjs",
+      "blob": "322f078229c1bb4290b4972b9774769409338ca7"
+    },
+    {
+      "file": "evaluation/runner/summarize-runs.test.mjs",
+      "blob": "5172af5737b56f3ed6ff42db1dc84e998b396286"
+    },
+    {
+      "file": "evaluation/runner/token-provenance.test.mjs",
+      "blob": "2e12739e0c3b92699d87c21e5ae3834739cd49b6"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/probe-reachability.test.mjs",
+      "blob": "f2c24807d4bf9af76b8287ee56675b2e1a13164e"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/verify.multi-target.test.mjs",
+      "blob": "7b4eb6f0c488a150aba7c2eec0851d4ca4d38b90"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/verify.test.mjs",
+      "blob": "a7e448ed48ba50500e57e1ff77848529a61d14ae"
+    },
+    {
+      "file": "evaluation/tasks/bridge-name/verify.test.mjs",
+      "blob": "cede6855c7837764a9cee1be6a3c1e038340eca6"
+    }
+  ],
+  "tests_tar": "/private/tmp/topic4-runs/20260911T184529Z-devloop-note.k1Qz/20260911T184529Z-devloop-note/start-tests.tar",
+  "suite_at_start": {
+    "exit": 1,
+    "tests": 554,
+    "pass": 549,
+    "fail": 3,
+    "cancelled": 0,
+    "failures": [
+      {
+        "name": "方案 2 之后,资产源文件是占位符,正文里不再含判别值",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the right-address asset cannot document the endpoint already in the prompt",
+        "file": "evaluation/attribution/extract-tokens.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      },
+      {
+        "name": "the recorded three-channel session yields recalled and injected, and no selected",
+        "file": "evaluation/provenance/build-early-events.test.mjs",
+        "type": "test",
+        "failure_type": "testCodeFailure"
+      }
+    ],
+    "explained": true,
+    "problems": []
+  }
+}

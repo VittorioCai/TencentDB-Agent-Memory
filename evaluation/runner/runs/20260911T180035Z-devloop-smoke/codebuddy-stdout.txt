@@ -1,0 +1,32 @@
+[20:00:47] model custom-local:deepseek-v4-flash
+[20:00:47] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+修复完成。
+
+## 原因
+
+`outcomeOf()` 用 `/(?:^|\n)Exit code:\s*(\d+)/` 解析退出状态——小写 `code`。而真实的 CodeBuddy Bash 工具结果信封用的是**大写 `Exit Code:`**:
+
+```
+Command: node --test
+Stdout: …
+Stderr: (empty)
+Exit Code: 0
+Signal: (none)
+```
+
+手写 fixture 恰好都写的是小写,所以测试从没暴露;真实 capture 里这段永远匹配不上,`exit_code` 恒为 `null`,下游按退出状态分类失败调用的逻辑因此失效。已用真实格式复现:`Exit Code: 0` → `exit_code: null`。
+
+## 改动
+
+- `evaluation/attribution/collect-artifacts.mjs:124` — 正则加 `i` 标志并允许负号:`/(?:^|\n)Exit code:\s*(-?\d+)/i`。大小写两种写法都能读;加注释说明真实格式与旧 bug。
+- 新增 `evaluation/attribution/collect-artifacts.test.mjs` — 一条回归测试,三例:大写 `Exit Code`(0 / 28)、旧小写仍可读且无状态仍为 null、以及端到端断言 capture 里操作结果的 `exit_code` 被正确填充(0 和 1)。这些用例在修复前会失败。
+
+## 验证
+
+- 新增测试:3/3 通过。
+- 全量 `node --test 'evaluation/**/*.test.mjs'`:555 tests,550 pass,3 fail。修改前为 552 tests,547 pass,3 fail —— 同样这 3 个失败(`evaluation/gate0/artifacts/` 夹具缺失导致的 `ENOENT`,与本改动无关),无新增回归。
+
+## 团队经验检索
+
+动手前用 skill 检索了多次(关键词含"工具结果 / exit status / exit_code / capture / 归因 / CodeBuddy 格式"),未命中与本问题相关的 skill;返回的几个(部署清单、bridge 端点)与退出状态解析无关,故按自己的判断处理。

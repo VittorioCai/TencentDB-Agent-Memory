@@ -1,0 +1,26 @@
+# 资产使用回执 — 运行 20260911T184746Z-devloop-note · 会话 ddacec03 · 任务 task-5e6xp4mrrw · 2026-09-11T18:49:19Z
+
+本次应用 1 项团队资产
+- Skill：eval-tool-result-exit-line — its value bt-78yk9r3bfrm was used in tool call call_00_NKUFu2qWxVXTlBsiWqFF9183 (message 39); the call succeeded and the run's acceptance passed
+
+效果状态
+- 1 项已通过相关测试验证
+
+✓ eval-tool-result-exit-line  v2  skill
+    来源         usr-n68ea5ythq  (cross_user)
+    类型         Skill
+    状态         已验证——已采用，且它引出的调用成功、本次运行验收通过
+    为何提供       offered at rank 1 of 1 (score 0.88) for the query "CodeBuddy 工具结果 超时 失败 识别 verify evaluator"
+    影响         its value bt-78yk9r3bfrm was used in tool call call_00_NKUFu2qWxVXTlBsiWqFF9183 (message 39); the call succeeded and the run's acceptance passed
+    作用点        tool_call
+    相关测试 verify.mjs: attempt ? (call_00_NKUFu2qWxVXTlBsiWqFF9183) 通过
+    证据
+      verify_result   20260911T184746Z-devloop-note:verify.mjs:call=call_00_NKUFu2qWxVXTlBsiWqFF9183:ok=true  — the call it fed succeeded (reference test passed on the changed copy) and the run's acceptance passed (reference test passed on the changed copy)
+      tool_arg        request(64763d1c-bbda-4370-9540-e514ac82f5e6):msg[39]:call_00_NKUFu2qWxVXTlBsiWqFF9183:arguments  — token bt-78yk9r3bfrm; content of v2 entered the context at message 6, before this operation at message 39
+      capture_line    ddacec03-7722-478a-837b-1cf5d5d7bcd3:call_00_wTl61K1LTBt1QkMN7nIg6649  — skill:get-by-name answered at message 6; carrying content; version 2; no service-side row recorded it — telemetry gap
+      test_command    request(4c3708b8-7348-4790-b0cf-f1aff1fd2b2b):msg[43]:call_00_qNZkwI2y5Vjw66RCQeR73033:arguments  — token bt-78yk9r3bfrm; the token appears in a search command — the model was looking for it, not using it
+      diff_hunk       diff:evaluation/tasks/bridge-addr/verify.exit-status.bt-78yk9r3bfrm.test.mjs:1-61  — token bt-78yk9r3bfrm; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-con, before the credited fetch — its use cannot be attributed to that fetch
+    闸门 准入 · 作者置信度 0.583
+    风险         非最新版: v2 was used; the pool's head is v1
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

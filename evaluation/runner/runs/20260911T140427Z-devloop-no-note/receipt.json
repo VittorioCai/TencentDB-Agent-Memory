@@ -1,0 +1,20 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "f2f6cdd1-6030-4fe2-b808-324951f31c1a",
+  "run_id": "20260911T140427Z-devloop-no-note",
+  "task_id": "task-5e6xp4mrrw",
+  "generated_at": "2026-09-11T14:08:06Z",
+  "summary": {
+    "applied_count": 0,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 0,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": []
+}
