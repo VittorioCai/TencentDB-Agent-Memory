@@ -67,20 +67,23 @@
 | 2026-09-11T16:09:56Z | after re-sync of the re-judged note runs (trusted rows expected) | candidate | team | 2 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 | 2026-09-11T16:10:55Z | after re-sync of the re-judged note runs as trusted rows | candidate | team | 4 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
 | 2026-09-11T16:11:39Z | after re-sync with the owner-key hash lookup | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+| 2026-09-11T16:54:11Z | after the extraction window closed (before apply) | candidate | team | 6 | pending | 2026-09-11T11:25:46.115Z | 0/0/0 |
+| 2026-09-11T16:54:11Z | after apply | approved | team | 6 | admit | 2026-09-11T16:54:11.610Z | 2/0/0 |
 
-闸门 decided_at 停在 2026-09-11T11:25:46.115Z(decision pending),evidence_revision 2 → 6:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。
+闸门在 2026-09-11T16:54:11Z 重判:decided_at 2026-09-11T11:25:46.115Z → 2026-09-11T16:54:11.610Z,decision pending → admit,status candidate → approved;evidence_revision 2 → 6。回流闭合。
 
 ## 回流窗口、池快照与新资产的来源
 
 | 时间 | 开关 | 前 → 后 | 容器读回 | 配置 sha 前→后 | 备份 | ok |
 |---|---|---|---|---|---|---|
 | 2026-09-11T16:25:58Z | on | false → true | enabled:true | 66ebab0a→cdb5b484 | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T162547Z-before-extraction-on | true |
+| 2026-09-11T16:52:28Z | off | true → false | enabled:false | cdb5b484→66ebab0a | deploy/global-images/.memory-core-config/tdai-gateway.yaml.bak-20260911T165220Z-before-extraction-off | true |
 
-开关时间窗:开 2026-09-11T16:25:58Z → 关 未关。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z; 20260911T154907Z-devloop-note 2026-09-11T16:27:42Z; 20260911T155035Z-devloop-note 2026-09-11T16:28:03Z。
+开关时间窗:开 2026-09-11T16:25:58Z → 关 2026-09-11T16:52:28Z。四次写回的调用时间:20260911T144347Z-devloop-no-note 2026-09-11T16:26:56Z; 20260911T144542Z-devloop-no-note 2026-09-11T16:27:22Z; 20260911T154907Z-devloop-note 2026-09-11T16:27:42Z; 20260911T155035Z-devloop-note 2026-09-11T16:28:03Z。
 
 写回记录里出现的新资产 10 项(每条写回调用前后比对注册表,以该次消费者用户的 key 读;注册表行只带 owner user,归档 key 的路径段给出被归档会话的 agent):skl-HJW3hVeUmdXj team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-isClIUZCR2nH codebuddy-tool-result-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpvaeml21e(=该次消费者),提取任务 skill-extract-task-96a66940; skl-d9gLp1pxJFuK team-skill-bridge-http v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-uVUnsZwjjQmq eval-verifier-regression-fix-workflow v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-nyuzDt1y8wmt codebuddy-bash-tool-result-format v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hpyg3smf6v(=该次消费者),提取任务 skill-extract-task-3656971c; skl-zxOrEOb022WE team-skill-bridge-search v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-706O31iXcvAU evaluation-repo-test-conventions v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-z0V6zwphUvhB codebuddy-tool-result-exit-line v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsv5hd4ys2(=该次消费者),提取任务 skill-extract-task-9d11533a; skl-NNeJq4zXYret confirm-fix-with-git-stash-baseline v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265; skl-47VVI0Hmdzz2 codebuddy-exit-status-parsing v1 candidate owner user usr-4u07qc2kuj(=该次消费者用户),归档 agent agt-hsylov19pn(=该次消费者),提取任务 skill-extract-task-a58a9265。owner user 等于该次消费者用户的 10/10;归档 agent 等于该次消费者的 10/10。
 
-池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 7 项(2026-09-11T16:28:23Z),新增 0;关闭后 未拍。 作者 key 拍的快照没有看到这 10 项:提取出的 skill 默认 visibility private、属消费者用户,作者的注册表列表不含它们(与笔记私有那次是同一机制);来源以每次写回前后的注册表比对为准。
+池快照:开关前 7 项(2026-09-11T16:18:49Z);写回后 7 项(2026-09-11T16:28:23Z),新增 0;关闭后 7 项(2026-09-11T16:54:11Z),相对开关前新增 0。 作者 key 拍的快照没有看到这 10 项:提取出的 skill 默认 visibility private、属消费者用户,作者的注册表列表不含它们(与笔记私有那次是同一机制);来源以每次写回前后的注册表比对为准。
 
 ## apply 之前的两项确认
 
@@ -90,6 +93,8 @@
 
 闸门评估记录:
 - 2026-09-11T16:19:07Z dry-run(before the write-back with extraction on (trusted rows 2)):decision admit → status_target approved;status candidate → candidate;online validated 2 / corrected 0 / cross_user_validated 2 / untrusted_ignored 2
+- 2026-09-11T16:54:11Z APPLY(apply after the write-back window: the rule's own decision on the two trusted cross-user validated rows):decision admit → status_target approved;status candidate → approved;online validated 2 / corrected 0 / cross_user_validated 2 / untrusted_ignored 2
+apply 结果:status candidate → approved,与最后一次试算(admit)一致。
 
 ## 不信模型自报:这些运行的实证
 
