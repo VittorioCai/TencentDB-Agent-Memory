@@ -74,12 +74,23 @@
 逐条对照见 `evaluation/runner/COMPARISON-2026-09-11-reparsed.md` 的复核一节与 `evaluation/STATE.md`;
 `evaluation/REVIEW-GUIDE.md` 的失败案例卡里也各留了一条。
 
-## 顺手给上游提的一个修复(与本题目无关,独立分支)
+## 顺手给上游提的两个修复(与本题目无关,独立分支,均待审核)
 
-做题目四时实测撞到的一个产品缺陷,**已提给上游**:
-[TencentCloud/TencentDB-Agent-Memory#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)
-(2026-09-12,base `feat/server_team`)。它**不在本分支里**:分支 `fix/skill-extraction-flag`,
-从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独一个 worktree,`evaluation/` 零文件混入。
+做题目四时实测撞到的两个产品缺陷,**已提给上游,都还在等审核**——
+[#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358) 与
+[#1359](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1359)(均 2026-09-12,base `feat/server_team`)。
+两条都**不在本分支里**:各自从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独的 worktree,
+`evaluation/` 零文件混入。**两条都没有自动检查结果**:上游 `pr-ci.yml` 只在 base 为 `main` 时触发,
+所以下面写的"验证"一律指本地跑的单元测试与类型检查,不是 CI 绿,更不是已合并。
+
+**#1359 `fix(proxy): honor read-only mode in skill listing instructions`**:
+`skillRuntime.allowLlmWrite` 的产品默认是 `false`,此时 skill-bridge 对写子路径回 40302/403、
+工具清单也正确地不给 `skill_patch`;但 `<available_skills>` 的头部仍无条件写着"skill 有问题就用
+`skill_patch` 修""结束前更新它"。**默认部署下,产品指示模型去用一个从未给过它的工具。**
+修法是把那两句按同一个开关渲染(开关就在隔壁一行为另一个注入器算好),`+43/−8` 实现 + 9 个测试
+(其中 3 个走真实注入路径)。归档见 `evaluation/upstream/readonly-skill-listing/`。
+
+**#1358** 的问题如下。
 
 `/v3/skill/extract`、`/v3/skill/conversation/add`、`/v3/skill/conversation/force-archive` 三个归档入口的成功响应
 只回 `ok`/`status` + `task_id`。这句话没错——`SkillTriggerService.archive()` 在 tasks mutex 内写归档、追加

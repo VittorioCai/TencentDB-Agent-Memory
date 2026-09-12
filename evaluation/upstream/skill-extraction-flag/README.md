@@ -3,8 +3,8 @@
 候选二,按 2026-09-12 专家复核的定位重做。**不是**「任务永不消费」类的缺陷 —— 那个问题
 定义是我(审阅侧)先前写错的,已作废;现在的定位是**响应可观测性修复**。
 
-**已提:上游 PR [#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)**
-(2026-09-12T18:40Z 开,base `feat/server_team`、head `VittorioCai:fix/skill-extraction-flag`,OPEN、非草稿、mergeable)。
+**状态:已提交上游,待审核。** PR [#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)
+(2026-09-12T18:40Z 开,base `feat/server_team`、head `VittorioCai:fix/skill-extraction-flag`,OPEN、非草稿、`mergeable=MERGEABLE`)。**尚未被接受;`mergeable` 只表示无文本冲突,不是评审结论。**而且**没有任何自动检查结果**——上游 `pr-ci.yml` 只在 base 为 `main` 时触发,下表里的"通过"一律只指本地验证,不能读成 CI 绿。
 
 分支 `fix/skill-extraction-flag`,基于上游默认分支 `feat/server_team` 的 `0468a2a`
 (worktree `.claude/worktrees/upstream-extract-flag`,与本交付分支历史不相干,不含题目四的

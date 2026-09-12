@@ -135,6 +135,8 @@ unknown,闸门据此把复核优先级提到 high,admit/reject 不变——作�
 重新定位为**响应可观测性修复**,并要求复现证据必须包含任务登记记录与 worker 失败日志、"候选池没新增"不得单独作证。
 处置与三项证据见 `evaluation/upstream/skill-extraction-flag/`。
 
+**第六轮**(2026-09-12 夜)给了四条 proxy 缺陷,四条全部复现成立;第 ① 条已提为上游 PR **#1359**(只读模式下系统提示仍要求模型改 Skill——而只读是产品默认),②③④ 排在交付验收之后。两条上游 PR 的问题定义、证据、查重与剩余缺点见 `evaluation/upstream/`(含索引);**两条都只是「已提交,待审核」,且都没有自动检查结果**,归档里写的"通过"一律指本地验证。
+
 ## 每份报告都有"测的是什么,不是什么"
 
 批次四:`runner/COMPARISON-2026-09-11-reparsed.md` 开头;闭环:`tasks/exit-code-fix/REPORT.md`、`tasks/exit-line-collect/REPORT.md` 第一节;作者:`author/README.md` "Limits, stated"。
