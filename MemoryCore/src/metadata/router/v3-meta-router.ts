@@ -29,7 +29,7 @@ import {
 import { extractInstanceId } from "./instance.js";
 import { resolvePagination } from "./pagination.js";
 import { resolveUserId } from "../service/resolve-user-id.js";
-import type { AgentFilter, TaskFilter, ParticipationLogFilter } from "../types.js";
+import type { AgentFilter, TaskFilter, ParticipationLogFilter, AssetOutcomeFilter } from "../types.js";
 import * as S from "./v3-meta-schemas.js";
 import {
   createMetaApiTraceContext,
@@ -254,17 +254,55 @@ const routeTable: Record<string, Handler> = {
     return s.listParticipationLogsForCaller(filter, c, resolvePagination(d));
   }),
 
+  // AssetOutcome / admission gate
+  [`${V3_PREFIX}/asset/outcome/append`]: bind(S.assetOutcomeAppendSchema, (d, c, s) => {
+    // relation is derived by the service; the caller's value is dropped here.
+    const { evaluate, relation: _relation, ...input } = d;
+    void _relation;
+    return s.appendAssetOutcomeForCaller(input, c, { evaluate: evaluate ?? true });
+  }),
+  [`${V3_PREFIX}/asset/outcome/list`]: bind(S.assetOutcomeListSchema, (d, c, s) => {
+    const filter: AssetOutcomeFilter = { team_id: d.team_id };
+    if (d.asset_id) filter.asset_id = d.asset_id;
+    if (d.states) filter.states = d.states;
+    if (d.consumer_user_id) filter.consumer_user_id = d.consumer_user_id;
+    if (d.owner_user_id) filter.owner_user_id = d.owner_user_id;
+    if (d.trusted !== undefined) filter.trusted = d.trusted;
+    if (d.occurred_after) filter.occurred_after = d.occurred_after;
+    if (d.occurred_before) filter.occurred_before = d.occurred_before;
+    return s.listAssetOutcomesForCaller(filter, c, resolvePagination(d));
+  }),
+  [`${V3_PREFIX}/asset/gate/evaluate`]: bind(S.assetGateEvaluateSchema, (d, c, s) =>
+    s.evaluateAssetGateForCaller(d.asset_id, c, { apply: d.apply ?? true, asOf: d.as_of ?? null }),
+  ),
+  [`${V3_PREFIX}/asset/gate/get`]: bind(S.assetGateGetSchema, (d, c, s) => s.getAssetGateForCaller(d.asset_id, c)),
+  [`${V3_PREFIX}/asset/gate/review`]: bind(S.assetGateReviewSchema, (d, c, s) =>
+    s.reviewAssetGateForCaller(d.asset_id, c, { decision: d.decision, note: d.note ?? null, expected_version: d.expected_version, expected_content_hash: d.expected_content_hash ?? null, expected_revision: d.expected_revision, overrode: d.overrode ?? null }),
+  ),
+  [`${V3_PREFIX}/asset/outcome/retract`]: bind(S.assetOutcomeRetractSchema, (d, c, s) =>
+    s.retractAssetOutcomeForCaller(d.outcome_id, c, { reason: d.reason }),
+  ),
+  [`${V3_PREFIX}/asset/gate/assessment`]: bind(S.assetGateAssessmentSchema, (d, c, s) =>
+    s.writeAuthorAssessmentForCaller(d.asset_id, c, d.assessment),
+  ),
+  [`${V3_PREFIX}/asset/gate/backfill`]: bind(S.assetGateBackfillSchema, (d, c, s) =>
+    s.backfillAssetGateForCaller(d.team_id, c, { dry_run: d.dry_run, asset_type: d.asset_type }),
+  ),
+  [`${V3_PREFIX}/asset/gate/submit`]: bind(S.assetGateSubmitSchema, (d, c, s) =>
+    s.submitAssetForReviewForCaller(d.asset_id, c, { withdraw: d.withdraw, note: d.note ?? null }),
+  ),
+
   // Asset
   [`${V3_PREFIX}/asset/create`]: bind(S.assetCreateSchema, (d, c, s) => s.createAssetForCaller(d, c)),
-  [`${V3_PREFIX}/asset/get`]: bind(S.assetGetSchema, async (d, _c, s) => orNotFound(await s.getAssetById(d.asset_id), "asset_not_found", d.asset_id)),
+  [`${V3_PREFIX}/asset/get`]: bind(S.assetGetSchema, (d, c, s) => s.getAssetForCaller(d.asset_id, c)),
   [`${V3_PREFIX}/asset/update`]: bind(S.assetUpdateSchema, (d, c, s) => {
     const { asset_id, ...patch } = d;
     return s.updateAssetForCaller(asset_id, patch, c);
   }),
   [`${V3_PREFIX}/asset/delete`]: bind(S.assetDeleteSchema, (d, c, s) => s.deleteAssetsForCaller(d.asset_ids, c)),
-  [`${V3_PREFIX}/asset/list`]: bind(S.assetListSchema, (d, _c, s) => {
+  [`${V3_PREFIX}/asset/list`]: bind(S.assetListSchema, (d, c, s) => {
     const { team_id, limit, offset, ...filter } = d;
-    return s.listAssetsByTeam(team_id, resolvePagination({ limit, offset }), filter);
+    return s.listAssetsForCaller(team_id, c, resolvePagination({ limit, offset }), filter);
   }),
   [`${V3_PREFIX}/asset/list-accessible`]: bind(S.assetListAccessibleSchema, (d, _c, s) =>
     s.listAccessibleAssets(d)),

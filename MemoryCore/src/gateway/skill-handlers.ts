@@ -237,6 +237,107 @@ async function precheckWrite<T>(
   return { ok: true, core, data: parsed.data };
 }
 
+/**
+ * The admission gate on the skill data plane (2026-09-08).
+ *
+ * Every read a model can make — get, get-by-name, files/read, list, search,
+ * listing — passes through the asset registry: skill id = asset id, and the
+ * asset's status says whether it was admitted. On the model's path
+ * (`readPurpose` "use", which is what the proxy's bridge and injector send)
+ * only an approved asset passes, the caller's own included; a skill with no
+ * asset row is unregistered, is denied, and is registered as a candidate so
+ * it reaches the review queue. On the panel's path ("manage") the asset's
+ * own permission rules apply — owner, admins and reviewers see candidates.
+ *
+ * Fail closed: with no metadata service to ask, the model's path returns
+ * nothing rather than everything.
+ */
+type SkillLike = { skill_id: string; team_id?: string; owner_agent_id?: string; name?: string; version?: number; content_hash?: string };
+async function admissionFilter<T extends SkillLike>(
+  items: T[],
+  ctx: { deps: SkillRouterDeps; auth: V2AuthContext; user_id?: string; team_id?: string; agent_id?: string },
+): Promise<{ allowed: T[]; denied: Array<{ skill_id: string; reason: string }>; purpose: "use" | "manage" }> {
+  // Nothing to admit, so nothing was admitted under "manage": the honest
+  // answer for a caller that reads the purpose is the model's path.
+  if (items.length === 0) return { allowed: [], denied: [], purpose: "use" };
+  let purpose: "use" | "manage" = ctx.auth.readPurpose === "manage" ? "manage" : "use";
+  if (!ctx.deps.getMetadataService || !ctx.user_id) {
+    if (purpose === "manage") return { allowed: items, denied: [], purpose };
+    const why = !ctx.user_id ? "no user_id on the request" : "no metadata service";
+    ctx.deps.logger.warn(`[skill-admission] ${why}; denying ${items.length} skill(s) on the model path`);
+    return { allowed: [], denied: items.map((s) => ({ skill_id: s.skill_id, reason: !ctx.user_id ? "no_user" : "metadata_unavailable" })), purpose };
+  }
+  const meta = await ctx.deps.getMetadataService(ctx.auth.serviceId);
+  // "manage" is a person's read: the request must carry a user key that
+  // resolves to the user it reads for. A model that reaches Core with the
+  // service credential and a header gets the model's path.
+  if (purpose === "manage") {
+    const keyUser = ctx.auth.userKey ? await meta.getUserByKey(ctx.auth.userKey).catch(() => null) : null;
+    if (!keyUser || keyUser.user_id !== ctx.user_id) {
+      ctx.deps.logger.warn(`[skill-admission] manage requested for ${ctx.user_id} without a matching user key; reading on the model path`);
+      purpose = "use";
+    }
+  }
+  // What is about to be served, so the registry can refuse a version it has not admitted.
+  const served: Record<string, { version?: number; content_hash?: string | null; team_id?: string; agent_id?: string; name?: string }> = {};
+  for (const s of items) served[s.skill_id] = { version: s.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name };
+  const decisions = await meta.decideAssetReads({ user_id: ctx.user_id, asset_ids: items.map((s) => s.skill_id), purpose, agent_id: ctx.agent_id, served });
+  const allowed: T[] = [];
+  const denied: Array<{ skill_id: string; reason: string }> = [];
+  for (const s of items) {
+    const d = decisions.get(s.skill_id);
+    if (d?.allowed) { allowed.push(s); continue; }
+    denied.push({ skill_id: s.skill_id, reason: d?.reason ?? "unknown" });
+    if (d?.reason === "unregistered" && s.team_id && s.owner_agent_id && s.name) {
+      // Register it as a candidate so a human sees it; never on the request's critical path.
+      meta.ensureSkillAsset({ skill_id: s.skill_id, team_id: s.team_id, agent_id: s.owner_agent_id, name: s.name, version: s.version, content_hash: s.content_hash ?? null })
+        .catch((err: unknown) => ctx.deps.logger.warn(`[skill-admission] ensureSkillAsset ${s.skill_id} failed: ${(err as Error).message}`));
+    }
+  }
+  // The purpose the admission actually ran under — "manage" only when a
+  // user key resolved to the user being read for. Every later step reads
+  // this, never the request header: a downgrade decided here must not be
+  // undone downstream (2026-09-08d).
+  return { allowed, denied, purpose };
+}
+
+/**
+ * The skill row that is about to be served — the requested version, or the
+ * head when none was asked for — as the registry needs it (version, content
+ * hash). The caller then pins that version on the read it performs, so the
+ * row checked and the row returned are the same one (2026-09-08c). The id
+ * alone when the row cannot be read.
+ */
+async function headOf(core: SkillCore, ids: { skill_id: string; version?: number; user_id?: string; team_id?: string; agent_id?: string; task_id?: string }): Promise<SkillLike> {
+  try {
+    const row = await core.get({ user_id: ids.user_id, team_id: ids.team_id, agent_id: ids.agent_id, task_id: ids.task_id, skill_id: ids.skill_id, version: ids.version, include_content: false, include_manifest: false });
+    return { skill_id: row.skill_id, team_id: row.team_id, owner_agent_id: row.owner_agent_id, name: row.name, version: row.version, content_hash: row.content_hash };
+  } catch {
+    return { skill_id: ids.skill_id, version: ids.version };
+  }
+}
+
+function notAdmitted(skillId: string, reason: string, requestId: string): ApiResponseEnvelope {
+  return errorEnvelope(40301, `SKILL_NOT_ADMITTED: ${skillId} is not in the admitted pool (${reason})`, requestId);
+}
+
+/**
+ * After update / patch: the registry follows the new version (handler-level
+ * copy of the versioning hook, for the standalone core that has no hook;
+ * idempotent, so the two never disagree). Logged, never fatal: the write
+ * happened, and the read path refuses to serve the new content as admitted
+ * until the registry knows it.
+ */
+async function syncAssetVersion(deps: SkillRouterDeps, auth: V2AuthContext, r: Skill): Promise<void> {
+  if (!deps.getMetadataService || !r.team_id || !r.owner_agent_id) return;
+  try {
+    const meta = await deps.getMetadataService(auth.serviceId);
+    await meta.syncSkillAssetVersion({ skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version, content_hash: r.content_hash });
+  } catch (err) {
+    deps.logger.warn(`${TAG} syncSkillAssetVersion failed for ${r.skill_id} v${r.version}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 // 把 Skill 行形成 SkillSummary 形态（不带 content；带 manifest 当 detail 时再加）
 // 字段对齐设计文档 §3.4 SkillSummary。
 /** 反序列化 skill.metadata_json 到 metadata 对象；无效 JSON 返回 undefined。 */
@@ -347,6 +448,7 @@ export async function handleUpdate(body: unknown, auth: V2AuthContext, requestId
 
   try {
     const r = await pre.core.update(pre.data);
+    await syncAssetVersion(deps, auth, r);
     try { trace.report("skill.update", { skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version }); } catch { /* noop */ }
     obsLogger.info("skill.handleUpdate.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: r.skill_id, name: r.name, version: r.version });
     return successEnvelope(toSummary(r), requestId);
@@ -371,6 +473,7 @@ export async function handlePatch(body: unknown, auth: V2AuthContext, requestId:
 
   try {
     const r = await pre.core.patch(pre.data);
+    await syncAssetVersion(deps, auth, r);
     try { trace.report("skill.patch", { skill_id: r.skill_id, team_id: r.team_id, agent_id: r.owner_agent_id, name: r.name, version: r.version }); } catch { /* noop */ }
     obsLogger.info("skill.handlePatch.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: r.skill_id, name: r.name, version: r.version });
     return successEnvelope(toSummary(r), requestId);
@@ -476,6 +579,11 @@ export async function handleGetByName(body: unknown, _auth: V2AuthContext, reque
       include_content: pre.data.include_content,
       include_manifest: pre.data.include_manifest,
     });
+    const adm = await admissionFilter([row], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (adm.allowed.length === 0) {
+      obsLogger.info("skill.handleGetByName.done", { req_id: requestId, code: 40301, dur_ms: Date.now() - t0, skill_id: row.skill_id, reason: adm.denied[0]?.reason });
+      return notAdmitted(row.skill_id, adm.denied[0]?.reason ?? "unknown", requestId);
+    }
     const includeContent = pre.data.include_content ?? true;
     const includeManifest = pre.data.include_manifest ?? true;
     const data = {
@@ -507,6 +615,11 @@ export async function handleGet(body: unknown, _auth: V2AuthContext, requestId: 
   if (!pre.ok) { obsLogger.warn("skill.handleGet.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
     const row = await pre.core.get(pre.data);
+    const adm = await admissionFilter([row], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (adm.allowed.length === 0) {
+      obsLogger.info("skill.handleGet.done", { req_id: requestId, code: 40301, dur_ms: Date.now() - t0, skill_id: row.skill_id, reason: adm.denied[0]?.reason });
+      return notAdmitted(row.skill_id, adm.denied[0]?.reason ?? "unknown", requestId);
+    }
     const includeContent = pre.data.include_content ?? true;
     const includeManifest = pre.data.include_manifest ?? true;
     // Detail view 额外附上 content_hash / storage_dir（summary 没输出这些）。
@@ -536,8 +649,10 @@ export async function handleList(body: unknown, _auth: V2AuthContext, requestId:
     // SqliteSkillStore.listSkills / TcvdbSkillStore.listSkills 中的默认值）。
     // 普通业务调用方 **不应** 显式请求 archived——它对读/写 API 已经不可见。
     const r = await pre.core.list(pre.data);
-    obsLogger.info("skill.handleList.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, items: r.items.length, total: r.total });
-    return successEnvelope({ items: r.items.map(toSummary), total: r.total }, requestId);
+    const adm = await admissionFilter(r.items, { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    obsLogger.info("skill.handleList.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, items: adm.allowed.length, total: r.total, not_admitted: adm.denied.length });
+    // total counts what the store holds; the page carries only what the caller may read.
+    return successEnvelope({ items: adm.allowed.map(toSummary), total: r.total - adm.denied.length }, requestId);
   } catch (e) { obsLogger.error("skill.handleList.done", { req_id: requestId, dur_ms: Date.now() - t0 }, e instanceof Error ? e : undefined); return mapCoreError(e, requestId); }
 }
 
@@ -552,7 +667,9 @@ export async function handleSearch(body: unknown, _auth: V2AuthContext, requestI
     const searchInput = scope === "team"
       ? { ...data, agent_id: undefined }
       : data;
-    const hits = await pre.core.search(searchInput);
+    const hitsAll = await pre.core.search(searchInput);
+    const admS = await admissionFilter(hitsAll.map((h) => ({ ...h.skill, _hit: h })), { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    const hits = admS.allowed.map((s) => s._hit);
     const items = hits.map((h) => ({
       ...toSummary(h.skill),
       score: h.score,
@@ -569,7 +686,16 @@ export async function handleVersions(body: unknown, _auth: V2AuthContext, reques
   const pre = await precheck(versionsRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
+    // Version history names and describes the skill; a candidate's is not for the model.
+    const targetV = await headOf(pre.core, pre.data);
+    const admV = await admissionFilter([targetV], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admV.allowed.length === 0) return notAdmitted(pre.data.skill_id, admV.denied[0]?.reason ?? "unknown", requestId);
     const r = await pre.core.listVersions(pre.data);
+    // On the model's path only the admitted version's summary is history the model may see.
+    if (admV.purpose !== "manage") {
+      r.items = r.items.filter((s) => s.version === targetV.version && (!targetV.content_hash || s.content_hash === targetV.content_hash));
+      r.total = r.items.length;
+    }
     if (r.total === 0) {
       obsLogger.warn("skill.handleVersions.done", { req_id: requestId, code: 40401, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id, reason: "not_found" });
       return errorEnvelope(40401, "skill not found", requestId);
@@ -634,7 +760,11 @@ export async function handleFilesRead(body: unknown, _auth: V2AuthContext, reque
   const pre = await precheck(filesReadRequestSchema, body, _auth, deps, requestId);
   if (!pre.ok) { obsLogger.warn("skill.handleFilesRead.done", { req_id: requestId, code: pre.envelope.code, dur_ms: Date.now() - t0, reason: "precheck" }); return pre.envelope; }
   try {
-    const r = await pre.core.readFile(pre.data);
+    const targetF = await headOf(pre.core, pre.data);
+    const admF = await admissionFilter([targetF], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admF.allowed.length === 0) return notAdmitted(pre.data.skill_id, admF.denied[0]?.reason ?? "unknown", requestId);
+    // Read the version that was checked, not whatever is head by now.
+    const r = await pre.core.readFile({ ...pre.data, version: targetF.version ?? pre.data.version });
     obsLogger.info("skill.handleFilesRead.done", { req_id: requestId, code: 0, dur_ms: Date.now() - t0, skill_id: pre.data.skill_id,
       version: r.version,
       size_bytes: r.size_bytes,
@@ -653,7 +783,12 @@ export async function handleExport(body: unknown, _auth: V2AuthContext, requestI
     return pre.envelope;
   }
   try {
-    const r = await pre.core.exportSkill(pre.data);
+    // Export carries the content; same gate as get.
+    const targetE = await headOf(pre.core, pre.data);
+    const admE = await admissionFilter([targetE], { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    if (admE.allowed.length === 0) return notAdmitted(pre.data.skill_id, admE.denied[0]?.reason ?? "unknown", requestId);
+    // Export the version that was checked, not whatever is head by now.
+    const r = await pre.core.exportSkill({ ...pre.data, version: targetE.version ?? pre.data.version });
     obsLogger.info("skill.handleExport.done", {
       req_id: requestId, code: 0, dur_ms: Date.now() - t0,
       skill_id: pre.data.skill_id, version: r.version,
@@ -682,7 +817,7 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
     const topK = routing?.searchTopK ?? 20;
 
     // search 模式：按 routing.mode 选检索算法；fallback 到 list head（query 为空）。
-    type Item = { skill_id: string; name: string; description: string; version: number };
+    type Item = { skill_id: string; name: string; description: string; version: number; team_id?: string; owner_agent_id?: string; content_hash?: string };
     let items: Item[];
     let mode: "full" | "search";
     if (useSearch) {
@@ -699,6 +834,9 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         name: h.skill.name,
         description: h.skill.description,
         version: h.skill.version,
+        team_id: h.skill.team_id,
+        owner_agent_id: h.skill.owner_agent_id,
+        content_hash: h.skill.content_hash,
       }));
       mode = "search";
     } else {
@@ -713,9 +851,16 @@ export async function handleListing(body: unknown, _auth: V2AuthContext, request
         name: s.name,
         description: s.description,
         version: s.version,
+        team_id: s.team_id,
+        owner_agent_id: s.owner_agent_id,
+        content_hash: s.content_hash,
       }));
       mode = items.length < topK ? "full" : "search";
     }
+    // What the model is told exists is what it may read: the injected
+    // <available_skills> block never names a candidate or a rejected skill.
+    const admL = await admissionFilter(items, { deps, auth: _auth, user_id: pre.data.user_id, team_id: pre.data.team_id, agent_id: pre.data.agent_id });
+    items = admL.allowed;
 
     // 渲染 listing；按 char_budget 截断（保留头部 + 显式截断标记）。
     // 默认 id 模式: 每行结构化 `- id=<skill_id>, name=<name>, desc=<description>`,

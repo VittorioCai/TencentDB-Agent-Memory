@@ -359,9 +359,16 @@ export function parseV2Auth(
     return null;
   }
 
+  const purposeHeader = String(req.headers["x-tdai-read-purpose"] ?? "").trim().toLowerCase();
+  const userKey = String(req.headers["x-tdai-user-key"] ?? "").trim();
   return Object.fromEntries([
     ["apiKey", authHeader.slice(7).trim()],
     ["serviceId", serviceId.trim()],
+    // Only an explicit "manage" is honoured, and only with a user key that
+    // the admission filter can resolve to the reader (a header alone is not
+    // a credential); everything else is the model's path.
+    ["readPurpose", purposeHeader === "manage" ? "manage" : "use"],
+    ...(userKey ? [["userKey", userKey]] : []),
   ]) as V2AuthContext;
 }
 

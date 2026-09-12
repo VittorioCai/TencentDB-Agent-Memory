@@ -54,6 +54,86 @@ export function runMetadataStoreContract(
       await teardown(store);
     });
 
+    // ── Conditional writes and the evidence counter (2026-09-08g) ──
+    //
+    // These were added to SQLite and MongoDB together but only ever
+    // exercised through the SQLite service tests, so the Mongo
+    // implementations had no coverage at all. They belong here: the rule is
+    // the same on every backend, and a backend that gets it wrong lets a
+    // stale decision be written.
+    describe("conditional writes and the evidence counter", () => {
+      async function anAsset(): Promise<{ asset_id: string; team_id: string }> {
+        const owner = await store.createUser(uniqueUserInput());
+        const team = await store.createTeam({ name: "t", owner_user_id: owner.user_id } as CreateTeamInput);
+        const asset_id = newExternalAssetId("skill");
+        await store.createAsset({ asset_id, team_id: team.team_id, asset_type: "skill", name: "s",
+          owner_user_id: owner.user_id, source_type: "manual", visibility: "team", status: "candidate" });
+        return { asset_id, team_id: team.team_id };
+      }
+
+      it("a new asset starts at revision 0 and evidence_revision 0", async () => {
+        const { asset_id } = await anAsset();
+        const a = await store.getAssetById(asset_id);
+        expect(a?.revision ?? 0).toBe(0);
+        expect(a?.evidence_revision ?? 0).toBe(0);
+      });
+
+      it("every write raises the revision, so one read cannot write twice", async () => {
+        const { asset_id } = await anAsset();
+        const read = (await store.getAssetById(asset_id))!;
+        const expect1 = { version: read.version, content_hash: read.content_hash ?? null, revision: read.revision ?? 0 };
+        expect(await store.updateAssetIf(asset_id, { description: "one" }, expect1)).not.toBeNull();
+        expect(await store.updateAssetIf(asset_id, { description: "two" }, expect1)).toBeNull();
+        expect((await store.getAssetById(asset_id))?.description).toBe("one");
+        // An unconditional write raises it too.
+        const before = (await store.getAssetById(asset_id))!;
+        await store.updateAsset(asset_id, { description: "elsewhere" });
+        expect(await store.updateAssetIf(asset_id, { description: "three" },
+          { version: before.version, content_hash: before.content_hash ?? null, revision: before.revision ?? 0 })).toBeNull();
+        expect((await store.getAssetById(asset_id))?.description).toBe("elsewhere");
+      });
+
+      it("an outcome raises the evidence counter — appended, confirmed in place, or retracted", async () => {
+        const { asset_id, team_id } = await anAsset();
+        const ev = async () => (await store.getAssetById(asset_id))?.evidence_revision ?? 0;
+        const start = await ev();
+        const row = await store.appendAssetOutcome({ team_id, asset_id, asset_version: 1, state: "validated",
+          relation: "cross_user", consumer_user_id: "usr-x", trusted: false, call_id: "c1" });
+        const afterAppend = await ev();
+        expect(afterAppend).toBeGreaterThan(start);
+        await store.updateAssetOutcome(row.id, { trusted: true });
+        const afterConfirm = await ev();
+        expect(afterConfirm).toBeGreaterThan(afterAppend);
+        await store.updateAssetOutcome(row.id, { retracted_at: new Date().toISOString(), retracted_by: "usr-r", retract_reason: "x" });
+        expect(await ev()).toBeGreaterThan(afterConfirm);
+      });
+
+      it("a decision read before an outcome landed cannot be written after it", async () => {
+        const { asset_id, team_id } = await anAsset();
+        const read = (await store.getAssetById(asset_id))!;
+        const asRead = { version: read.version, content_hash: read.content_hash ?? null,
+          revision: read.revision ?? 0, evidence_revision: read.evidence_revision ?? 0 };
+        await store.appendAssetOutcome({ team_id, asset_id, asset_version: 1, state: "corrected",
+          corrected_reason: "wrong", relation: "cross_user", consumer_user_id: "usr-x", trusted: true, call_id: "c2" });
+        expect(await store.updateAssetIf(asset_id, { status: "approved" }, asRead)).toBeNull();
+        expect((await store.getAssetById(asset_id))?.status).toBe("candidate");
+        // Re-read, then write: that one lands.
+        const fresh = (await store.getAssetById(asset_id))!;
+        expect(await store.updateAssetIf(asset_id, { status: "approved" }, { version: fresh.version,
+          content_hash: fresh.content_hash ?? null, revision: fresh.revision ?? 0, evidence_revision: fresh.evidence_revision ?? 0 })).not.toBeNull();
+      });
+
+      it("a usage touch is not a change to the asset or its evidence", async () => {
+        const { asset_id } = await anAsset();
+        const before = (await store.getAssetById(asset_id))!;
+        await store.touchAssetUsage(asset_id);
+        const after = (await store.getAssetById(asset_id))!;
+        expect(after.usage_count).toBe(before.usage_count + 1);
+        expect(after.revision ?? 0).toBe(before.revision ?? 0);
+        expect(after.evidence_revision ?? 0).toBe(before.evidence_revision ?? 0);
+      });
+    });
+
     // ── User ──
     describe("User", () => {
       it("createUser 自动生成 user_id / 默认 key 并可按 id/key 查回", async () => {
@@ -635,7 +715,10 @@ export function runMetadataStoreContract(
           owner_user_id: owner.user_id,
           source_type: "auto",
           visibility: "team",
-          status: "active",
+          // A legacy status the type no longer admits and production rows
+          // still carry (three chat_memory rows on the live stack). The
+          // cast keeps the case honest about what the store must handle.
+          status: "active" as never,
         });
         await store.createAsset({
           asset_id: selfMemoryB,
@@ -645,7 +728,7 @@ export function runMetadataStoreContract(
           owner_user_id: owner.user_id,
           source_type: "auto",
           visibility: "private",
-          status: "active",
+          status: "active" as never,
         });
         await store.setAgentFixedAssets(agentB.agent_id, [
           { asset_id: selfMemoryB, asset_type: "chat_memory", created_by: owner.user_id },

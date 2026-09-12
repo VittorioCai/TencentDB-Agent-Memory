@@ -106,9 +106,12 @@ export interface SkillAssetHooks {
     user_id?: string;
     name: string;
     description: string;
+    content_hash?: string;
   }) => Promise<void>;
   onSkillAccessed?: (skill: Skill) => void;
   onSkillArchived?: (params: { skill_id: string; team_id?: string }) => void;
+  /** A new version was written: the asset registry follows (see SkillVersioningOptions.onSkillVersioned). */
+  onSkillVersioned?: (params: { skill_id: string; team_id?: string; agent_id?: string; name: string; version: number; content_hash: string }) => void;
 }
 
 // ============================
@@ -899,6 +902,7 @@ export class TdaiCore {
         resources: skillResources,
         storage: this.storage,
         onSkillCreated: assetHooks?.onSkillCreated,
+        onSkillVersioned: assetHooks?.onSkillVersioned,
       });
 
       this.skillCore = new SkillCore({

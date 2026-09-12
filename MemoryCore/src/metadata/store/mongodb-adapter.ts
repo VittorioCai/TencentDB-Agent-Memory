@@ -36,6 +36,9 @@ import type {
   ParticipationLogEntity,
   AppendParticipationLogInput,
   ParticipationLogFilter,
+  AssetOutcomeEntity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
   AssetEntity,
   FixedAssetBindingEntity,
   AclEntity,
@@ -64,10 +67,11 @@ import type {
   UpsertInstanceUpstreamConfigInput,
   InstanceUpstreamConfigFilter,
   UpstreamConfigType,
+  UpdateAssetExpect,
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
-import { DuplicateUserKeyError } from "./interface.js";
+import { DuplicateUserKeyError, type IMetadataStore } from "./interface.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -233,6 +237,12 @@ export class MongoMetadataStore implements IMetadataStore {
       { team_id: 1, task_id: 1, agent_id: 1, user_id: 1, created_at: -1 },
       { name: "ix_pl_team_dims_created" },
     );
+
+    // ── meta_asset_outcomes ──
+    await this.ensureIndex("meta_asset_outcomes", { team_id: 1, asset_id: 1, occurred_at: -1 }, { name: "ix_ao_team_asset_occurred" });
+    await this.ensureIndex("meta_asset_outcomes", { team_id: 1, consumer_user_id: 1, occurred_at: -1 }, { name: "ix_ao_team_consumer_occurred" });
+    // One row per recorder event (idempotent delivery); rows without an event id are not constrained.
+    await this.ensureIndex("meta_asset_outcomes", { team_id: 1, event_id: 1 }, { name: "ux_ao_team_event", unique: true, partialFilterExpression: { event_id: { $type: "string" } } });
 
     // ── meta_assets ──
     await this.ensureIndex("meta_assets", { asset_id: 1 }, { unique: true });
@@ -1011,6 +1021,145 @@ export class MongoMetadataStore implements IMetadataStore {
     );
   }
 
+  // ============================================================
+  // AssetOutcome
+  // ============================================================
+  async appendAssetOutcome(input: AppendAssetOutcomeInput): Promise<AssetOutcomeEntity> {
+    const now = nowIso();
+    const entity: AssetOutcomeEntity = {
+      id: generateRelationId(),
+      team_id: input.team_id,
+      asset_id: input.asset_id,
+      asset_version: input.asset_version ?? null,
+      state: input.state,
+      relation: input.relation ?? "unknown",
+      corrected_reason: input.state === "corrected" ? (input.corrected_reason ?? "other") : null,
+      consumer_user_id: input.consumer_user_id,
+      consumer_agent_id: input.consumer_agent_id ?? null,
+      task_id: input.task_id ?? null,
+      run_id: input.run_id ?? null,
+      source: input.source ?? "unknown",
+      evidence_json: input.evidence_json ?? "{}",
+      call_id: input.call_id ?? null,
+      event_id: input.event_id ?? null,
+      trusted: input.trusted === true,
+      untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
+      submitted_by_user_id: input.submitted_by_user_id ?? null,
+      submitted_role: input.submitted_role ?? null,
+      content_hash: input.content_hash ?? null,
+      retracted_at: null, retracted_by: null, retract_reason: null,
+      occurred_at: input.occurred_at ?? now,
+      created_at: now,
+    };
+    await this.col("meta_asset_outcomes").insertOne(entity);
+    // After the row lands, so a reader that saw it cannot also have seen the
+    // old counter (2026-09-08f).
+    //
+    // NOT atomic with the insert, and it cannot be made so here: the row and
+    // the counter are in different collections, which needs a session
+    // transaction and therefore a replica set. SQLite wraps the pair in one
+    // transaction (2026-09-08h); on MongoDB a crash between these two awaits
+    // leaves evidence on file that `evidence_revision` does not know about,
+    // and a decision read before it could be written over that evidence. The
+    // deployed stack is SQLite; a MongoDB deployment must run this pair
+    // inside `withTransaction` before it can be trusted the same way.
+    await this.bumpAssetEvidence(entity.asset_id);
+    return entity;
+  }
+
+  async getAssetOutcomeByEvent(teamId: string, eventId: string): Promise<AssetOutcomeEntity | null> {
+    const d = await this.col("meta_asset_outcomes").findOne({ team_id: teamId, event_id: eventId });
+    return d ? this.mapAssetOutcomeDoc(d) : null;
+  }
+
+  async getAssetOutcomeById(id: string): Promise<AssetOutcomeEntity | null> {
+    const d = await this.col("meta_asset_outcomes").findOne({ id });
+    return d ? this.mapAssetOutcomeDoc(d) : null;
+  }
+
+  async updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): Promise<AssetOutcomeEntity | null> {
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation", "content_hash", "retracted_at", "retracted_by", "retract_reason"] as const;
+    const $set: Document = {};
+    for (const k of allowed) if (patch[k] !== undefined) $set[k] = patch[k];
+    if (Object.keys($set).length) await this.col("meta_asset_outcomes").updateOne({ id }, { $set });
+    const d = await this.col("meta_asset_outcomes").findOne({ id });
+    if (!d) return null;
+    const row = this.mapAssetOutcomeDoc(d);
+    // Confirming a row in place, or retracting it, changes the evidence.
+    // Same caveat as appendAssetOutcome: not atomic with the update on
+    // MongoDB without a session transaction (2026-09-08h).
+    if (Object.keys($set).length) await this.bumpAssetEvidence(row.asset_id);
+    return row;
+  }
+
+  /** Rows written before 2026-09-08 lack the trust fields; read them as untrusted. */
+  private mapAssetOutcomeDoc(d: Document): AssetOutcomeEntity {
+    const r = d as unknown as Partial<AssetOutcomeEntity>;
+    return {
+      ...(r as AssetOutcomeEntity),
+      call_id: r.call_id ?? null,
+      event_id: r.event_id ?? null,
+      trusted: r.trusted === true,
+      untrusted_reason: r.untrusted_reason ?? null,
+      submitted_by_user_id: r.submitted_by_user_id ?? null,
+      submitted_role: r.submitted_role ?? null,
+      content_hash: r.content_hash ?? null,
+      retracted_at: r.retracted_at ?? null,
+      retracted_by: r.retracted_by ?? null,
+      retract_reason: r.retract_reason ?? null,
+    };
+  }
+
+  async updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): Promise<AssetEntity | null> {
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"];
+    const $set: Document = {};
+    for (const k of allowed) if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) $set[k] = (patch as Record<string, unknown>)[k];
+    $set.updated_at = nowIso();
+    const filter: Document = { asset_id: assetId };
+    if (expect.version !== undefined) filter.version = expect.version;
+    if (expect.content_hash !== undefined) filter.content_hash = expect.content_hash;
+    if (expect.updated_at !== undefined) filter.updated_at = expect.updated_at;
+    // The revision is the decisive condition: `$inc` raises it on every
+    // write, so a second write from the same read finds no match — where
+    // `updated_at`, a millisecond clock, could be unchanged (2026-09-08d).
+    // A row written before the field existed carries revision 0.
+    const eq = (field: string, n: number): Document => (n === 0 ? { $or: [{ [field]: 0 }, { [field]: { $exists: false } }] } : { [field]: n });
+    const and: Document[] = [];
+    if (expect.revision !== undefined) and.push(eq("revision", expect.revision));
+    if (expect.evidence_revision !== undefined) and.push(eq("evidence_revision", expect.evidence_revision));
+    if (and.length) filter.$and = and;
+    const res = await this.col("meta_assets").updateOne(filter, { $set, $inc: { revision: 1 } });
+    if (!res.matchedCount) return null;
+    return this.getAssetById(assetId);
+  }
+
+  async bumpAssetEvidence(assetId: string): Promise<void> {
+    // Raised after the outcome row lands; touches nothing else on the asset.
+    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $inc: { evidence_revision: 1 } });
+  }
+
+  async listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): Promise<ListPage<AssetOutcomeEntity>> {
+    const q: Document = { team_id: filter.team_id };
+    if (filter.asset_id) q.asset_id = filter.asset_id;
+    if (filter.states && filter.states.length) q.state = { $in: filter.states };
+    if (filter.consumer_user_id) q.consumer_user_id = filter.consumer_user_id;
+    if (filter.trusted !== undefined) q.trusted = filter.trusted ? true : { $ne: true };
+    if (filter.event_id) q.event_id = filter.event_id;
+    if (filter.occurred_after) q.occurred_at = { ...(q.occurred_at as Document), $gte: filter.occurred_after };
+    if (filter.occurred_before) q.occurred_at = { ...(q.occurred_at as Document), $lte: filter.occurred_before };
+    if (filter.owner_user_id) {
+      // Author signal: outcomes of the assets this user owns. Resolved through
+      // meta_assets first; an unregistered asset is not counted, as in SQLite.
+      const owned = await this.col("meta_assets")
+        .find({ team_id: filter.team_id, owner_user_id: filter.owner_user_id }, { projection: { asset_id: 1 } })
+        .toArray();
+      const ids = owned.map((d) => String((d as unknown as { asset_id: unknown }).asset_id));
+      if (ids.length === 0) return { items: [], total: 0 };
+      q.asset_id = filter.asset_id ? filter.asset_id : { $in: ids };
+    }
+    return this.paginatedFind("meta_asset_outcomes", q, pagination, { occurred_at: -1, id: -1 }, (d) => this.mapAssetOutcomeDoc(d));
+  }
+
   private buildParticipationLogMatch(filter: ParticipationLogFilter): Document {
     const q: Document = { team_id: filter.team_id };
     if (filter.task_id) q.task_id = filter.task_id;
@@ -1038,6 +1187,8 @@ export class MongoMetadataStore implements IMetadataStore {
       source_type: input.source_type,
       source_ref: input.source_ref ?? null,
       version: 1,
+      revision: 0,
+      evidence_revision: 0,
       visibility: input.visibility ?? "team",
       status: input.status ?? "draft",
       confidence: input.confidence ?? null,
@@ -1045,6 +1196,7 @@ export class MongoMetadataStore implements IMetadataStore {
       last_used_at: null,
       usage_count: 0,
       content_ref: input.content_ref ?? null,
+      content_hash: input.content_hash ?? null,
       created_at: now,
       updated_at: now,
       metadata_json: input.metadata_json ?? "{}",
@@ -1054,11 +1206,22 @@ export class MongoMetadataStore implements IMetadataStore {
   }
 
   async getAssetById(assetId: string): Promise<AssetEntity | null> {
-    return this.col<AssetEntity>("meta_assets").findOne({ asset_id: assetId } as Document, PROJECT_NO_ID) as Promise<AssetEntity | null>;
+    const doc = (await this.col<AssetEntity>("meta_assets").findOne({ asset_id: assetId } as Document, PROJECT_NO_ID)) as AssetEntity | null;
+    // A row written before the revision field existed reads as revision 0,
+    // which is what a conditional write on it expects.
+    return doc ? { ...doc, revision: doc.revision ?? 0, evidence_revision: doc.evidence_revision ?? 0 } : null;
   }
 
   async updateAsset(assetId: string, patch: Partial<AssetEntity>): Promise<AssetEntity | null> {
-    await this.patchOne("meta_assets", { asset_id: assetId }, patch, ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "version", "source_ref", "metadata_json"], true);
+    // One statement: the fields and the revision bump land together
+    // (2026-09-08e). Two awaits left a window in which a conditional write
+    // read the row after the fields changed but before the revision rose,
+    // and was allowed through on a revision that was already stale.
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"];
+    const $set: Document = {};
+    for (const k of allowed) if (k in patch && (patch as Record<string, unknown>)[k] !== undefined) $set[k] = (patch as Record<string, unknown>)[k];
+    $set.updated_at = nowIso();
+    await this.col("meta_assets").updateOne({ asset_id: assetId }, { $set, $inc: { revision: 1 } });
     return this.getAssetById(assetId);
   }
 

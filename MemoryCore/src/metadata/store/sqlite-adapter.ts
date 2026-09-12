@@ -32,6 +32,9 @@ import type {
   ParticipationLogEntity,
   AppendParticipationLogInput,
   ParticipationLogFilter,
+  AssetOutcomeEntity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
   AssetEntity,
   FixedAssetBindingEntity,
   AclEntity,
@@ -60,10 +63,11 @@ import type {
   UpsertInstanceUpstreamConfigInput,
   InstanceUpstreamConfigFilter,
   UpstreamConfigType,
+  UpdateAssetExpect,
 } from "../types.js";
 import { DEFAULT_PAGINATION } from "../pagination.js";
 import { buildChatMemoryAssetId } from "../utils/chat-memory-asset.js";
-import { DuplicateUserKeyError } from "./interface.js";
+import { DuplicateUserKeyError, type IMetadataStore } from "./interface.js";
 
 const require = createRequire(import.meta.url);
 function requireNodeSqlite(): typeof import("node:sqlite") {
@@ -241,6 +245,8 @@ export class SqliteMetadataStore implements IMetadataStore {
         source_type TEXT NOT NULL,
         source_ref TEXT,
         version INTEGER NOT NULL DEFAULT 1,
+        revision INTEGER NOT NULL DEFAULT 0,
+        evidence_revision INTEGER NOT NULL DEFAULT 0,
         visibility TEXT NOT NULL DEFAULT 'team',
         status TEXT NOT NULL DEFAULT 'draft',
         confidence REAL,
@@ -248,6 +254,7 @@ export class SqliteMetadataStore implements IMetadataStore {
         last_used_at TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         content_ref TEXT,
+        content_hash TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         metadata_json TEXT NOT NULL DEFAULT '{}'
@@ -292,6 +299,43 @@ export class SqliteMetadataStore implements IMetadataStore {
       CREATE INDEX IF NOT EXISTS idx_meta_acl_asset_created ON meta_asset_acl(asset_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_meta_acl_subject_created ON meta_asset_acl(subject_type, subject_id, created_at DESC);
 
+      -- Asset outcomes: what happened after an asset was used. Written by
+      -- whoever can tie a use to a result (evaluation harness, CI, reviewer);
+      -- read by the admission gate, which turns them into status/confidence.
+      CREATE TABLE IF NOT EXISTS meta_asset_outcomes (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        asset_version INTEGER,
+        state TEXT NOT NULL,
+        relation TEXT NOT NULL DEFAULT 'unknown',
+        corrected_reason TEXT,
+        consumer_user_id TEXT NOT NULL,
+        consumer_agent_id TEXT,
+        task_id TEXT,
+        run_id TEXT,
+        source TEXT NOT NULL DEFAULT 'unknown',
+        evidence_json TEXT NOT NULL DEFAULT '{}',
+        call_id TEXT,
+        event_id TEXT,
+        trusted INTEGER NOT NULL DEFAULT 0,
+        untrusted_reason TEXT,
+        submitted_by_user_id TEXT,
+        submitted_role TEXT,
+        content_hash TEXT,
+        retracted_at TEXT,
+        retracted_by TEXT,
+        retract_reason TEXT,
+        occurred_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_meta_ao_team_asset_occurred ON meta_asset_outcomes(team_id, asset_id, occurred_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_meta_ao_team_consumer_occurred ON meta_asset_outcomes(team_id, consumer_user_id, occurred_at DESC);
+      -- The unique index on (team_id, event_id) is created by
+      -- migrateAssetOutcomeTrustColumns(), after the column exists on
+      -- databases that predate it: in this block it would fail before the
+      -- ALTER ran.
+
       CREATE TABLE IF NOT EXISTS meta_config_params (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         scope TEXT NOT NULL CHECK (scope IN ('global', 'user')),
@@ -331,6 +375,55 @@ export class SqliteMetadataStore implements IMetadataStore {
     `);
     this.migrateUserTypeColumn();
     this.migrateLegacyUserKeys();
+    this.migrateAssetOutcomeTrustColumns();
+    this.migrateAssetContentHashColumn();
+    this.migrateAssetRevisionColumn();
+    this.migrateAssetEvidenceRevisionColumn();
+  }
+
+  /**
+   * Existing databases (2026-09-08f): assets gain `evidence_revision`,
+   * raised whenever an outcome about the asset is added, confirmed in place
+   * or retracted. A decision is written conditional on it, so evidence that
+   * landed after the decision read it refuses the write.
+   */
+  private migrateAssetEvidenceRevisionColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'evidence_revision'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN evidence_revision INTEGER NOT NULL DEFAULT 0"); } catch { /* concurrent init */ }
+    }
+  }
+
+  /**
+   * The evidence about an asset changed. Raised AFTER the row itself lands,
+   * so a reader that saw the new row can never also have seen the old
+   * counter. Touches nothing else: an edit to the asset's name is not
+   * evidence, and evidence is not an edit.
+   */
+  bumpAssetEvidence(assetId: string): void {
+    this.run("UPDATE meta_assets SET evidence_revision = COALESCE(evidence_revision, 0) + 1 WHERE asset_id = ?", assetId);
+  }
+
+  /**
+   * Existing databases (2026-09-08d): assets gain `revision`, raised by
+   * every write. `updated_at` was the conditional-write key and it is a
+   * millisecond clock — two writes inside one millisecond left version,
+   * hash and time all unchanged, so the second stale write landed and the
+   * first review vanished from the history.
+   */
+  private migrateAssetRevisionColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'revision'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"); } catch { /* concurrent init */ }
+    }
+  }
+
+  /** Existing databases (2026-09-08): assets gain content_hash, filled in as skills are read or versioned. */
+  private migrateAssetContentHashColumn(): void {
+    const have = this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_assets') WHERE name = 'content_hash'");
+    if (have.length === 0) {
+      try { this.db.exec("ALTER TABLE meta_assets ADD COLUMN content_hash TEXT"); } catch { /* concurrent init */ }
+    }
   }
 
   private migrateUserTypeColumn(): void {
@@ -345,6 +438,27 @@ export class SqliteMetadataStore implements IMetadataStore {
       }
     }
     this.db.exec(`DROP INDEX IF EXISTS ux_meta_users_single_system_admin`);
+  }
+
+  /**
+   * Existing databases (2026-09-08): outcome rows gain call identity, an
+   * idempotency key and the trust mark. Rows written before this carry
+   * trusted=0 — they were submitted before the service derived trust, so
+   * the gate no longer reads them; the evidence base is re-recorded by a
+   * trusted submitter rather than promoted by a migration.
+   */
+  private migrateAssetOutcomeTrustColumns(): void {
+    const have = new Set(this.all<{ name: string }>("SELECT name FROM pragma_table_info('meta_asset_outcomes')").map((r) => r.name));
+    const add: Array<[string, string]> = [
+      ["call_id", "TEXT"], ["event_id", "TEXT"], ["trusted", "INTEGER NOT NULL DEFAULT 0"],
+      ["untrusted_reason", "TEXT"], ["submitted_by_user_id", "TEXT"], ["submitted_role", "TEXT"],
+      ["content_hash", "TEXT"], ["retracted_at", "TEXT"], ["retracted_by", "TEXT"], ["retract_reason", "TEXT"],
+    ];
+    for (const [col, type] of add) {
+      if (have.has(col)) continue;
+      try { this.db.exec(`ALTER TABLE meta_asset_outcomes ADD COLUMN ${col} ${type}`); } catch { /* concurrent init */ }
+    }
+    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_meta_ao_team_event ON meta_asset_outcomes(team_id, event_id) WHERE event_id IS NOT NULL`);
   }
 
   /** 存量库：若 meta_users 仍有 user_key 列，回填 meta_user_keys 后不再写入该列。 */
@@ -1255,6 +1369,150 @@ export class SqliteMetadataStore implements IMetadataStore {
     );
   }
 
+  // ============================================================
+  // AssetOutcome
+  // ============================================================
+  appendAssetOutcome(input: AppendAssetOutcomeInput): AssetOutcomeEntity {
+    const now = nowIso();
+    const entity: AssetOutcomeEntity = {
+      id: generateRelationId(),
+      team_id: input.team_id,
+      asset_id: input.asset_id,
+      asset_version: input.asset_version ?? null,
+      state: input.state,
+      relation: input.relation ?? "unknown",
+      corrected_reason: input.state === "corrected" ? (input.corrected_reason ?? "other") : null,
+      consumer_user_id: input.consumer_user_id,
+      consumer_agent_id: input.consumer_agent_id ?? null,
+      task_id: input.task_id ?? null,
+      run_id: input.run_id ?? null,
+      source: input.source ?? "unknown",
+      evidence_json: input.evidence_json ?? "{}",
+      call_id: input.call_id ?? null,
+      event_id: input.event_id ?? null,
+      trusted: input.trusted === true,
+      untrusted_reason: input.trusted === true ? null : (input.untrusted_reason ?? null),
+      submitted_by_user_id: input.submitted_by_user_id ?? null,
+      submitted_role: input.submitted_role ?? null,
+      content_hash: input.content_hash ?? null,
+      retracted_at: null, retracted_by: null, retract_reason: null,
+      occurred_at: input.occurred_at ?? now,
+      created_at: now,
+    };
+    return this.tx(() => {
+      this.run(
+        `INSERT INTO meta_asset_outcomes
+          (id, team_id, asset_id, asset_version, state, relation, corrected_reason, consumer_user_id,
+           consumer_agent_id, task_id, run_id, source, evidence_json, call_id, event_id, trusted,
+           untrusted_reason, submitted_by_user_id, submitted_role, content_hash, occurred_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        entity.id, entity.team_id, entity.asset_id, entity.asset_version, entity.state, entity.relation,
+        entity.corrected_reason, entity.consumer_user_id, entity.consumer_agent_id, entity.task_id,
+        entity.run_id, entity.source, entity.evidence_json, entity.call_id, entity.event_id, entity.trusted ? 1 : 0,
+        entity.untrusted_reason, entity.submitted_by_user_id, entity.submitted_role, entity.content_hash, entity.occurred_at, entity.created_at,
+      );
+      // The evidence about the asset just changed, and the counter rises with
+      // it, in the store (2026-09-08f). Putting this in the service left it
+      // bypassable: anything writing straight to the store — a migration, a
+      // test, a script — added evidence a decision could then be written over.
+      // Row and counter go together or not at all (2026-09-08h): a crash
+      // between them would leave evidence on file that the counter does not
+      // know about, and a decision read before it could then be written over
+      // that evidence for good.
+      this.bumpAssetEvidence(entity.asset_id);
+      return entity;
+    });
+  }
+
+  getAssetOutcomeByEvent(teamId: string, eventId: string): AssetOutcomeEntity | null {
+    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE team_id = ? AND event_id = ?", teamId, eventId));
+  }
+
+  getAssetOutcomeById(id: string): AssetOutcomeEntity | null {
+    return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+  }
+
+  updateAssetOutcome(id: string, patch: Partial<AssetOutcomeEntity>): AssetOutcomeEntity | null {
+    const allowed = ["trusted", "untrusted_reason", "submitted_by_user_id", "submitted_role", "call_id", "asset_version", "evidence_json", "relation", "content_hash", "retracted_at", "retracted_by", "retract_reason"] as const;
+    const p: Record<string, unknown> = {};
+    for (const k of allowed) if (patch[k] !== undefined) p[k] = k === "trusted" ? (patch[k] ? 1 : 0) : patch[k];
+    if (Object.keys(p).length === 0) return this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+    const sets = Object.keys(p).map((k) => `${k} = ?`).join(", ");
+    return this.tx(() => {
+      this.run(`UPDATE meta_asset_outcomes SET ${sets} WHERE id = ?`, ...(Object.values(p) as SQLInputValue[]), id);
+      const row = this.mapAssetOutcome(this.get("SELECT * FROM meta_asset_outcomes WHERE id = ?", id));
+      // Confirming a row in place, or retracting it, changes the evidence too,
+      // and lands with it (2026-09-08h).
+      if (row) this.bumpAssetEvidence(row.asset_id);
+      return row;
+    });
+  }
+
+  listAssetOutcomes(filter: AssetOutcomeFilter, pagination?: PaginationParams | null): ListPage<AssetOutcomeEntity> {
+    const conditions = ["o.team_id = ?"];
+    const params: SQLInputValue[] = [filter.team_id];
+    if (filter.asset_id) { conditions.push("o.asset_id = ?"); params.push(filter.asset_id); }
+    if (filter.states && filter.states.length) {
+      conditions.push(`o.state IN (${filter.states.map(() => "?").join(", ")})`);
+      params.push(...filter.states);
+    }
+    if (filter.consumer_user_id) { conditions.push("o.consumer_user_id = ?"); params.push(filter.consumer_user_id); }
+    if (filter.trusted !== undefined) { conditions.push("o.trusted = ?"); params.push(filter.trusted ? 1 : 0); }
+    if (filter.event_id) { conditions.push("o.event_id = ?"); params.push(filter.event_id); }
+    if (filter.occurred_after) { conditions.push("o.occurred_at >= ?"); params.push(filter.occurred_after); }
+    if (filter.occurred_before) { conditions.push("o.occurred_at <= ?"); params.push(filter.occurred_before); }
+    // Outcomes of one author's assets: join through meta_assets. Used by the
+    // gate for the author signal; an asset with no meta row cannot be joined
+    // and is not counted, which is the right answer for an unregistered asset.
+    let join = "";
+    if (filter.owner_user_id) {
+      join = " JOIN meta_assets a ON a.asset_id = o.asset_id";
+      conditions.push("a.owner_user_id = ?");
+      params.push(filter.owner_user_id);
+    }
+    const base = `FROM meta_asset_outcomes o${join} WHERE ${conditions.join(" AND ")}`;
+    return this.selectList(
+      `SELECT COUNT(*) AS c ${base}`,
+      params,
+      `SELECT o.* ${base} ORDER BY o.occurred_at DESC, o.id DESC`,
+      params,
+      pagination,
+      (r) => this.mapAssetOutcome(r),
+    );
+  }
+
+  private mapAssetOutcome(row: Row | null): AssetOutcomeEntity | null {
+    if (!row) return null;
+    const r = row as Record<string, unknown>;
+    return {
+      id: String(r.id),
+      team_id: String(r.team_id),
+      asset_id: String(r.asset_id),
+      asset_version: r.asset_version === null || r.asset_version === undefined ? null : Number(r.asset_version),
+      state: String(r.state) as AssetOutcomeEntity["state"],
+      relation: String(r.relation) as AssetOutcomeEntity["relation"],
+      corrected_reason: r.corrected_reason === null || r.corrected_reason === undefined ? null : (String(r.corrected_reason) as AssetOutcomeEntity["corrected_reason"]),
+      consumer_user_id: String(r.consumer_user_id),
+      consumer_agent_id: r.consumer_agent_id === null || r.consumer_agent_id === undefined ? null : String(r.consumer_agent_id),
+      task_id: r.task_id === null || r.task_id === undefined ? null : String(r.task_id),
+      run_id: r.run_id === null || r.run_id === undefined ? null : String(r.run_id),
+      source: String(r.source),
+      evidence_json: String(r.evidence_json),
+      call_id: r.call_id === null || r.call_id === undefined ? null : String(r.call_id),
+      event_id: r.event_id === null || r.event_id === undefined ? null : String(r.event_id),
+      trusted: Number(r.trusted ?? 0) === 1,
+      untrusted_reason: r.untrusted_reason === null || r.untrusted_reason === undefined ? null : String(r.untrusted_reason),
+      submitted_by_user_id: r.submitted_by_user_id === null || r.submitted_by_user_id === undefined ? null : String(r.submitted_by_user_id),
+      submitted_role: r.submitted_role === null || r.submitted_role === undefined ? null : String(r.submitted_role),
+      content_hash: r.content_hash == null ? null : String(r.content_hash),
+      retracted_at: r.retracted_at == null ? null : String(r.retracted_at),
+      retracted_by: r.retracted_by == null ? null : String(r.retracted_by),
+      retract_reason: r.retract_reason == null ? null : String(r.retract_reason),
+      occurred_at: String(r.occurred_at),
+      created_at: String(r.created_at),
+    };
+  }
+
   private buildParticipationLogWhere(filter: ParticipationLogFilter): { sql: string; params: SQLInputValue[] } {
     const conditions = ["team_id = ?"];
     const params: SQLInputValue[] = [filter.team_id];
@@ -1306,9 +1564,9 @@ export class SqliteMetadataStore implements IMetadataStore {
     this.run(
       `INSERT INTO meta_assets
         (asset_id, team_id, asset_type, name, description, owner_user_id, source_type, source_ref,
-         version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref,
-         created_at, updated_at, metadata_json)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         version, visibility, status, confidence, expires_at, last_used_at, usage_count, content_ref, content_hash,
+         created_at, updated_at, metadata_json, revision, evidence_revision)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       assetId,
       input.team_id,
       input.asset_type,
@@ -1325,9 +1583,12 @@ export class SqliteMetadataStore implements IMetadataStore {
       null,
       0,
       input.content_ref ?? null,
+      input.content_hash ?? null,
       now,
       now,
       input.metadata_json ?? "{}",
+      0,
+      0,
     );
     return this.getAssetById(assetId)!;
   }
@@ -1336,9 +1597,38 @@ export class SqliteMetadataStore implements IMetadataStore {
     return this.mapAsset(this.get("SELECT * FROM meta_assets WHERE asset_id = ?", assetId));
   }
 
+  /**
+   * One statement: the new fields land together with `updated_at`, and only
+   * if the row still matches what the caller read (version, hash, updated_at).
+   * A row that moved on is left alone and null is returned.
+   */
+  updateAssetIf(assetId: string, patch: Partial<AssetEntity>, expect: UpdateAssetExpect): AssetEntity | null {
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"] as const;
+    const fields: Record<string, SQLInputValue> = {};
+    for (const k of allowed) { const v = (patch as Record<string, unknown>)[k]; if (k in patch && v !== undefined) fields[k] = v as SQLInputValue; }
+    fields.updated_at = nowIso();
+    const where: string[] = ["asset_id = ?"]; const params: SQLInputValue[] = [];
+    // `revision = revision + 1` is not a bound value: every write raises it,
+    // so a second write from the same read cannot match the row any more.
+    const sets = [...Object.keys(fields).map((k) => `${k} = ?`), "revision = revision + 1"];
+    params.push(...Object.keys(fields).map((k) => fields[k]));
+    params.push(assetId);
+    if (expect.version !== undefined) { where.push("version = ?"); params.push(expect.version); }
+    if (expect.content_hash !== undefined) { if (expect.content_hash === null) where.push("content_hash IS NULL"); else { where.push("content_hash = ?"); params.push(expect.content_hash); } }
+    if (expect.updated_at !== undefined) { where.push("updated_at = ?"); params.push(expect.updated_at); }
+    if (expect.revision !== undefined) { where.push("COALESCE(revision, 0) = ?"); params.push(expect.revision); }
+    if (expect.evidence_revision !== undefined) { where.push("COALESCE(evidence_revision, 0) = ?"); params.push(expect.evidence_revision); }
+    const res = this.db.prepare(`UPDATE meta_assets SET ${sets.join(", ")} WHERE ${where.join(" AND ")}`).run(...params) as { changes: number | bigint };
+    if (Number(res.changes) === 0) return null;
+    return this.getAssetById(assetId);
+  }
+
   updateAsset(assetId: string, patch: Partial<AssetEntity>): AssetEntity | null {
-    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "version", "source_ref", "metadata_json"] as const;
+    const allowed = ["name", "description", "visibility", "status", "confidence", "expires_at", "content_ref", "content_hash", "version", "source_ref", "metadata_json"] as const;
     this.applyUpdate("meta_assets", "asset_id", assetId, allowed, patch);
+    // An unconditional write raises the revision too, so a conditional write
+    // that read the row before it is refused.
+    this.run("UPDATE meta_assets SET revision = COALESCE(revision, 0) + 1 WHERE asset_id = ?", assetId);
     return this.getAssetById(assetId);
   }
 
@@ -1721,6 +2011,8 @@ export class SqliteMetadataStore implements IMetadataStore {
       source_type: String(r.source_type),
       source_ref: r.source_ref != null ? String(r.source_ref) : null,
       version: Number(r.version ?? 1),
+      revision: Number(r.revision ?? 0),
+      evidence_revision: Number(r.evidence_revision ?? 0),
       visibility: String(r.visibility) as AssetEntity["visibility"],
       status: String(r.status) as AssetEntity["status"],
       confidence: r.confidence != null ? Number(r.confidence) : null,
@@ -1728,6 +2020,7 @@ export class SqliteMetadataStore implements IMetadataStore {
       last_used_at: r.last_used_at != null ? String(r.last_used_at) : null,
       usage_count: Number(r.usage_count ?? 0),
       content_ref: r.content_ref != null ? String(r.content_ref) : null,
+      content_hash: r.content_hash != null ? String(r.content_hash) : null,
       created_at: String(r.created_at),
       updated_at: String(r.updated_at),
       metadata_json: String(r.metadata_json ?? "{}"),

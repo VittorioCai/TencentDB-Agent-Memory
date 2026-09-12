@@ -17,6 +17,7 @@ import {
   checkPermission,
   canBindAsset,
   roleDefaultCovers,
+  reviewRequested,
   type PermCheckResult,
   type PermCheckLogger,
 } from "./permission-checker.js";
@@ -30,6 +31,7 @@ import {
   type MemorySystemUserConfig,
 } from "../system-user.js";
 import { resolveUserId } from "./resolve-user-id.js";
+import { decideAsset, mergeGateIntoMetadata, gateOf, activeReview, effectiveStatus, expireReviews, reviewsOf, outcomeValidity, collapseByCall, trustedOnly } from "./asset-gate.js";
 import type { V3AuthContext } from "../router/auth.js";
 import { DEFAULT_INSTANCE_ID, DEFAULT_AUTH_PROVIDER } from "../constants.js";
 import {
@@ -55,6 +57,7 @@ import type {
   AppendParticipationLogInput,
   ParticipationLogFilter,
   AssetEntity,
+  AssetReadPurpose,
   FixedAssetBindingEntity,
   AgentFixedAssetSummary,
   AgentFixedAssetSummaryResult,
@@ -90,6 +93,14 @@ import type {
   UpsertInstanceUpstreamConfigInput,
   InstanceUpstreamConfigFilter,
   UpstreamConfigType,
+  AssetOutcomeEntity,
+  AssetOutcomeWithValidity,
+  AppendAssetOutcomeInput,
+  AssetOutcomeFilter,
+  GateDecision,
+  GateDecisionKind,
+  GateEffective,
+  HumanReviewRecord,
 } from "../types.js";
 import { formatListResult, paginateArray, resolvePagination, wrapPaginated, DEFAULT_PAGINATION } from "../pagination.js";
 import { generateId, ID_PREFIX } from "../utils/id-generator.js";
@@ -203,6 +214,8 @@ export interface CheckPermissionParams {
   asset_id: string;
   action: Permission;
   agent_id?: string;
+  /** `use` = the model's path (admitted assets only); `manage` (default) = the human's. */
+  purpose?: AssetReadPurpose;
 }
 
 export interface ListAccessibleAssetsParams {
@@ -219,11 +232,25 @@ export interface ListAccessibleAssetsParams {
    * 目的：让前端从 HTTP 响应上就拿不到不需要的数据（安全 + 减小载荷）。
    */
   visibility?: AssetEntity["visibility"] | AssetEntity["visibility"][];
+  /** `use` = only admitted assets, whoever owns them; `manage` (default) = what the caller may see as a person. */
+  purpose?: AssetReadPurpose;
   limit?: number;
   offset?: number;
 }
 
 const FILTERED_STATUSES: AssetStatus[] = ["archived", "deprecated", "failed"];
+
+/** An outcome carries evidence when its evidence_json is a non-empty object or array. */
+function hasEvidence(evidenceJson: string | undefined | null): boolean {
+  if (!evidenceJson) return false;
+  try {
+    const v = JSON.parse(evidenceJson) as unknown;
+    if (Array.isArray(v)) return v.length > 0;
+    return !!v && typeof v === "object" && Object.keys(v as object).length > 0;
+  } catch {
+    return false;
+  }
+}
 
 export interface MetadataQuotaLimits {
   maxUsersPerInstance: number;
@@ -1185,6 +1212,163 @@ export class MetadataService {
     return formatListResult({ items, total: page.total }, pagination);
   }
 
+  /**
+   * The management list (2026-09-08): what the caller may see as a person.
+   * Every asset goes through the permission check with purpose=manage — the
+   * owner sees their own, admins and reviewers see the candidates and
+   * rejections of the team, nobody sees another person's private asset
+   * unless its owner submitted it for review. `asset/list` used to return
+   * the whole team pool to any member, candidates and all.
+   */
+  async listAssetsForCaller(
+    teamId: string,
+    ctx: V3AuthContext,
+    pagination: PaginationParams = DEFAULT_PAGINATION,
+    filter?: AssetFilter,
+  ): Promise<PaginatedResult<AssetEntity>> {
+    const callerId = this.requireCallerId(ctx);
+    await this.requireActiveTeamMember(ctx, teamId);
+    const visible: AssetEntity[] = [];
+    let offset = 0;
+    const limit = 100;
+    while (true) {
+      const page = await this.store.listAssetsByTeam(teamId, { limit, offset }, filter);
+      for (const asset of page.items) {
+        const perm = await this.checkAssetPermission({ user_id: callerId, asset_id: asset.asset_id, action: "read", purpose: "manage" });
+        if (perm.allowed) visible.push(asset);
+      }
+      if (offset + page.items.length >= page.total) break;
+      offset += limit;
+    }
+    return paginateArray(visible, pagination);
+  }
+
+  /**
+   * Bring legacy rows under the gate (2026-09-08, team admin). An asset
+   * whose status is not one the gate knows — "active" from before the
+   * candidate pool existed, or any other stray value — was never admitted
+   * by anything, so it becomes a candidate and is decided once: it shows
+   * up in the review queue, not in the model's context. `draft` (a manual
+   * registration) is counted and left alone; approved / failed /
+   * deprecated / archived are untouched. A migration never approves.
+   */
+  async backfillAssetGateForCaller(teamId: string, ctx: V3AuthContext, opts: { dry_run?: boolean; asset_type?: AssetType } = {}): Promise<{ asset_type: AssetType; moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }>; drafts: number; untouched: number; dry_run: boolean }> {
+    await this.assertCallerIsTeamAdmin(ctx, teamId);
+    // The gate governs the shared pool — skills by default. chat_memory rows
+    // are the agents' own conversation memory, registered with the same
+    // stray "active" by an older path; they are not pool assets and are
+    // left alone unless asked for by type.
+    const assetType: AssetType = opts.asset_type ?? "skill";
+    const known = new Set<string>(["candidate", "approved", "failed", "deprecated", "archived", "draft"]);
+    const moved: Array<{ asset_id: string; from: string; decision: GateDecisionKind | null }> = [];
+    let drafts = 0; let untouched = 0;
+    let offset = 0;
+    const limit = 100;
+    while (true) {
+      const page = await this.store.listAssetsByTeam(teamId, { limit, offset }, { asset_type: assetType });
+      for (const asset of page.items) {
+        const status = String(asset.status);
+        if (status === "draft") { drafts += 1; continue; }
+        if (known.has(status)) { untouched += 1; continue; }
+        if (opts.dry_run) { moved.push({ asset_id: asset.asset_id, from: status, decision: null }); continue; }
+        await this.updateAsset(asset.asset_id, { status: "candidate" });
+        const { decision } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
+        moved.push({ asset_id: asset.asset_id, from: status, decision: decision.decision });
+      }
+      if (offset + page.items.length >= page.total) break;
+      offset += limit;
+    }
+    return { asset_type: assetType, moved, drafts, untouched, dry_run: !!opts.dry_run };
+  }
+
+  /**
+   * A write that must not overwrite a row that moved on since it was read
+   * (2026-09-08c): version, content hash, updated_at AND the row's revision
+   * as read are the precondition; a mismatch is a stale_write, and the
+   * caller re-reads. The revision is what makes it sound (2026-09-08d):
+   * `updated_at` is a millisecond clock, and two writes inside one
+   * millisecond leave version, hash and time all unchanged — the second
+   * stale write landed and the first review disappeared from the history.
+   */
+  private async writeAssetAsRead(asset: AssetEntity, patch: Partial<AssetEntity>, what: string, opts: { expectEvidence?: boolean } = {}): Promise<AssetEntity> {
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0,
+      // A write that carries a DECISION must also be conditional on the
+      // evidence it was decided from; a write that carries an edit must not
+      // be, or an outcome landing elsewhere would refuse an unrelated save.
+      ...(opts.expectEvidence ? { evidence_revision: asset.evidence_revision ?? 0 } : {}) });
+    if (!updated) {
+      const now = await this.getAssetById(asset.asset_id);
+      throw new MetadataError("stale_write", `${what}: asset ${asset.asset_id} changed since it was read (read v${asset.version}${asset.content_hash ? ` ${asset.content_hash.slice(0, 10)}` : ""} @ ${asset.updated_at} rev ${asset.revision ?? 0}; now ${now ? `v${now.version}${now.content_hash ? ` ${now.content_hash.slice(0, 10)}` : ""} @ ${now.updated_at} rev ${now.revision ?? 0}` : "gone"}); read it again`);
+    }
+    return updated;
+  }
+
+  /** One asset on the management path: the caller must be able to read it. */
+  async getAssetForCaller(assetId: string, ctx: V3AuthContext): Promise<AssetEntity> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.assertManageRead(ctx, asset);
+    return asset;
+  }
+
+  /** Throws unless the caller may read the asset on the management path. */
+  private async assertManageRead(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {
+    const callerId = this.requireCallerId(ctx);
+    const perm = await this.checkAssetPermission({ user_id: callerId, asset_id: asset.asset_id, action: "read", purpose: "manage" });
+    if (!perm.allowed) throw new MetadataError("permission_denied", `asset ${asset.asset_id} is not readable by the caller (${perm.reason})`);
+  }
+
+  /**
+   * For the skill data plane (2026-09-08): may this user read these skills
+   * for this purpose? Skill id = asset id by convention. A skill with no
+   * asset row is unregistered — it never passed the gate — and is denied on
+   * the model path with that reason.
+   */
+  async decideAssetReads(params: { user_id: string; asset_ids: string[]; purpose: AssetReadPurpose; agent_id?: string; served?: Record<string, { version?: number; content_hash?: string | null; team_id?: string; agent_id?: string; name?: string }> }): Promise<Map<string, { allowed: boolean; reason: string }>> {
+    const out = new Map<string, { allowed: boolean; reason: string }>();
+    for (const id of new Set(params.asset_ids)) {
+      const asset = await this.getAssetById(id);
+      if (!asset) { out.set(id, { allowed: params.purpose !== "use", reason: "unregistered" }); continue; }
+      const perm = await this.checkAssetPermission({ user_id: params.user_id, asset_id: id, action: "read", purpose: params.purpose, agent_id: params.agent_id });
+      // The row about to be served must be exactly the row the admission
+      // was about (2026-09-08d): same version, same content. Equality, not
+      // "not newer" — a rollback to an older version whose text happens to
+      // hash the same as the approved one is still a different row, and an
+      // asset's non-content files can change without the body's hash
+      // moving. Missing binding is not a pass: a read that cannot say which
+      // version it is serving is refused on the model's path.
+      const s = params.served?.[id];
+      if (params.purpose === "use" && perm.allowed && asset.status === "approved") {
+        if (!s || s.version === undefined) {
+          out.set(id, { allowed: false, reason: "unbound_read:the served version is not known" });
+          continue;
+        }
+        if (s.version !== asset.version) {
+          out.set(id, { allowed: false, reason: `version_mismatch:registry=${asset.version},served=${s.version}` });
+          // Only forward: the registry follows a new version, it does not
+          // roll back to an older one being served.
+          if (s.version > asset.version) {
+            // Awaited: the registry has caught up before this read answers.
+            await this.syncSkillAssetVersion({ skill_id: id, version: s.version, content_hash: s.content_hash ?? null, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
+              .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
+          }
+          continue;
+        }
+        if (asset.content_hash) {
+          if (!s.content_hash) { out.set(id, { allowed: false, reason: "unbound_read:the registry holds a content hash, the served row carries none" }); continue; }
+          if (s.content_hash !== asset.content_hash) {
+            out.set(id, { allowed: false, reason: "content_hash_mismatch" });
+            await this.syncSkillAssetVersion({ skill_id: id, version: s.version, content_hash: s.content_hash, team_id: s.team_id, agent_id: s.agent_id, name: s.name })
+              .catch((err: unknown) => this.logger.debug(`[META] version sync on read for ${id} failed: ${err instanceof Error ? err.message : String(err)}`));
+            continue;
+          }
+        }
+      }
+      out.set(id, perm);
+    }
+    return out;
+  }
+
   async touchAssetUsage(assetId: string): Promise<void> {
     if (!(await this.getAssetById(assetId))) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
     await this.store.touchAssetUsage(assetId);
@@ -1420,13 +1604,24 @@ export class MetadataService {
     team_id: string;
     agent_id: string;
     name: string;
+    /** The skill head's version and content hash, when the caller has them (2026-09-08b). */
+    version?: number;
+    content_hash?: string | null;
   }): Promise<AssetEntity> {
     const assetId = params.skill_id; // skill_id === asset_id（约定）
 
-    // 1. LRU 短路
+    // 1. LRU 短路（版本已知时仍核对：内容走在登记前面就同步）
     if (this.ensuredSkillAssets.has(assetId)) {
       const cached = await this.getAssetById(assetId);
-      if (cached) return cached;
+      if (cached) {
+        if (params.version !== undefined && (params.version > cached.version || (params.content_hash && cached.content_hash && params.content_hash !== cached.content_hash))) {
+          return (await this.syncSkillAssetVersion({ skill_id: assetId, version: params.version, content_hash: params.content_hash ?? null })).asset;
+        }
+        if (params.content_hash && !cached.content_hash && (params.version === undefined || params.version === cached.version)) {
+          return this.updateAsset(assetId, { content_hash: params.content_hash }); // same version, hash not yet on file
+        }
+        return cached;
+      }
       this.ensuredSkillAssets.delete(assetId);
     }
 
@@ -1456,8 +1651,18 @@ export class MetadataService {
     // 为什么不是 "team"：Skill 内容常包含内部知识、脚本、凭证注释等，
     // "默认对整个 team 可见"对隐私敏感场景（例如个人调试用的 skill）不够安全。
     // 私密 → 主动共享的心智更符合直觉。
+    //
+    // status = "candidate" (2026-09-07): a skill enters as a candidate, not as
+    // an admitted asset. "active" was never in AssetStatus; it read as "no
+    // opinion", and the pool had no way to hold an asset back. A candidate is
+    // readable by its owner, team admins and reviewers (permission-checker)
+    // and by nobody else until the gate admits it on recorded outcomes —
+    // that is the candidate pool. The gate runs once here so the cold-start
+    // decision (review priority from the author's record) is on the asset
+    // from the moment it exists.
     let asset = await this.getAssetById(assetId);
     if (!asset) {
+      let created = false;
       try {
         asset = await this.createAsset({
           asset_id: assetId,
@@ -1467,8 +1672,11 @@ export class MetadataService {
           owner_user_id: agent.owner_user_id,
           source_type: "extracted",
           visibility: "private",
-          status: "active",
+          status: "candidate",
+          content_hash: params.content_hash ?? null,
         });
+        if (params.version !== undefined && params.version !== 1) asset = await this.updateAsset(assetId, { version: params.version });
+        created = true;
       } catch (err) {
         const raced = await this.getAssetById(assetId);
         if (raced) {
@@ -1476,6 +1684,18 @@ export class MetadataService {
         } else {
           throw err;
         }
+      }
+      if (created) {
+        try {
+          asset = (await this.evaluateAssetGate(assetId, { apply: true })).asset;
+        } catch (err) {
+          // The asset exists either way; a gate failure must not undo that.
+          this.logger.debug(`[META] gate evaluation on new skill asset ${assetId} failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      } else if (asset && params.version !== undefined && (params.version > asset.version || (params.content_hash && asset.content_hash && params.content_hash !== asset.content_hash))) {
+        asset = (await this.syncSkillAssetVersion({ skill_id: assetId, version: params.version, content_hash: params.content_hash ?? null })).asset;
+      } else if (asset && params.content_hash && !asset.content_hash && (params.version === undefined || params.version === asset.version)) {
+        asset = await this.updateAsset(assetId, { content_hash: params.content_hash }); // same version, hash not yet on file
       }
     }
 
@@ -1584,8 +1804,9 @@ export class MetadataService {
       return { allowed: false, reason: "asset_not_available" };
     }
 
-    // owner 短路，无需查成员/ACL
-    if (asset.owner_user_id === userId) {
+    // owner 短路，无需查成员/ACL。模型路径（purpose=use）不短路：准入看资产不看人，
+    // owner 自己的候选/被拒资产也不能进上下文，由 checkPermission 第 1b 步判。
+    if (params.purpose !== "use" && asset.owner_user_id === userId) {
       return { allowed: true, reason: "owner" };
     }
 
@@ -1600,6 +1821,7 @@ export class MetadataService {
       action,
       aclRecords: [],
       agentId: params.agent_id,
+      purpose: params.purpose,
       logger: this.logger,
     });
     if (fast.allowed) return fast;
@@ -1616,6 +1838,7 @@ export class MetadataService {
       action,
       aclRecords,
       agentId: params.agent_id,
+      purpose: params.purpose,
       logger: this.logger,
     });
   }
@@ -1666,6 +1889,8 @@ export class MetadataService {
         for (const asset of page.items) {
           if (seen.has(asset.asset_id)) continue;
           if (FILTERED_STATUSES.includes(asset.status)) continue;
+          // 模型路径只列已准入的；候选、草稿在这里就剔掉（checkPermission 1b 会再判一次）
+          if (params.purpose === "use" && asset.status !== "approved") continue;
           // visibility 白名单过滤（在权限判定前先剔除，节省 checkAssetPermission 开销）
           if (visFilter && !visFilter.has(asset.visibility)) continue;
           const perm = await this.checkAssetPermission({
@@ -1673,6 +1898,7 @@ export class MetadataService {
             asset_id: asset.asset_id,
             action,
             agent_id: params.agent_id,
+            purpose: params.purpose,
           });
           if (perm.allowed) {
             seen.add(asset.asset_id);
@@ -1921,6 +2147,533 @@ export class MetadataService {
     return this.unlinkTaskAgent(taskId, agentId);
   }
 
+  // ============================================================
+  // Asset outcomes and the admission gate
+  // ============================================================
+  //
+  // An outcome is recorded by whoever can tie a use of an asset to a result;
+  // the gate turns the outcomes on file into the asset's status, so the
+  // product's own read paths admit or drop it. Both live here, next to the
+  // asset, rather than in a script beside the product.
+
+  /** Record an outcome. The consumer defaults to the caller; naming another user needs team admin. */
+  /**
+   * Record what happened after an asset was used (2026-09-08 rules):
+   *
+   *   - the consumer defaults to the caller; naming someone else takes a
+   *     team admin or reviewer;
+   *   - `relation` is derived here from consumer vs. owner — the caller's
+   *     value, if any, is discarded;
+   *   - `trusted` is derived here, never taken from the caller: the
+   *     submitter is an admin or reviewer, and the row carries a call id,
+   *     the asset version and evidence. Anything else is recorded and
+   *     marked untrusted with the reasons, and the gate does not read it;
+   *   - `event_id` makes delivery idempotent: the row already on file for
+   *     it comes back, nothing is added;
+   *   - the gate re-runs only when a trusted row was added.
+   */
+  async appendAssetOutcomeForCaller(
+    input: Omit<AppendAssetOutcomeInput, "consumer_user_id" | "trusted" | "untrusted_reason" | "submitted_by_user_id" | "submitted_role"> & { consumer_user_id?: string },
+    ctx: V3AuthContext,
+    opts: { evaluate?: boolean } = {},
+  ): Promise<{ outcome: AssetOutcomeEntity; gate: GateDecision | null; duplicate: boolean; confirmed?: boolean }> {
+    const member = await this.requireActiveTeamMember(ctx, input.team_id);
+    const callerId = this.requireCallerId(ctx);
+    const reviewerRole = member.role === "admin" || member.role === "reviewer";
+    const consumer = input.consumer_user_id ?? callerId;
+    if (consumer !== callerId && !reviewerRole) {
+      throw new MetadataError("permission_denied", "naming another consumer takes a team admin or reviewer");
+    }
+    const asset = await this.getAssetById(input.asset_id);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${input.asset_id}`);
+    if (asset.team_id !== input.team_id) throw new MetadataError("team_mismatch", `asset ${input.asset_id} belongs to team ${asset.team_id}, not ${input.team_id}`);
+
+    const relation: AssetOutcomeEntity["relation"] = asset.owner_user_id === consumer ? "self" : "cross_user";
+    const why: string[] = [];
+    if (!reviewerRole) why.push(`submitted by a ${member.role}, not an admin or reviewer`);
+    if (!input.call_id) why.push("no call_id");
+    if (input.asset_version === null || input.asset_version === undefined) why.push("no asset_version");
+    if (asset.content_hash && !input.content_hash) why.push("no content_hash (the asset carries one)");
+    if (!hasEvidence(input.evidence_json)) why.push("no evidence");
+    const trusted = why.length === 0;
+
+    if (input.event_id) {
+      const existing = await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id);
+      if (existing) {
+        // The same event must be the same subject; a different asset, state
+        // or consumer under a known event id is a conflict, not a retry.
+        const sameSubject = existing.asset_id === input.asset_id && existing.state === input.state && existing.consumer_user_id === consumer
+          && (existing.corrected_reason ?? null) === (input.state === "corrected" ? (input.corrected_reason ?? "other") : null);
+        if (!sameSubject) throw new MetadataError("event_id_conflict", `event ${input.event_id} is already on file for ${existing.asset_id} ${existing.state} by ${existing.consumer_user_id}`);
+        // A trusted submission confirms an untrusted row on file (a member
+        // reported first, a reviewer confirmed with the call, the version and
+        // evidence): the row becomes trusted in place, with who confirmed it.
+        if ((!existing.trusted && trusted) || (existing.trusted && trusted && !existing.content_hash && input.content_hash)) {
+          const confirmed = await this.store.updateAssetOutcome(existing.id, {
+            trusted: true, untrusted_reason: null, submitted_by_user_id: callerId, submitted_role: member.role,
+            call_id: input.call_id ?? existing.call_id, asset_version: input.asset_version ?? existing.asset_version,
+            content_hash: input.content_hash ?? existing.content_hash,
+            evidence_json: input.evidence_json ?? existing.evidence_json, relation,
+          });
+          const gate = opts.evaluate !== false ? await this.decideAfterEvidenceChange(asset.asset_id) : null;
+          return { outcome: confirmed ?? existing, gate, duplicate: false, confirmed: true };
+        }
+        return { outcome: existing, gate: null, duplicate: true };
+      }
+    }
+
+    let outcome: AssetOutcomeEntity;
+    try {
+      outcome = await this.store.appendAssetOutcome({
+        ...input, consumer_user_id: consumer, relation, trusted,
+        untrusted_reason: trusted ? null : why.join("; "),
+        submitted_by_user_id: callerId, submitted_role: member.role,
+      });
+    } catch (err) {
+      // Two deliveries of one event racing: the first won, return its row.
+      const raced = input.event_id ? await this.store.getAssetOutcomeByEvent(input.team_id, input.event_id) : null;
+      if (raced) return { outcome: raced, gate: null, duplicate: true };
+      throw err;
+    }
+    const gate = trusted && opts.evaluate !== false ? await this.decideAfterEvidenceChange(asset.asset_id) : null;
+    return { outcome, gate, duplicate: false };
+  }
+
+  /**
+   * Re-decide after the evidence changed, and never fail the write that
+   * changed it (2026-09-08g). The row is already on file; a decision refused
+   * because the evidence moved again means another writer is deciding with
+   * evidence that includes this row, so the asset converges without this
+   * call succeeding. Reporting `stale_write` here would tell a caller its
+   * outcome was rejected when it was recorded.
+   */
+  private async decideAfterEvidenceChange(assetId: string): Promise<GateDecision | null> {
+    try {
+      return (await this.evaluateAssetGate(assetId, { apply: true })).decision;
+    } catch (err) {
+      if (err instanceof MetadataError && err.code === "stale_write") {
+        this.logger.debug(`[META] gate: ${assetId} was being decided concurrently; the row is on file and a later decision covers it`);
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Reading outcomes follows the asset (2026-09-08): by asset, the caller
+   * must be able to read that asset on the management path; by author, the
+   * caller is that author or an admin/reviewer; team-wide or by another
+   * consumer, an admin/reviewer; by oneself as consumer, anyone.
+   */
+  async listAssetOutcomesForCaller(
+    filter: AssetOutcomeFilter,
+    ctx: V3AuthContext,
+    pagination: PaginationParams = DEFAULT_PAGINATION,
+  ): Promise<PaginatedResult<AssetOutcomeWithValidity>> {
+    const member = await this.requireActiveTeamMember(ctx, filter.team_id);
+    const callerId = this.requireCallerId(ctx);
+    const reviewerRole = member.role === "admin" || member.role === "reviewer";
+    if (filter.asset_id) {
+      const asset = await this.getAssetById(filter.asset_id);
+      if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${filter.asset_id}`);
+      await this.assertManageRead(ctx, asset);
+    } else if (filter.owner_user_id) {
+      if (filter.owner_user_id !== callerId && !reviewerRole) throw new MetadataError("permission_denied", "another author's outcomes take a team admin or reviewer");
+    } else if (filter.consumer_user_id !== callerId && !reviewerRole) {
+      throw new MetadataError("permission_denied", "listing outcomes across the team takes a team admin or reviewer");
+    }
+    const page = await this.store.listAssetOutcomes(filter, pagination);
+    // Every row carries the gate's own verdict on it (2026-09-08e). A
+    // reader — the Panel, the author pipeline, a reviewer — must not have
+    // to rebuild the rule from the raw fields and get a different answer.
+    // The asset a row is about is read once per asset id in the page.
+    const assets = new Map<string, AssetEntity | null>();
+    // Which row is the last word on its call (2026-09-08f). `collapseByCall`
+    // is the gate's own rule, and it needs every row about the call, not the
+    // ones this page happens to hold — so the rows for each asset in the
+    // page are read once, in full, and the answer is memoised per asset.
+    // The gate filters to what it may read and THEN collapses, so this does
+    // the same, in the same order: otherwise retracting the last row would
+    // leave the listing calling the earlier one superseded while the gate
+    // counted it — the two answers drifting again.
+    const finalOf = new Map<string, Map<string, string>>();
+    const finalFor = async (assetId: string): Promise<Map<string, string>> => {
+      const hit = finalOf.get(assetId);
+      if (hit) return hit;
+      // Within the SAME window the listing is answering for. `final` means
+      // "the last word on this call", and that is a question about a period:
+      // as of the cutoff an earlier row IS the last word, and a row the
+      // listing excludes must not be what supersedes it (2026-09-08h).
+      const readable = trustedOnly(await this.allOutcomes({
+        team_id: filter.team_id, asset_id: assetId,
+        occurred_after: filter.occurred_after, occurred_before: filter.occurred_before,
+      })).kept;
+      const winners = new Map(collapseByCall(readable).kept.map((o) => [o.call_id ? `call:${o.call_id}` : `row:${o.id}`, o.id]));
+      const m = new Map<string, string>();
+      for (const o of readable) m.set(o.id, winners.get(o.call_id ? `call:${o.call_id}` : `row:${o.id}`) ?? o.id);
+      finalOf.set(assetId, m);
+      return m;
+    };
+    const rows: AssetOutcomeWithValidity[] = [];
+    for (const o of page.items) {
+      if (!assets.has(o.asset_id)) assets.set(o.asset_id, await this.getAssetById(o.asset_id));
+      const asset = assets.get(o.asset_id) ?? null;
+      const v = outcomeValidity(o, asset);
+      // A row the gate does not read has no standing on its call at all; the
+      // reason it is out is already the trust or retraction reason.
+      const winner = v.trusted && !v.retracted ? ((await finalFor(o.asset_id)).get(o.id) ?? o.id) : null;
+      const isFinal = winner === o.id;
+      rows.push({ ...o, gate_validity: {
+        ...v,
+        // A superseded row is history: it is a record of what happened, and
+        // it is not the result of its call any more, so nothing may rest on
+        // it — not the ledger, not a supports/contradicts.
+        usable: v.usable && isFinal,
+        final: isFinal,
+        superseded_by: isFinal || !winner ? null : winner,
+        reason: v.reason ?? (isFinal ? null : winner ? `superseded by ${winner}, a later result for the same call` : "not read by the gate"),
+        asset_version_now: asset?.version ?? null, asset_content_hash_now: asset?.content_hash ?? null,
+      } });
+    }
+    return wrapPaginated(rows, page.total, pagination);
+  }
+
+  /**
+   * Put a context-based author assessment onto the asset (2026-09-08b).
+   * Only a team admin or reviewer may write one, never the author; it must
+   * be about this asset's author, version and content, and carry the
+   * evidence cutoff it used. Core signs it (written_by / written_at); the
+   * gate reads only signed assessments whose binding matches. The asset is
+   * re-decided so the priority reflects it.
+   */
+  async writeAuthorAssessmentForCaller(assetId: string, ctx: V3AuthContext, input: Record<string, unknown>): Promise<{ asset: AssetEntity; assessment: Record<string, unknown>; decision: GateDecision }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const callerId = this.requireCallerId(ctx);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") throw new MetadataError("permission_denied", "only a team admin or a reviewer may write an author assessment");
+    if (asset.owner_user_id === callerId) throw new MetadataError("permission_denied", "an author may not write their own assessment");
+    await this.assertManageRead(ctx, asset);
+    const bad = (why: string) => new MetadataError("invalid_request", `assessment rejected: ${why}`);
+    if (input.schema !== "author-assessment-summary-v2") throw bad("schema must be author-assessment-summary-v2");
+    if (!["high", "medium", "low", "unknown"].includes(String(input.competence))) throw bad("competence must be high | medium | low | unknown");
+    if (typeof input.domain !== "string" || !input.domain) throw bad("domain is required");
+    if (typeof input.assessed_at !== "string" || Number.isNaN(Date.parse(input.assessed_at))) throw bad("assessed_at must be an ISO time");
+    if (typeof input.evidence_cutoff !== "string" || Number.isNaN(Date.parse(input.evidence_cutoff))) throw bad("evidence_cutoff must be an ISO time (the latest record date the assessment used)");
+    if (input.author_user_id !== asset.owner_user_id) throw bad(`author_user_id ${String(input.author_user_id)} is not the asset's author ${asset.owner_user_id}`);
+    if (Number(input.asset_version) !== asset.version) throw bad(`asset_version ${String(input.asset_version)} is not the asset's current version ${asset.version}`);
+    // The hash the assessment read must be the hash the asset carries. When
+    // the asset has one, the submission must name it — Core never fills it
+    // in, because "what the asset is now" is not "what the assessment read".
+    if (asset.content_hash) {
+      if (!input.content_hash) throw bad(`the asset carries content hash ${asset.content_hash}; the assessment must name the hash it was made on`);
+      if (input.content_hash !== asset.content_hash) throw bad("content_hash does not match the asset's content");
+    }
+    const acc = input.asset_claim_check as { verdict?: unknown } | null | undefined;
+    if (acc && !["supports", "contradicts", "silent"].includes(String(acc.verdict))) throw bad("asset_claim_check.verdict must be supports | contradicts | silent");
+    const assessment = { ...input, author_user_id: asset.owner_user_id, asset_version: asset.version, content_hash: input.content_hash ?? null, written_by: callerId, written_at: new Date().toISOString() };
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    m.gate = { ...gateOf(asset.metadata_json), author_assessment: assessment };
+    await this.writeAssetAsRead(asset, { metadata_json: JSON.stringify(m) }, "write assessment");
+    const { decision, asset: decided } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
+    return { asset: decided, assessment, decision };
+  }
+
+  /**
+   * The owner asks the team to review a candidate (2026-09-08). Until this
+   * is on file a private candidate is the owner's alone: admins and
+   * reviewers do not see it in the queue or through gate/get. Withdrawing
+   * takes it back out of their sight.
+   */
+  async submitAssetForReviewForCaller(assetId: string, ctx: V3AuthContext, input: { withdraw?: boolean; note?: string | null } = {}): Promise<{ asset: AssetEntity; review_request: Record<string, unknown> }> {
+    const asset = await this.assertCallerIsAssetOwner(ctx, assetId);
+    if (asset.status !== "candidate") throw new MetadataError("invalid_state", `only a candidate can be submitted for review; ${assetId} is ${asset.status}`);
+    const callerId = this.requireCallerId(ctx);
+    const now = new Date().toISOString();
+    const gate = gateOf(asset.metadata_json);
+    const prev = (gate.review_request && typeof gate.review_request === "object" ? gate.review_request : {}) as Record<string, unknown>;
+    const review_request: Record<string, unknown> = input.withdraw
+      ? { ...prev, withdrawn_at: now, withdrawn_by: callerId }
+      : { requested_at: now, requested_by: callerId, note: input.note ?? null, asset_version: asset.version, content_hash: asset.content_hash ?? null };
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    // History keeps every past request (expired or withdrawn); the current one lives in review_request.
+    const history = Array.isArray(gate.review_requests) ? (gate.review_requests as unknown[]) : [];
+    const past = prev.requested_at && !history.some((h) => (h as { requested_at?: unknown }).requested_at === prev.requested_at) ? [...history, input.withdraw ? review_request : prev] : history;
+    m.gate = { ...gate, review_request, review_requests: past };
+    const updated = await this.writeAssetAsRead(asset, { metadata_json: JSON.stringify(m) }, input.withdraw ? "withdraw review request" : "submit for review");
+    return { asset: updated, review_request };
+  }
+
+  /**
+   * Decide one asset from the outcomes on file and, with `apply`, write the
+   * decision onto it: status (approved / candidate / failed), confidence, and
+   * metadata_json.gate. Service-level: no caller check, so the extraction
+   * hook and the outcome append can call it.
+   */
+  async evaluateAssetGate(assetId: string, opts: { apply?: boolean; now?: Date; asOf?: string | null } = {}): Promise<{ decision: GateDecision; effective: GateEffective; review: HumanReviewRecord | null; applied: boolean; asset: AssetEntity }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    // as_of: read only outcomes that occurred at or before this time. An
+    // evaluation batch passes its frozen baseline so the gate acts on the
+    // evidence base and not on the batch's own runs, which are recorded
+    // (evaluate=false) but must not decide the batch they belong to.
+    const filter = opts.asOf ? { occurred_before: opts.asOf } : {};
+    const own = await this.allOutcomes({ team_id: asset.team_id, asset_id: asset.asset_id, ...filter });
+    const author = await this.allOutcomes({ team_id: asset.team_id, owner_user_id: asset.owner_user_id, ...filter });
+    const decision = decideAsset({ asset, outcomes: own, authorOutcomes: author, now: opts.now, asOf: opts.asOf ?? null });
+    // The rule's suggestion and the human decision in force resolve to the
+    // status (2026-09-08b); a re-evaluation no longer reverts a human admit.
+    const gate = gateOf(asset.metadata_json);
+    const review = activeReview(gate, asset);
+    const effective = effectiveStatus(decision, review, opts.now);
+    if (opts.apply === false) return { decision, effective, review, applied: false, asset };
+    const patch: Partial<AssetEntity> = {
+      status: effective.status,
+      confidence: decision.confidence,
+      metadata_json: mergeGateIntoMetadata(asset.metadata_json, decision, { effective, review }),
+    };
+    // Written only if the asset is still the one the decision was made on;
+    // a row that moved on (a new version, a review) is decided afresh.
+    // Conditional on the asset AND on the evidence it was decided from. The
+    // asset row does not move when an outcome lands, so `revision` alone let
+    // a decision made before a correction arrived be written after it
+    // (2026-09-08f). `asset.evidence_revision` was read before the outcomes
+    // were, so any row that arrived since refuses this write.
+    const updated = await this.store.updateAssetIf(asset.asset_id, patch, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0, evidence_revision: asset.evidence_revision ?? 0 });
+    if (!updated) {
+      // Binding the write to the evidence set made refusals ordinary rather
+      // than rare: a burst of outcomes, each re-deciding, has every decision
+      // reading evidence that the next append has already moved. Three
+      // immediate retries were not enough — 8 of 12 concurrent submissions
+      // failed (2026-09-08g). A wider budget with a yield between attempts
+      // lets the queue drain; a refusal that survives it is reported.
+      const attempt = (opts as { _attempt?: number })._attempt ?? 0;
+      if (attempt >= 8) throw new MetadataError("stale_write", `gate: asset ${assetId} kept changing while being decided`);
+      await new Promise((r) => setTimeout(r, attempt * 2));
+      return this.evaluateAssetGate(assetId, { ...opts, _attempt: attempt + 1 } as typeof opts);
+    }
+    return { decision, effective, review, applied: true, asset: updated };
+  }
+
+  /**
+   * A skill got a new version (2026-09-08b): the asset follows it. The
+   * version and content hash are recorded, every human decision in force
+   * expires with the reason, and the new version is decided on its own
+   * outcomes — which, being new, makes it a candidate. Idempotent: the
+   * same version twice changes nothing. Called from the versioning hook,
+   * from the update/patch handlers, and from a read that finds the served
+   * content ahead of the registry.
+   */
+  async syncSkillAssetVersion(params: { skill_id: string; version: number; content_hash?: string | null; team_id?: string; agent_id?: string; name?: string }): Promise<{ asset: AssetEntity; changed: boolean }> {
+    let asset = await this.getAssetById(params.skill_id);
+    if (!asset) {
+      if (!params.team_id || !params.agent_id) throw new MetadataError("asset_not_found", `asset not found: ${params.skill_id}`);
+      asset = await this.ensureSkillAsset({ skill_id: params.skill_id, team_id: params.team_id, agent_id: params.agent_id, name: params.name ?? params.skill_id, version: params.version, content_hash: params.content_hash ?? null });
+      return { asset, changed: true };
+    }
+    const sameVersion = asset.version === params.version;
+    const sameHash = !params.content_hash || !asset.content_hash || asset.content_hash === params.content_hash;
+    if (sameVersion && sameHash) {
+      if (!asset.content_hash && params.content_hash) asset = await this.updateAsset(asset.asset_id, { content_hash: params.content_hash });
+      return { asset, changed: false };
+    }
+    if (params.version < asset.version) return { asset, changed: false }; // an older version being served is not a new one
+    const reason = sameVersion
+      ? `content of version ${asset.version} changed (hash ${asset.content_hash ?? "?"} → ${params.content_hash ?? "?"})`
+      : `asset version changed from ${asset.version} to ${params.version}`;
+    const gate = expireReviews(gateOf(asset.metadata_json), reason);
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    m.gate = gate;
+    // One write: version, hash, the expired decisions AND status=candidate
+    // land together, so no read sees the new text with the old approval.
+    // Conditional on the row as read: a concurrent sync or review that got
+    // in first is not overwritten — the row is re-read instead.
+    const moved = await this.store.updateAssetIf(asset.asset_id, { version: params.version, content_hash: params.content_hash ?? null, status: "candidate", confidence: null, metadata_json: JSON.stringify(m) }, { version: asset.version, content_hash: asset.content_hash ?? null, updated_at: asset.updated_at, revision: asset.revision ?? 0 });
+    if (!moved) {
+      const now = await this.getAssetById(asset.asset_id);
+      if (!now) throw new MetadataError("asset_not_found", `asset not found: ${params.skill_id}`);
+      if (now.version >= params.version) return { asset: now, changed: false };
+      return this.syncSkillAssetVersion(params);
+    }
+    const { asset: decided } = await this.evaluateAssetGate(asset.asset_id, { apply: true });
+    return { asset: decided, changed: true };
+  }
+
+  /**
+   * A reviewer retracts an outcome row (2026-09-08c): a correction that was
+   * mistaken, a validation that was not. The row stays on file with who,
+   * when and why; the gate stops reading it and the asset is re-decided.
+   *
+   * `decision` is null when that re-decision was refused because the
+   * evidence moved again while it ran (2026-09-08g). The retraction itself
+   * has landed; another writer is deciding with evidence that includes it.
+   */
+  async retractAssetOutcomeForCaller(outcomeId: string, ctx: V3AuthContext, input: { reason: string }): Promise<{ outcome: AssetOutcomeEntity; decision: GateDecision | null }> {
+    const callerId = this.requireCallerId(ctx);
+    const row = await this.store.getAssetOutcomeById(outcomeId);
+    if (!row) throw new MetadataError("outcome_not_found", `outcome not found: ${outcomeId}`);
+    const member = await this.requireActiveTeamMember(ctx, row.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") throw new MetadataError("permission_denied", "only a team admin or a reviewer may retract an outcome");
+    const asset = await this.getAssetById(row.asset_id);
+    if (asset) await this.assertManageRead(ctx, asset);
+    if (row.retracted_at) throw new MetadataError("invalid_state", `outcome ${outcomeId} was already retracted at ${row.retracted_at} by ${row.retracted_by}`);
+    if (!input.reason || !input.reason.trim()) throw new MetadataError("invalid_request", "a reason is required to retract an outcome");
+    const updated = await this.store.updateAssetOutcome(row.id, { retracted_at: new Date().toISOString(), retracted_by: callerId, retract_reason: input.reason.trim() });
+    const decision = await this.decideAfterEvidenceChange(row.asset_id);
+    return { outcome: updated ?? row, decision };
+  }
+
+
+
+  /** Owner, team admin or reviewer may run the gate by hand — on an asset they may read. */
+  async evaluateAssetGateForCaller(assetId: string, ctx: V3AuthContext, opts: { apply?: boolean; asOf?: string | null } = {}) {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.assertCallerMayReview(ctx, asset);
+    await this.assertManageRead(ctx, asset);
+    return this.evaluateAssetGate(assetId, opts);
+  }
+
+  /**
+   * A human review: an admin or a reviewer admits or rejects a candidate by
+   * hand. Recorded on the asset beside the gate's own decision
+   * (metadata_json.gate.review) so the two are never confused, and applied
+   * as status. The owner may not review their own asset — self-approval is
+   * the thing the gate exists to prevent.
+   */
+  async reviewAssetGateForCaller(
+    assetId: string,
+    ctx: V3AuthContext,
+    input: { decision: "admit" | "reject"; note?: string | null; expected_version?: number | null; expected_content_hash?: string | null; expected_revision?: number | null; overrode?: Array<{ outcome_id: string; reason: string }> | null },
+  ): Promise<{ asset: AssetEntity; review: HumanReviewRecord; effective: GateEffective }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const callerId = this.requireCallerId(ctx);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") {
+      throw new MetadataError("permission_denied", "only a team admin or a reviewer may review an asset");
+    }
+    if (asset.owner_user_id === callerId) {
+      throw new MetadataError("permission_denied", "an author may not review their own asset");
+    }
+    // The decision applies to the text the reviewer read (2026-09-08c): the
+    // request names that version and content, and they must be the asset's
+    // now — otherwise the reviewer is asked to read again. Checked before
+    // the read permission: a reviewer who read v1 learns nothing new from
+    // "the asset moved on", and gets the answer that explains it.
+    if (input.expected_version === undefined || input.expected_version === null) throw new MetadataError("invalid_request", "expected_version is required: the version the reviewer read");
+    if (input.expected_version !== asset.version) throw new MetadataError("stale_review", `the reviewer read version ${input.expected_version}, the asset is at ${asset.version}; read it again`);
+    if (asset.content_hash) {
+      if (!input.expected_content_hash) throw new MetadataError("invalid_request", `expected_content_hash is required: the asset carries content hash ${asset.content_hash}`);
+      if (input.expected_content_hash !== asset.content_hash) throw new MetadataError("stale_review", "the content the reviewer read is not the asset's content now; read it again");
+    }
+    // The row's revision as the reviewer read it (2026-09-08d). Version and
+    // hash do not move when a second reviewer, or a status change, writes to
+    // the row — two decisions made from the same read would both pass those
+    // and the later one would silently replace the earlier. The revision
+    // rises on every write, so exactly one of them lands.
+    if (input.expected_revision === undefined || input.expected_revision === null) throw new MetadataError("invalid_request", "expected_revision is required: the row revision the reviewer read");
+    if (input.expected_revision !== (asset.revision ?? 0)) throw new MetadataError("stale_review", `the reviewer read revision ${input.expected_revision}, the asset is at ${asset.revision ?? 0}; read it again`);
+    await this.assertManageRead(ctx, asset);
+    const now = new Date();
+    const status: HumanReviewRecord["status"] = input.decision === "admit" ? "approved" : "failed";
+    // A later review supersedes the one in force for this version; the
+    // earlier one stays in the history, expired with that reason.
+    const gate0 = gateOf(asset.metadata_json);
+    const prior = activeReview(gate0, asset);
+    const gate = prior ? expireReviews(gate0, `superseded by a later review (${input.decision} by ${callerId})`, now) : gate0;
+    // The corrections in force right now, not the ones the decision on file
+    // happened to record: an admit is judged against the evidence as it
+    // stands when it is made (2026-09-08d).
+    const fresh = await this.evaluateAssetGate(assetId, { apply: false, now });
+    const decision = fresh.decision;
+    const live = decision.reject_evidence_ids ?? [];
+    const overrode = (input.overrode ?? []).map((o) => ({ outcome_id: String(o.outcome_id ?? "").trim(), reason: String(o.reason ?? "").trim() }));
+    if (overrode.length > 0) {
+      if (input.decision !== "admit") throw new MetadataError("invalid_request", "only an admit overrules corrected outcomes");
+      for (const o of overrode) {
+        if (!o.reason) throw new MetadataError("invalid_request", `overruling ${o.outcome_id || "an outcome"} needs a reason`);
+        if (!live.includes(o.outcome_id)) throw new MetadataError("invalid_request", `outcome ${o.outcome_id} is not one of the corrected outcomes rejecting this asset right now (${live.join(", ") || "none"})`);
+      }
+    }
+    // An admit that leaves a live correction unnamed is accepted and
+    // recorded — it just does not lift the reject. The reviewer is told
+    // which rows still stand in `effective.reason`.
+    const review: HumanReviewRecord = {
+      id: `rev-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      decision: input.decision, status, by: callerId, at: now.toISOString(), note: input.note ?? null,
+      asset_version: asset.version, content_hash: asset.content_hash ?? null,
+      overrode: overrode.length ? overrode : null,
+    };
+    const reviews = [...reviewsOf(gate), review];
+    const effective = effectiveStatus(decision, review, now);
+    let m: Record<string, unknown> = {};
+    try { m = JSON.parse(asset.metadata_json || "{}") as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+    m.gate = { ...gate, ...decision, reviews, review, effective };
+    let updated: AssetEntity;
+    try {
+      updated = await this.writeAssetAsRead(asset, { status: effective.status, metadata_json: JSON.stringify(m) }, "review", { expectEvidence: true });
+    } catch (err) {
+      if (err instanceof MetadataError && err.code === "stale_write") throw new MetadataError("stale_review", err.message);
+      throw err;
+    }
+    // The review is now on file; the status it resolved to was computed from
+    // the evidence as it stood a moment ago. An outcome recorded with
+    // `evaluate: false` (the batch sync path) does not touch the asset row,
+    // so the revision guard cannot see it: between the validation above and
+    // this write, a new correction could have arrived that the admit does
+    // not name. Re-deciding here settles it from the evidence on file, with
+    // the review in force — an admit that no longer covers everything falls
+    // back to failed instead of standing on a stale reading (2026-09-08e).
+    const settled = await this.evaluateAssetGate(assetId, { apply: true });
+    return { asset: settled.asset, review, effective: settled.effective };
+  }
+
+  /** The decision on file (metadata_json.gate), or null when the gate has not run. */
+  async getAssetGateForCaller(assetId: string, ctx: V3AuthContext): Promise<{ asset_id: string; name: string; asset_type: AssetEntity["asset_type"]; owner_user_id: string; visibility: AssetEntity["visibility"]; version: number; content_hash: string | null; revision: number; created_at: string; updated_at: string; status: AssetEntity["status"]; confidence: number | null; gate: GateDecision | null; review: HumanReviewRecord | null; reviews: HumanReviewRecord[]; effective: GateEffective | null; review_request: unknown; review_requests: unknown[]; review_requested: boolean }> {
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    await this.requireActiveTeamMember(ctx, asset.team_id);
+    // The decision, its reasons and the evidence ids follow the asset's own
+    // permission (2026-09-08): hidden in a list means hidden here too.
+    await this.assertManageRead(ctx, asset);
+    const g = gateOf(asset.metadata_json);
+    const gate = "decision" in g ? (g as unknown as GateDecision) : null;
+    return { asset_id: asset.asset_id, name: asset.name, asset_type: asset.asset_type, owner_user_id: asset.owner_user_id, visibility: asset.visibility, version: asset.version, content_hash: asset.content_hash ?? null, revision: asset.revision ?? 0, created_at: asset.created_at, updated_at: asset.updated_at,
+      status: asset.status, confidence: asset.confidence ?? null, gate, review: activeReview(g, asset), reviews: reviewsOf(g),
+      effective: (g.effective && typeof g.effective === "object" ? (g.effective as GateEffective) : null), review_request: g.review_request ?? null,
+      // The expired requests, oldest first. Kept on file since 2026-09-08c
+      // but not returned until 2026-09-08f, so "the history is kept" could
+      // not be checked by anyone reading the product.
+      review_requests: Array.isArray(g.review_requests) ? (g.review_requests as unknown[]) : [],
+      review_requested: reviewRequested(asset) };
+  }
+
+  private async assertCallerMayReview(ctx: V3AuthContext, asset: AssetEntity): Promise<void> {
+    const callerId = this.requireCallerId(ctx);
+    if (asset.owner_user_id === callerId) return;
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (member.role !== "admin" && member.role !== "reviewer") {
+      throw new MetadataError("permission_denied", "caller is not the asset owner, a team admin or a reviewer");
+    }
+  }
+
+  private async allOutcomes(filter: AssetOutcomeFilter): Promise<AssetOutcomeEntity[]> {
+    const out: AssetOutcomeEntity[] = [];
+    let offset = 0;
+    const limit = 200;
+    while (true) {
+      const page = await this.store.listAssetOutcomes(filter, { limit, offset });
+      out.push(...page.items);
+      if (offset + page.items.length >= page.total || page.items.length === 0) break;
+      offset += limit;
+    }
+    return out;
+  }
+
   async appendParticipationLogForCaller(
     input: AppendParticipationLogInput,
     ctx: V3AuthContext,
@@ -1942,11 +2695,40 @@ export class MetadataService {
     return this.listParticipationLogs(filter, pagination);
   }
 
+  /**
+   * The audit fields — `status`, `confidence`, `metadata_json.gate` — are
+   * written by the gate and the review routes only (2026-09-08). Through
+   * create and update a plain member cannot set them at all; a team admin
+   * may set status / confidence (a management act) but never the gate
+   * object, whose on-file value is carried over untouched. A member's
+   * manually registered asset enters as a candidate, like an extracted one.
+   */
+  private async guardAuditFields<T extends { status?: AssetEntity["status"]; confidence?: number | null; metadata_json?: string | null }>(
+    input: T,
+    role: TeamMemberEntity["role"],
+    existing: AssetEntity | null,
+  ): Promise<T> {
+    const out = { ...input };
+    if (role !== "admin") {
+      if (out.status !== undefined) throw new MetadataError("permission_denied", "audit_fields_protected: status is written by the admission gate or a review, not through asset create/update");
+      if (out.confidence !== undefined) throw new MetadataError("permission_denied", "audit_fields_protected: confidence is written by the admission gate, not through asset create/update");
+      if (!existing) out.status = "candidate";
+    }
+    if (out.metadata_json !== undefined && out.metadata_json !== null) {
+      let m: Record<string, unknown> = {};
+      try { m = JSON.parse(out.metadata_json) as Record<string, unknown>; if (!m || typeof m !== "object" || Array.isArray(m)) m = {}; } catch { m = {}; }
+      const onFile = existing ? gateOf(existing.metadata_json) : {};
+      if (Object.keys(onFile).length > 0) m.gate = onFile; else delete m.gate;
+      out.metadata_json = JSON.stringify(m);
+    }
+    return out;
+  }
+
   async createAssetForCaller(input: CreateAssetInput, ctx: V3AuthContext): Promise<AssetEntity> {
     await this.assertTeamExists(input.team_id);
-    await this.requireActiveTeamMember(ctx, input.team_id);
+    const member = await this.requireActiveTeamMember(ctx, input.team_id);
     this.assertCallerIsResourceOwner(ctx, input.owner_user_id);
-    return this.createAsset(input);
+    return this.createAsset(await this.guardAuditFields(input, member.role, null));
   }
 
   async updateAssetForCaller(
@@ -1954,8 +2736,19 @@ export class MetadataService {
     patch: Partial<AssetEntity>,
     ctx: V3AuthContext,
   ): Promise<AssetEntity> {
-    await this.assertCallerIsAssetOwner(ctx, assetId);
-    return this.updateAsset(assetId, patch);
+    const asset = await this.getAssetById(assetId);
+    if (!asset) throw new MetadataError("asset_not_found", `asset not found: ${assetId}`);
+    const callerId = this.requireCallerId(ctx);
+    const member = await this.requireActiveTeamMember(ctx, asset.team_id);
+    if (asset.owner_user_id !== callerId) {
+      // A team admin who is not the owner may perform the management act
+      // only: status / confidence. Content and visibility stay the owner's.
+      const keys = Object.keys(patch).filter((k) => (patch as Record<string, unknown>)[k] !== undefined);
+      if (member.role !== "admin" || keys.some((k) => k !== "status" && k !== "confidence")) {
+        throw new MetadataError("permission_denied", "caller is not resource owner");
+      }
+    }
+    return this.updateAsset(assetId, await this.guardAuditFields(patch, member.role, asset));
   }
 
   async deleteAssetsForCaller(assetIds: string[], ctx: V3AuthContext): Promise<BatchDeleteResult> {

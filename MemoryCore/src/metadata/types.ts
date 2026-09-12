@@ -179,6 +179,25 @@ export interface AssetEntity {
   source_type: string;
   source_ref?: string | null;
   version: number;
+  /**
+   * A counter the store raises on every write to the row (2026-09-08d). It
+   * is the row's identity in time: `updated_at` is a millisecond clock and
+   * two writes in the same millisecond leave version, hash and time all
+   * unchanged, so a stale write would land. A caller that read the row at
+   * revision N writes conditional on N and is refused if anything moved.
+   * Absent on rows written before the column existed; read it as 0.
+   */
+  revision?: number;
+  /**
+   * A counter the store raises whenever the EVIDENCE about this asset
+   * changes — an outcome added, confirmed in place, or retracted
+   * (2026-09-08f). `revision` covers the asset row; it says nothing about
+   * the rows the decision is made from, and those live in another table.
+   * A decision therefore reads this, decides, and writes conditional on it:
+   * evidence that arrived after the read refuses the write instead of being
+   * silently written over. Absent on rows from before the column; read as 0.
+   */
+  evidence_revision?: number;
   visibility: AssetVisibility;
   status: AssetStatus;
   confidence?: number | null;
@@ -186,6 +205,13 @@ export interface AssetEntity {
   last_used_at?: string | null;
   usage_count: number;
   content_ref?: string | null;
+  /**
+   * Hash of the content this row's `version` stands for (the skill store's
+   * content_hash for a skill). The gate binds outcomes, decisions and human
+   * reviews to `asset_id + version + content_hash` (2026-09-08); a read on
+   * the model's path checks the served content against it.
+   */
+  content_hash?: string | null;
   created_at: string;
   updated_at: string;
   metadata_json: string;
@@ -409,7 +435,20 @@ export interface CreateAssetInput {
   confidence?: number | null;
   expires_at?: string | null;
   content_ref?: string | null;
+  content_hash?: string | null;
   metadata_json?: string;
+}
+
+/** Precondition for a write that must not overwrite a newer row (2026-09-08c). */
+export interface UpdateAssetExpect {
+  version?: number;
+  content_hash?: string | null;
+  /** The row's updated_at as read; a write in the same millisecond does not change it, so this alone is not enough. */
+  updated_at?: string;
+  /** The row's revision as read. Every write raises it, so this one is decisive. */
+  revision?: number;
+  /** The evidence counter as read. A decision written after new evidence landed is refused. */
+  evidence_revision?: number;
 }
 
 export interface FixedAssetBindingInput {
@@ -463,6 +502,317 @@ export interface AssetFilter {
   status?: AssetStatus;
   owner_user_id?: string;
   visibility?: AssetVisibility;
+}
+
+// ============================
+// Asset outcomes and the admission gate
+// ============================
+
+/**
+ * What happened after an asset was used, as recorded by whoever can tie the
+ * use to a result: the evaluation harness, a CI hook, a reviewer.
+ *
+ *   validated  the asset's content fed a call or an artifact and the task's
+ *              acceptance passed on it
+ *   corrected  the asset's content fed a call that failed, and the failure is
+ *              explained by the content (reason wrong) or by its age (stale)
+ *   used       the content was acted on; no outcome is known yet
+ *
+ * A row is evidence about one asset version from one consumer. The gate
+ * reads rows; it never writes them.
+ */
+export type AssetOutcomeState = "validated" | "corrected" | "used";
+/** How the consumer relates to the asset's author. */
+export type AssetOutcomeRelation = "cross_user" | "cross_agent" | "self" | "unknown";
+export type AssetCorrectedReason = "wrong" | "stale" | "other";
+
+export interface AssetOutcomeEntity {
+  id: string;
+  team_id: string;
+  asset_id: string;
+  asset_version: number | null;
+  state: AssetOutcomeState;
+  relation: AssetOutcomeRelation;
+  corrected_reason: AssetCorrectedReason | null;
+  consumer_user_id: string;
+  consumer_agent_id: string | null;
+  task_id: string | null;
+  /** The recorder's own run / session identifier, for tracing back to its artifacts. */
+  run_id: string | null;
+  /** Who recorded it: "evaluation-runner", "panel", "ci", … */
+  source: string;
+  /** Recorder-defined evidence (proof refs, call ids, probe records), JSON text. */
+  evidence_json: string;
+  /**
+   * The one call this row is about — the tool-call id the recorder captured
+   * — when known. Two real calls with the same arguments carry different
+   * ids and are two rows; the gate counts calls, and a later row about the
+   * same call supersedes the earlier one (a `used` followed by a `validated`).
+   */
+  call_id: string | null;
+  /**
+   * Recorder-chosen idempotency key, unique per team. Redelivering an event
+   * returns the row already on file instead of adding a second one, so a
+   * retry never adds weight. Null when the recorder chose none.
+   */
+  event_id: string | null;
+  /**
+   * Whether the gate may act on this row. Derived by the service from who
+   * submitted it and what it carries — a team admin or reviewer, naming the
+   * consumer, with the call id, the asset version and evidence — and never
+   * taken from the caller. An untrusted row is kept as a record and is
+   * ignored by the gate, the confidence and the author statistics alike.
+   */
+  trusted: boolean;
+  untrusted_reason: string | null;
+  submitted_by_user_id: string | null;
+  submitted_role: string | null;
+  /**
+   * Hash of the content the outcome is about (2026-09-08c). The gate counts
+   * a row for the asset's current version only when version and hash both
+   * match; a row without them is history that cannot claim the current text.
+   */
+  content_hash: string | null;
+  /** A retracted row stays on file and is not read by the gate; who, when, why. */
+  retracted_at: string | null;
+  retracted_by: string | null;
+  retract_reason: string | null;
+  occurred_at: string;
+  created_at: string;
+}
+
+/**
+ * An outcome row as a reader gets it: the stored row plus the gate's own
+ * verdict on it (2026-09-08e), computed by `outcomeValidity` — the same
+ * function the decision uses. `gate_validity` is derived, never stored,
+ * and is recomputed on every read because it depends on the asset's
+ * current version and content.
+ */
+export interface AssetOutcomeWithValidity extends AssetOutcomeEntity {
+  gate_validity: {
+    /** Trusted, not retracted, and about the asset's current version and content. */
+    usable: boolean;
+    trusted: boolean;
+    retracted: boolean;
+    bound: "current" | "other_version" | "unbound" | "unknown";
+    /**
+     * Whether this row is the last word on its call. A call can be reported
+     * more than once — used, then validated, then corrected — and only the
+     * final result counts; the earlier rows stay on file as history and may
+     * not carry a conclusion (2026-09-08f).
+     */
+    final: boolean;
+    superseded_by: string | null;
+    /** Why it is not usable, in the reader's words; null when it is. */
+    reason: string | null;
+    asset_version_now: number | null;
+    asset_content_hash_now: string | null;
+  };
+}
+
+export interface AppendAssetOutcomeInput {
+  team_id: string;
+  asset_id: string;
+  asset_version?: number | null;
+  state: AssetOutcomeState;
+  relation?: AssetOutcomeRelation;
+  corrected_reason?: AssetCorrectedReason | null;
+  consumer_user_id: string;
+  consumer_agent_id?: string | null;
+  task_id?: string | null;
+  run_id?: string | null;
+  source?: string;
+  evidence_json?: string;
+  occurred_at?: string;
+  call_id?: string | null;
+  event_id?: string | null;
+  content_hash?: string | null;
+  /** Set by the service, never by the caller (the router drops them). */
+  trusted?: boolean;
+  untrusted_reason?: string | null;
+  submitted_by_user_id?: string | null;
+  submitted_role?: string | null;
+}
+
+export interface AssetOutcomeFilter {
+  team_id: string;
+  asset_id?: string;
+  states?: AssetOutcomeState[];
+  consumer_user_id?: string;
+  /** Only rows the gate may act on (true) or only the ignored ones (false). */
+  trusted?: boolean;
+  event_id?: string;
+  /** Outcomes for assets owned by this user (join on meta_assets.owner_user_id). */
+  owner_user_id?: string;
+  occurred_after?: string;
+  occurred_before?: string;
+}
+
+/**
+ * Why an asset is being read. `use` is the model's everyday path (bridge,
+ * injection, get): only an admitted asset passes, whoever owns it. `manage`
+ * is the human's path (panel, review queue): the owner, admins and reviewers
+ * also see candidates and rejections, within the visibility rules.
+ */
+export type AssetReadPurpose = "use" | "manage";
+
+export type GateDecisionKind = "admit" | "reject" | "pending";
+export type ReviewPriority = "high" | "normal" | "low";
+
+/**
+ * The gate's decision about one asset, stored on the asset as
+ * `metadata_json.gate` and reflected in `status` / `confidence`.
+ */
+export interface GateDecision {
+  schema_version: "gate-decision-v2";
+  rules_version: string;
+  asset_id: string;
+  /** The version and content the decision is about; outcomes of other versions are reported, not used. */
+  asset_version: number;
+  content_hash: string | null;
+  decided_at: string;
+  decision: GateDecisionKind;
+  /** The status the decision maps to: admit→approved, reject→failed, pending→candidate. */
+  status_target: Extract<AssetStatus, "approved" | "failed" | "candidate">;
+  /**
+   * Share of this asset's cross-person outcomes that validated, or null with
+   * no outcomes. A description of the evidence on file, not a prior.
+   */
+  confidence: number | null;
+  /** The denominator behind `confidence`: cross-person calls that validated or were corrected(wrong/stale). */
+  confidence_n: number;
+  /** Which rows were allowed to decide: only rows the service marked trusted. */
+  evidence_policy: "trusted-only";
+  reasons: string[];
+  evidence_refs: Array<{ outcome_id: string; state: AssetOutcomeState; relation: AssetOutcomeRelation; call_id?: string | null }>;
+  signals: {
+    online: {
+      /** Counts are per call (rows about the same call collapsed to the latest), trusted rows only. */
+      validated: number;
+      corrected: number;
+      used: number;
+      cross_user_validated: number;
+      distinct_consumers: number;
+      distinct_tasks: number;
+      /** Calls the counts above are drawn from. */
+      calls: number;
+      /** Rows on file the gate did not read because they are not trusted. */
+      untrusted_ignored: number;
+      /** Trusted calls about other versions of this asset: reported, never deciding this version. */
+      other_version: number;
+      /** Trusted rows with no version, or no hash while the asset has one: history that cannot claim the current text. */
+      unbound_ignored: number;
+      /** Rows retracted by a reviewer: kept on file, not read. */
+      retracted_ignored: number;
+      /** Rows about one call that tie on both clocks, so the record does not say which came last. */
+      same_call_ties?: number;
+    };
+    author: {
+      user_id: string;
+      /** Outcomes of the author's OTHER assets, cross-person only. */
+      validated: number;
+      corrected: number;
+      distinct_consumers: number;
+      recent_wrong_asset_ids: string[];
+      /** Filled by the context-based assessment when one is on file and accepted; null otherwise. */
+      assessment: AuthorAssessmentSummary | null;
+      /** Why an assessment on file was not read (unsigned, wrong author/version/content, evidence past as_of). */
+      assessment_ignored: string | null;
+    };
+  };
+  review_priority: ReviewPriority | null;
+  /**
+   * The corrected(wrong/stale) outcomes this reject rests on. A human admit
+   * lifts the reject only by naming every one of them (`review.overrode`).
+   * The time is the time the row was RECORDED, not the time the event it
+   * describes happened: a failure that happened before an admit but reached
+   * the registry after it is evidence the reviewer could not have seen.
+   */
+  reject_evidence_ids?: string[];
+  reject_evidence_latest_at?: string | null;
+  /**
+   * When set, only outcomes with occurred_at <= evidence_as_of were read. An
+   * evaluation batch passes its frozen baseline time here so the gate acts on
+   * the evidence base and not on the batch's own runs.
+   */
+  evidence_as_of?: string | null;
+}
+
+/**
+ * A human decision on one version of an asset (2026-09-08). Kept as an
+ * append-only history under `metadata_json.gate.reviews`; the one in force
+ * is the latest not expired for the asset's current version.
+ */
+export interface HumanReviewRecord {
+  id: string;
+  decision: "admit" | "reject";
+  /** The status the decision maps to. */
+  status: Extract<AssetStatus, "approved" | "failed">;
+  by: string;
+  at: string;
+  note: string | null;
+  asset_version: number;
+  content_hash: string | null;
+  /**
+   * The corrected outcomes this admit overrules, each named with the
+   * reviewer's reason (2026-09-08d). A human admit lifts a rule reject only
+   * for the rows it names: nothing is inferred from the fact that a
+   * correction was already on file when the reviewer clicked, because the
+   * record does not say they read it. A correction not named here keeps the
+   * asset rejected, and so does one that arrives afterwards.
+   */
+  overrode?: Array<{ outcome_id: string; reason: string }> | null;
+  /** Set when the decision stopped applying, with the reason (a new version, a later review). */
+  expired_at?: string | null;
+  expired_reason?: string | null;
+}
+
+/**
+ * What the asset's status is and why: the rule's suggestion and the human
+ * decision are kept apart, and this is what they resolve to. Precedence:
+ * a reject from either wins; then a human admit; then the rule's admit;
+ * else candidate.
+ */
+export interface GateEffective {
+  status: Extract<AssetStatus, "approved" | "failed" | "candidate">;
+  source: "rule" | "review";
+  review_id: string | null;
+  reason: string;
+  at: string;
+}
+
+/**
+ * The part of a context-based author assessment the gate reads (v2,
+ * 2026-09-08b). Written only through asset/gate/assessment by a team admin
+ * or reviewer, and bound to the author, the asset version and content it was
+ * made for, and the evidence cutoff it used. The gate ignores — with the
+ * reason — an assessment whose binding does not match the asset, or whose
+ * evidence runs past the `as_of` it is evaluating at.
+ */
+export interface AuthorAssessmentSummary {
+  schema?: "author-assessment-summary-v2";
+  competence: "high" | "medium" | "low" | "unknown";
+  domain: string;
+  assessed_at: string;
+  /** Only records dated at or before this were used. Independent of assessed_at. */
+  evidence_cutoff?: string | null;
+  citations: number;
+  /** Execution-grade claims the competence rests on (proxy-observed calls, harness-verified outcomes). */
+  execution_claims?: { success: number; failure: number } | null;
+  /**
+   * Whether the author's own records support, contradict, or say nothing
+   * about what the asset asserts — verified citations only. A contradiction
+   * from the author's own history is the strongest cold-start signal there is.
+   */
+  asset_claim_check?: { verdict: "supports" | "contradicts" | "silent"; record_ids?: string[]; strength?: "strong" | "weak" | null } | null;
+  author_user_id?: string;
+  asset_version?: number;
+  content_hash?: string | null;
+  pack_sha256?: string;
+  assessment_file?: string;
+  /** Set by Core on write. */
+  written_by?: string;
+  written_at?: string;
 }
 
 // ============================

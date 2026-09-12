@@ -387,6 +387,8 @@ export const assetListAccessibleSchema = userIdOrKeyFields
     action: permission.optional(),
     asset_type: assetType.optional(),
     agent_id: z.string().optional(),
+    /** `use` = admitted assets only (the model's path); `manage` (default) = what the caller may see. */
+    purpose: z.enum(["use", "manage"]).optional(),
     // 可选的服务端 visibility 过滤：
     //   - 单值：`visibility: "team"` → 只返回 team 可见的（管控页"团队资产"tab 用）
     //   - 数组：`visibility: ["team", "restricted"]` → 白名单方式
@@ -524,3 +526,77 @@ export const V3_SCHEMAS = {
 } as const;
 
 export type V3Route = keyof typeof V3_SCHEMAS;
+
+// ── AssetOutcome / admission gate ──
+const assetOutcomeState = z.enum(["validated", "corrected", "used"]);
+const assetOutcomeRelation = z.enum(["cross_user", "cross_agent", "self", "unknown"]);
+const assetCorrectedReason = z.enum(["wrong", "stale", "other"]);
+export const assetOutcomeAppendSchema = z.object({
+  team_id: nonEmpty,
+  asset_id: nonEmpty,
+  asset_version: z.number().int().nullable().optional(),
+  state: assetOutcomeState,
+  /** Accepted for compatibility and ignored: the service derives it from consumer vs. owner. */
+  relation: assetOutcomeRelation.optional(),
+  corrected_reason: assetCorrectedReason.nullable().optional(),
+  /** Defaults to the caller; another user's id needs a team admin or reviewer. */
+  consumer_user_id: nonEmpty.optional(),
+  /** The tool-call id this outcome is about. Required for the row to be trusted. */
+  call_id: nonEmpty.nullable().optional(),
+  /** Recorder's idempotency key; a redelivery returns the row on file. */
+  event_id: nonEmpty.nullable().optional(),
+  /** Hash of the content the outcome is about; required for trust when the asset carries one. */
+  content_hash: nonEmpty.nullable().optional(),
+  consumer_agent_id: nonEmpty.nullable().optional(),
+  task_id: nonEmpty.nullable().optional(),
+  run_id: nonEmpty.nullable().optional(),
+  source: z.string().optional(),
+  evidence_json: z.string().optional(),
+  occurred_at: z.string().datetime().optional(),
+  /** Re-run the gate for the asset after recording (default true). */
+  evaluate: z.boolean().optional(),
+});
+export const assetOutcomeListSchema = z
+  .object({
+    team_id: nonEmpty,
+    asset_id: nonEmpty.optional(),
+    states: z.array(assetOutcomeState).optional(),
+    consumer_user_id: nonEmpty.optional(),
+    owner_user_id: nonEmpty.optional(),
+    trusted: z.boolean().optional(),
+    occurred_after: z.string().datetime().optional(),
+    occurred_before: z.string().datetime().optional(),
+  })
+  .merge(paginationInputSchema);
+export const assetGateBackfillSchema = z.object({ team_id: nonEmpty, dry_run: z.boolean().optional(), asset_type: assetType.optional() });
+/** The verified summary of a context-based author assessment; the service validates the binding. */
+export const assetGateAssessmentSchema = z.object({ asset_id: nonEmpty, assessment: z.record(z.string(), z.unknown()) });
+export const assetGateSubmitSchema = z.object({
+  asset_id: nonEmpty,
+  /** Take a pending request back; admins and reviewers stop seeing a private candidate. */
+  withdraw: z.boolean().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+export const assetGateEvaluateSchema = z.object({
+  asset_id: nonEmpty,
+  /** Write status / confidence / metadata_json.gate (default true); false = decide only. */
+  apply: z.boolean().optional(),
+  /** Read only outcomes with occurred_at <= as_of (an evaluation batch passes its frozen baseline time). */
+  as_of: z.string().datetime().optional(),
+});
+export const assetGateGetSchema = z.object({ asset_id: nonEmpty });
+export const assetOutcomeRetractSchema = z.object({ outcome_id: nonEmpty, reason: z.string().min(1).max(2000) });
+export const assetGateReviewSchema = z.object({
+  asset_id: nonEmpty,
+  decision: z.enum(["admit", "reject"]),
+  note: z.string().max(2000).nullable().optional(),
+  /** The version, content and row revision the reviewer read; the decision is refused if the asset moved on. */
+  expected_version: z.number().int().min(1),
+  expected_content_hash: nonEmpty.nullable().optional(),
+  expected_revision: z.number().int().min(0),
+  /**
+   * The corrected outcomes this admit overrules, each with the reviewer's
+   * reason. An admit that names none does not lift a rule reject.
+   */
+  overrode: z.array(z.object({ outcome_id: nonEmpty, reason: z.string().min(1).max(2000) })).max(50).optional(),
+});

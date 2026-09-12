@@ -74,7 +74,25 @@ export interface SkillVersioningOptions {
     user_id?: string;
     name: string;
     description: string;
+    /** Hash of the v1 content, so the registry binds from the first version (2026-09-08b). */
+    content_hash?: string;
   }) => Promise<void>;
+  /**
+   * A new version was written (2026-09-08b). The asset registry follows:
+   * version and content hash are recorded, human decisions in force expire,
+   * the new version is a candidate until decided on its own outcomes.
+   * Fire-and-forget: a failure here never fails the write — the read path
+   * checks the served version against the registry and refuses to serve a
+   * newer content as admitted, so the registry catches up on first read.
+   */
+  onSkillVersioned?: (params: {
+    skill_id: string;
+    team_id?: string;
+    agent_id?: string;
+    name: string;
+    version: number;
+    content_hash: string;
+  }) => void;
 }
 
 export class SkillVersioning {
@@ -84,6 +102,7 @@ export class SkillVersioning {
   private readonly logger?: SkillVersioningOptions["logger"];
   private readonly onSkillVdbChanged?: (delta: number) => void;
   private readonly onSkillCreated?: SkillVersioningOptions["onSkillCreated"];
+  private readonly onSkillVersioned?: SkillVersioningOptions["onSkillVersioned"];
 
   constructor(opts: SkillVersioningOptions) {
     this.store = opts.store;
@@ -92,6 +111,7 @@ export class SkillVersioning {
     this.logger = opts.logger;
     this.onSkillVdbChanged = opts.onSkillVdbChanged;
     this.onSkillCreated = opts.onSkillCreated;
+    this.onSkillVersioned = opts.onSkillVersioned;
   }
 
   /**
@@ -172,6 +192,7 @@ export class SkillVersioning {
     if (this.onSkillCreated) {
       try {
         await this.onSkillCreated({
+          content_hash: computeContentHash(mut.content),
           skill_id: skillId,
           team_id: ctx.team_id,
           agent_id: ctx.agent_id,
@@ -291,6 +312,9 @@ export class SkillVersioning {
         metadata_json: mut.metadata_json ?? head.metadata_json,
       });
       this.onSkillVdbChanged?.(1);
+      if (this.onSkillVersioned) {
+        try { this.onSkillVersioned({ skill_id: row.skill_id, team_id: row.team_id, agent_id: row.owner_agent_id, name: row.name, version: row.version, content_hash: row.content_hash }); } catch { /* swallow */ }
+      }
       return row;
     } catch (e) {
       // DB 失败 → 清理刚 copy 的新目录
