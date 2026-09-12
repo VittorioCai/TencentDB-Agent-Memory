@@ -165,6 +165,7 @@
       "superseded_by_a_later_row": 0,
       "cited_transport_calls": 0
     },
+    "scope_note": "程序核对的是:引用的记录存在、引文在记录里、结构化结果与声明的类型一致、与被评估资产的绑定关系。声明里自由文本的语义与适用范围(例如「作者不具备某能力」「在任何环境都不成立」)不在核对范围内——每条保留的声明都附了程序从记录造的 fact_sentence,模型原话在 model_statement 里,按推断读。",
     "asset_claim_check": {
       "verdict": "silent",
       "record_ids": [],
@@ -188,6 +189,8 @@
         "outcome": "success",
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "Core 结果记录 outcome:591f0db4-6b17-473e-9523-006f70889287,资产 skl-pXLc38dex6Zt v1,state=validated,消费者 usr-4u07qc2kuj,call call_00_RHmV4S1O5LcgS05ZIxxI6538,2026-09-11T16:10:53.242Z",
+        "model_statement": "The evaluation harness validated a call on the asset under assessment's prior version, skl-pXLc38dex6Zt v1 (run 20260911T154907Z-devloop-note, 2026-09-11T15:50:06Z).",
         "by_identity": false,
         "note": "outcome:591f0db4-6b17-473e-9523-006f70889287 is about version 1 (9ed211c254) of this asset, not version 2 (b230f087c6); it neither supports nor contradicts the current text",
         "found_in": "outcome:591f0db4-6b17-473e-9523-006f70889287",
@@ -204,6 +207,8 @@
         "outcome": "success",
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "Core 结果记录 outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced,资产 skl-pXLc38dex6Zt v1,state=validated,消费者 usr-4u07qc2kuj,call call_00_FyIgEjn7omrGZtlb2DKJ4738,2026-09-11T16:10:54.865Z",
+        "model_statement": "The harness validated a second call on skl-pXLc38dex6Zt v1 (run 20260911T155035Z-devloop-note, 2026-09-11T15:51:10Z).",
         "by_identity": false,
         "note": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced is about version 1 (9ed211c254) of this asset, not version 2 (b230f087c6); it neither supports nor contradicts the current text",
         "found_in": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced",
@@ -220,6 +225,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": null,
+        "model_statement": "The asset skl-pXLc38dex6Zt v2 asserts the label is 'Exit Code:' with a capital C, based on 329 batch-4 tool results — this is the asset's own authored text, not independent verification.",
         "by_identity": false,
         "note": null,
         "found_in": "skill:skl-pXLc38dex6Zt@2",
@@ -236,6 +243,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": null,
+        "model_statement": "The asset locates the misreading acceptance at evaluation/tasks/bridge-addr/verify.mjs, so its applicability is the CodeBuddy Bash tool-result format and that acceptance script.",
         "by_identity": false,
         "note": null,
         "found_in": "skill:skl-pXLc38dex6Zt@2",
@@ -252,6 +261,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "proxy 观察 call:cd4a73260f5a931d,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The author (agent agt-5e4hna56j9) issued a POST search to the skill bridge at 127.0.0.1:8096 — an observed operation unrelated to exit-status parsing.",
         "by_identity": false,
         "note": null,
         "found_in": "call:cd4a73260f5a931d",
@@ -269,6 +280,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "proxy 观察 call:b5903fc59d61214c,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The author probed both documented bridge endpoints with the reachability query, again an operation in the bridge-endpoint domain, not the exit-status domain.",
         "by_identity": false,
         "note": null,
         "found_in": "call:b5903fc59d61214c",
@@ -359,5 +372,5 @@
     "pack_sha256": "a3c0b2d9262aa16a9a03531957eb1302c62beb1a599754163dd17df489e57643",
     "assessment_file": "evaluation/author/artifacts/assessment-a-exit-line.json"
   },
-  "rechecked_at": "2026-09-12T10:50:35.748Z"
+  "rechecked_at": "2026-09-12T11:31:34.076Z"
 }

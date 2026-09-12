@@ -161,6 +161,12 @@ const wouldHaveSlipped = judged.filter((r) => r.model_tests && r.model_tests.fil
 // ── result judgement, explained per event (review 2026-09-11 evening, point 1) ──
 L.push(`## 结果判定逐条解释`);
 L.push("");
+L.push(`**本场景里 \`validated\` 的操作定义(2026-09-12 第三轮复核后写明)**:两件事**并列**成立才记 validated——` +
+  `① 这条结果绑定到了一次"采用了笔记约定"的写入调用(标记出现在新增测试里,且能关联到写入);` +
+  `② 该次运行的最终副本通过了独立验收(验证器自带的参考测试,与模型自述无关)。` +
+  `验证器把参考测试的结果写进每个新增测试的 \`attempt.ok\`,所以判定器那句"它喂给的那次调用成功了"读作**这两件事都成立**,` +
+  `**不**表示已单独证明"这次写入促成了通过",更不表示笔记的建议因此得到验证。`);
+L.push("");
 L.push(`判据(judge-outcome.mjs):每条 used 事件按它的 call id 找验收记录里同一调用的 attempt;attempt 成功且本次验收 PASS → validated;` +
   `该调用不是验收 attempt(提到了判别值但不是写入新增测试的调用)→ needs_review "the token appeared in an operation that was not an acceptance attempt";` +
   `attempt 失败 → corrected 或 needs_review(视失败是否由资产内容解释)。attempt 只认最终新增测试的文件名/标题里的标记,并关联最后一次写入该文件且含标记的调用。`);
@@ -195,7 +201,8 @@ const viaWrite = nt.flatMap((r) => (r.attempts ?? []).filter((a) => /^bt-/.test(
 L.push(`## 结论(按 2026-09-11 晚定的口径)`);
 L.push("");
 L.push(`两组功能验收相同(验证器自带参考测试 + 起点测试原内容),正式样本里无笔记 ${nnPass}/${nn.length} 通过、有笔记 ${ntPass}/${nt.length} 通过。` +
-  `笔记的可观测作用是改变实现路径:有笔记组 ${ntNewFile}/${nt.length} 次按团队约定新建了带判别值的独立测试文件(无笔记组把测试加进已有文件),` +
+  `直接证据支持的是**测试约定被采用**:有笔记组 ${ntNewFile}/${nt.length} 次按团队约定新建了带判别值的独立测试文件,无笔记组带判别值的独立测试文件 0 次(判别值只在 Core 正文里,无笔记组拿不到);两组最终代码都通过同一套独立验收。` +
+  `**没有单独证明根因判断或修复方案来自笔记**——副本里已有正确实现可参照,模型完全可能照着它修、同时照笔记命名测试(2026-09-12 第三轮复核)。`,
   `不是"没笔记就做不成"。判别值随机生成、只在 Core 正文里;无笔记组 ${allNoNote.length} 次(含作废)零出现(${nnMarker} 次带标记)。` +
   `采用证据来自送达事件(injected / recalled / fetched)与写入调用的关联(${viaWrite.length} 条,写入方式 ${[...new Set(viaWrite)].join("、") || "无"}),有笔记组 ${ntUsed}/${nt.length} 次判 used;不依赖模型自述。` +
   `样本 ${nn.length}+${nt.length},差异仅描述这些运行。`);
@@ -213,7 +220,7 @@ else {
   const moved = first.gate?.decided_at !== last.gate?.decided_at;
   L.push("");
   L.push(moved
-    ? `闸门在 ${last.at} 重判:decided_at ${first.gate?.decided_at} → ${last.gate?.decided_at},decision ${first.gate?.decision} → ${last.gate?.decision},status ${first.status} → ${last.status};evidence_revision ${first.evidence_revision} → ${last.evidence_revision}。回流闭合:一条经验被提取 → 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 ${q(last.gate?.online?.validated)} 次 validated 来自同一消费者用户、同一任务,见"apply 之前的两项确认"。`
+    ? `闸门在 ${last.at} 重判:decided_at ${first.gate?.decided_at} → ${last.gate?.decided_at},decision ${first.gate?.decision} → ${last.gate?.decision},status ${first.status} → ${last.status};evidence_revision ${first.evidence_revision} → ${last.evidence_revision}。回流:**两条流程要分开讲**(2026-09-12 第三轮复核)。① 初始笔记(正文整理好后经 skill/create 登记)被使用、被验证、按规则准入——这一条走完了;② 开发会话经 skill/extract 产生另外 10 条候选资产,候选回流已发生,**它们的使用与验证尚未展示**。下面这句只描述第 ① 条:一条经验**整理入池**(skill/create,不是自动提取)→ 被使用 → 被验证 → 闸门据证据准入;笔记保留 approved(判定与状态一致,是这一环的实物;上次人工 approved 时 gate 仍 pending,状态与判定不一致,故置回)。admit 所依据的 ${q(last.gate?.online?.validated)} 次 validated 按版本分开看(v1:2 次、1 个消费者用户、1 个任务实体;v2:4 次、2 个消费者用户、2 个任务实体,含第二任务的运行),两个用户由同一人操作,见"apply 之前的两项确认"。`
     : `闸门 decided_at 停在 ${last.gate?.decided_at}(decision ${last.gate?.decision}),evidence_revision ${first.evidence_revision} → ${last.evidence_revision}:证据写入了,闸门尚未据此重判——回流只是写入,没闭合。`);
 }
 L.push("");

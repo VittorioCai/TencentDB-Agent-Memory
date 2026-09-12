@@ -19,7 +19,10 @@
  * The author signal never moves admit or reject. In the pending branch it
  * sets the review priority — the order a human looks at the queue — from
  * two things: the author's recent assets judged wrong, and, when a
- * context-based assessment of the author is on file, its competence for the
+ * context-based assessment of the author is on file, its `competence` field —
+ * kept under that name for compatibility, but it is an **asset-outcome
+ * profile**: what the trusted results on THIS asset come to, not a verified
+ * measure of what the person can do (2026-09-12 review). Its level for the
  * asset's domain. Counts of the author's earlier outcomes are reported as
  * they are; no prior, no shrinkage, no score derived from them.
  *
@@ -379,22 +382,22 @@ export function decideAsset(input: DecideInput): GateDecision {
       reasons.push(`author ${authorId} has ${recentWrong.length} other asset(s) judged wrong within ${RECENT_WRONG_WINDOW_DAYS} days (${recentWrong.join(", ")}); review priority: high`);
     } else if (assessment && (assessment.competence === "low" || assessment.competence === "unknown")) {
       review_priority = "high";
-      reasons.push(`context-based assessment: author competence ${assessment.competence} for "${assessment.domain}" (${assessment.citations} cited record(s), ${assessment.assessed_at}); review priority: high`);
+      reasons.push(`context-based assessment: asset-outcome profile ${assessment.competence} on this asset for "${assessment.domain}" (${assessment.citations} cited record(s), ${assessment.assessed_at}) — a profile of results, not a verified measure of the author; review priority: high`);
     } else if (assessment && assessment.competence === "high") {
       review_priority = "low";
-      reasons.push(`context-based assessment: author competence high for "${assessment.domain}" (${assessment.citations} cited record(s), ${assessment.assessed_at}); review priority: low`);
+      reasons.push(`context-based assessment: asset-outcome profile high on this asset for "${assessment.domain}" (${assessment.citations} cited record(s), ${assessment.assessed_at}) — a profile of results, not a verified measure of the author; review priority: low`);
     } else {
       review_priority = "normal";
       reasons.push(
         assessment
-          ? `context-based assessment: author competence ${assessment.competence} for "${assessment.domain}"; review priority: normal`
+          ? `context-based assessment: asset-outcome profile ${assessment.competence} on this asset for "${assessment.domain}" (a profile of results, not a verified measure of the author); review priority: normal`
           : `author ${authorId}: ${author.validated} validated / ${author.corrected} corrected on other assets, no context-based assessment on file; review priority: normal`,
       );
     }
   } else {
     reasons.push(`author ${authorId}: ${author.validated} validated / ${author.corrected} corrected on other assets (reported, not used)`);
     if (assessment) {
-      reasons.push(`context-based assessment on file: competence ${assessment.competence} for "${assessment.domain}"${contradicted ? "; the author's own records contradict this asset's claim" : assessment.asset_claim_check?.verdict === "supports" ? "; the author's own records support this asset's claim" : ""} (reported, not used: the decision rests on outcomes)`);
+      reasons.push(`context-based assessment on file: asset-outcome profile ${assessment.competence} on this asset for "${assessment.domain}"${contradicted ? "; the author's own records contradict this asset's claim" : assessment.asset_claim_check?.verdict === "supports" ? "; the author's own records support this asset's claim" : ""} (reported, not used: the decision rests on outcomes)`);
     }
   }
 

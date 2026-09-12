@@ -545,7 +545,9 @@ it carries:
 - `recent_wrong_asset_ids`: the author's other assets judged wrong within 30
   days;
 - `signals.author.assessment`: the **context-based assessment** when one is
-  on file — competence for the asset's domain (high / medium / low /
+  on file — the `competence` field, kept under that name but read as an
+  **asset-outcome profile**: what the trusted results on this asset come to
+  (high / medium / low /
   unknown), derived by reading the author's own records (L0 conversations,
   L1 memories, persona, earlier assets and their outcomes) with every claim
   citing a record id and the citations machine-checked. Written under
@@ -553,7 +555,7 @@ it carries:
 
 Where it changes something visible: a `pending` asset gets a review
 priority — high when the author has recent assets judged wrong or the
-assessment says low/unknown competence, low when it says high, normal
+profile is low/unknown, low when it is high, normal
 otherwise. The priority orders the human queue and never moves admit or
 reject; on no evidence, neither would survive a question.
 

@@ -86,7 +86,7 @@
 - 写入作者评估会重判并撤销刚置的准入:`LESSONS.md`(2026-09-11 第二任务)。
 - 证据包漏掉"作者作为消费者"的一本账:`LESSONS.md`、`author/build-evidence-pack.test.mjs`。
 - 作者评估在资产没有判别值时,把**别的资产**上的失败当成本资产的强矛盾(第二人复核构造的反例);同一轮还发现能力等级
-  统计的是作者的全部业务结果、不按被评估领域筛选:`author/README.md`「能力等级说的是什么」、`author/check-citations.mjs`。
+  统计的是作者的全部业务结果、不按被评估领域筛选:`author/README.md`「这个等级说的是什么:资产结果概况,不是人的能力」、`author/check-citations.mjs`。
 - 「来源链完整」其实是三个集合各自非空,相邻关系从未验证:`author/build-evidence-pack.mjs` 的 `chainFacts`、`author/README.md`。
 - 报告把「内容送达」读成「判定正确」,被第二人复核挑出:`runner/COMPARISON-2026-09-11-reparsed.md` 复核一节、`attribution/calibration.mjs`。
 
@@ -103,6 +103,14 @@
 未经测量的设计目的。重算用 `assess.mjs --recheck`(不重新调用模型),结果与线上写回见
 `author/artifacts/assessment-recheck-2026-09-12.json` 与 `assessment-write-b-readback-2026-09-12.json`:B 的评估由 medium 变
 unknown,闸门据此把复核优先级提到 high,admit/reject 不变——作者信号只排队、不定生死,这一条现在有了线上证据。
+
+**第三轮**只查一类问题:事实成立、结论多走了一步。五条全部成立并已收紧:① 直接证据支持的是"测试约定被采用",
+不能读成"修复方案来自笔记";② `validated` 的操作定义写进报告(采用了约定的写入 **且** 最终副本通过独立验收,
+两件事并列,不表示这次写入促成了通过);③ 结果标签不是人的能力——字段仍叫 `competence`(与 Core 摘要兼容),
+但读作**资产结果概况**,Core 的闸门理由串已同步改成 `asset-outcome profile … on this asset`;④ 程序核的是引用
+真实性、结构化结果一致性与资产关联,**自由文本的语义和适用范围核不了**,所以每条声明现在带程序造的
+`fact_sentence`,模型原话另列为 `model_statement`,边界写在输出的 `scope_note` 里;⑤ "回流闭合"拆成两条流程:
+初始笔记(整理入池)走完了使用 → 验证 → 准入,自动提取的 10 条候选只走到回流,使用与验证尚未展示。
 
 ## 每份报告都有"测的是什么,不是什么"
 

@@ -470,6 +470,7 @@
       "superseded_by_a_later_row": 0,
       "cited_transport_calls": 1
     },
+    "scope_note": "程序核对的是:引用的记录存在、引文在记录里、结构化结果与声明的类型一致、与被评估资产的绑定关系。声明里自由文本的语义与适用范围(例如「作者不具备某能力」「在任何环境都不成立」)不在核对范围内——每条保留的声明都附了程序从记录造的 fact_sentence,模型原话在 model_statement 里,按推断读。",
     "asset_claim_check": {
       "verdict": "silent",
       "record_ids": [],
@@ -493,6 +494,8 @@
         "outcome": "success",
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "proxy 观察 call:c082942675850287,kind=bridge_call,upstream_status=200",
+        "model_statement": "The person's search command for 'convention address reach skill bridge' was answered by the bridge endpoint with HTTP status 200 (transport-level success; application body is not shown).",
         "by_identity": false,
         "note": null,
         "found_in": "call:c082942675850287",
@@ -510,6 +513,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "proxy 观察 call:38d8b59d76dd06fb,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The person's session issued a get-by-name request for skill-bridge-http-access using URL http://127.0.0.1:8096; the bridge answered with HTTP status 200.",
         "by_identity": false,
         "note": null,
         "found_in": "call:38d8b59d76dd06fb",
@@ -527,6 +532,8 @@
         "outcome": null,
         "relation": "silent",
         "strength": null,
+        "fact_sentence": "proxy 观察 call:90f7cd79b2034e2b,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The person's session issued a POST to the /skill/get endpoint (the cross-agent read method recommended in the authored skill) targeting skill skl-sZFb3KatWY6m, and the paired bridge call returned HTTP 200.",
         "by_identity": false,
         "note": null,
         "found_in": "call:90f7cd79b2034e2b",
@@ -632,7 +639,7 @@
     "pack_sha256": "bd0ab2c72016322c794636fce887a8bc327541bde5550130102b8d7cd81c82a4",
     "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
-  "rechecked_at": "2026-09-12T10:50:36.097Z",
+  "rechecked_at": "2026-09-12T11:31:34.435Z",
   "pack_sha_at_generation": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
   "pack_rebuilt": true
 }

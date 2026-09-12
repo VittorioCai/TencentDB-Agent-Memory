@@ -137,5 +137,6 @@
     "reject_evidence_latest_at": null,
     "evidence_as_of": null
   },
-  "status_after": "candidate"
+  "status_after": "candidate",
+  "schema_note_2026_09_12": "chain_complete 是 2026-09-12 复核前的字段形状(当时把「三个集合各自非空」叫作来源链完整)。这份是历史快照,保留原样;当前口径见 chain_production_link / chain_writer_known / chain_collected / chain_gaps 与 author/README.md。"
 }

@@ -464,3 +464,38 @@ test("② 不指定资产时行为不变(旧调用方)", () => {
   const d = deriveCompetence([{ found_in: "o1", outcome: "success", ledger: "own_business" }]);
   assert.equal(d.competence, "medium");
 });
+
+// --- 2026-09-12 第三轮复核:程序只能核结构化事实,自由文本的语义与适用范围核不了 ----------
+import { factSentence } from "./check-citations.mjs";
+
+test("程序生成受限事实句:只说记录里有的字段,不替模型下结论", () => {
+  const outcome = rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05",
+    { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "call-9", recorded_at: "2026-09-05T00:00:00Z" }, "harness_verified");
+  const f = factSentence(outcome, "outcome:o1");
+  assert.match(f, /skl-a/); assert.match(f, /v2/); assert.match(f, /corrected/); assert.match(f, /call-9/);
+  assert.doesNotMatch(f, /能力|不具备|任何环境/);
+
+  const call = rec("call", "2026-09-06 bridge_call search status=404 http://127.0.0.1:8096/skill-bridge/v3/skill/search",
+    { kind: "bridge_call", upstream_status: 404 }, "proxy_observed");
+  const g = factSentence(call, "call:c2");
+  assert.match(g, /404/); assert.match(g, /proxy/);
+
+  assert.equal(factSentence(rec("l0", "the deploy failed", { role: "assistant" }, "assistant_report"), "l0:m"), null,
+    "自述类记录没有结构化事实可生成");
+});
+
+test("每条保留的声明都带上受限事实句,模型原话另列为推断", () => {
+  const rows = new Map([
+    ["outcome:o1", rec("outcome", "corrected(wrong) on asset skl-a v2 by usr-b (cross_user) at 2026-09-05; 10.244.7.19:8096 timed out",
+      { state: "corrected", corrected_reason: "wrong", asset_id: "skl-a", asset_version: 2, consumer_user_id: "usr-b", call_id: "c9", final: true }, "harness_verified")],
+  ]);
+  const raw = { competence: "low", claims: [{ statement: "作者不具备部署能力,而且这个地址在任何环境都不能工作", type: "execution_result", outcome: "failure",
+    record_ids: ["outcome:o1"], quote: "10.244.7.19:8096 timed out", relation_to_asset: "contradicts" }] };
+  const r = checkAssessment(raw, rows, { assetTokens: ["10.244.7.19:8096"], assetId: "skl-a", assetVersion: 2, authorId: "usr-a" });
+  const k = r.claims_kept[0];
+  assert.ok(k.fact_sentence, "程序生成的事实句必须在");
+  assert.equal(k.model_statement, "作者不具备部署能力,而且这个地址在任何环境都不能工作");
+  assert.doesNotMatch(k.fact_sentence, /不具备|任何环境/);
+  // 程序没有核过这句话的适用范围,输出必须自己说清楚
+  assert.match(r.scope_note ?? "", /适用范围|语义/);
+});

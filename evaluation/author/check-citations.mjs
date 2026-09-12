@@ -158,6 +158,35 @@ export function verifyCitation(item, pack) {
  * an application-level refusal carried inside a 200 envelope (a 40401
  * body) is not visible here and is not claimed as such.
  */
+/**
+ * 受限事实句:只用记录里的结构化字段造句,不碰模型那句话的语义(2026-09-12 第三轮复核)。
+ *
+ * 复核的反例:引文属实、状态属实、资产绑定属实,声明却是"作者不具备部署能力,而且这个地址在
+ * 任何环境都不能工作"——程序核的是引用真实性、结果类型一致性和资产关联,**核不了**这句话的
+ * 语义与适用范围。所以输出里把两件事分开摆:`fact_sentence` 是程序从记录造的句子,
+ * `model_statement` 是模型的原话,属推断。null 表示这条记录没有可造句的结构化事实。
+ */
+export function factSentence(rec, foundIn) {
+  if (!rec || typeof rec !== "object") return null;
+  const m = rec.meta ?? {};
+  if (rec.evidence_class === "harness_verified" && m.state) {
+    const bits = [`Core 结果记录 ${foundIn ?? ""}`.trim(), `资产 ${m.asset_id ?? "?"}${m.asset_version != null ? ` v${m.asset_version}` : ""}`, `state=${m.state}${m.corrected_reason ? `(${m.corrected_reason})` : ""}`];
+    if (m.consumer_user_id) bits.push(`消费者 ${m.consumer_user_id}`);
+    if (m.call_id) bits.push(`call ${m.call_id}`);
+    if (m.recorded_at ?? rec.at) bits.push(String(m.recorded_at ?? rec.at));
+    if (m.final === false) bits.push("已被同一调用的后续结果取代");
+    return bits.join(",");
+  }
+  if (rec.evidence_class === "proxy_observed") {
+    const st = m.upstream_status;
+    const bits = [`proxy 观察 ${foundIn ?? ""}`.trim(), m.kind ? `kind=${m.kind}` : null, Number.isFinite(Number(st)) && Number(st) > 0 ? `upstream_status=${st}` : "没有观察到上游响应(model_intent)"];
+    if (m.reject_reason) bits.push(`reject_reason=${m.reject_reason}`);
+    if (rec.at) bits.push(String(rec.at));
+    return bits.filter(Boolean).join(",");
+  }
+  return null;
+}
+
 export function recordedOutcome(rec) {
   if (!rec) return null;
   if (rec.evidence_class === "harness_verified") {
@@ -367,10 +396,10 @@ export function checkAssessment(raw, pack, opts = {}) {
       }
       if (!f.ok && isExec && /intent only|needs a proxy-observed call/.test(f.reason)) {
         const asOp = verifyFact({ ...c, type: "observed_operation", relation_to_asset: "silent" }, pack, v.found_in, assetTokens, assetId, assetVersion, assetContentHash);
-        if (asOp.ok) { kept.push({ ...row, type: "observed_operation", outcome: null, relation: "silent", strength: null, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class, downgraded_from: "execution_result", note: `kept as intent: ${f.reason}` }); continue; }
+        if (asOp.ok) { kept.push({ ...row, fact_sentence: factSentence(recordOf(pack, v.found_in), v.found_in), model_statement: c?.statement ?? null, type: "observed_operation", outcome: null, relation: "silent", strength: null, found_in: v.found_in, evidence_class: recordOf(pack, v.found_in).evidence_class, downgraded_from: "execution_result", note: `kept as intent: ${f.reason}` }); continue; }
       }
       if (!f.ok) { dropped.push({ ...row, type: f.type, reason: f.reason }); continue; }
-      kept.push({ ...row, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, by_identity: f.by_identity ?? false, note: f.note ?? null, found_in: foundIn, evidence_class: recordOf(pack, foundIn).evidence_class });
+      kept.push({ ...row, fact_sentence: factSentence(recordOf(pack, foundIn), foundIn), model_statement: c?.statement ?? null, type: f.type, outcome: f.outcome, relation: f.relation, strength: f.strength, by_identity: f.by_identity ?? false, note: f.note ?? null, found_in: foundIn, evidence_class: recordOf(pack, foundIn).evidence_class });
     }
   }
   // One call, one result: several sentences on the same status record count once.
@@ -448,6 +477,8 @@ export function checkAssessment(raw, pack, opts = {}) {
     competence_as_said: said,
     competence_downgraded: derived.competence !== said,
     execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, domain_counts: derived.domain_counts ?? null, cross_asset_history: derived.history_counts ?? null, scoped_to: derived.scoped_to ?? null, harness_records: ledgerRows.length, superseded_by_a_later_row: supersededCalls, cited_transport_calls: transport.length },
+    // 程序核到哪一步,必须自己说清楚(2026-09-12 第三轮复核)
+    scope_note: "程序核对的是:引用的记录存在、引文在记录里、结构化结果与声明的类型一致、与被评估资产的绑定关系。声明里自由文本的语义与适用范围(例如「作者不具备某能力」「在任何环境都不成立」)不在核对范围内——每条保留的声明都附了程序从记录造的 fact_sentence,模型原话在 model_statement 里,按推断读。",
     asset_claim_check: assetClaim,
     asset_claim_as_said: accSaid,
     claims_kept: kept,

@@ -1,6 +1,6 @@
 # 开发闭环第二任务 `exit-line-collect`:运行报告(脚本生成)
 
-生成于 2026-09-12T10:34:52Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
+生成于 2026-09-12T11:30:24Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
 笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v2,仓库只存 sha256 1e85dcf5dcf7…);v1 于 2026-09-11T17:55:11Z 退役(值已进 git 历史),本任务所有运行都在 v2 上。
 判据版本:repo-2026-09-11d;起点提交 141c044(与 exit-code-fix 相同),任务文本 sha256 f32af00888d3…。
 
@@ -30,6 +30,8 @@
 | no-note | 20260911T190605Z-devloop-no-note | agt-h10fmja5kp(usr-8ypylzex49) | task-h1k7xruuhb | candidate v2 team | PASS | 6/6 | 5 / 否 | 无 | 0 / 0 | none: collect-artifacts.test.mjs carries no bt- marker | M evaluation/attribution/collect-artifacts.mjs; A evaluation/attribution/collect-artifacts.test.mjs | 是 |
 
 ## 验收明细
+**本场景里 `validated` 的操作定义(2026-09-12 第三轮复核后写明)**:两件事**并列**成立才记 validated——① 这条结果绑定到了一次"采用了笔记约定"的写入调用(标记出现在新增测试里,且能关联到写入);② 该次运行的最终副本通过了独立验收(验证器自带的参考测试,与模型自述无关)。验证器把参考测试的结果写进每个新增测试的 `attempt.ok`,所以判定器那句"它喂给的那次调用成功了"读作**这两件事都成立**,**不**表示已单独证明"这次写入促成了通过",更不表示笔记的建议因此得到验证。
+
 
 - **20260911T175839Z-devloop-smoke**(smoke,作废):? — ?
 - **20260911T180035Z-devloop-smoke**(smoke,作废):PASS — reference test passed (6/6); no new identified failure in the controlled suite (560 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing; note: the model's own tests (1 added or rewritten file(s)): 3/3 pass (recorded, not a verdict input)
@@ -113,7 +115,7 @@
 
 有笔记组 4 次:送达 4,新增测试带判别值且验收通过 4,带判别值但关联不上写入调用或验收未过 0,功能验收通过 4。无笔记组 2 次:通过 2,判别值出现 0 次(判别值随机,无笔记组出现次数必须为 0 才说明标记来自笔记)。
 其中 1 次(20260911T185430Z-devloop-note)验收器判"采用"(标记在新增测试里、绑到写入调用),但使用判定器把该次使用记为 needs_review(原因见验收明细的 used 行:标记在被记入的取用之前就经另一条 get-by-name 到达模型,使用与哪次送达绑定不能唯一确定)——没有结果行,不同步、闸门不计。这是审阅定的规则(关联不上就待复核),不是漏判。。**按冻结口径怎么记(2026-09-12 第二人复核)**:校准的使用检测是三态——采纳未知单列、不进分母,所以这 1 次记一次弃权,不计入准确率;若按二值口径(未产出 used 即阴性),在参考采纳成立的前提下它就是一次假阴性。两种记法都不等于「不是漏判」,报告按冻结的三态口径记弃权,并把这句话留在这里。
-按这几次运行:笔记在另一个文件的同类缺陷上被用到了(4/4),标记只在有笔记组出现。这说明的是实现路径受笔记影响,不是"没有笔记做不出来"——无笔记组通过 2/2。
+按这几次运行:在另一个文件的同类缺陷任务里,观察到了**笔记测试约定的采用**(4/4,标记只在有笔记组出现),最终代码通过独立验收。**尚未单独证明修复方案源于笔记**——副本里已有正确实现可参照,模型可能照它修、同时照笔记命名测试;"迁移"在这里指这种可观察的约定迁移,不等于"笔记帮助解决了缺陷"(2026-09-12 第三轮复核)。无笔记组通过 2/2。
 
 ## 闸门对 v2 的判定:两个任务、两个消费者用户
 
