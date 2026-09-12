@@ -1,0 +1,31 @@
+{
+  "schema": "live-state-record-v1",
+  "at": "2026-09-12T17:56:07Z",
+  "what": "skill.extraction.enabled was found ON on the live Core and restored to OFF (reviewer ruling ③)",
+  "found": {
+    "at": "2026-09-12T17:55Z",
+    "file": "deploy/global-images/.memory-core-config/tdai-gateway.yaml",
+    "sha256": "cdb5b484a139f0c351b1b643842df940a86bb134d45f346456c8789abe6e1b6d",
+    "file_reads": "true",
+    "container_reads": "enabled:true",
+    "core_log": "2026-09-12T11:33:13.546Z [skill][config] initialized: … extraction=true, degradations=0"
+  },
+  "cause": "the second image switch (2026-09-12T11:33Z) started Core with deploy/global-images/start-memory-core.sh, and that script REGENERATES the whole mounted config (start-memory-core.sh:55 `cat > \"$CORE_CONFIG_FILE\" <<YAML`), which writes extraction back on. This is the trap commit c88e955 recorded for run conditions ('extraction-off is enforced per run, since the deploy script regenerates the config with it on'); it was not re-checked after the image switch, so ruling ③ was not in effect from 11:33Z to 17:56Z.",
+  "drift_scope": {
+    "checked": "diff of the pre-③ backup (2026-09-11T23:35:31Z) against the regenerated file (2026-09-12T17:56:01Z backup)",
+    "result": "identical — the extraction switch was the only setting affected",
+    "why": "that switch is the only edit made to this generated file; everything else in it comes from the script"
+  },
+  "restored": {
+    "by": "bash evaluation/runner/core-extraction.sh off --record evaluation/tasks/exit-code-fix/extraction-switch.jsonl",
+    "record": "evaluation/tasks/exit-code-fix/extraction-switch.jsonl (last entry, at 2026-09-12T17:56:07Z)",
+    "sha256_after": "66ebab0a50c9a13b5d11a463eface79a6314d323e6ea396c2b6ad55577e739f7",
+    "verify": "bash evaluation/runner/core-extraction.sh status → file=false container=enabled:false"
+  },
+  "read_back_after": {
+    "batch4": "evaluation/gate/artifacts/core-status-after-extraction-off-20260912.json — skl-oBaDO5CceKnr approved/admit, skl-sZFb3KatWY6m failed/reject (unchanged)",
+    "dev_loop_note": "evaluation/gate/artifacts/core-status-note-after-extraction-off-20260912.json — skl-pXLc38dex6Zt v2 approved/admit (unchanged)"
+  },
+  "affects_runs": "no delivered run: every batch and dev-loop run predates 11:33Z, and each run's own conditions.json records the switch it ran under (runner/prepare.sh enforces off per run, per c88e955). What was wrong for those six hours was the live state and STATE.md's description of it, not any recorded result.",
+  "also_recorded_here": "the six-hour window is what the upstream reproduction in evaluation/upstream/skill-extraction-flag/ was run in — see that folder's artifacts."
+}

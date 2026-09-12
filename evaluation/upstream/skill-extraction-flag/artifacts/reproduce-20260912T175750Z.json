@@ -1,0 +1,93 @@
+{
+  "at": "20260912T175750Z",
+  "what": "live reproduction for the upstream extraction-flag PR",
+  "claim": "extraction off: /v3/skill/extract archives, registers and enqueues the task, and the response carries no field saying the task cannot be executed in this configuration",
+  "not_claimed": [
+    "that the task is never queued — it is queued (trigger-service.ts writeTasks + enqueueAgent inside the tasks mutex)",
+    "that every storage mode behaves this way — this is the standalone/sqlite path; service mode builds the extractor per instance",
+    "anything about retry policy for tasks already in the queue",
+    "that an empty candidate pool proves the task did not run — a real extraction may also produce nothing"
+  ],
+  "switch": "skill.extraction.enabled: file=false container=enabled:false",
+  "session_id": "repro-extraction-flag-20260912T175750Z",
+  "agent_id": "agt-repro-extraction-flag",
+  "request_id": "req-6f8365f3512d416d",
+  "task_id": "skill-extract-task-fe84b9ed",
+  "response": {
+    "code": 0,
+    "message": "ok",
+    "request_id": "req-6f8365f3512d416d",
+    "data": {
+      "ok": true,
+      "task_id": "skill-extract-task-fe84b9ed",
+      "archived_at_ms": 1789235870833,
+      "archive_key": "skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/repro-extraction-flag-20260912T175750Z/data-1789235870833.jsonl"
+    }
+  },
+  "tasks_file": {
+    "before": null,
+    "after": "/data/tdai-memory/skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/_tasks.json"
+  },
+  "tasks_before": null,
+  "tasks_after": {
+    "team_id": "team-5ezfoladb5",
+    "agent_id": "agt-repro-extraction-flag",
+    "updated_at_ms": 1789235870833,
+    "tasks": [
+      {
+        "task_id": "skill-extract-task-fe84b9ed",
+        "session_id": "repro-extraction-flag-20260912T175750Z",
+        "user_id": "usr-n68ea5ythq",
+        "team_id": "team-5ezfoladb5",
+        "agent_id": "agt-repro-extraction-flag",
+        "space_id": "default",
+        "archive_key": "skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/repro-extraction-flag-20260912T175750Z/data-1789235870833.jsonl",
+        "archived_at_ms": 1789235870833,
+        "enqueued_at_ms": 1789235870833,
+        "reason": "upstream PR reproduction: extraction switch is not visible in the archive response"
+      }
+    ]
+  },
+  "core_log": [
+    "2026-09-12T17:57:50.815+00:00 INFO  [tdai-gateway] [skill-perf] dispatch.enter req_id=req-6f8365f3512d416d path=/v3/skill/extract t=1789235870815 t0_offset=2ms",
+    "2026-09-12T17:57:50.815+00:00 INFO  [tdai-gateway] [skill-perf] phase=parseAuth req_id=req-6f8365f3512d416d elapsed=2ms dur=0ms ok=true",
+    "2026-09-12T17:57:50.825+00:00 INFO  [tdai-gateway] [skill-perf] phase=resolveStoreAndStorage req_id=req-6f8365f3512d416d elapsed=12ms dur=10ms serviceId=default",
+    "2026-09-12T17:57:50.826+00:00 INFO  [tdai-gateway] [skill-perf] phase=parseJsonBody req_id=req-6f8365f3512d416d elapsed=13ms dur=1ms len=478",
+    "[observability][console][log][INFO] skill.handleExtract.schema_parse { req_id: 'req-6f8365f3512d416d', dur_ms: 2, ok: true }",
+    "2026-09-12T17:57:50.831+00:00 WARN  [tdai-gateway] [skill-worker-pool] no shared ioredis (deployMode=standalone); falling back to in-memory queue (single-node only) prefix=tdai_memory_v2:skill-conv",
+    "2026-09-12T17:57:50.832+00:00 INFO  [tdai-gateway] [skill-worker-pool] start pool_id=skill-pool-default-7 concurrency=60 brpopBlockMs=5000 extractLockTtlMs=600000",
+    "2026-09-12T17:57:50.833+00:00 INFO  [tdai-gateway] [skill-worker-pool] started concurrency=60 brpopBlockMs=5000 extractLockTtlMs=600000",
+    "2026-09-12T17:57:50.833+00:00 INFO  [tdai-gateway] [skill-worker-pool] self-heal cold scan done scanned=0 repushed=0 legacy_purged=0 dur_ms=1",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "2026-09-12T17:57:50.835+00:00 DEBUG [tdai-gateway] [storage][local] putObject: skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/repro-extraction-flag-20260912T175750Z/data-1789235870833.jsonl (215 bytes)",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  archive_key: 'skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/repro-extraction-flag-20260912T175750Z/data-1789235870833.jsonl'",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "  archive_key: 'skill_buffer/usr-n68ea5ythq/team-5ezfoladb5/agt-repro-extraction-flag/repro-extraction-flag-20260912T175750Z/data-1789235870833.jsonl'",
+    "[observability][console][trace] REPORT event=tdai.skill.extract attrs={\"task_id\":\"skill-extract-task-fe84b9ed\",\"team_id\":\"team-5ezfoladb5\",\"agent_id\":\"agt-repro-extraction-flag\",\"session_id\":\"repro-extraction-flag-20260912T175750Z\",\"msg_count\":2,\"success\":true}",
+    "  req_id: 'req-6f8365f3512d416d',",
+    "  task_id: 'skill-extract-task-fe84b9ed',",
+    "2026-09-12T17:57:50.837+00:00 INFO  [tdai-gateway] [skill-perf] phase=handler req_id=req-6f8365f3512d416d elapsed=24ms dur=11ms envelope_code=0",
+    "2026-09-12T17:57:50.837+00:00 INFO  [tdai-gateway] [skill-perf] phase=sendJson req_id=req-6f8365f3512d416d elapsed=24ms dur=0ms status=200",
+    "2026-09-12T17:57:50.837+00:00 INFO  [tdai-gateway] [skill-perf] req.finish t=1789235870837 total=24ms status=200 req_id=req-6f8365f3512d416d url=/v3/skill/extract",
+    "2026-09-12T17:57:50.858+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#0 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)",
+    "2026-09-12T17:57:50.859+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#1 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)",
+    "2026-09-12T17:57:50.860+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#2 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)",
+    "2026-09-12T17:57:50.860+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#3 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)",
+    "2026-09-12T17:57:50.860+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#4 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)",
+    "2026-09-12T17:57:50.860+00:00 ERROR [tdai-gateway] [skill-worker-pool] skill-pool-default-7#5 consumeAgent error: [skill-worker-pool] standalone SkillExtractor unavailable (instance=default)"
+  ]
+}
