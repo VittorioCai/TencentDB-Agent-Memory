@@ -1,0 +1,155 @@
+working copy: /private/tmp/topic4-devloop-selfcheck.jCDI/repo
+start commit 141c044be519e53bbfe2d1ef780632ae110a8136 (tree 631aa8559a847b34b7c169236411eecd29e1d16a); 1215 tracked files, 40 test files; excluded: evaluation/runner/runs, evaluation/tasks/exit-code-fix
+runs/ present in copy: no;  task dir present in copy: no
+
+════════════════════════════════════════════════════════════════════
+【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)
+frozen 2026-09-12T23:17:54Z: copy commit 127ad28 (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.jCDI/start.json
+suite at start: tests 554 pass 549 fail 3 (exit 1); baseline failing: evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值; evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt; evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+exit 0 (expected 0 = 套件结果可解释)
+
+════════════════════════════════════════════════════════════════════
+【1】起点 + 原版失败:在冻结起点跑验证器自带的参考回归测试
+verdict FAIL: the verifier's reference regression test does not pass (2 failing)
+reference test: tests 7 pass 5 fail 2
+    not ok 1 - a timed-out call whose only signal is the exit status line, as CodeBuddy spells it, is a timeout
+      error: |-
+    not ok 2 - a non-zero exit status, as CodeBuddy spells it, is a failure
+      error: |-
+    ok 3 - the lower-case spelling found in older records still reads
+    ok 4 - a successful call is unchanged: exit 0 with a code-0 envelope is ok
+    ok 5 - a refusal is unchanged: exit 0 with a non-zero envelope code is a failure
+    ok 6 - exit 0 with nothing to read stays unreadable, not a failure
+    ok 7 - a connection failure named in stderr is a failure whichever way the exit line is spelt
+exit 1 (expected 1 = FAIL)
+
+════════════════════════════════════════════════════════════════════
+【2】参考修复通过:同一副本打上 reference/fix.patch,同一测试;判决对照冻结起点
+patch applied:  1 file changed, 1 insertion(+), 1 deletion(-)
+verdict PASS: reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing
+reference test: tests 7 pass 7 fail 0
+compared with start 127ad28 (frozen 2026-09-12T23:17:54Z); copy HEAD 127ad28, commits after start 0
+diff: ['evaluation/tasks/bridge-addr/verify.mjs']  out_of_scope []  touched_verifier False  deleted_tests []
+attempts: ['none: no test file was added']
+exit 0 (expected 0 = PASS)
+
+════════════════════════════════════════════════════════════════════
+【3】既有套件不回归:受控套件(起点的测试内容)+ 参考测试;基线绑定(文件, 测试名)
+controlled suite: state OK; 41 test files (start 40 + 1 reference), tests 561 pass 556 fail 3 cancelled 0, exit 1, explained True
+new failures vs the frozen start: []
+baseline failures still failing (3 of 3):
+    evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值
+    evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt
+    evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
+original tests: baseline 40 files, missing [], rewritten [], model-added []
+
+════════════════════════════════════════════════════════════════════
+【4】判别值来源唯一:token-provenance 对笔记判别值
+OK   eval-tool-result-exit-line skl-pXLc38dex6Zt v2  sha256 1e85dcf5dcf7…  value, version and content hash verified from Core (manage read)
+OK   skl-pXLc38dex6Zt visibility=team status=approved  team-visible: the bridge's search can return it to a consumer
+扫描来源 3422 处(任务说明 / 其他资产 / 系统提示 / 历史记忆 / 缓存)
+
+BAD  skl-pXLc38dex6Zt  token="bt-<value>"
+       已出现于 [task] task:REPORT.md ×2
+       已出现于 [record] task:devloop-runs.json ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184529Z-devloop-note/capture.jsonl ×152
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184529Z-devloop-note/codebuddy-stdout.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184529Z-devloop-note/final.diff ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184529Z-devloop-note/run-artifacts.json ×14
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184529Z-devloop-note/verdict.json ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184634Z-devloop-note/capture-before.jsonl ×152
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184634Z-devloop-note/capture.jsonl ×104
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184634Z-devloop-note/run-artifacts.json ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/capture-before.jsonl ×104
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/capture.jsonl ×256
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/codebuddy-stdout.txt ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/copy-state.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/final.diff ×8
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/judgement.md ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/outcome-events.jsonl ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/receipt.json ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/receipt.txt ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/receipt.zh.txt ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/run-artifacts.json ×59
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/run.json ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/tool-call-logs-all.jsonl ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/tool-call-logs.jsonl ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/used-events.jsonl ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T184746Z-devloop-note/verdict.json ×8
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/capture-before.jsonl ×256
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/capture.jsonl ×246
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/codebuddy-stdout.txt ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/copy-state.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/final.diff ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/tool-call-logs-all.jsonl ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/tool-call-logs.jsonl ×3
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185010Z-devloop-note/verdict.json ×8
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/capture-before.jsonl ×246
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/capture.jsonl ×650
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/codebuddy-stdout.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/copy-state.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/final.diff ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/judgement.md ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/outcome-events.jsonl ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/receipt.json ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/receipt.txt ×7
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/receipt.zh.txt ×7
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/run-artifacts.json ×36
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/run.json ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/tool-call-logs-all.jsonl ×9
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/tool-call-logs.jsonl ×3
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/used-events.jsonl ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185119Z-devloop-note/verdict.json ×8
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/capture-before.jsonl ×650
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/capture.jsonl ×195
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/codebuddy-stdout.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/final.diff ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/judgement.md ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/receipt.json ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/receipt.txt ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/receipt.zh.txt ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/run-artifacts.json ×38
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/tool-call-logs-all.jsonl ×9
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/used-events.jsonl ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185430Z-devloop-note/verdict.json ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/capture-before.jsonl ×195
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/capture.jsonl ×239
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/codebuddy-stdout.txt ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/final.diff ×3
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/judgement.md ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/outcome-events.jsonl ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/receipt.json ×3
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/receipt.txt ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/receipt.zh.txt ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/run-artifacts.json ×22
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/tool-call-logs-all.jsonl ×9
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/used-events.jsonl ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185811Z-devloop-note/verdict.json ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/capture-before.jsonl ×239
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/capture.jsonl ×486
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/codebuddy-stdout.txt ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/final.diff ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/judgement.md ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/outcome-events.jsonl ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/receipt.json ×5
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/receipt.txt ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/receipt.zh.txt ×6
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/run-artifacts.json ×20
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/tool-call-logs-all.jsonl ×10
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/tool-call-logs.jsonl ×1
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/used-events.jsonl ×4
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T185927Z-devloop-note/verdict.json ×2
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T190408Z-devloop-no-note/capture-before.jsonl ×486
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T190408Z-devloop-no-note/tool-call-logs-all.jsonl ×10
+       已出现于 [record] /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T190605Z-devloop-no-note/tool-call-logs-all.jsonl ×10
+
+没扫到的地方 1 处 —— 这些位置**没有被查过**,不能读作没有命中:
+     /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/runner/runs/20260911T175839Z-devloop-smoke/capture.jsonl:capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过
+
+1 个 token 不可用
+
+exit 1 (expected 0 = 全部 OK、零未扫描缺口)
+runtime images: core sha256:6d0d59064a49 proxy sha256:85d0360534bd
+
+conditions.json written (/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/tasks/exit-code-fix/conditions.json)
+结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1)

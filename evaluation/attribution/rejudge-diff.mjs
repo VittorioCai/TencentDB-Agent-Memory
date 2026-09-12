@@ -14,11 +14,17 @@ import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
-const before = opt("before"), after = opt("after"), manifestPath = opt("manifest");
-if (!before || !after || !manifestPath) { console.error("usage: rejudge-diff.mjs --before=<dir> --after=<dir> --manifest=<file> [--extra=<ids>]"); process.exit(2); }
-const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-const formal = (manifest.runs ?? []).map((r) => r.run_id ?? r);
-const extra = (opt("extra") ?? "").split(",").filter(Boolean);
+// Only parsed when run as a script — importing this module (the title test does) must
+// not hit the usage error and exit.
+const RUN_AS_SCRIPT = import.meta.url === `file://${process.argv[1]}`;
+let before = null, after = null, manifestPath = null, manifest = null, formal = [], extra = [];
+if (RUN_AS_SCRIPT) {
+  before = opt("before"); after = opt("after"); manifestPath = opt("manifest");
+  if (!before || !after || !manifestPath) { console.error("usage: rejudge-diff.mjs --before=<dir> --after=<dir> --manifest=<file> [--extra=<ids>]"); process.exit(2); }
+  manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  formal = (manifest.runs ?? []).map((r) => r.run_id ?? r);
+  extra = (opt("extra") ?? "").split(",").filter(Boolean);
+}
 
 const readJson = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
 const readJsonl = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
@@ -56,8 +62,20 @@ function table(ids, title) {
   return L.join("\n");
 }
 
+/**
+ * The date in the title comes from the re-judge copy's directory name, not from the
+ * clock. Stamping `new Date()` made the report differ from its committed copy on every
+ * later day — a permanent 4-line `REPARSE-DIFF.diff` in each delivery archive, against a
+ * delivery that claims generated reports match their committed copies. Same copy in,
+ * same title out; a path with no date in it gets no date rather than an invented one.
+ */
+export const titleDate = (dir) => (String(dir ?? "").match(/(\d{4}-\d{2}-\d{2})/) ?? [])[1] ?? null;
+
+if (RUN_AS_SCRIPT) {
 const versions = new Set(formal.map((id) => view(after, id).version));
-console.log(`# Re-judge diff — ${new Date().toISOString().slice(0, 10)}`, "");
+const stamp = titleDate(after);
+console.log(`# Re-judge diff${stamp ? ` — ${stamp}` : ""}`, "");
 console.log(`Before: \`${before}\` (records as written at run time). After: \`${after}\` (copies re-judged by rejudge-runs.mjs; acceptance ${[...versions].join(", ")}). Formal sample: the ${formal.length} run ids in \`${manifestPath}\`.`, "");
 console.log(table(formal, "Formal sample (the manifest)"));
 if (extra.length) console.log(table(extra, "Not samples: preparation and trial runs"));
+}

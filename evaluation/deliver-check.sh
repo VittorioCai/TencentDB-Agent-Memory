@@ -77,7 +77,7 @@ echo "[5] re-judge diff reproduced"
 if compgen -G "$REJUDGE/20260910T23*" > /dev/null; then
   node evaluation/attribution/rejudge-diff.mjs --before=evaluation/runner/runs --after="$REJUDGE" --manifest=evaluation/gate/artifacts/batch4-runs.json --extra=20260910T231329Z-b4-prep,20260910T231900Z-b4-prep,20260910T232209Z-trial-gate-off,20260910T232305Z-trial-gate-on > "$OUT/REPARSE-DIFF-reproduced.md" 2>"$OUT/rejudge-diff.err"; e=$?
   d="$(mddiff evaluation/attribution/REPARSE-DIFF-2026-09-11.md "$OUT/REPARSE-DIFF-reproduced.md" "$OUT/REPARSE-DIFF.diff")"
-  row "rejudge-diff" "rejudge-diff.mjs --before=runs --after=<copies> --manifest=batch4-runs.json" "$e" "exit 0, diff small (header only) vs REPARSE-DIFF-2026-09-11.md" "" "$d"
+  row "rejudge-diff" "rejudge-diff.mjs --before=runs --after=<copies> --manifest=batch4-runs.json" "$e" "exit 0, diff 0 vs REPARSE-DIFF-2026-09-11.md (the title date now comes from the re-judge copy, not the clock)" "" "$d"
 fi
 
 echo "[5b] exit-line re-parse reproduced (the second task's fix on the main branch, measured on the 14 batch-4 captures)"
