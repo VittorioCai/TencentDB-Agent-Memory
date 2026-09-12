@@ -127,6 +127,11 @@ base 选错会当场露怯:对着 `main` 提这个 PR,diff 会变成"新增整�
 
 ## 推送与开 PR(由你手动)
 
+**正文按 `PR-BODY.md` 原样提交,不加任何 AI 生成标记**(`🤖 Generated with …` 之类)。用户裁定
+(2026-09-12):这份工作是"用户主导 + 多方复核",那行标记会让人低估实际投入;提到腾讯官方仓库的 PR
+尤其不能带。`--body-file` 提交的就是文件内容,文件里也不许出现该行 —— 两个正文文件都已核过,从未有过。
+
+
 ```bash
 cd /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/upstream-extract-flag
 git push mine fix/skill-extraction-flag
