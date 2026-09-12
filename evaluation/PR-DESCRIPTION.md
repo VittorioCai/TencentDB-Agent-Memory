@@ -144,6 +144,7 @@
   (2026-09-12T10:44:33Z,管理员密钥由用户执行,CLAUDE.md §14):`competence` 由 medium 改为 unknown,读回核对见
   `evaluation/author/artifacts/assessment-write-b-readback-2026-09-12.json` —— 闸门据此把复核优先级提到 high,
   admit/reject 未变,这正是"作者信号只排队、不定生死"的线上证据。
+- **证据包里有 17 条记录指向未入库的批次三运行**(`evidence-pack-a/b-exit-line.json` 的 `records[].meta.run_id` → `20260908T*-gate-{on,off}-core` / `-gate-on-iso`,这 16 个运行目录留在本地、未提交,约 65 MB)。**交付结论不依赖它们**:A 的最终评估引用这些 run id **零次**,保留的声明全部落在已提交的 `20260910T*` / `20260911T*` 运行上;套件里出现的那个 id 只是 `calibration-report.test.mjs` 的字符串夹具,不读目录,干净克隆彩排因此照常通过。影响面是:评委若去追那 17 条**输入记录**的出处,在干净克隆上找不到对应目录。2026-09-13 通读时发现并记录,未补交——补交要 65 MB,而没有任何交付结论建立在其上。
 - 小样本、单场景、单主体、单模型;采纳证据覆盖率 0.95(批次四)。
 - 判别值已随记录进入 git(批次四 v4、闭环笔记 v1 与 v2),再用须先轮换。
 - 提取出的 skill 与 create 的 skill 默认 private;进池脚本已加 team 可见性校验,产品默认未改。
