@@ -85,6 +85,9 @@
 - 提取关着时 extract 只归档:`extraction-switch.jsonl`、`LESSONS.md`。
 - 写入作者评估会重判并撤销刚置的准入:`LESSONS.md`(2026-09-11 第二任务)。
 - 证据包漏掉"作者作为消费者"的一本账:`LESSONS.md`、`author/build-evidence-pack.test.mjs`。
+- 作者评估在资产没有判别值时,把**别的资产**上的失败当成本资产的强矛盾(第二人复核构造的反例);同一轮还发现能力等级
+  统计的是作者的全部业务结果、不按被评估领域筛选:`author/README.md`「能力等级说的是什么」、`author/check-citations.mjs`。
+- 「来源链完整」其实是三个集合各自非空,相邻关系从未验证:`author/build-evidence-pack.mjs` 的 `chainFacts`、`author/README.md`。
 - 报告把「内容送达」读成「判定正确」,被第二人复核挑出:`runner/COMPARISON-2026-09-11-reparsed.md` 复核一节、`attribution/calibration.mjs`。
 
 ## 第二人复核做过了,而且改了东西(2026-09-12)
@@ -94,6 +97,12 @@
 「写过记忆」推不出「本次不独立」、报告里的复算命令要是真跑过的那条、威胁模型的措辞收紧。
 处置与逐条对照见 `runner/COMPARISON-2026-09-11-reparsed.md` 的「第二人复核(2026-09-12)与处置」一节;
 正式组的 20 项判定在复核前后逐项相同——改的是口径,不是数字。
+
+**第二轮**(作者评估与两份闭环报告)又提了六条,同样全部成立、全部改在实现与生成器里:作者评估的相关性边界与领域边界
+(两处实际判定缺口)、证据包不再声称"来源链完整"、第二任务的两个采用口径分列、第一任务 v1/v2 分开讲、"缩短定位"改为
+未经测量的设计目的。重算用 `assess.mjs --recheck`(不重新调用模型),结果与线上写回见
+`author/artifacts/assessment-recheck-2026-09-12.json` 与 `assessment-write-b-readback-2026-09-12.json`:B 的评估由 medium 变
+unknown,闸门据此把复核优先级提到 high,admit/reject 不变——作者信号只排队、不定生死,这一条现在有了线上证据。
 
 ## 每份报告都有"测的是什么,不是什么"
 

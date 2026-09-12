@@ -1,0 +1,47 @@
+{
+  "what": "B 的作者评估按第二人复核的重算结果写回 Core 之后的读回核对(2026-09-12)",
+  "write_record": "evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12.json",
+  "written": {
+    "asset_id": "skl-z0V6zwphUvhB",
+    "competence": "unknown(原 medium)",
+    "asset_claim": "silent",
+    "signed_by": "usr-n3h5ewx4ja(管理员密钥,由用户执行,CLAUDE.md §14)",
+    "signed_at": "2026-09-12T10:44:33.225Z",
+    "evidence_cutoff": "2026-09-11T18:00:00.000Z",
+    "asset_version": 1
+  },
+  "read_back": {
+    "candidate": {
+      "asset_id": "skl-z0V6zwphUvhB",
+      "name": "codebuddy-tool-result-exit-line",
+      "version": 1,
+      "status": "candidate",
+      "visibility": "private",
+      "gate_decision": "pending",
+      "review_priority": "high",
+      "assessment": "accepted",
+      "why": "闸门只用作者评估定复核优先级:competence unknown → high(此前 medium → normal)。admit/reject 不受影响,这一条是设计如此"
+    },
+    "devloop_note": {
+      "skl-pXLc38dex6Zt": {
+        "status": "approved",
+        "visibility": "team",
+        "gate_decision": "admit"
+      }
+    },
+    "batch4_assets": {
+      "skl-oBaDO5CceKnr": {
+        "status": "approved",
+        "visibility": "team",
+        "gate_decision": "admit"
+      },
+      "skl-sZFb3KatWY6m": {
+        "status": "failed",
+        "visibility": "team",
+        "gate_decision": "reject"
+      }
+    }
+  },
+  "side_effect_checked": "write-assessment.sh 会以 apply:true 重判被写资产的闸门;这次只重判了该候选,笔记 v2 仍是 approved/admit、批次四两条仍是 approved/admit 与 failed/reject(上面读回)",
+  "recorded_at": "2026-09-12T10:46:09Z"
+}

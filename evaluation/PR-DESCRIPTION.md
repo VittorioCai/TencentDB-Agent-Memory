@@ -110,4 +110,4 @@ Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-11d30e
 只能写"未知",对现在的线上是自建镜像的摘要。proxy 强制身份为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy
 密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **off**(2026-09-11T23:35Z 拨回并记录;产品启动脚本每次重生成配置会把它拨回 on,重起后要再关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
 批次四资产 right approved / wrong failed;10 项由消费者会话提取的候选属 usr-4u07qc2kuj、private,其中 `skl-z0V6zwphUvhB` 已由所有者
-提交复核并带签名评估;第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。
+提交复核并带签名评估(2026-09-12 按复核意见重算后写回:competence unknown,闸门 pending、复核优先级 high);第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。

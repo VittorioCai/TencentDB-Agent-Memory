@@ -197,9 +197,10 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 
 **重算结果**(`author/artifacts/assessment-recheck-2026-09-12.json`,用 `assess.mjs --recheck`,**没有重新调用模型**):
 A 对笔记 v2 medium → medium(本资产上 2 条 validated);**B 对自己候选的评估 medium → unknown**;A 的 bridge 资产 medium → low;A 的冷启动候选 medium → unknown。
-**待用户(管理员密钥,§14)**:把 B 的新评估写回 Core,否则线上那份仍是 medium:
-`bash evaluation/author/write-assessment.sh evaluation/author/artifacts/assessment-b-exit-line.json --out evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12.json`
-(注意:该脚本以 apply:true 重判闸门,会撤销手工置过的 approved;闸门只用作者评估定复核优先级,unknown → 复核优先级 high。)
+**已写回(2026-09-12T10:44:33Z,用户执行,管理员签名)**:B 的评估以 competence=unknown 写入 Core,闸门读回
+`decision pending / review_priority **high** / assessment accepted`——作者信号只改复核优先级,不改 admit/reject,这正是设计。
+写入记录 `author/artifacts/assessment-write-b-exit-line-2026-09-12.json`;读回核对 `author/artifacts/assessment-write-b-readback-2026-09-12.json`:
+该脚本的 apply:true 只重判了这一条候选,**闭环笔记 v2 仍 approved/admit、批次四 right approved/admit 与 wrong failed/reject 均未变**(已逐条读回)。
 
 ## 第二人复核(2026-09-12)已完成并已处置
 
