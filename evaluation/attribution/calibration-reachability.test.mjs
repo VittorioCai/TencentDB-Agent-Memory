@@ -163,7 +163,8 @@ test("ISOLATION FAILURE is reachable: hidden, but its content came in another wa
   const row = bucketOf(d, HIDDEN);
   assert.equal(row.delivery, "delivered_from_other_source");
   assert.equal(row.bucket, "isolation_failure");
-  // Not counted against the judge: calling it used was right.
+  // Not counted against the judge, and not counted for it either: arriving is not
+  // using — the use verdict is settled by adoption evidence (2026-09-12 second review).
   assert.equal(row.counts_toward_rate, false);
 });
 

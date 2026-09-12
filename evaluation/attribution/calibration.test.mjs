@@ -12,10 +12,12 @@ test("hidden, confirmed undelivered, judged used — that is the judge's false p
   assert.equal(c.counts_toward_rate, true);
 });
 
-test("hidden yet delivered is an isolation failure, and NOT a judging error", () => {
-  // Calling it used was right — the content did reach the model. What failed
-  // is the setup. Counting this against the judge would hide a real hole and
-  // make the judge look worse than it is.
+test("hidden yet delivered is an isolation failure, judged apart from the use verdict", () => {
+  // The content did reach the model, so what this bucket records is the setup
+  // failing. Whether the use verdict was right is a separate question, settled by
+  // the adoption evidence — arriving is not using (2026-09-12 second review).
+  // Counting a leak against the judge would hide a real hole; counting it as proof
+  // the judge was right is the mirror mistake.
   const c = classify({ judgedUsed: true, hidden: true, verdict: "delivered" });
   assert.equal(c.bucket, "isolation_failure");
   assert.equal(c.counts_toward_rate, false);

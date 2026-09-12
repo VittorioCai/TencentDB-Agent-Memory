@@ -71,9 +71,11 @@
 - **污染记录这条路是断的 —— 已接通(2026-09-09)。** 原来 `runInput` 读的是
   `run.contaminated_by`,而 `runs/` 下没有任何一次运行写过这个字段(0/42),
   于是 `!!undefined` 对每一次运行都是 false,"受污染的运行"一节永远不会出现。
-  现在由 `contaminationOf()` 读 `agent_memory`,三值:`isolated:false` 或
-  `written_during_run:true` → 受污染;`isolated:true` → 干净;**没有这个字段 → 未知**。
-  报告里改为"独立性"一节,受污染与未知分别列出。
+  现在由 `contaminationOf()` 读 `agent_memory`。**这里原先的判法已于 2026-09-12 被第二人复核推翻**:
+  当时写的是"`isolated:false` 或 `written_during_run:true` → 受污染",但运行期间写记忆只影响**之后**的
+  运行,回滚失败只说明现场没还原,两者都推不出本次读过别人的内容。现在报告四项事实各自列出
+  (起点、回滚是否成功、本次是否写入、有没有证据读到别的运行的内容),只有记录标注来源或复算确认
+  他源送达才判非独立,其余一律"独立性未确认"。
 
   **接通之后立刻显形的事实**:整批 35 次运行里,只有五次 `*-gate-on-iso` 有
   `agent_memory`,其余隔离配置未记录。
