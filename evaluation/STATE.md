@@ -6,7 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 当前执行负责人 | 执行会话(Claude Code),worktree `.claude/worktrees/topic4-gate0` |
-| **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-11d30eaa720d`(id sha256:72d7076e…,构建提交 11d30ea 的 MemoryCore 树 == HEAD;package 2.0.0-beta.1),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **off**(2026-09-11T23:35:37Z 用 `core-extraction.sh off --record` 拨回,记录在 `tasks/exit-code-fix/extraction-switch.jsonl` 末条,审阅裁定 ③);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
+| **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-66bc9aecd719`(**2026-09-12T11:33Z 第二次切换**:第三轮复核改了闸门理由串,必须重建;构建提交 66bc9ae 的 MemoryCore 树 == HEAD;记录 `gate/artifacts/core-image-switch-20260912T113253Z.json`;上一版 topic4-11d30eaa720d 的切换记录仍在),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **off**(2026-09-11T23:35:37Z 用 `core-extraction.sh off --record` 拨回,记录在 `tasks/exit-code-fix/extraction-switch.jsonl` 末条,审阅裁定 ③);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
 | 分支 | `topic4-attribution-gate`,远端 `mine`(推送由用户手动完成) |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
 | 验证时间 | 2026-09-12 凌晨(交付复跑 `evaluation/delivery/2026-09-12b/SUMMARY.md`,线上栈;**干净克隆彩排** D:无密钥、无 Core、无 docker 的克隆 + 已烧毁值登记簿,判决类步骤全过、生成报告 diff 0——登记簿本身未入库,等用户定) |
@@ -181,6 +181,21 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 4. harness 冒烟一次(不进批次):`hash_restored == hash_before`、记忆通道 PASS、两遍验收产出
    `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
+
+## 第三轮复核(2026-09-12,只查"事实成立但结论多走一步")已处置
+
+五条全部成立,改在生成器、核对器与 Core 里,报告重新生成:
+
+| 条 | 处置 |
+|---|---|
+| "测试约定被采用"被扩大成"修复路径受笔记影响" | 两份报告改成:直接证据支持的是**测试约定被采用**,最终代码通过独立验收;**未单独证明**根因判断或修复方案来自笔记(副本里已有正确实现可参照)。"迁移"限定为可观察的约定迁移 |
+| `validated` 被读成"笔记帮上了忙" | 两份报告写明操作定义:① 结果绑定的写入采用了笔记约定 **且** ② 该次运行最终副本通过独立验收,两件事并列;不表示这次写入促成了通过 |
+| 只看同一资产仍不能把结果标签叫作者能力 | 字段仍叫 `competence`(与已签名摘要兼容),但一律读作**资产结果概况**;`asset-gate.ts` 的理由串改为 `asset-outcome profile … on this asset … not a verified measure of the author`,**因此重建镜像并切换**(见线上状态行),线上试算已读回新措辞 |
+| "程序核对了事实"强过实际 | 核对器给每条保留的声明生成 `fact_sentence`(只用记录字段造句),模型原话另列 `model_statement`,输出带 `scope_note` 写明:自由文本的语义与适用范围不在核对范围内;两份 README 同步 |
+| "回流闭合"把两条流程串成一条 | 第一任务报告拆开:① 初始笔记经 `skill/create` 整理入池 → 被使用 → 被验证 → 准入(走完);② 会话经 `skill/extract` 产生 10 条候选,只到回流,使用与验证尚未展示 |
+
+另按用户提醒:`author/artifacts/` 下 8 个仍带 `chain_complete` 的历史件已逐个加 `schema_note_2026_09_12` 标明是旧形状(不改原记录);
+`runner/runs/*/gate-apply.json` 里的同名字段是 Core 当时返回的原始运行记录,不修改;写进 Core 的那份摘要也仍是旧形状,要换需再写一次评估。
 
 ## 第二人复核第二轮(2026-09-12,作者评估与两份闭环报告)已处置
 

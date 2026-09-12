@@ -1,0 +1,38 @@
+{
+  "what": "第三轮复核改了 MemoryCore 的闸门理由串(author competence → asset-outcome profile),因此必须重建镜像并切换:线上运行的必须是当前代码",
+  "when": {
+    "built": "2026-09-12T11:31Z",
+    "stopped": "2026-09-12T11:32:53Z",
+    "started": "2026-09-12T11:33:10Z(start-memory-core.sh)"
+  },
+  "change": {
+    "file": "deploy/global-images/.env(gitignored)",
+    "line": "MEMORY_CORE_IMAGE=agentmemory/memory-core:topic4-11d30eaa720d → agentmemory/memory-core:topic4-66bc9aecd719",
+    "source_change": "MemoryCore/src/metadata/service/asset-gate.ts:4 处理由串 + 头注释(字段名 competence 不变,与已签名摘要兼容)"
+  },
+  "backups": {
+    "env": {
+      "path": "deploy/global-images/.env.bak-20260912T113253Z-before-image-switch2",
+      "sha256": "c0140a7afa1e1f80261b6ac3c66d9069f616ff8bb96b51de58f7a6c5c88b512a",
+      "mode": "0600, gitignored"
+    },
+    "data_volume": {
+      "path": "/Users/vittoriocai/Desktop/topic4-backup/core-data-20260912T113253Z-before-image-switch2.tar.gz",
+      "sha256": "482afc9da1ef6a42fa3108e7abd0a40824655e73254534d0a24bf82869effd4a",
+      "bytes": 3800591,
+      "how": "容器停止后 docker cp | gzip"
+    }
+  },
+  "restore": {
+    "image": "sed -i '' 's#^MEMORY_CORE_IMAGE=.*#MEMORY_CORE_IMAGE=agentmemory/memory-core:topic4-11d30eaa720d#' deploy/global-images/.env && bash deploy/global-images/start-memory-core.sh",
+    "verify": "bash evaluation/eval-core.sh status;bash evaluation/gate/core-gate.sh --status --baseline evaluation/gate/artifacts/gate_baseline_batch4.json"
+  },
+  "verification_after": {
+    "eval_core_status": "gate built into the image;build: commit 66bc9aecd719 — its MemoryCore tree equals HEAD's (81cfdb930780)",
+    "batch4": "right approved/admit、wrong failed/reject(读回未变)",
+    "devloop_note_v2": "approved/admit(读回未变)",
+    "new_reason_string_live": "对 B 的候选做 apply:false 试算,理由串读回:context-based assessment: asset-outcome profile unknown on this asset for \"…\" (9 cited record(s), …) — a profile of results, not a verified measure of the author; review priority: high",
+    "note": "已签名写入 Core 的那份摘要仍是旧形状(含 chain_complete: null、无 domain_counts):字段名未变所以闸门照常读,要换成新字段需再写一次评估(管理员密钥)"
+  },
+  "previous_switch": "evaluation/gate/artifacts/core-image-switch-20260911T224508Z.json(上游 :latest → 自建 topic4-11d30eaa720d)"
+}
