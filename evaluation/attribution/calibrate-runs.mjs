@@ -21,30 +21,41 @@ const readJson = (p, fallback = null) => (existsSync(p) ? JSON.parse(readFileSyn
 const readLines = (p) => (existsSync(p) ? readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
 
 /**
- * 这次运行是不是独立样本。
+ * 这次运行的隔离**事实**,不是一句"独立 / 不独立"的判决(2026-09-12 第二人复核)。
  *
- * 三种取值,不是两种:runner 在隔离改造之后才开始写 `agent_memory`,更早的运行
- * 根本没有这个字段——那是**未知**,不是 `isolated: false`,也不是 true。把未知
- * 折叠成"干净"正是本项目反复犯的那个错。
+ * 原来把 `written_during_run === true` 直接判成"本次受污染"。那是推不出来的:本次写了
+ * 记忆,只证明**之后**的运行不再从同一起点出发,不证明本次读过别的运行的内容;回滚失败
+ * (`isolated === false`,即 hash_restored ≠ hash_before)同样是"现场没还原",不是"本次被污染"。
+ * 所以这里分开四件事各自报告,谁也不顶替谁:
  *
- * `written_during_run` 为真同样算受污染:这次运行往记忆里写了东西,它之后的运行
- * 就不是从同一状态出发的。
+ *   起点(hash_before)· 回滚是否成功 · 本次是否写入 · 是否有证据读到别的运行的内容
+ *
+ * 只有两种情况判 `contaminated: true`:运行记录直接标注了污染来源,或派生审计从原始捕获
+ * 复算确认内容由他源送达(见 mergeIsolationFindings)。回滚成功且没写入才算 `independent: true`;
+ * 其余一律 `independent: null` —— **未确认**,既不是干净也不是脏。
  */
 export function contaminationOf(run) {
-  if (run?.contaminated_by) {
-    return { contaminated: true, contaminated_by: run.contaminated_by, by: run.contaminated_by, why: "运行记录直接标注了污染来源" };
-  }
   const m = run?.agent_memory;
-  if (!m || typeof m.isolated !== "boolean") {
-    return { contaminated: null, contaminated_by: null, by: null, why: "这次运行没有记录 agent_memory,隔离与否未知" };
+  const facts = {
+    start_hash: m?.hash_before ?? null,
+    rollback_ok: m && typeof m.isolated === "boolean" ? m.isolated : null,
+    wrote_during_run: m && typeof m.written_during_run === "boolean" ? m.written_during_run : null,
+    scope_files_before: m?.consumer_scope?.files_before ?? null,
+  };
+  if (run?.contaminated_by) {
+    return { contaminated: true, contaminated_by: run.contaminated_by, by: run.contaminated_by, independent: false, memory_facts: facts, why: "运行记录直接标注了污染来源" };
   }
-  if (m.written_during_run === true) {
-    return { contaminated: true, contaminated_by: null, by: null, why: "运行期间写过记忆,之后的运行不再是同一起点" };
+  if (facts.rollback_ok === null) {
+    return { contaminated: null, contaminated_by: null, by: null, independent: null, memory_facts: facts, why: "这次运行没有记录 agent_memory:起点、回滚与写入都未知" };
   }
-  if (m.isolated === false) {
-    return { contaminated: true, contaminated_by: null, by: null, why: "runner 记录 isolated=false" };
+  if (facts.rollback_ok === true && facts.wrote_during_run === false) {
+    return { contaminated: false, contaminated_by: null, by: null, independent: true, memory_facts: facts, why: "runner 记录回滚成功(hash_restored == hash_before)且运行期间没有写入" };
   }
-  return { contaminated: false, contaminated_by: null, by: null, why: "runner 记录 isolated=true 且运行期间没有写入" };
+  const parts = [];
+  if (facts.rollback_ok === false) parts.push("回滚未成功(hash_restored ≠ hash_before):运行结束时现场没还原");
+  if (facts.wrote_during_run === true) parts.push("运行期间写过记忆:之后的运行不再从同一起点出发");
+  parts.push("这些事实不证明本次读过别的运行的内容,独立性未确认");
+  return { contaminated: null, contaminated_by: null, by: null, independent: null, memory_facts: facts, why: parts.join(";") };
 }
 
 /**
@@ -63,6 +74,7 @@ export function mergeIsolationFindings(runs, findingsDoc) {
     return {
       ...r,
       contaminated: true,
+      independent: false,
       contamination_why: "原始捕获复算确认内容由他源送达",
       isolation_recorded: f.isolation_recorded ?? null,
       leaks: f.leaks ?? [],
@@ -227,10 +239,18 @@ export function runInput(dir, opts = {}) {
  */
 const n = (x) => (x === null || x === undefined ? "—" : String(x));
 
-/** 取要讲的那一组:优先冻结规则那一行,没有就用累计。 */
-function pickSet(result, frozen) {
-  if (frozen && result?.by_rules_version?.[frozen]) return { name: `规则 ${frozen}`, t: result.by_rules_version[frozen] };
-  return { name: "累计", t: result?.cumulative ?? {} };
+/**
+ * 取要讲的那一组。**优先正式样本组**(名单给出的那个实验),其次冻结规则的累计,最后总累计。
+ * 2026-09-12 第二人复核:原来优先 `by_rules_version[frozen]`,它把同一规则下的准备运行与试跑
+ * 一起算进去——表格分开列了 batch4 / batch4-prep / batch4-trial,正文却报了三者之和(28),
+ * 读起来像是正式样本有 28 项。正式组是名单里的那 10 次运行、20 个判定项。
+ */
+function pickSet(result, frozen, formalKey) {
+  if (formalKey && result?.by_experiment?.[formalKey]) {
+    return { name: `规则 ${frozen} · ${String(formalKey).split(" · ").pop()}(正式样本组)`, t: result.by_experiment[formalKey], kind: "formal" };
+  }
+  if (frozen && result?.by_rules_version?.[frozen]) return { name: `规则 ${frozen}(累计,含准备与试跑)`, t: result.by_rules_version[frozen], kind: "rules" };
+  return { name: "累计(含准备与试跑)", t: result?.cumulative ?? {}, kind: "cumulative" };
 }
 
 /** 由数字推出的结论句;没有可评样本时不给准确率,也不谈错误率上下界。 */
@@ -260,11 +280,22 @@ function verdictSentences(name, t) {
   return L;
 }
 
-export function report(result, { frozen, runs, usage, codeHashes } = {}) {
+export function report(result, { frozen, runs, usage, codeHashes, manifest = null, command = null } = {}) {
   const contaminatedRuns = (runs ?? []).filter((r) => r.contaminated === true);
-  const isolationUnknown = (runs ?? []).filter((r) => r.contaminated === null).map((r) => r.run_id);
-  const d = pickSet(result, frozen);
-  const u = usage ? pickSet(usage, frozen) : null;
+  const isolationUnknown = (runs ?? []).filter((r) => r.memory_facts && r.memory_facts.rollback_ok === null).map((r) => r.run_id);
+  // 四件事实,各算各的(2026-09-12):起点、回滚、写入、是否读到别人的内容。
+  const startHashes = [...new Set((runs ?? []).map((r) => r.memory_facts?.start_hash).filter(Boolean))];
+  const scopeEmpty = (runs ?? []).filter((r) => r.memory_facts?.scope_files_before === 0).length || null;
+  const rollbackOk = (runs ?? []).filter((r) => r.memory_facts?.rollback_ok === true);
+  const rollbackBad = (runs ?? []).filter((r) => r.memory_facts?.rollback_ok === false);
+  const wrote = (runs ?? []).filter((r) => r.memory_facts?.wrote_during_run === true);
+  const leaked = (runs ?? []).filter((r) => r.contaminated === true);
+  // 正式样本组的键:experimentOf 对名单里的运行返回 `batch<N>`,表格行名是 `<规则> · batch<N>`。
+  const formalKey = frozen && manifest?.batch != null ? `${frozen} · batch${manifest.batch}` : null;
+  const d = pickSet(result, frozen, formalKey);
+  const u = usage ? pickSet(usage, frozen, formalKey) : null;
+  const formalRuns = manifest?.runs?.length ?? (runs ?? []).length;
+  const cum = result?.cumulative ?? {}, ucum = usage?.cumulative ?? null;
   const ut = u?.t ?? {};
   const starts = (runs ?? []).map((r) => r.started_at).filter(Boolean).sort();
   const hiddenUnknown = (result?.rows ?? []).filter((r) => r.hidden === null).length;
@@ -285,9 +316,12 @@ export function report(result, { frozen, runs, usage, codeHashes } = {}) {
 **这份文档本身由脚本生成**,表格和正文里的结论都出自同一次计算:
 
 \`\`\`bash
-node evaluation/attribution/calibrate-runs.mjs --frozen=${frozen ?? "<rules version>"} \\
-  --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
+${command ?? `node evaluation/attribution/calibrate-runs.mjs --frozen=${frozen ?? "<rules version>"} <运行目录…>`}
 \`\`\`
+
+上面是**这次实际执行的命令**(2026-09-12 改:原来这里是一条固定模板,既没传正式样本名单
+\`--manifest\`,通配符又匹配不到 \`…-b4-prep\` 这类准备运行,照抄复现不出这份报告)。运行目录
+的位置随重判副本放在哪儿而变,所以数据范围按**运行 id** 列在下面,那才是这份报告的口径。
 
 生成于 ${new Date().toISOString()}。
 
@@ -295,7 +329,8 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=${frozen ?? "<rules vers
 
 - **分析代码**:${codeHashes ? Object.entries(codeHashes).map(([f, h]) => `\`${f}\` @ ${h}`).join("、") : "(未记录)"}
 - **规则版本**:${frozen ?? "(未指定冻结规则)"}
-- **数据范围**:${(runs ?? []).length} 次运行${starts.length ? `,${starts[0]} → ${starts[starts.length - 1]}` : ""}
+- **数据范围**:${(runs ?? []).length} 次运行${starts.length ? `,${starts[0]} → ${starts[starts.length - 1]}` : ""}${manifest ? `;其中正式样本 ${formalRuns} 次(名单 \`batch${manifest.batch}-runs.json\`)` : ""}
+- **运行 id**:${(runs ?? []).length ? (runs ?? []).map((r) => `\`${r.run_id}\``).join("、") : "(无)"}
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 ${n(result?.cumulative?.unsettled)} 项;采纳无证据 ${n(usage?.cumulative?.unknown_adoption)} 项;隐藏状态未记录 ${hiddenUnknown} 项;捕获不完整 ${captureBad} 次
 
 ## 判据
@@ -305,7 +340,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=${frozen ?? "<rules vers
 | 情形 | 归类 | 为什么 |
 |---|---|---|
 | 被隐藏 + 确认未送达 + 判 used | **假阳性** | 判定器错了 |
-| 被隐藏 + 实际送达(**来路不限**) | **隔离失败** | 判 used 是对的,失效的是实验设置 |
+| 被隐藏 + 实际送达(**来路不限**) | **隔离失败** | 实验隔离失效;使用判定是否正确,仍须由实际采纳证据判断 |
 | 说不清(覆盖不足 / 来源无法识别 / 全部到达都晚于操作) | **未定** | 不计入任一侧 |
 
 "来路不限"是要点:来源**已识别但不是本资产**(知识文件、缓存的工具结果、另一个技能)仍然是到达,隐藏时就是泄漏;只有来源**无法识别**才算未定。
@@ -332,6 +367,15 @@ ${result.table}
 
 ${verdictSentences(d.name + " · 送达一致性", d.t).join("\n\n")}
 
+这张表的 FN 是"**已送达但未判使用**",不是使用检测的漏报:内容进了上下文,模型完全可以不采用。
+使用判定是否漏报,看下一节(参考判定 = 采纳)。同理,隔离失败那一列只说明实验隔离失效,
+不能反过来证明使用判定正确——两件事可以同时发生。
+
+这一组 ${n(d.t.decisions_total)} 个判定项来自 ${formalRuns} 次运行(每次运行按资产分别判定),${n(d.t.decisions_total)} 个判定项不是 ${n(d.t.decisions_total)} 次独立实验。
+
+累计(含准备运行、试跑等非正式样本)另计:送达 可评 ${n(cum.decisions_rated)}/${n(cum.decisions_total)}、准确率 ${n(cum.accuracy)}${ucum ? `;使用 可评 ${n(ucum.decisions_rated)}/${n(ucum.decisions_total)}、准确率 ${n(ucum.accuracy)}、采纳未知 ${n(ucum.unknown_adoption)}` : ""}。
+累计跨实验跨样本性质,只描述历史,不作为验收结论。
+
 ${usage ? `## 实际使用(参考判定 = 采纳)
 
 ${usage.table}
@@ -351,26 +395,32 @@ ${(() => {
 
 ### 收益不等于采纳
 
-采纳且奏效 ${n(ut.adopted_and_worked)} 项,采纳但未奏效 ${n(ut.adopted_but_failed)} 项,采纳而收益未知 ${n(ut.adopted_benefit_unknown)} 项。
+${u?.kind === "formal" ? "正式样本组" : u?.name ?? "这一组"}:采纳且奏效 ${n(ut.adopted_and_worked)} 项,采纳但未奏效 ${n(ut.adopted_but_failed)} 项,采纳而收益未知 ${n(ut.adopted_benefit_unknown)} 项。${ucum && u?.kind === "formal" ? `
+累计(含准备与试跑)则是 ${n(ucum.adopted_and_worked)} / ${n(ucum.adopted_but_failed)} / ${n(ucum.adopted_benefit_unknown)} 项——两组数字不能混着引。` : ""}
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 ` : ""}
-${contaminatedRuns.length || isolationUnknown.length ? `## 独立性
+${(runs ?? []).length ? `## 独立性:四件事分开说(2026-09-12 第二人复核后改写)
 
-隔离**配置**(运行时有没有快照还原记忆)与内容**泄漏**(资产内容有没有从别处到达)是
-两件独立的事实。配置没记录,不能抹掉已经复算出来的泄漏证据;反过来也不行。
+隔离**配置**、本次**写入**、**回滚**是否成功、有没有证据**读到**别的运行的内容,是四件不同的事实。
+原来这一节把"运行期间写过记忆"直接算成"本次不是独立样本",那是推不出来的——写入影响的是**之后**的
+运行,回滚失败说的是现场没还原;两者都不证明本次读过别人的东西。所以下面分开报,不给总判决。
 
-${contaminatedRuns.length ? `**不是独立样本 ${contaminatedRuns.length} 次:**
-
-${contaminatedRuns.map((r) => `- \`${r.run_id}\` —— ${r.contamination_why ?? "运行记录标注了污染"}${r.isolation_recorded ? `;隔离配置${r.isolation_recorded}` : ""}${(r.leaks ?? []).length ? `;来源 ${r.leaks.map((l) => l.where ?? l.from ?? "见派生审计").join("、")}` : ""}`).join("\n")}
-` : "**没有一次运行被确认为非独立样本。**"}
-${isolationUnknown.length ? `
-**隔离配置未记录 ${isolationUnknown.length} 次** —— 这些运行早于隔离改造,没有 \`agent_memory\` 字段。未记录不等于干净:它们既不能算独立样本,也没有证据说不是。这 ${isolationUnknown.length} 次的捕获都经过了同一套他源送达复算,没有再查出泄漏;查不出不等于没有。
+| 事实 | 这批运行 | 说明 |
+|---|---|---|
+| 起点是否一致 | ${startHashes.length === 1 ? `一致(${(runs ?? []).length} 次运行记录的 hash_before 相同:\`${String(startHashes[0]).slice(0, 8)}\`)` : startHashes.length ? `${startHashes.length} 个不同的起点哈希` : "未记录"}${scopeEmpty != null ? `;消费者自己的记忆范围在 ${scopeEmpty}/${(runs ?? []).filter((r) => r.memory_facts?.scope_files_before != null).length} 次运行开始时为空` : ""} | 运行前先清消费者残留再取快照 |
+| 回滚是否成功 | 回滚成功 ${rollbackOk.length} 次;**回滚未成功 ${rollbackBad.length} 次**${rollbackBad.length ? `(${rollbackBad.slice(0, 12).map((r) => `\`${r.run_id}\``).join("、")})` : ""} | hash_restored ≠ hash_before:结束时现场没还原,风险落在**之后**的运行 |
+| 本次是否写入记忆 | 运行期间写入记忆 ${wrote.length} 次${wrote.length ? `(${wrote.slice(0, 12).map((r) => `\`${r.run_id}\``).join("、")})` : ""} | 写入只说明之后的运行不再从同一起点出发 |
+| 是否读到别的运行的内容 | ${leaked.length ? `**确认 ${leaked.length} 次**(${leaked.map((r) => `\`${r.run_id}\``).join("、")})` : "已覆盖的扫描面上没有查出证据"} | 判别值泄漏由 \`derive-isolation-findings.mjs\` 从原始捕获复算 |
+${isolationUnknown.length ? `| 隔离字段未记录 | ${isolationUnknown.length} 次(${isolationUnknown.slice(0, 12).map((id) => `\`${id}\``).join("、")}) | 早于隔离改造,没有 \`agent_memory\`;未记录不等于干净 |
 ` : ""}
-泄漏证据由 \`derive-isolation-findings.mjs\` 从原始捕获复算,写在
-\`artifacts/isolation-findings.json\`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
+**结论:${leaked.length ? `${leaked.length} 次确认非独立;其余` : ""}独立性未确认。** 起点一致是记录支持的事实,
+回滚失败与运行期间写入都不能推出本次被污染;反过来,也不能据此把这些运行判为干净。
+**没有判别值泄漏的证据,不等于没有记忆污染**:复算只扫判别值这一类内容,\`profiles/\` 之外的 atomic 记忆
+(\`records/*.jsonl\`、\`skill_buffer/\`)不在快照与清理范围内,那部分既没有被还原也没有被扫描。
+
+泄漏证据写在 \`artifacts/isolation-findings.json\`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
 \`runs/\` 下的原始记录未改动。
-` : ""}
-## 这份数字测的是什么,不是什么
+` : ""}## 这份数字测的是什么,不是什么
 
 **测的**:上面两件事——判定与送达是否一致,判定与采纳是否一致。
 
@@ -388,16 +438,19 @@ ${isolationUnknown.length ? `
 一次 \`lsof\` 枚举进程就能回退。一个刻意枚举进程、读 harness 文件的模型**可以**突破这层
 隔离;能挡住的是不对抗、只是"资产被藏起后去别处找答案"的模型。
 
-关键在于:**突破会被记下来**。闸门本身没有旁路——2026-09-10 的冒烟运行里,两条资产都被
-闸门挡在池外,模型仍然拿到了判别值,不是因为闸门漏了,而是因为它 \`lsof\` 到探针进程的
-cwd 是仓库,\`cd\` 进去读了评测自己的记录文件。送达审计把这次判成隔离失败(他源送达),
-来源精确到第 24 轮那条 \`cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json\`。
-所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路;**已覆盖的通道**(捕获里的
-工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy 项目缓存)上的绕过可以
-检测并定位;来源无法识别的到达**单列为未知**,不计入任一侧",不是"模型在同主机同用户下
-无法物理接触到答案",也不是"所有通道都已覆盖"。要后者,需要把会话放进只通代理的
-沙箱(见 REMAINING 的方案 3 spike:真实 CLI 是 npm 包 \`@tencent-ai/codebuddy-code\`,可进
-Linux 容器;宿主上另有 \`sandbox-exec\` 可用)。
+本评测能主张的,到此为止(2026-09-12 第二人复核后收紧):**已验证的产品读取路径受闸门
+控制;已覆盖的捕获中可以识别部分替代来源;未覆盖或无法归属的情况保留为未知。**
+
+有一次绕过确实被检出并定位:2026-09-10 的冒烟运行里,两条资产都被闸门挡在池外,模型仍然
+拿到了判别值——它 \`lsof\` 到探针进程的 cwd 是仓库,\`cd\` 进去读了评测自己的记录文件;送达
+审计把它判成隔离失败(他源送达),来源精确到第 24 轮那条
+\`cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json\`。这证明的是**那一次**
+被检出,不能推广成"任何绕过都会被记下来":覆盖面之外的通道没有证据,没有证据不等于没有绕过。
+
+已覆盖的通道:捕获里的工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy
+项目缓存。要把主张提到"模型无法接触到答案",需要把会话放进只通代理的沙箱(见 REMAINING
+的方案 3 spike:真实 CLI 是 npm 包 \`@tencent-ai/codebuddy-code\`,可进 Linux 容器;宿主上
+另有 \`sandbox-exec\` 可用)。
 `;
 }
 
@@ -439,7 +492,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const f of ["delivery-audit.mjs", "adoption.mjs", "calibration.mjs", "calibrate-runs.mjs"]) {
       codeHashes[f] = createHash("sha256").update(readFileSync(new URL(f, import.meta.url))).digest("hex").slice(0, 12);
     }
-    writeFileSync(mdOut, report({ ...result, table }, { frozen, runs, usage: { ...usage, table: usageTable }, codeHashes }));
+    // 命令按**可复现**的形式记录:去掉 --md(它只决定写到哪儿,不影响内容;交付复跑里它
+    // 指向临时目录,留着会让复算 diff 永远不为 0),运行目录按 id 列在正文的"运行 id"里。
+    const shownFlags = args.filter((a) => a.startsWith("--") && !a.startsWith("--md="));
+    const command = `node evaluation/attribution/calibrate-runs.mjs ${shownFlags.join(" ")} <${dirs.length} 个运行目录,id 见下>`;
+    writeFileSync(mdOut, report({ ...result, table }, { frozen, runs, usage: { ...usage, table: usageTable }, codeHashes, manifest, command }));
     console.error(`written → ${mdOut}`);
   }
   console.log("## 送达一致性\n");

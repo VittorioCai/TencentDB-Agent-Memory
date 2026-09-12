@@ -182,6 +182,18 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
    `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
+## 第二人复核(2026-09-12)已完成并已处置
+
+复核对象:`attribution/CALIBRATION-batch4-reparsed-2026-09-11.md` 与主报告。五条意见全部成立,**全部改在生成器**
+(`calibration.mjs`、`calibrate-runs.mjs`)后重新生成报告,未手改:① 隔离失败不再被说成"判 used 是对的",送达表的 FN
+明确为"已送达但未判使用";② 正文主结论只报正式样本组(20 项 / 10 次运行),累计(28 项)单列并标明含准备与试跑,
+收益按组给出(正式 9/2/3,累计 13/5/3),并写明判定项 ≠ 独立实验;③ 独立性改为四项事实分别报告(起点一致、回滚未成功 10 次、
+运行期间写入 10 次、未查出读到别人内容),结论"独立性未确认",并写明没有判别值泄漏 ≠ 没有记忆污染;④ 报告记真实复算命令
+(去掉只决定输出位置的 `--md`)与全部运行 id;⑤ 威胁模型收紧为"已验证的产品读取路径受控 / 已覆盖通道可识别部分替代来源 /
+其余未知"。两版数字差异已逐项说清:`20260910T232627Z-gate-off` 的 wrong 资产由"采纳未知"变 TP,因为重判后的
+`verdict.json` 按目标拆出两条带值的 attempt,旧记录里有一条 attempt 的 value 为空、按判据整项不进分母。
+先失败后通过的测试 9 个(`calibrate-runs.test.mjs`、`calibration.test.mjs`)。
+
 ## 干净克隆能不能复算(审阅 2026-09-12 的核心问题)
 
 审阅指出分支里没有批次四与闭环的任何运行目录,"每个数字可从原始记录重算"在干净克隆上不成立。处置与结果:
@@ -204,7 +216,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 | 什么 | 在哪 |
 |---|---|
 | 批次四对照报告(新口径) | `evaluation/runner/COMPARISON-2026-09-11-reparsed.md`;表格 `summary-2026-09-11-reparsed{,-noread}.md`;校准 `attribution/CALIBRATION-batch4-reparsed-2026-09-11.md`;差异 `attribution/REPARSE-DIFF-2026-09-11.md` |
-| 旧口径(保留) | `evaluation/runner/COMPARISON-2026-09-11.md`(顶部有取代说明)、`summary-2026-09-11.md`、`attribution/CALIBRATION.md`(名单已对齐)、`CALIBRATION-2026-09-11-as-committed-ef22463.md` |
+| 旧口径(保留,**正文是 2026-09-12 复核前的措辞,只作历史记录**) | `evaluation/runner/COMPARISON-2026-09-11.md`(顶部有取代说明)、`summary-2026-09-11.md`、`attribution/CALIBRATION.md`(名单已对齐;它自己头部那条模板命令复现不出它的 51 次运行——这正是复核挑出的问题,交付版已改)、`CALIBRATION-2026-09-11-as-committed-ef22463.md` |
 | 重判副本(仓库外,可重生成) | `/private/tmp/topic4-rejudge/2026-09-11/<run_id>/`,命令在新报告开头;2026-09-12 起 `deliver-check.sh` 发现副本缺失会先用同一命令重生成(干净克隆也能复算) |
 | 条件清单(冻结 2026-09-10T23:21:51Z) | `evaluation/gate/artifacts/batch4-conditions.json` |
 | 闸门基线(冻结 23:20:45Z,source_runs = 两次 b4-prep) | `evaluation/gate/artifacts/gate_baseline_batch4.json` |

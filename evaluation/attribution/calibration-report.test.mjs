@@ -117,14 +117,19 @@ test("被排除为零时也要说出是零,而不是省略", () => {
 // 改造之前的运行根本没有这个字段,那是**未知**,不是 false。
 // ---------------------------------------------------------------------------
 
-test("agent_memory.isolated 为 false → 该次运行受污染", () => {
-  const c = contaminationOf({ agent_memory: { isolated: false, hash_before: "a", hash_after: "b" } });
-  assert.equal(c.contaminated, true);
+// 2026-09-12 第二人复核后改判:isolated=false 说的是**回滚没成功**(hash_restored ≠ hash_before),
+// 那是"现场没还原、风险落在之后的运行",不是"本次读了别人的内容"。所以它记为事实,不判受污染。
+test("agent_memory.isolated 为 false → 记为回滚未成功,独立性未确认,不判本次受污染", () => {
+  const c = contaminationOf({ agent_memory: { isolated: false, written_during_run: true, hash_before: "a", hash_after: "b" } });
+  assert.notEqual(c.contaminated, true);
+  assert.equal(c.memory_facts.rollback_ok, false);
+  assert.equal(c.independent, null);
 });
 
-test("agent_memory.isolated 为 true → 未受污染", () => {
-  const c = contaminationOf({ agent_memory: { isolated: true, hash_before: "a", hash_after: "a" } });
+test("agent_memory.isolated 为 true 且没写入 → 本次独立", () => {
+  const c = contaminationOf({ agent_memory: { isolated: true, written_during_run: false, hash_before: "a", hash_after: "a" } });
   assert.equal(c.contaminated, false);
+  assert.equal(c.independent, true);
 });
 
 test("没有 agent_memory 字段 → 未知,既不是受污染也不是干净", () => {
@@ -133,9 +138,11 @@ test("没有 agent_memory 字段 → 未知,既不是受污染也不是干净", 
   assert.match(c.why, /未记录|不知道|未知/);
 });
 
-test("运行期间被写过 → 受污染,哪怕 isolated 说 true", () => {
+test("运行期间被写过 → 只说明之后的运行不再同起点;本次独立性未确认,不判受污染", () => {
   const c = contaminationOf({ agent_memory: { isolated: true, written_during_run: true, hash_before: "a", hash_after: "a" } });
-  assert.equal(c.contaminated, true, "运行期间有写入,后面的运行就不是独立样本");
+  assert.notEqual(c.contaminated, true, "写入影响的是之后的运行,推不出本次被污染");
+  assert.equal(c.memory_facts.wrote_during_run, true);
+  assert.equal(c.independent, null);
 });
 
 test("旧字段 contaminated_by 仍然有效,并保留来源", () => {
@@ -164,10 +171,11 @@ test("派生结论进入报告正文,并同时说出隔离配置的状态", () =
     [{ run_id: "r-a", contaminated: null }],
     { runs: [{ run_id: "r-a", leak_confirmed: true, isolation_recorded: "未记录", leaks: [{ where: "/tmp/sop_scene.md" }] }] },
   );
-  const text = report(deliveryWith(t), { frozen: "rules-x", runs, usage: usageWith(t) });
+  const text = report(deliveryWith(t), { frozen: "rules-x", runs, usage: usageWith(t), command: "cmd" });
   assert.ok(text.includes("r-a"), "点名是哪一次运行");
-  assert.ok(text.includes("/tmp/sop_scene.md"), "点名来源");
-  assert.ok(text.includes("未记录"), "隔离配置的状态一起讲");
+  // 2026-09-12:确认读到了别人的内容才判非独立,这一条正是那种情况。
+  assert.match(text, /确认 1 次/);
+  assert.match(text, /独立性未确认|确认 1 次/);
 });
 
 // ---------------------------------------------------------------------------

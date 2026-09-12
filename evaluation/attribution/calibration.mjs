@@ -7,9 +7,12 @@
  * both. If an asset was hidden, confirmed not to have reached the model, and
  * the judge still called it used — the judge is wrong, and that is a false
  * positive. If an asset was hidden but actually did reach the model by some
- * other route, the judge calling it used is *correct*; what failed is the
- * isolation, and recording that as a judging error would hide a real hole in
- * the experiment while making the judge look worse than it is.
+ * other route, what this table records is the **isolation failure**; whether the
+ * use verdict was right is a separate question, settled by the adoption evidence
+ * in the usage table — content reaching the model does not mean the model used it
+ * (2026-09-12 second review). Recording a leak as a judging error would hide a real
+ * hole in the experiment; calling it a vindication of the judge would be the mirror
+ * mistake, and this table does neither.
  *
  *   hidden + not delivered + judged used   → false positive (the judge)
  *   hidden + delivered, from anywhere      → isolation failure (the setup)
@@ -155,9 +158,12 @@ export function renderCalibration(result, { frozenRules, byExperiment } = {}) {
   L.push("");
   // 这段是判据说明,不是数字断言;但它必须跟着判据走。"来源是别处"曾经算未定,
   // 现在算到达(隐藏时即泄漏),所以那句话必须一起改,否则报告会自相矛盾。
-  L.push("An isolation failure is not a judging error: the asset was hidden and its");
-  L.push("content reached the model anyway, so calling it used was right and the");
-  L.push("setup was what failed. Unsettled rows — a capture that does not cover the");
+  L.push("An isolation failure is a failure of the setup: the asset was hidden and its");
+  L.push("content reached the model anyway. Whether the use verdict was right is settled");
+  L.push("by the adoption evidence in the usage table, not here — a leak and a wrong use");
+  L.push("verdict can happen at the same time (2026-09-12 review). FN in THIS table means");
+  L.push("\"delivered but not judged used\", not a missed detection of use.");
+  L.push("Unsettled rows — a capture that does not cover the");
   L.push("run, a source the record cannot name, whether the asset was hidden not");
   L.push("recorded — count for neither side; `rated/total` is how much of the batch");
   L.push("measured anything. An arrival from an identified other source is NOT");

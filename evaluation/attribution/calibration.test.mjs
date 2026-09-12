@@ -66,7 +66,11 @@ test("rule sets are tallied apart, and the unmeasurable share is shown beside th
   assert.equal(r.cumulative.decisions_total, 5);
   const md = renderCalibration(r, { frozenRules: "frozen" });
   assert.match(md, /rules frozen \(frozen\)/);
-  assert.match(md, /isolation failure is not a judging error/);
+  // 2026-09-12 第二人复核:送达 ≠ 采用,隔离失败不能推出"判 used 是对的"。
+  assert.match(md, /isolation failure is a failure of the setup/);
+  assert.match(md, /settled\s*\n?\s*by the adoption evidence/);
+  assert.doesNotMatch(md, /calling it used was right/);
+  assert.match(md, /delivered but not judged used/);
 });
 
 test("every row carries what it was measured under", () => {

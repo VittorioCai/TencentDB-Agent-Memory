@@ -13,17 +13,21 @@
 **这份文档本身由脚本生成**,表格和正文里的结论都出自同一次计算:
 
 ```bash
-node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
-  --md=evaluation/attribution/CALIBRATION.md evaluation/runner/runs/2026*-gate-*/
+node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f --task=evaluation/tasks/bridge-addr --manifest=evaluation/gate/artifacts/batch4-runs.json <14 个运行目录,id 见下>
 ```
 
-生成于 2026-09-11T10:42:20.926Z。
+上面是**这次实际执行的命令**(2026-09-12 改:原来这里是一条固定模板,既没传正式样本名单
+`--manifest`,通配符又匹配不到 `…-b4-prep` 这类准备运行,照抄复现不出这份报告)。运行目录
+的位置随重判副本放在哪儿而变,所以数据范围按**运行 id** 列在下面,那才是这份报告的口径。
+
+生成于 2026-09-12T09:56:27.787Z。
 
 ## 这次分析的口径
 
-- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ 2b9844bef126、`calibrate-runs.mjs` @ 582dd50e0471
+- **分析代码**:`delivery-audit.mjs` @ f1c69943b123、`adoption.mjs` @ 76b4788be935、`calibration.mjs` @ f6990ae509cf、`calibrate-runs.mjs` @ 4dd10949e5fe
 - **规则版本**:gate-rules-2026-09-08f
-- **数据范围**:14 次运行,2026-09-10T23:13:29Z → 2026-09-10T23:29:24Z
+- **数据范围**:14 次运行,2026-09-10T23:13:29Z → 2026-09-10T23:29:24Z;其中正式样本 10 次(名单 `batch4-runs.json`)
+- **运行 id**:`20260910T231329Z-b4-prep`、`20260910T231900Z-b4-prep`、`20260910T232209Z-trial-gate-off`、`20260910T232305Z-trial-gate-on`、`20260910T232424Z-gate-off`、`20260910T232507Z-gate-on`、`20260910T232522Z-gate-off`、`20260910T232611Z-gate-on`、`20260910T232627Z-gate-off`、`20260910T232715Z-gate-on`、`20260910T232730Z-gate-off`、`20260910T232818Z-gate-on`、`20260910T232835Z-gate-off`、`20260910T232924Z-gate-on`
 - **未知项(全数据范围,非仅冻结组)**:送达说不清 0 项;采纳无证据 0 项;隐藏状态未记录 0 项;捕获不完整 0 次
 
 ## 判据
@@ -33,7 +37,7 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 | 情形 | 归类 | 为什么 |
 |---|---|---|
 | 被隐藏 + 确认未送达 + 判 used | **假阳性** | 判定器错了 |
-| 被隐藏 + 实际送达(**来路不限**) | **隔离失败** | 判 used 是对的,失效的是实验设置 |
+| 被隐藏 + 实际送达(**来路不限**) | **隔离失败** | 实验隔离失效;使用判定是否正确,仍须由实际采纳证据判断 |
 | 说不清(覆盖不足 / 来源无法识别 / 全部到达都晚于操作) | **未定** | 不计入任一侧 |
 
 "来路不限"是要点:来源**已识别但不是本资产**(知识文件、缓存的工具结果、另一个技能)仍然是到达,隐藏时就是泄漏;只有来源**无法识别**才算未定。
@@ -63,19 +67,31 @@ node evaluation/attribution/calibrate-runs.mjs --frozen=gate-rules-2026-09-08f \
 | gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 5 | 1 | 0 | 0 | 20/20 | 0.95 |
 | **cumulative** | 21 | 0 | 6 | 1 | 0 | 0 | 28/28 | 0.964 |
 
-An isolation failure is not a judging error: the asset was hidden and its
-content reached the model anyway, so calling it used was right and the
-setup was what failed. Unsettled rows — a capture that does not cover the
+An isolation failure is a failure of the setup: the asset was hidden and its
+content reached the model anyway. Whether the use verdict was right is settled
+by the adoption evidence in the usage table, not here — a leak and a wrong use
+verdict can happen at the same time (2026-09-12 review). FN in THIS table means
+"delivered but not judged used", not a missed detection of use.
+Unsettled rows — a capture that does not cover the
 run, a source the record cannot name, whether the asset was hidden not
 recorded — count for neither side; `rated/total` is how much of the batch
 measured anything. An arrival from an identified other source is NOT
 unsettled: the content did reach the model.
 
-**规则 gate-rules-2026-09-08f · 送达一致性**:可评 28/28,假阳性 0 个,假阴性 1 个,准确率 0.964。
+**规则 gate-rules-2026-09-08f · batch4(正式样本组) · 送达一致性**:可评 20/20,假阳性 0 个,假阴性 1 个,准确率 0.95。
 
 已经出现反例:假阳性 0 个、假阴性 1 个。反例的成因要逐条查清,不能只看比率。
 
-这一组 28 项全部可评,没有项被排除在分母之外。
+这一组 20 项全部可评,没有项被排除在分母之外。
+
+这张表的 FN 是"**已送达但未判使用**",不是使用检测的漏报:内容进了上下文,模型完全可以不采用。
+使用判定是否漏报,看下一节(参考判定 = 采纳)。同理,隔离失败那一列只说明实验隔离失效,
+不能反过来证明使用判定正确——两件事可以同时发生。
+
+这一组 20 个判定项来自 10 次运行(每次运行按资产分别判定),20 个判定项不是 20 次独立实验。
+
+累计(含准备运行、试跑等非正式样本)另计:送达 可评 28/28、准确率 0.964;使用 可评 28/28、准确率 1、采纳未知 0。
+累计跨实验跨样本性质,只描述历史,不作为验收结论。
 
 ## 实际使用(参考判定 = 采纳)
 
@@ -86,11 +102,11 @@ unsettled: the content did reach the model.
 | gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 6 | 0 | 0 | 20/20 | 1 | 1 |
 | **cumulative** | 21 | 0 | 7 | 0 | 0 | 28/28 | 1 | 1 |
 
-**规则 gate-rules-2026-09-08f · 使用检测**:可评 28/28,假阳性 0 个,假阴性 0 个,准确率 1。
+**规则 gate-rules-2026-09-08f · batch4(正式样本组) · 使用检测**:可评 20/20,假阳性 0 个,假阴性 0 个,准确率 1。
 
 这一组里假阳性 0 个、假阴性 0 个。在几乎没有反例的集合上,准确率的信息量有限——它说明"没发现判定器凭空判定",不说明"判定器在困难情形下也对"。
 
-这一组 28 项全部可评,没有项被排除在分母之外。
+这一组 20 项全部可评,没有项被排除在分母之外。
 
 **采纳证据的覆盖率是 1**,其中 0 项没有独立证据可判,已单独计为"采纳未知",没有进分母。
 
@@ -98,33 +114,30 @@ unsettled: the content did reach the model.
 
 ### 收益不等于采纳
 
-采纳且奏效 13 项,采纳但未奏效 5 项,采纳而收益未知 3 项。
+正式样本组:采纳且奏效 9 项,采纳但未奏效 2 项,采纳而收益未知 3 项。
+累计(含准备与试跑)则是 13 / 5 / 3 项——两组数字不能混着引。
 资产被用上了不代表它帮到了任务;这一列就是把两者分开看的地方。
 
-## 独立性
+## 独立性:四件事分开说(2026-09-12 第二人复核后改写)
 
-隔离**配置**(运行时有没有快照还原记忆)与内容**泄漏**(资产内容有没有从别处到达)是
-两件独立的事实。配置没记录,不能抹掉已经复算出来的泄漏证据;反过来也不行。
+隔离**配置**、本次**写入**、**回滚**是否成功、有没有证据**读到**别的运行的内容,是四件不同的事实。
+原来这一节把"运行期间写过记忆"直接算成"本次不是独立样本",那是推不出来的——写入影响的是**之后**的
+运行,回滚失败说的是现场没还原;两者都不证明本次读过别人的东西。所以下面分开报,不给总判决。
 
-**不是独立样本 11 次:**
+| 事实 | 这批运行 | 说明 |
+|---|---|---|
+| 起点是否一致 | 一致(14 次运行记录的 hash_before 相同:`3912716a`);消费者自己的记忆范围在 14/14 次运行开始时为空 | 运行前先清消费者残留再取快照 |
+| 回滚是否成功 | 回滚成功 4 次;**回滚未成功 10 次**(`20260910T232424Z-gate-off`、`20260910T232507Z-gate-on`、`20260910T232522Z-gate-off`、`20260910T232611Z-gate-on`、`20260910T232627Z-gate-off`、`20260910T232715Z-gate-on`、`20260910T232730Z-gate-off`、`20260910T232818Z-gate-on`、`20260910T232835Z-gate-off`、`20260910T232924Z-gate-on`) | hash_restored ≠ hash_before:结束时现场没还原,风险落在**之后**的运行 |
+| 本次是否写入记忆 | 运行期间写入记忆 10 次(`20260910T232209Z-trial-gate-off`、`20260910T232507Z-gate-on`、`20260910T232522Z-gate-off`、`20260910T232611Z-gate-on`、`20260910T232627Z-gate-off`、`20260910T232715Z-gate-on`、`20260910T232730Z-gate-off`、`20260910T232818Z-gate-on`、`20260910T232835Z-gate-off`、`20260910T232924Z-gate-on`) | 写入只说明之后的运行不再从同一起点出发 |
+| 是否读到别的运行的内容 | 已覆盖的扫描面上没有查出证据 | 判别值泄漏由 `derive-isolation-findings.mjs` 从原始捕获复算 |
 
-- `20260910T232209Z-trial-gate-off` —— 运行记录标注了污染
-- `20260910T232424Z-gate-off` —— 运行记录标注了污染
-- `20260910T232507Z-gate-on` —— 运行记录标注了污染
-- `20260910T232522Z-gate-off` —— 运行记录标注了污染
-- `20260910T232611Z-gate-on` —— 运行记录标注了污染
-- `20260910T232627Z-gate-off` —— 运行记录标注了污染
-- `20260910T232715Z-gate-on` —— 运行记录标注了污染
-- `20260910T232730Z-gate-off` —— 运行记录标注了污染
-- `20260910T232818Z-gate-on` —— 运行记录标注了污染
-- `20260910T232835Z-gate-off` —— 运行记录标注了污染
-- `20260910T232924Z-gate-on` —— 运行记录标注了污染
+**结论:独立性未确认。** 起点一致是记录支持的事实,
+回滚失败与运行期间写入都不能推出本次被污染;反过来,也不能据此把这些运行判为干净。
+**没有判别值泄漏的证据,不等于没有记忆污染**:复算只扫判别值这一类内容,`profiles/` 之外的 atomic 记忆
+(`records/*.jsonl`、`skill_buffer/`)不在快照与清理范围内,那部分既没有被还原也没有被扫描。
 
-
-泄漏证据由 `derive-isolation-findings.mjs` 从原始捕获复算,写在
-`artifacts/isolation-findings.json`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
+泄漏证据写在 `artifacts/isolation-findings.json`,每条绑运行 id、捕获文件 sha256、消息位置与分析代码哈希。
 `runs/` 下的原始记录未改动。
-
 ## 这份数字测的是什么,不是什么
 
 **测的**:上面两件事——判定与送达是否一致,判定与采纳是否一致。
@@ -143,13 +156,16 @@ unsettled: the content did reach the model.
 一次 `lsof` 枚举进程就能回退。一个刻意枚举进程、读 harness 文件的模型**可以**突破这层
 隔离;能挡住的是不对抗、只是"资产被藏起后去别处找答案"的模型。
 
-关键在于:**突破会被记下来**。闸门本身没有旁路——2026-09-10 的冒烟运行里,两条资产都被
-闸门挡在池外,模型仍然拿到了判别值,不是因为闸门漏了,而是因为它 `lsof` 到探针进程的
-cwd 是仓库,`cd` 进去读了评测自己的记录文件。送达审计把这次判成隔离失败(他源送达),
-来源精确到第 24 轮那条 `cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json`。
-所以本评测的隔离主张是有边界的:它保证的是"闸门没有旁路;**已覆盖的通道**(捕获里的
-工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy 项目缓存)上的绕过可以
-检测并定位;来源无法识别的到达**单列为未知**,不计入任一侧",不是"模型在同主机同用户下
-无法物理接触到答案",也不是"所有通道都已覆盖"。要后者,需要把会话放进只通代理的
-沙箱(见 REMAINING 的方案 3 spike:真实 CLI 是 npm 包 `@tencent-ai/codebuddy-code`,可进
-Linux 容器;宿主上另有 `sandbox-exec` 可用)。
+本评测能主张的,到此为止(2026-09-12 第二人复核后收紧):**已验证的产品读取路径受闸门
+控制;已覆盖的捕获中可以识别部分替代来源;未覆盖或无法归属的情况保留为未知。**
+
+有一次绕过确实被检出并定位:2026-09-10 的冒烟运行里,两条资产都被闸门挡在池外,模型仍然
+拿到了判别值——它 `lsof` 到探针进程的 cwd 是仓库,`cd` 进去读了评测自己的记录文件;送达
+审计把它判成隔离失败(他源送达),来源精确到第 24 轮那条
+`cd …/evaluation/tasks/bridge-addr && cat pair.json && cat tokens.json`。这证明的是**那一次**
+被检出,不能推广成"任何绕过都会被记下来":覆盖面之外的通道没有证据,没有证据不等于没有绕过。
+
+已覆盖的通道:捕获里的工具结果、注入的系统提示与记忆、服务侧日志、运行记录、CodeBuddy
+项目缓存。要把主张提到"模型无法接触到答案",需要把会话放进只通代理的沙箱(见 REMAINING
+的方案 3 spike:真实 CLI 是 npm 包 `@tencent-ai/codebuddy-code`,可进 Linux 容器;宿主上
+另有 `sandbox-exec` 可用)。
