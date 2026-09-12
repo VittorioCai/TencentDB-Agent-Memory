@@ -47,16 +47,30 @@ A token surviving both filters is *discriminative*, and only those may support a
 ## Recomputing from a clean clone (2026-09-12)
 
 The reports are recomputed from the committed records (`evaluation/runner/runs/`, batch 4 and both dev-loop
-tasks) by `bash evaluation/deliver-check.sh`. The analysis needs each discriminative value in plaintext, and
-the design keeps plaintext only in Core (`resolve-tokens.mjs`, pinned by version, content hash and sha256).
-A clean clone has no author key and no Core, so `resolve-tokens.mjs` has an **offline route** for values that
-are already **burned** — their plaintext is in the committed records (the captures, verdicts, receipts of the
-runs that used them), and the rule retires such a value for good. `evaluation/attribution/burned-tokens.json`
-lists them; `build-burned-registry.mjs` writes it from Core and refuses any value it cannot find in the
-committed tree with `git grep`, so the registry exposes nothing that git does not already hold. Offline, a
-value is accepted only when its version equals the pinned one and its sha256 set equals the frozen
-`token_sha256`; the content hash is stated as not verified. With a key present the registry is never
-consulted. `TOKENS_OFFLINE=1` forces the route; a missing key file selects it.
+tasks) by `bash evaluation/deliver-check.sh`. The analysis needs each discriminative value in plaintext, and the
+design keeps plaintext only in Core (`resolve-tokens.mjs`, pinned by version, content hash and sha256). A clean
+clone has no author key and no Core, so `resolve-tokens.mjs` has an **offline route** for values that are already
+**burned** — their plaintext is in the committed records (the captures, verdicts and receipts of the runs that
+used them), and the rule retires such a value for good.
+
+`burned-tokens.json` is that registry; `build-burned-registry.mjs` writes it from Core and refuses any value it
+cannot find in the committed tree with `git grep`.
+
+**What it adds, stated plainly.** Not new plaintext: every value in it is already in the committed tree. What it
+adds is the **value → asset version** mapping. `tokens.json` carries only sha256, so a reader who greps the
+records gets a pile of strings without knowing which asset version each one belongs to; that mapping exists
+nowhere else. It is opened only for burned values, which are retired by rule and never reused — but it is a real
+addition, not nothing.
+
+**Retention.** The registry holds the delivered batch's entries only. Before a new batch, entries the delivery no
+longer references are archived out (`--archive=<file outside the repo>`); the builder refuses to write while
+stale entries are present, so the file cannot grow into a catalogue of every historical value. Rule and origin:
+`CLAUDE.md` §16.
+
+Offline, a value is accepted only when its version equals the pinned one and its sha256 set equals the frozen
+`token_sha256`; the content hash is stated as not verified. With a key present the registry is never consulted.
+`TOKENS_OFFLINE=1` forces the route; a missing key file selects it. What each delivery step needs — nothing, the
+registry, or the live stack — is listed in `evaluation/REVIEW-GUIDE.md`.
 
 ## Usage
 

@@ -8,18 +8,39 @@
 
 ## 干净克隆上什么能复算,什么需要线上(2026-09-12 彩排实测)
 
-`bash evaluation/deliver-check.sh` 在一个没有密钥、没有 Core、没有 docker 的克隆上跑过(`evaluation/delivery/rehearsal-*`
-不入库,结论如下);每一步的依赖写在这里,评审不必猜。
+`bash evaluation/deliver-check.sh` 在一个没有作者密钥、没有 Core、没有 docker 的克隆上跑过;下面按**依赖**分三组,
+最上面一组不需要本仓库以外的任何东西。
 
-| 步骤 | 干净克隆(无密钥、无 Core) | 需要什么 |
+**A. 纯离线可跑(克隆下来就能复算)**
+
+| 步骤 | 结果 |
+|---|---|
+| 单元套件 `node --test evaluation/**/*.test.mjs` | 全过 |
+| 两个闭环 REPORT `node evaluation/tasks/*/report.mjs` | 与提交副本 diff 0 |
+| 退出行 reparse `reparse-exit-status.mjs` | 与 `REPARSE-DIFF-2026-09-11-exitline-collect.md` diff 0 |
+| 两个 selfcheck 的【0】–【3】段 | 冻结起点、参考测试先失败后通过、套件不回归 |
+| demo 的 record 段(7 段中 5 段) | 读已提交记录 |
+
+**B. 还需要已烧毁值登记簿 `attribution/burned-tokens.json`(已入库,无需密钥)**
+
+| 步骤 | 结果 | 为什么需要 |
 |---|---|---|
-| 单元套件 604 | ✅ 全过 | 无 |
-| 批次四重判副本重生成、校准表、汇总表、重判差异、退出行 reparse | ✅ 与提交副本 diff 0(重判差异只差副本路径一行) | 已烧毁值登记簿 `attribution/burned-tokens.json`(值早已在提交的记录里;无登记簿则这几步跳过并说明) |
-| 两个闭环 REPORT | ✅ diff 0 | 无 |
-| 两个 selfcheck 【0】–【3】 | ✅ | 无;【4】离线时只核版本与 sha256,可见性与 content_hash 标 SKIP |
-| demo 7 段 | 6 段(record/fixture),第 1 段"资产池"离线降为夹具 | 第 1 段与第 5 段的 live 需要 Core + 作者密钥 |
-| 条件核对 `batch-conditions --check` | 文件哈希、基线等本地项可核;Core 读取、容器镜像、消费者记忆各行标 unreadable / 未冻结,不算通过 | 线上各行需要 Core + docker + 密钥 |
-| 线上状态一节 | 只记录,不判决 | Core + proxy 配置 + 密钥 |
+| 批次四重判副本重生成 `rejudge-runs.mjs` | 14 份副本 | 重判要把判别值明文喂给判定器 |
+| 校准表 `calibrate-runs.mjs` | 与 `CALIBRATION-batch4-reparsed-2026-09-11.md` diff 0 | 同上 |
+| 汇总表 `summarize-runs.mjs` | 与 `summary-2026-09-11-reparsed.md` diff 0 | 同上 |
+| 重判差异 `rejudge-diff.mjs` | 与 `REPARSE-DIFF-2026-09-11.md` 只差副本路径一行 | 同上 |
+| 两个 selfcheck 的【4】段 | 只核版本与 sha256;可见性与 content_hash 标 SKIP | 离线核不了 Core 里的正文 |
+
+登记簿只对**已烧毁**的值开放(明文早已在提交的记录里),它新增的是「值 → 资产版本」的映射;规则与理由见
+`CLAUDE.md` §16 与 `attribution/README.md`。无登记簿时 B 组全部跑不了(彩排 C 实测),A 组不受影响。
+
+**C. 需要线上栈(Core + 作者密钥 + docker),干净克隆上按设计不通过**
+
+| 步骤 | 干净克隆上的表现 |
+|---|---|
+| 条件核对 `batch-conditions --check` | 文件哈希、基线等本地项照常判;Core 读取、容器镜像、消费者记忆各行标 unreadable / 未冻结,**不算通过** |
+| demo 第 1、5 段(资产池、判定准确性) | 第 1 段降为夹具,第 5 段不跑 |
+| 线上状态一节 `prepare.sh --status`、`gate-observe.mjs` | 只记录不判决;无密钥时明说"nothing observed" |
 
 ## 一句话主张,和三个否定
 
@@ -42,13 +63,12 @@
 | 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环无 / 有笔记各 2 次 ×2 任务(演示,非性能对照) | `runner/COMPARISON-2026-09-11-reparsed.md`、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
 | 六 经验回流与候选 | 提取候选默认 candidate、私有;闸门规则 admit 需跨人 validated ≥ 1 且无 corrected;作者上下文评估只定复核优先级 | `tasks/exit-code-fix/REPORT.md` "闸门有没有动"、`gate-evaluations.jsonl`、`author/README.md` | `node evaluation/tasks/exit-code-fix/gate-evaluate.mjs --dry-run` |
 
-## 导师 9/4 三条 → 本分支
+## 导师意见 → 本分支(两条)
 
 | 条 | 对应 | 文件 |
 |---|---|---|
 | ① 置信度是入池 / 回池门禁,系统辅助人判断;离线 + 在线两类指标 | 闸门在 Core 写 status;confidence = 跨人结果中 validated 占比,带分母,无证据为 null;人可推翻、可撤回结果行;pending 资产带复核优先级排队 | `gate/README.md`、`MemoryCore/src/metadata/service/asset-gate.ts` |
 | ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
-| ③(待补) | — | — |
 
 ## 离线 / 在线两类指标,对应到代码里的名字
 

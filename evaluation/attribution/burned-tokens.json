@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "what": "burned discriminative values (plaintext already in git history), for resolve-tokens.mjs' offline route",
+    "adds": "not new plaintext — the value → asset version mapping. tokens.json holds only sha256, so the records alone do not say which asset version a value belongs to; that mapping exists nowhere else and is opened only for burned values.",
+    "rule": "only a value found in the committed tree is registered; a registered value is burned and never reused (rotate before any run)",
+    "retention": "the delivered batch's entries only; before a new batch the stale ones are archived out with --archive=<file outside the repo>, never accumulated here (CLAUDE.md §16)",
+    "verify": "for each entry: sha256 of every token equals token_sha256 (frozen in the task's tokens.json); in_git_files > 0 at build time",
+    "built_at": "2026-09-12T07:57:38Z",
+    "built_from": [
+      "evaluation/tasks/bridge-addr",
+      "evaluation/tasks/exit-code-fix"
+    ],
+    "builder": "evaluation/attribution/build-burned-registry.mjs"
+  },
+  "skl-sZFb3KatWY6m": {
+    "burned": {
+      "4": {
+        "tokens": [
+          "bt-6r9pvuj8gf3"
+        ],
+        "token_sha256": [
+          "250ef7a74a7c8012f71fbd56772f6b56ec83e92c70e36dc5a420e115ef2cda15"
+        ],
+        "content_hash": "c0566d8595d65ddaaa5add8ff1ef69de",
+        "in_git_files": 133,
+        "retired_at": null,
+        "registered_at": "2026-09-12T07:57:38Z",
+        "source_task": "evaluation/tasks/bridge-addr"
+      }
+    }
+  },
+  "skl-oBaDO5CceKnr": {
+    "burned": {
+      "4": {
+        "tokens": [
+          "bt-itaa73enpfq"
+        ],
+        "token_sha256": [
+          "090284b4cf32d7d45abb9ec6b4aacf02600d720e0f97c9153eae05a4e7757c6c"
+        ],
+        "content_hash": "91d3869cc76132508cc02169f5187c49",
+        "in_git_files": 198,
+        "retired_at": null,
+        "registered_at": "2026-09-12T07:57:38Z",
+        "source_task": "evaluation/tasks/bridge-addr"
+      }
+    }
+  },
+  "skl-pXLc38dex6Zt": {
+    "burned": {
+      "1": {
+        "tokens": [
+          "bt-imczk9p69e3"
+        ],
+        "token_sha256": [
+          "d3d4dd1bd6a4756a7897d3c543cb79df366cfaa543319430ecf0b163795e5873"
+        ],
+        "content_hash": "9ed211c2546c0db58a94d51a79eb442c",
+        "in_git_files": 41,
+        "retired_at": "2026-09-11T17:55:11Z",
+        "registered_at": "2026-09-12T07:57:38Z",
+        "source_task": "evaluation/tasks/exit-code-fix"
+      },
+      "2": {
+        "tokens": [
+          "bt-78yk9r3bfrm"
+        ],
+        "token_sha256": [
+          "1e85dcf5dcf786af3565c89183b7e9c88594a1409b3b65331a1d6b8e73e6286d"
+        ],
+        "content_hash": "b230f087c6f958348d5fe6406693bdc2",
+        "in_git_files": 97,
+        "retired_at": null,
+        "registered_at": "2026-09-12T07:57:38Z",
+        "source_task": "evaluation/tasks/exit-code-fix"
+      }
+    }
+  }
+}

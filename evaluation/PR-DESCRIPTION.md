@@ -42,9 +42,12 @@
 (`evaluation/runner/runs/20260910T23*`)与 23 个闭环目录(`20260911T1*-devloop-*`,含作废运行)强制加入分支,每目录只排除
 `capture-before.jsonl`(运行前探针残留,无脚本读取;哈希在 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);
 入库前按 `.env` 与三把用户密钥的真实值逐文件扫描,无命中(捕获里的 user-key 头本来就是 `[REDACTED]`)。批次四的重判副本不入库,
-`deliver-check.sh` 发现缺失会用报告开头的同一命令重生成。**干净克隆彩排**(无密钥、无 Core、无 docker):套件 604/604,批次四重判副本
-重生成、校准 / 汇总 / reparse 与两份闭环 REPORT 均与提交副本 diff 0——前提是已烧毁值登记簿 `evaluation/attribution/burned-tokens.json`
-在场(`resolve-tokens.mjs` 的离线路线,只收 git 树里已有的值);各步依赖列在 `evaluation/REVIEW-GUIDE.md`。
+`deliver-check.sh` 发现缺失会用报告开头的同一命令重生成。**干净克隆彩排**(无密钥、无 Core、无 docker):套件全过,批次四重判副本
+重生成、校准 / 汇总 / reparse 与两份闭环 REPORT 均与提交副本 diff 0。这依赖已烧毁值登记簿
+`evaluation/attribution/burned-tokens.json`(`resolve-tokens.mjs` 的离线路线,只收已在提交树里的值,登记前用 `git grep` 逐个证明)。
+登记簿新增的**不是新明文,而是「值 → 资产版本」的映射**:`tokens.json` 只有 sha256,光看记录并不知道某个字符串属于哪条资产的哪个版本。
+它只对已烧毁(按规则必须轮换、不再使用)的值开放,且只保留已交付批次的条目,新批次前归档旧条目。规则见 `CLAUDE.md` §16;
+每一步需要什么(纯离线 / 需登记簿 / 需线上栈)列在 `evaluation/REVIEW-GUIDE.md`。
 
 ## 验收命令与输出
 
