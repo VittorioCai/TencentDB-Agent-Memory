@@ -1,5 +1,5 @@
 {
-  "frozen_at": "2026-09-12T10:47:27Z",
+  "frozen_at": "2026-09-12T10:52:41Z",
   "start_commit": "141c044be519e53bbfe2d1ef780632ae110a8136",
   "start_tree": "631aa8559a847b34b7c169236411eecd29e1d16a",
   "task_md_sha256": "f32af00888d3cab43cc5962cb97926b9f253f4292012a5a81419463e3e38915d",
@@ -130,7 +130,7 @@
     ],
     "proxy_image_created": "2026-09-07T09:27:27.00487263Z",
     "recorded_live": true,
-    "read_at": "2026-09-12T10:47:27Z",
+    "read_at": "2026-09-12T10:52:41Z",
     "recorded_live_since": "2026-09-11",
     "meaning": "the containers as they run when this selfcheck runs (read live, not frozen at run time); the Core image the recorded runs used is unknown — see devloop-runs.json config_fixes"
   },
