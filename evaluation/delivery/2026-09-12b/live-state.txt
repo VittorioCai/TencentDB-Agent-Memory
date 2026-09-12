@@ -5,4 +5,4 @@ skill.extraction.enabled: file=false container=enabled:false
   forced identity:  agt-5e0y4l8a7a  (consumer — mainline runs)
   core auto-extraction: OFF  (pool frozen for the comparison)
   candidate log: OFF
-2026-09-12T08:01:18Z [delivery re-run 2026-09-12T080047Z] skl-pXLc38dex6Zt: status approved, visibility team, evidence_revision 10, gate admit decided_at 2026-09-11T19:08:30.973Z (online validated 4, used 0, corrected 0)
+2026-09-12T09:57:24Z [delivery re-run 2026-09-12T095652Z] skl-pXLc38dex6Zt: status approved, visibility team, evidence_revision 10, gate admit decided_at 2026-09-11T19:08:30.973Z (online validated 4, used 0, corrected 0)

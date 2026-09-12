@@ -78,9 +78,11 @@ PASS  文件未变 evaluation/tasks/bridge-addr/assets/wrong.md
 PASS  文件未变 evaluation/tasks/bridge-addr/assets/right.md
 PASS  文件未变 evaluation/attribution/delivery-audit.mjs
 PASS  文件未变 evaluation/attribution/adoption.mjs
-PASS  文件未变 evaluation/attribution/calibration.mjs
+FAIL  文件未变 evaluation/attribution/calibration.mjs
+      期望 "2b9844bef126"  实际 "f6990ae509cf"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
 FAIL  文件未变 evaluation/attribution/calibrate-runs.mjs
-      期望 "5055eff4ef8f"  实际 "582dd50e0471"
+      期望 "5055eff4ef8f"  实际 "4dd10949e5fe"
       修法 代码变了:要么重新冻结,要么在报告里说明差异
 PASS  文件未变 evaluation/attribution/judge-hard.mjs
 FAIL  文件未变 evaluation/attribution/judge-outcome.mjs
@@ -101,5 +103,5 @@ PASS  闸门基线文件存在且 rules/版本一致
 PASS  pair.json 顶层消费者 == 冻结消费者
 PASS  pair.json 资产版本 == 线上版本
 
-通过 49  未过 18  未知 0  提示 2  / 共 69
+通过 48  未过 19  未知 0  提示 2  / 共 69
 结论:条件不一致,不开试跑

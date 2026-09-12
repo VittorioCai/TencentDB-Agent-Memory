@@ -8,9 +8,12 @@ written → evaluation/delivery/2026-09-12b/CALIBRATION-reproduced.md
 | gate-rules-2026-09-08f · batch4 (frozen) | 14 | 0 | 5 | 1 | 0 | 0 | 20/20 | 0.95 |
 | **cumulative** | 21 | 0 | 6 | 1 | 0 | 0 | 28/28 | 0.964 |
 
-An isolation failure is not a judging error: the asset was hidden and its
-content reached the model anyway, so calling it used was right and the
-setup was what failed. Unsettled rows — a capture that does not cover the
+An isolation failure is a failure of the setup: the asset was hidden and its
+content reached the model anyway. Whether the use verdict was right is settled
+by the adoption evidence in the usage table, not here — a leak and a wrong use
+verdict can happen at the same time (2026-09-12 review). FN in THIS table means
+"delivered but not judged used", not a missed detection of use.
+Unsettled rows — a capture that does not cover the
 run, a source the record cannot name, whether the asset was hidden not
 recorded — count for neither side; `rated/total` is how much of the batch
 measured anything. An arrival from an identified other source is NOT
