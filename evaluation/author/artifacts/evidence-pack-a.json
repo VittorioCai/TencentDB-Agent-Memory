@@ -31,12 +31,16 @@
   "chain": {
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
     "producer": {
       "asset_owner_user_id": "usr-n68ea5ythq",
       "owner_agent_id": "agt-5e4hna56j9",
       "wrote_this_version": "usr-n68ea5ythq",
       "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v2"
     },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
     "source_sessions": [
       "6ae29c1e-a7c8-468d-a988-35ec676b848a"
     ],
@@ -49,39 +53,35 @@
     "operations": [
       {
         "record_id": "call:8bfc28964692642e",
-        "at": "2026-09-06T04:02:04.357Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T04:02:04.357Z"
       },
       {
         "record_id": "call:a2c86ceddac82bc1",
-        "at": "2026-09-06T04:02:04.441Z",
-        "status": 200,
-        "kind": "bridge_call"
+        "at": "2026-09-06T04:02:04.441Z"
       },
       {
         "record_id": "call:b5903fc59d61214c",
-        "at": "2026-09-06T04:02:28.595Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T04:02:28.595Z"
       }
     ],
     "results": [
       {
         "record_id": "outcome:c91cdca6-40f5-4e84-b03b-f65713584044",
-        "state": "corrected",
-        "corrected_reason": "wrong",
         "at": "2026-09-05T22:34:32.249Z"
       },
       {
         "record_id": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
-        "state": "corrected",
-        "corrected_reason": "wrong",
         "at": "2026-09-05T22:01:22.682Z"
       }
     ],
-    "complete": true,
-    "breaks": []
+    "collected": {
+      "source_sessions": 1,
+      "naming_messages": 4,
+      "operations": 3,
+      "results": 2
+    },
+    "gaps": [],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
   },
   "pairing": {
     "paired": 3,
@@ -171,7 +171,7 @@
         ],
         "head_version": 2,
         "version_at_cutoff": 2,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {
@@ -192,7 +192,7 @@
         ],
         "head_version": 2,
         "version_at_cutoff": 2,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {

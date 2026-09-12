@@ -144,7 +144,10 @@ export function skillRecord(s, content) {
   return { record_id: `skill:${s.skill_id}@${s.version}`, kind: "skill", evidence_class: "authored_text", text: `name: ${s.name}\ndescription: ${s.description ?? ""}\n${head}`, at: s.created_at_ms ? new Date(s.created_at_ms).toISOString() : null,
     meta: { skill_id: s.skill_id, version: s.version, name: s.name, status: s.status ?? null, owner_agent_id: s.owner_agent_id ?? null, content_hash: s.content_hash ?? null,
       tokens: bodyTokens(content), head_version: s.head_version ?? null, version_at_cutoff: s.version_at_cutoff ?? null,
-      operator: "unknown: the skill store records the owning agent, not who wrote each version" } };
+      // 2026-09-12 第二人复核:这个字段还留着 2026-09-08g 之前的说法。版本行上的 user_id
+      // (`/v3/skill/versions` 的 owner_user_id)就是那一版的写入者,链里已按事实记;这里
+      // 不再声称 unknown,而是指向那个字段。
+      writer_field: "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version" } };
 }
 
 /** host:port and skill-id tokens carried by a body — exact values, no host-only forms. */
@@ -287,6 +290,43 @@ async function pages(path, base, key, itemsKey, limit, max) {
     if (items.length === 0 || offset + items.length >= total) break;
   }
   return out.slice(0, max);
+}
+
+/**
+ * 围绕被评估版本收集到的**相关证据**,以及一句必须说清的话:生产来源未证实。
+ *
+ * 2026-09-12 第二人复核:原来这里叫 `complete`(版本 → 写入者 → 会话 → 操作 → 结果,无断点),
+ * 但实现只是分别找出"提到资产名或判别值的会话""提到它的操作""同一 asset id 的结果",三个集合
+ * 各自非空就标完整——**相邻记录之间的关系一次都没有验证过**。真实的 A 包里,链头是在读两条
+ * 已经存在的 skill,链尾是另外两次消费者运行的结果:它能证明相关的使用历史,证明不了这一版由
+ * 这段会话产生。所以字段改名、去掉 `complete`,写入者(版本行上的 user_id)作为**事实**保留,
+ * 生产来源另记 `production_link: "unproven"`,空集合仍按缺口列出。
+ */
+export function chainFacts({ assetVersion, contentHash = null, writer = null, assetOwnerUserId = null, ownerAgentId = null, sessions = [], naming = [], ops = [], results = [], callsExported = true } = {}) {
+  const gaps = [];
+  if (!writer) gaps.push("写入者(producer):这一版没有版本行,谁写的未知");
+  if (!sessions.length) gaps.push(naming.length ? `来源会话:${naming.length} 条 L0 消息提到了资产或判别值,但都没带 session id` : "来源会话:截止时刻前没有 L0 消息提到该资产或它的判别值");
+  if (!ops.length) gaps.push(callsExported ? "操作:没有任何 proxy 观察到的调用带着该资产的判别值" : "操作:没有提供 proxy 调用导出,因而没有可观察的操作");
+  if (!results.length) gaps.push("结果:截止时刻前该资产上没有受信结果");
+  return {
+    asset_version: assetVersion, content_hash: contentHash,
+    what_this_is: "相关证据汇集(related evidence collected around this version),不是生产链",
+    producer: {
+      asset_owner_user_id: assetOwnerUserId,
+      owner_agent_id: ownerAgentId,
+      wrote_this_version: writer,
+      wrote_this_version_from: writer ? `skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v${assetVersion}` : null,
+    },
+    writer_known: !!writer,
+    production_link: "unproven",
+    production_note: "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
+    source_sessions: sessions,
+    naming_messages: naming.map((r) => r.record_id ?? r),
+    operations: ops.map((r) => (r.record_id ? { record_id: r.record_id, at: r.at, status: r.meta?.upstream_status, kind: r.meta?.kind } : r)),
+    results: results.map((r) => (r.record_id ? { record_id: r.record_id, state: r.meta?.state, corrected_reason: r.meta?.corrected_reason, at: r.at } : r)),
+    collected: { source_sessions: sessions.length, naming_messages: naming.length, operations: ops.length, results: results.length },
+    gaps,
+  };
 }
 
 export async function buildPack({ author, domain, keywords = [], assetId = null, callsFile = null, tokensFiles = [], maxL0 = 400, cutoff = null }) {
@@ -452,30 +492,12 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       const versionRow = rows.find((v) => v.version === a.version) ?? null;
       const writer = versionRow?.owner_user_id ?? null;
       const breaks = [];
-      if (!writer) breaks.push("producer: no version row for this version, so who wrote it is unknown");
-      if (!sessions.length) breaks.push(naming.length ? `source session: ${naming.length} L0 message(s) name the asset or its tokens but carry no session id` : "source session: no L0 message at or before the cutoff names the asset or its tokens");
-      if (!ops.length) breaks.push(sources.calls?.total ? "operations: no proxy-observed call carries the asset's tokens" : "operations: no proxy call export was supplied, so no observed operation can be tied to the asset");
-      if (!results.length) breaks.push("results: no trusted outcome is recorded on this asset at or before the cutoff");
-      chain = {
-        asset_version: a.version, content_hash: a.content_hash ?? null,
-        producer: {
-          asset_owner_user_id: a.owner_user_id,
-          owner_agent_id: author.agent_id,
-          // The user the skill store recorded on this version's own row.
-          wrote_this_version: writer,
-          wrote_this_version_from: writer ? `skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v${a.version}` : null,
-        },
-        source_sessions: sessions,
-        naming_messages: naming.map((r) => r.record_id),
-        operations: ops.map((r) => ({ record_id: r.record_id, at: r.at, status: r.meta.upstream_status, kind: r.meta.kind })),
-        results: results.map((r) => ({ record_id: r.record_id, state: r.meta.state, corrected_reason: r.meta.corrected_reason, at: r.at })),
-        // Complete means every link is named: the version, who wrote it, the
-        // sessions that produced it, the operations, the results. Until
-        // 2026-09-08g this read `=== 1`, because the producer was assumed to
-        // be permanently unknown and one break was the floor.
-        complete: breaks.length === 0,
-        breaks,
-      };
+      chain = chainFacts({
+        assetVersion: a.version, contentHash: a.content_hash ?? null, writer,
+        assetOwnerUserId: a.owner_user_id, ownerAgentId: author.agent_id,
+        sessions, naming, ops, results,
+        callsExported: !!sources.calls?.total,
+      });
     } catch (e) { asset = { asset_id: assetId, error: String(e.message) }; }
   }
 
@@ -506,6 +528,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(pack, null, 2) + "\n");
   console.log(`evidence pack for ${a.author} (${author.user_id}) cutoff ${pack.evidence_cutoff}: ${pack.record_count} record(s) ${JSON.stringify(pack.by_class)}; excluded ${JSON.stringify(pack.excluded)} → ${out}`);
-  if (pack.chain) console.log(`  chain: ${pack.chain.complete ? "complete — every link named" : `${pack.chain.breaks.length} break(s)`} — ${pack.chain.breaks.join(" | ")}`);
+  if (pack.chain) console.log(`  related evidence: writer ${pack.chain.writer_known ? pack.chain.producer.wrote_this_version : "unknown"}; sessions ${pack.chain.collected.source_sessions}, operations ${pack.chain.collected.operations}, results ${pack.chain.collected.results}; production link ${pack.chain.production_link}${pack.chain.gaps.length ? ` — ${pack.chain.gaps.length} gap(s)` : ""}`);
   for (const [k, v] of Object.entries(pack.sources)) if (v.error) console.log(`  [warn] ${k}: ${v.error}`);
 }

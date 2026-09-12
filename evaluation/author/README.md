@@ -18,6 +18,18 @@ derives the conclusions itself.
 | `demo-cold-start.sh` | A new skill by A → candidate → pack (calls exported, cutoff now) → assessment → written through the route → the gate's priority reflects it |
 | `artifacts/` | Packs, prompts, assessments (`.json` with the raw model output beside the verified result; `.md` for reading), write records |
 
+## 能力等级说的是什么(2026-09-12 第二人复核后收紧)
+
+等级只由**被评估资产上**的业务结果得出。作者在别的资产上的历史结果照常统计、照常显示,但
+不参与定级——评价范围不同:39 条 bridge 地址结果说明不了"读退出状态行"这件事。被评估资产
+上没有业务结果时,等级是 `unknown`,不是 medium;`high` 仍然永不推出。
+检查器的输出里,`execution_claims.domain_counts` 是定级用的那部分,`cross_asset_history` 是
+另算的历史,`scoped_to` 是被评估的资产 id。
+
+同一条规则也管相关性:资产没有判别值时,**别的资产**上的结果不能被算作支持或反驳——引文
+可能属实,但两件事无关,一律记 `silent`(`relevance unverifiable`)。同资产、同版本、同内容
+的结果仍按身份关联,这条没变。
+
 ## What the gate does with it
 
 `MemoryCore/src/metadata/service/asset-gate.ts` reads
@@ -50,14 +62,16 @@ describe the window, not all history, because the cutoff now goes to Core
 with the query), assistant_report 4,
 user_instruction 4, derived_memory 4 (all source_unavailable),
 team_principles 22, authored_text 2 (the versions that existed at the
-cutoff; 1 skill created later excluded). Chain: results 2 (corrected
-outcomes on the asset); breaks: the version's operator is unknown; 4 L0
-messages name the address but carry no session id.
+cutoff; 1 skill created later excluded). Related evidence: results 2
+(corrected outcomes on the asset); gaps: 4 L0 messages name the address but
+carry no session id; production link unproven.
 
-- competence **medium** — ledgers: others on A's assets 2 validated (the
-  right-address asset) / 2 corrected (this one), own business 0, transport
-  3 answered 2xx; model said medium. (The earlier "high — 2 successes" had
-  counted one of B's validations of A's *other* asset and one of A's own
+- competence **low** (2026-09-12, after the second review scoped competence to
+  the asset under assessment) — on *this* asset the author's ledger holds 2
+  corrected and 0 validated; the 2 validations of A's *other* asset are now
+  reported as cross-asset history and do not set the level. Before the fix it
+  read medium, because every business result of the author counted whatever
+  asset it was about. (The still earlier "high — 2 successes" had
   search 200s as if they were two successful executions by A; they are
   kept apart now.)
 - asset claim **contradicts (strong)** — by identity, version and content:
@@ -91,7 +105,10 @@ outcome on the asset.
   candidate's review priority is **high** (unknown), no longer low.
 
 **A's cold-start candidate** (`skl-ImeA29HL3Djj`, claims the same
-address): competence medium; asset claim contradicts (strong) through the
+address): competence **unknown** (2026-09-12: no business result on this
+candidate itself; the author's results on other assets are history, not
+capability here — it read medium before the scoping fix); asset claim
+contradicts (strong) through the
 exact token `10.244.7.19:8096` carried by the v2 body of the asset the
 corrected outcomes are on; priority high with the outcome ids in the
 reason.
@@ -121,11 +138,18 @@ All runs: `deepseek-v4-flash`, temperature 0, JSON output.
   return `session_id`: what dropped it was the pack itself, because
   `/v3/conversation/search` returns only content/id/role/score/timestamp,
   and a search hit overwrote the query's richer copy of the same message.
-  Records are merged now instead of overwritten. A's chain is complete —
-  version → writer → session → operations → results, no breaks; B's and the
-  cold-start candidate's carry one break each, and it is a fact about the
-  evidence, not a gap in the tooling: no trusted outcome exists on those
-  assets at or before the cutoff.
+  Records are merged now instead of overwritten. **What the pack can and
+  cannot say (corrected 2026-09-12 after a second review):** it collects the
+  evidence *around* a version — sessions naming the asset or its tokens, calls
+  carrying them, outcomes on that asset id — and it names the writer of the
+  version from the version row. It does **not** verify that adjacent records
+  are linked, so it cannot show the version was produced by those sessions:
+  `production_link` is always `unproven`, and the earlier "A's chain is
+  complete — version → writer → session → operations → results, no breaks"
+  claimed more than the code checks (three non-empty sets). Empty sets are
+  still listed as gaps, and a gap is a fact about the evidence rather than a
+  hole in the tooling: no trusted outcome exists on some of those assets at or
+  before the cutoff.
 - That `conversation/search` and `conversation/query` return different
   fields for the same message is a product inconsistency. It is worked
   around here (join by message id), not fixed.

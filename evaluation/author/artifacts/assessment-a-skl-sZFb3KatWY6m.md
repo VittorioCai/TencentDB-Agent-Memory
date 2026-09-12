@@ -2,14 +2,14 @@
 
 assessed 2026-09-07T19:59:34.950Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack be408c48e1d1 (49/49 records shown; classes {"authored_text":2,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
 
-**Competence: medium** — 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration (model said medium)
+**Competence: low** — 2 business-level failure(s), no success (own 0, others on the author's assets 2);该作者在其他资产上另有 5 条业务结果(5 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级 (model said medium)
 **Asset claim check: contradicts** (strong) — outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 — "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)" (model said contradicts)
 
-Derived summary: competence medium: 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 9 claim(s) kept, 0 dropped.
+Derived summary: competence low: 2 business-level failure(s), no success (own 0, others on the author's assets 2);该作者在其他资产上另有 5 条业务结果(5 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 9 claim(s) kept, 0 dropped.
 
 Model summary (as said): The asset claim that the skill bridge is reachable at http://10.244.7.19:8096/skill-bridge/v3/skill/search is contradicted by two harness-verified outcomes marking the skill documenting that address as wrong. The agent's own session shows it successfully used the bridge API to fetch and search skills, and it issued probes to both documented addresses, but the transport response to the asset's address is not uniquely observed in the proxy logs. The alternative address in skill skl-oBaDO5CceKnr was harness-validated, matching the agent's reported conclusion, so the agent's process appears sound but lacks a directly paired probe result for the disputed address.
 
-Chain: producer undefined / agt-5e4hna56j9 (operator undefined); sessions 1; operations 3; results 2. Breaks: 
+Related evidence (v2): wrote_this_version usr-n68ea5ythq / agent agt-5e4hna56j9; sessions 1; operations 3; results 2; production link UNPROVEN (adjacency between records not verified)
 
 ## Surviving claims (10)
 - [claim · execution_result · success] The agent successfully fetched the skill content for eval-bridge-endpoint-a via the bridge API, with an HTTP 200 response.

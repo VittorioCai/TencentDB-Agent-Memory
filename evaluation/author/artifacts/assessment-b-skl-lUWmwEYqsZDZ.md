@@ -2,14 +2,14 @@
 
 assessed 2026-09-07T20:01:59.703Z · evidence cutoff 2026-09-06T08:47:33.000Z · model deepseek-v4-flash · pack bd0ab2c72016 (179/292 records shown; classes {"assistant_report":41,"user_instruction":41,"derived_memory":31,"proxy_observed":178,"authored_text":1})
 
-**Competence: unknown** — no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive) (model said unknown)
+**Competence: unknown** — 被评估资产 skl-lUWmwEYqsZDZ 上没有业务结果;该作者在其他资产上另有 1 条业务结果(1 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级 (model said unknown)
 **Asset claim check: silent** (model said supports)
 
-Derived summary: competence unknown: no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive). asset claim silent. 3 claim(s) kept, 2 dropped (skill).
+Derived summary: competence unknown: 被评估资产 skl-lUWmwEYqsZDZ 上没有业务结果;该作者在其他资产上另有 1 条业务结果(1 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim silent. 3 claim(s) kept, 2 dropped (skill).
 
 Model summary (as said): The agent consistently exercised the HTTP skill bridge, including get-by-name on its own skill and /skill/get by skill_id after team searches, and the skill text it owns explicitly documents that get-by-name is own-agent scoped and returns 40401 for another agent's skill, recommending search + get-by-skill_id. However, at the cutoff there is no harness-verified application-level outcome confirming the 40401 behavior in an actual response body; all recorded bridge responses are transport-level 200s (or unpaired 403s). Competence is therefore not determinable from verified results, though the operational pattern and authored instructions support the asset's stated approach.
 
-Chain: producer undefined / agt-5e0y4l8a7a (operator undefined); sessions 8; operations 40; results 0. Breaks: results: no trusted outcome is recorded on this asset at or before the cutoff
+Related evidence (v3): wrote_this_version usr-4u07qc2kuj / agent agt-5e0y4l8a7a; sessions 8; operations 40; results 0; production link UNPROVEN (adjacency between records not verified); gaps: 结果:截止时刻前该资产上没有受信结果
 
 ## Surviving claims (4)
 - [claim · execution_result · success] The person's search command for 'convention address reach skill bridge' was answered by the bridge endpoint with HTTP status 200 (transport-level success; application body is not shown).

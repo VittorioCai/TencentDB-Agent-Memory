@@ -126,3 +126,27 @@ test("rows from both queries are merged once per outcome id", () => {
   const merged = mergeOutcomeRows(onAssets, asConsumer);
   assert.deepEqual(merged.map((o) => o.id), ["o1", "o2", "o3"]);   // o2 once; o3 (my result on their asset) present
 });
+
+// --- 2026-09-12 第二人复核:"来源链完整"其实只是三个集合各自非空 -----------------------
+import { chainFacts } from "./build-evidence-pack.mjs";
+
+test("三个集合非空 ≠ 生产链成立:写入者是事实,生产来源标未证实", () => {
+  const f = chainFacts({
+    assetVersion: 2, contentHash: "h2", writer: "usr-a",
+    sessions: ["s1"], naming: [{ record_id: "l0:1" }], ops: [{ record_id: "call:1" }], results: [{ record_id: "outcome:1" }],
+  });
+  assert.equal(f.writer_known, true);
+  assert.equal(f.production_link, "unproven");
+  assert.equal(f.complete, undefined, "不再给 complete 这种会被读成生产链成立的字段");
+  assert.match(f.what_this_is, /相关证据汇集|related evidence/);
+  assert.match(f.production_note, /相邻|adjacen|未验证/);
+  assert.deepEqual(f.collected, { source_sessions: 1, naming_messages: 1, operations: 1, results: 1 });
+});
+
+test("集合为空按缺口列出,但缺口不改变「生产来源未证实」这一点", () => {
+  const f = chainFacts({ assetVersion: 2, contentHash: null, writer: null, sessions: [], naming: [], ops: [], results: [] });
+  assert.equal(f.writer_known, false);
+  assert.equal(f.production_link, "unproven");
+  assert.equal(f.gaps.length, 4);
+  assert.ok(f.gaps.some((g) => /写入者|producer/.test(g)));
+});

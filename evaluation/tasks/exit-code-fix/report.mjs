@@ -116,7 +116,7 @@ L.push(`## 这份数字测的是什么,不是什么`);
 L.push("");
 L.push(`- 测的是:同一缺陷任务在"笔记对消费者不可见(candidate)"与"笔记已准入(approved)"两种池状态下,各跑若干次,模型改出的仓库副本能否通过与两组完全相同的功能验收;笔记是否送达、是否被采用(新增测试的文件名/标题带笔记的判别值,并关联到写入它的调用)、采用后的结果判定;每次运行的消费者是否新建、记忆通道是否读到借入的记忆。`);
 L.push(`- 不是:两组的性能对照。样本极小,先无笔记后有笔记只用于闭环演示,不作为闸门或笔记收益的估计。`);
-L.push(`- 仓库内已有正确实现可参照(起点副本的 \`evaluation/gate0/verify-capture.mjs\` 正确读退出行并通用解析 curl 错误行,见 conditions.json 的 known_hints_in_tracked_files),**笔记的作用是缩短定位而非提供唯一答案**;无笔记组通过并不说明笔记无用,有笔记组通过也不说明是笔记的功劳——采用与否只看 attempts 与 used 事件。`);
+L.push(`- 仓库内已有正确实现可参照(起点副本的 \`evaluation/gate0/verify-capture.mjs\` 正确读退出行并通用解析 curl 错误行,见 conditions.json 的 known_hints_in_tracked_files),**笔记的设计目的是帮助定位、不是唯一答案;本实验没有单独测量定位时间,不能说已证明缩短定位**;无笔记组通过并不说明笔记无用,有笔记组通过也不说明是笔记的功劳——采用与否只看 attempts 与 used 事件。`);
 L.push(`- 判据保守在哪:验收只认验证器自带的参考测试与起点测试的原内容;模型自报的测试结果不采信;模型新增的测试另记不进判决。未知项:送达/采用事件缺失时记"?",不折成 0。`);
 L.push("");
 L.push(`## 每次运行`);
@@ -268,12 +268,16 @@ else {
       : `试算理由里没有作者行,无法判断作者先验是否计入。`));
   const noteOwner = rows.map((r) => r.run?.consumer?.owner_user_id).filter(Boolean);
   const ownerUser = (readJsonOpt("asset-pool-snapshot.json")?.assets ?? []).find((x) => x.asset_id === NOTE)?.producer_user_id ?? null;
+  // 每次 apply 的信号各自成行:v1 与 v2 的计数不同,一句解释套两版就会自相矛盾(2026-09-12 复核)。
+  const applied = (evals ?? []).filter((e) => e.apply).map((e) => ({ at: e.at, asset_version: e.asset_version ?? e.signals?.asset_version ?? null, signals: e.signals }));
   const rel = rows.filter((r) => r.sample && r.arm === "note").map((r) => ({ run_id: r.run_id, consumer: r.consumer, user: r.run?.consumer?.owner_user_id ?? null, relation: r.run?.consumer?.owner_user_id && ownerUser ? (r.run.consumer.owner_user_id === ownerUser ? "same_user" : "cross_user") : "unknown" }));
   L.push("");
   L.push(`**2. 两次验证是 cross_user 还是 cross_agent?** 笔记作者 user ${q(ownerUser)};` + rel.map((x) => `${x.run_id} 消费者 ${x.consumer} 属 user ${q(x.user)} → ${x.relation}`).join(";") +
     `。Core 试算信号 cross_user_validated ${q(lastDry.signals?.online?.cross_user_validated)}、distinct_consumers ${q(lastDry.signals?.online?.distinct_consumers)}(按 user 计:两个 agent 同属一个消费者用户)。` +
     (rel.every((x) => x.relation === "cross_user")
-      ? `**闸门 admit 基于 ${q(lastDry.signals?.online?.cross_user_validated)} 次 cross_user validated,但两次来自同一消费者用户、同一任务(distinct_consumers=${q(lastDry.signals?.online?.distinct_consumers)},distinct_tasks=${q(lastDry.signals?.online?.distinct_tasks)})。跨人关系成立,独立性不成立——这是单主体条件下的已知限制,不是两个独立验证。**`
+      ? `**闸门的两次判定要分开讲(2026-09-12 第二人复核:生成器读最新数字,却留着 v1 时写死的解释)**:` +
+        (applied.length ? applied.map((e, i) => `${e.at}${e.asset_version ? ` 对 v${e.asset_version}` : i === 0 ? " 对 v1(记录未写版本,按时序:第二任务闭合前)" : ""}:cross_user validated ${q(e.signals?.online?.cross_user_validated)}、distinct_consumers ${q(e.signals?.online?.distinct_consumers)}、distinct_tasks ${q(e.signals?.online?.distinct_tasks)}`).join(";") + "。" : "") +
+        `本任务(第一任务)这 ${rel.length} 次验证来自 ${new Set(rel.map((x) => x.user)).size} 个消费者用户、1 个任务实体;v2 的计数还含第二任务 \`exit-line-collect\` 的运行。跨人关系在产品记录里成立,独立性不成立:所有身份由同一人操作,两个用户不是两位独立真人。`
       : `不全是跨人:"基于跨人验证 admit"这句要改。`));
 }
 L.push("");
@@ -364,10 +368,10 @@ L.push(`## 剩余缺点`);
 L.push("");
 for (const s of [
   "跨运行隔离尚未成立(批次四层面);本闭环改为每次运行新建消费者,只对这几次运行有效",
-  "解析修正后的统计未确认;正式样本分母已修正但需复核",
-  "开发闭环与交付验证待完成:本报告只覆盖清单里的运行",
-  "小样本、单场景、单主体、单模型;采纳证据覆盖率 0.95(批次四)",
-  "仓库内已有正确实现可参照:笔记的作用是缩短定位而非提供唯一答案;两组差异不能归于笔记",
+  "解析修正后的统计已经第二人复核(2026-09-12):口径问题已改在生成器里并重新生成,正式组 20 项判定逐项未变;复核核到表内加减与生成代码,未逐一重算原始捕获",
+  "本报告只覆盖清单里的运行(第 5 件开发闭环已闭合,交付复跑见 evaluation/delivery/ 最新一次;这一行原写「待完成」,2026-09-12 复核指出与现状不符)",
+  "小样本、单场景、单主体、单模型;批次四正式组的采纳证据覆盖率在新解析下是 1.0(旧解析 0.95),见 runner/COMPARISON-2026-09-11-reparsed.md 的校准一节",
+  "仓库内已有正确实现可参照。笔记的设计目的是帮助定位,但本实验没有单独测量定位时间,两组也不是严格性能对照:记录支持的只是「笔记里的测试约定出现在模型新增的测试里,并在这些运行里观察到了相应操作」,不能说已证明缩短定位;两组差异不能归于笔记",
   "模型自报测试结果不采信,验收只认验证器自带参考测试与起点测试原内容;模型新增的测试另记",
   "笔记正文列出 52/56、任务文本只描述超时:有笔记组在非零退出码一例上的通过含'笔记披露了验收覆盖范围'成分",
   "团队资产只在模型主动 skill_search 时送达;task.md 已加一句团队经验可检索(两组同文,改动前的运行作废留档),送达与否仍按事件如实报",

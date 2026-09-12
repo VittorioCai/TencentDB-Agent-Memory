@@ -2,14 +2,14 @@
 
 assessed 2026-09-11T18:09:25.019Z · evidence cutoff 2026-09-11T17:56:52.000Z · model deepseek-flash · pack a3c0b2d9262a (88/88 records shown; classes {"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":41,"proxy_observed":9,"authored_text":4})
 
-**Competence: medium** — 31 business-level success(es) (own 0, others on the author's assets 31), 10 failure(s) beside them; high is not derived without calibration (model said unknown)
+**Competence: medium** — 2 business-level success(es) (own 0, others on the author's assets 2); high is not derived without calibration;该作者在其他资产上另有 39 条业务结果(29 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级 (model said unknown)
 **Asset claim check: silent** (model said silent)
 
-Derived summary: competence medium: 31 business-level success(es) (own 0, others on the author's assets 31), 10 failure(s) beside them; high is not derived without calibration. asset claim silent. 6 claim(s) kept, 0 dropped.
+Derived summary: competence medium: 2 business-level success(es) (own 0, others on the author's assets 2); high is not derived without calibration;该作者在其他资产上另有 39 条业务结果(29 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim silent. 6 claim(s) kept, 0 dropped.
 
 Model summary (as said): The records contain no observed operation, session, or proxy call in which the author (usr-n68ea5ythq / agt-5e4hna56j9) reads or parses a CodeBuddy exit-status line; all of the author's recorded work concerns the conflicting skill-bridge endpoint convention. The only records naming the exit-status asset skl-pXLc38dex6Zt are its own authored text (v2) and two cross-user harness validations of v1, which validate calls against the asset but do not independently verify the 'Exit Code:' spelling or the parser fix. Because the pack neither demonstrates nor refutes the author's ability in this domain, competence is unknown and the asset claim is neither supported nor contradicted.
 
-Chain: producer undefined / agt-5e4hna56j9 (operator undefined); sessions 0; operations 0; results 2. Breaks: source session: no L0 message at or before the cutoff names the asset or its tokens | operations: no proxy-observed call carries the asset's tokens
+Related evidence (v2): wrote_this_version usr-n68ea5ythq / agent agt-5e4hna56j9; sessions 0; operations 0; results 2; production link UNPROVEN (adjacency between records not verified); gaps: 来源会话:截止时刻前没有 L0 消息提到该资产或它的判别值 | 操作:没有任何 proxy 观察到的调用带着该资产的判别值
 
 ## Surviving claims (8)
 - [claim · execution_result · success] The evaluation harness validated a call on the asset under assessment's prior version, skl-pXLc38dex6Zt v1 (run 20260911T154907Z-devloop-note, 2026-09-11T15:50:06Z).

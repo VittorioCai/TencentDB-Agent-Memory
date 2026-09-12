@@ -2,14 +2,14 @@
 
 assessed 2026-09-07T20:07:44.770Z · evidence cutoff 2026-09-07T20:03:34.813Z · model deepseek-v4-flash · pack e01acccf50f2 (50/50 records shown; classes {"authored_text":3,"user_instruction":4,"assistant_report":4,"derived_memory":4,"team_principles":22,"harness_verified":4,"proxy_observed":9})
 
-**Competence: medium** — 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration (model said medium)
+**Competence: unknown** — 被评估资产 skl-ImeA29HL3Djj 上没有业务结果;该作者在其他资产上另有 7 条业务结果(5 成功 / 2 纠错),属历史记录,与本次评估的领域不同,不参与定级 (model said medium)
 **Asset claim check: contradicts** (strong) — outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47 — "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)" (model said contradicts)
 
-Derived summary: competence medium: 2 business-level success(es) (own 0, others on the author's assets 2), 2 failure(s) beside them; transport: 3 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 10 claim(s) kept, 0 dropped.
+Derived summary: competence unknown: 被评估资产 skl-ImeA29HL3Djj 上没有业务结果;该作者在其他资产上另有 7 条业务结果(5 成功 / 2 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 10 claim(s) kept, 0 dropped.
 
 Model summary (as said): The worker's proxy log shows successful HTTP bridge calls for fetching team skills and searching the skill bridge over 127.0.0.1:8096, and reachability probes were sent to both documented candidates including the asset's URL. Harness-verified outcomes recorded the token 10.244.7.19:8096 as corrected(wrong) on a skill carrying that address and validated the rival 127.0.0.1:47318 endpoint, so the assessed asset's claim is contradicted even though no direct result exists on skl-ImeA29HL3Djj v1 itself. Overall this supports medium operational competence in issuing bridge HTTP requests, but no high-confidence personal result for the contested address is available.
 
-Chain: producer undefined / agt-5e4hna56j9 (operator undefined); sessions 1; operations 1; results 0. Breaks: results: no trusted outcome is recorded on this asset at or before the cutoff
+Related evidence (v1): wrote_this_version usr-n68ea5ythq / agent agt-5e4hna56j9; sessions 1; operations 1; results 0; production link UNPROVEN (adjacency between records not verified); gaps: 结果:截止时刻前该资产上没有受信结果
 
 ## Surviving claims (11)
 - [claim · execution_result · success] The worker successfully fetched the eval-bridge-endpoint-a skill through the bridge on 127.0.0.1:8096, with an HTTP 200 bridge_call in response.

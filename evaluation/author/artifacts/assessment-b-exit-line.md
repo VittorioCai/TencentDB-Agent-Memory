@@ -2,14 +2,14 @@
 
 assessed 2026-09-11T18:10:05.835Z · evidence cutoff 2026-09-11T18:00:00.000Z · model deepseek-flash · pack 238738d1d154 (996/1596 records shown; classes {"assistant_report":206,"derived_memory":185,"harness_verified":43,"proxy_observed":931,"user_instruction":209,"authored_text":1,"team_principles":21})
 
-**Competence: medium** — 32 business-level success(es) (own 32, others on the author's assets 0), 10 failure(s) beside them; transport: 1 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration (model said unknown)
+**Competence: unknown** — 被评估资产 skl-z0V6zwphUvhB 上没有业务结果;该作者在其他资产上另有 43 条业务结果(33 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级 (model said unknown)
 **Asset claim check: silent** (model said silent)
 
-Derived summary: competence medium: 32 business-level success(es) (own 32, others on the author's assets 0), 10 failure(s) beside them; transport: 1 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration. asset claim silent. 10 claim(s) kept, 0 dropped.
+Derived summary: competence unknown: 被评估资产 skl-z0V6zwphUvhB 上没有业务结果;该作者在其他资产上另有 43 条业务结果(33 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim silent. 10 claim(s) kept, 0 dropped.
 
 Model summary (as said): The pack's chain establishes no session, no operation and no trusted result for asset skl-z0V6zwphUvhB: nothing quotes a CodeBuddy tool-result exit-status line, no parser or regression test for the label's casing appears, and no harness outcome touches that asset. What the records do show is this user repeatedly searching for bridge convention skills and probing 127.0.0.1:8096 / 10.244.7.19:8096 / 127.0.0.1:47318 with curl under bounded timeouts, capturing exit status only via their own echo labels. Their harness results concern separate bridge-endpoint assets. Competence in reading a CodeBuddy exit-status label and making an acceptance parser case-insensitive is therefore unknown.
 
-Chain: producer undefined / agt-5e0y4l8a7a (operator undefined); sessions 0; operations 0; results 0. Breaks: source session: no L0 message at or before the cutoff names the asset or its tokens | operations: no proxy-observed call carries the asset's tokens | results: no trusted outcome is recorded on this asset at or before the cutoff
+Related evidence (v1): wrote_this_version usr-4u07qc2kuj / agent agt-5e0y4l8a7a; sessions 0; operations 0; results 0; production link UNPROVEN (adjacency between records not verified); gaps: 来源会话:截止时刻前没有 L0 消息提到该资产或它的判别值 | 操作:没有任何 proxy 观察到的调用带着该资产的判别值 | 结果:截止时刻前该资产上没有受信结果
 
 ## Surviving claims (11)
 - [claim · execution_result · success] The person's bridge search command (model_intent call:4b048ab8306eadae) was answered by the bridge at transport level: the paired bridge_call row records status 200.

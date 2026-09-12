@@ -24,19 +24,25 @@
   "chain": {
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
     "producer": {
-      "owner_user_id": "usr-4u07qc2kuj",
+      "asset_owner_user_id": "usr-4u07qc2kuj",
       "owner_agent_id": "agt-5e0y4l8a7a",
-      "operator": "unknown"
+      "wrote_this_version": "usr-4u07qc2kuj",
+      "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v3"
     },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
     "source_sessions": [
       "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
       "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
+      "f3a25403-8b00-4dad-a30f-484383d82d32",
       "fbd80e17-a3e0-4332-bb31-4ea1fa5ab320",
       "e3d6a3ef-7885-4593-8b8e-f8d4c21ecf0f",
       "62a164d0-073c-41ac-87d8-a556b0d4d3a0",
-      "87f53648-6c52-4d47-a42a-20138c76f947",
-      "4454916b-43c0-4025-800c-6d0ed63a880a"
+      "d2327237-4bbd-4f98-be42-98bbfea94570",
+      "87f53648-6c52-4d47-a42a-20138c76f947"
     ],
     "naming_messages": [
       "l0:msg-cc1f39cd95b0",
@@ -68,258 +74,181 @@
       "l0:msg-712bb8a57625",
       "l0:msg-50f9f45ff61b",
       "l0:msg-858280a2dcd7",
-      "l0:msg-de0f825e417f",
-      "l0:msg-3c9ea2512acb",
-      "l0:msg-c80b709d73f0"
+      "l0:msg-de0f825e417f"
     ],
     "operations": [
       {
         "record_id": "call:4b048ab8306eadae",
-        "at": "2026-09-05T07:25:34.144Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:25:34.144Z"
       },
       {
         "record_id": "call:8c7f7ca3c8b99c9c",
-        "at": "2026-09-05T07:26:47.951Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:26:47.951Z"
       },
       {
         "record_id": "call:f1f09e70c761e061",
-        "at": "2026-09-05T07:28:23.791Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:28:23.791Z"
       },
       {
         "record_id": "call:063d9b22365fb801",
-        "at": "2026-09-05T07:29:38.271Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:29:38.271Z"
       },
       {
         "record_id": "call:4fa3b9a0349c4a0c",
-        "at": "2026-09-05T07:30:05.979Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:30:05.979Z"
       },
       {
         "record_id": "call:fe5216a358f100dc",
-        "at": "2026-09-05T07:30:30.478Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:30:30.478Z"
       },
       {
         "record_id": "call:0ae7828bc4301fad",
-        "at": "2026-09-05T23:35:52.390Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:52.390Z"
       },
       {
         "record_id": "call:25c1ccb1f661e388",
-        "at": "2026-09-05T23:35:55.880Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:55.880Z"
       },
       {
         "record_id": "call:842563147fbeb5c6",
-        "at": "2026-09-05T23:35:55.880Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:55.880Z"
       },
       {
         "record_id": "call:2764185c0de4abd8",
-        "at": "2026-09-05T23:36:07.133Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:07.133Z"
       },
       {
         "record_id": "call:832047ea6ed25577",
-        "at": "2026-09-05T23:36:07.133Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:07.133Z"
       },
       {
         "record_id": "call:e8282d03743488dd",
-        "at": "2026-09-05T23:36:15.504Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:15.504Z"
       },
       {
         "record_id": "call:ff3c4702ebc1b798",
-        "at": "2026-09-05T23:36:15.504Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:15.504Z"
       },
       {
         "record_id": "call:b22b2109b835d793",
-        "at": "2026-09-05T23:36:28.316Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:28.316Z"
       },
       {
         "record_id": "call:5bf9dfdecfed90eb",
-        "at": "2026-09-05T23:36:28.316Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:28.316Z"
       },
       {
         "record_id": "call:2cfb3793485b09ba",
-        "at": "2026-09-05T23:36:42.489Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:42.489Z"
       },
       {
         "record_id": "call:4dd3046104707eea",
-        "at": "2026-09-05T23:37:50.601Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:37:50.601Z"
       },
       {
         "record_id": "call:3e50b58910c2b91c",
-        "at": "2026-09-05T23:38:53.590Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:38:53.590Z"
       },
       {
         "record_id": "call:33b29b4140ec5944",
-        "at": "2026-09-06T05:48:20.634Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:20.634Z"
       },
       {
         "record_id": "call:e4b8f55b8ee4919e",
-        "at": "2026-09-06T05:48:20.634Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:20.634Z"
       },
       {
         "record_id": "call:c854c7023e0f41c5",
-        "at": "2026-09-06T05:48:46.076Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:46.076Z"
       },
       {
         "record_id": "call:c47fdcad9d2133d4",
-        "at": "2026-09-06T05:48:48.321Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:48.321Z"
       },
       {
         "record_id": "call:efe6066ceb034f83",
-        "at": "2026-09-06T06:00:29.068Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:29.068Z"
       },
       {
         "record_id": "call:38d8b59d76dd06fb",
-        "at": "2026-09-06T06:00:29.068Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:29.068Z"
       },
       {
         "record_id": "call:48d6a3fa800e4126",
-        "at": "2026-09-06T06:00:29.186Z",
-        "status": 200,
-        "kind": "bridge_call"
+        "at": "2026-09-06T06:00:29.186Z"
       },
       {
         "record_id": "call:72482f15da036b02",
-        "at": "2026-09-06T06:00:33.963Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:33.963Z"
       },
       {
         "record_id": "call:496b174e49843b9d",
-        "at": "2026-09-06T06:00:33.963Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:33.963Z"
       },
       {
         "record_id": "call:b395c72bd3c78f2a",
-        "at": "2026-09-06T06:00:41.913Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:41.913Z"
       },
       {
         "record_id": "call:4e908750a6b50288",
-        "at": "2026-09-06T06:00:41.913Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:41.913Z"
       },
       {
         "record_id": "call:0021de1e82f612a7",
-        "at": "2026-09-06T06:00:48.777Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:48.777Z"
       },
       {
         "record_id": "call:5daf88613f7b036c",
-        "at": "2026-09-06T06:00:48.777Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:48.777Z"
       },
       {
         "record_id": "call:389cafc567cd3b98",
-        "at": "2026-09-06T06:01:00.001Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:00.001Z"
       },
       {
         "record_id": "call:acbde3d5e1c77e30",
-        "at": "2026-09-06T06:01:00.001Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:00.001Z"
       },
       {
         "record_id": "call:d6c754e2cc1855c5",
-        "at": "2026-09-06T06:01:05.587Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:05.587Z"
       },
       {
         "record_id": "call:f7ac8e50357bf3e3",
-        "at": "2026-09-06T06:01:08.551Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:08.551Z"
       },
       {
         "record_id": "call:7da1441df6f16b51",
-        "at": "2026-09-06T06:01:08.551Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:08.551Z"
       },
       {
         "record_id": "call:b3512c373c35a8d3",
-        "at": "2026-09-06T06:34:08.881Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:08.881Z"
       },
       {
         "record_id": "call:7a9d083fdc3674a3",
-        "at": "2026-09-06T06:34:08.881Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:08.881Z"
       },
       {
         "record_id": "call:90f7cd79b2034e2b",
-        "at": "2026-09-06T06:34:12.552Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:12.552Z"
       },
       {
         "record_id": "call:5d1f078d3215b132",
-        "at": "2026-09-06T06:34:12.552Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:12.552Z"
       }
     ],
     "results": [],
-    "complete": false,
-    "breaks": [
-      "producer: the skill store records the owning agent, not who wrote this version; the operator of the version is unknown",
-      "results: no trusted outcome is recorded on this asset at or before the cutoff"
-    ]
+    "collected": {
+      "source_sessions": 8,
+      "naming_messages": 30,
+      "operations": 40,
+      "results": 0
+    },
+    "gaps": [
+      "结果:截止时刻前该资产上没有受信结果"
+    ],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
   },
   "domain": "reading team skills through the skill bridge by name across agents",
   "asset_claim": "get-by-name through the skill bridge returns 40401 SKILL_NOT_FOUND for a skill owned by another agent; search first and get by skill_id instead",
@@ -507,11 +436,11 @@
   "raw_model_output": "{\n  \"competence\": \"unknown\",\n  \"domain\": \"reading team skills through the skill bridge by name across agents\",\n  \"claims\": [\n    {\n      \"statement\": \"The person's search command for 'convention address reach skill bridge' was answered by the bridge endpoint with HTTP status 200 (transport-level success; application body is not shown).\",\n      \"type\": \"execution_result\",\n      \"outcome\": \"success\",\n      \"record_ids\": [\"call:c082942675850287\"],\n      \"quote\": \"2026-09-06 06:00:29.184 bridge_call search status=200 {\\\"query\\\":\\\"convention address reach skill bridge\\\"\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The person's session issued a get-by-name request for skill-bridge-http-access using URL http://127.0.0.1:8096; the bridge answered with HTTP status 200.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:38d8b59d76dd06fb\", \"call:48d6a3fa800e4126\"],\n      \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get-by-name -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversation-id: f2bf3856-ba09-466d-9f36-4ea379b10d3a' -d '{\\\"skill_name\\\": \\\"skill-bridge-http-access\\\", \\\"include_content\\\": true, \\\"include_manifest\\\": true}'\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The person's session issued a POST to the /skill/get endpoint (the cross-agent read method recommended in the authored skill) targeting skill skl-sZFb3KatWY6m, and the paired bridge call returned HTTP 200.\",\n      \"type\": \"observed_operation\",\n      \"outcome\": null,\n      \"record_ids\": [\"call:90f7cd79b2034e2b\", \"call:0059f14f9dc6d9fa\"],\n      \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get\",\n      \"relation_to_asset\": \"silent\"\n    },\n    {\n      \"statement\": \"The agent-owned skill text at skl-lUWmwEYqsZDZ@2 records 127.0.0.1:8096 as the bridge endpoint and states get-by-name is scoped to the caller's own agent, returning 40401 SKILL_NOT_FOUND for another agent's skill, so search-then-get-by-skill_id is the documented behavior.\",\n      \"type\": \"environment_applicability\",\n      \"outcome\": null,\n      \"record_ids\": [\"skill:skl-lUWmwEYqsZDZ@2\"],\n      \"quote\": \"Observed request shape for a search:\\n\\n- Endpoint: `http://127.0.0.1:8096/skill-bridge/v3/skill/search` (POST)\\n- Headers: `content-type: application/json`, `x-tdai-service-id: default`, `x-conversation-id: <uuid>`\\n- Body: `{\\\"query\\\": \\\"<search text>\\\"}`\\n\\nWhen Bash is available, call it with `curl -sSk -X POST <endpoint> -H '<headers>' -d '<json body>' --max-time <sec>`.\\n\\n### Reading skills by name vs. by id (cross-agent)\\n- `get-by-name` is scoped to your OWN agent: asking for another agent's skill returns `40401 SKILL_NOT_FOUND ... for agent <you>`. That is a scope restriction, NOT proof the skill is absent.\",\n      \"relation_to_asset\": \"supports\"\n    },\n    {\n      \"statement\": \"These records contain only transport-level proxy statuses and no harness-verified application-body outcome, so no record independently verifies that a get-by-name call actually returned the 40401 SKILL_NOT_FOUND code at or before the cutoff.\",\n      \"type\": \"coverage_unknown\",\n      \"outcome\": null,\n      \"record_ids\": [],\n      \"quote\": \"\",\n      \"relation_to_asset\": \"silent\"\n    }\n  ],\n  \"counter_evidence\": [],\n  \"asset_claim_check\": {\n    \"verdict\": \"supports\",\n    \"type\": \"environment_applicability\",\n    \"outcome\": null,\n    \"record_ids\": [\"skill:skl-lUWmwEYqsZDZ@2\"],\n    \"quote\": \"Observed request shape for a search:\\n\\n- Endpoint: `http://127.0.0.1:8096/skill-bridge/v3/skill/search` (POST)\\n- Headers: `content-type: application/json`, `x-tdai-service-id: default`, `x-conversation-id: <uuid>`\\n- Body: `{\\\"query\\\": \\\"<search text>\\\"}`\\n\\nWhen Bash is available, call it with `curl -sSk -X POST <endpoint> -H '<headers>' -d '<json body>' --max-time <sec>`.\\n\\n### Reading skills by name vs. by id (cross-agent)\\n- `get-by-name` is scoped to your OWN agent: asking for another agent's skill returns `40401 SKILL_NOT_FOUND ... for agent <you>`. That is a scope restriction, NOT proof the skill is absent.\"\n  },\n  \"summary\": \"The agent consistently exercised the HTTP skill bridge, including get-by-name on its own skill and /skill/get by skill_id after team searches, and the skill text it owns explicitly documents that get-by-name is own-agent scoped and returns 40401 for another agent's skill, recommending search + get-by-skill_id. However, at the cutoff there is no harness-verified application-level outcome confirming the 40401 behavior in an actual response body; all recorded bridge responses are transport-level 200s (or unpaired 403s). Competence is therefore not determinable from verified results, though the operational pattern and authored instructions support the asset's stated approach.\"\n}",
   "verified": {
     "competence": "unknown",
-    "competence_basis": "no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive)",
+    "competence_basis": "被评估资产 skl-lUWmwEYqsZDZ 上没有业务结果;该作者在其他资产上另有 1 条业务结果(1 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级",
     "competence_as_said": "unknown",
     "competence_downgraded": false,
     "execution_claims": {
-      "success": 1,
+      "success": 0,
       "failure": 0,
       "calls": 1,
       "ledgers": {
@@ -524,10 +453,19 @@
           "failure": 0
         },
         "own_transport": {
-          "success": 1,
+          "success": 0,
           "failure": 0
         }
       },
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 1,
+        "failure": 0
+      },
+      "scoped_to": "skl-lUWmwEYqsZDZ",
       "harness_records": 0,
       "superseded_by_a_later_row": 0,
       "cited_transport_calls": 1
@@ -537,8 +475,10 @@
       "record_ids": [],
       "quote": null,
       "strength": null,
+      "by_identity": false,
+      "note": "statement of absence; not evidence",
       "basis": [],
-      "reason": "nothing accepted supports or contradicts the asset"
+      "reason": "statement of absence; not evidence"
     },
     "asset_claim_as_said": "supports",
     "claims_kept": [
@@ -641,7 +581,7 @@
       "citations": 3,
       "execution": 1
     },
-    "summary": "competence unknown: no business-level result; transport: 1 answered 2xx, 0 not (reported, not decisive). asset claim silent. 3 claim(s) kept, 2 dropped (skill).",
+    "summary": "competence unknown: 被评估资产 skl-lUWmwEYqsZDZ 上没有业务结果;该作者在其他资产上另有 1 条业务结果(1 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim silent. 3 claim(s) kept, 2 dropped (skill).",
     "summary_as_said": "The agent consistently exercised the HTTP skill bridge, including get-by-name on its own skill and /skill/get by skill_id after team searches, and the skill text it owns explicitly documents that get-by-name is own-agent scoped and returns 40401 for another agent's skill, recommending search + get-by-skill_id. However, at the cutoff there is no harness-verified application-level outcome confirming the 40401 behavior in an actual response body; all recorded bridge responses are transport-level 200s (or unpaired 403s). Competence is therefore not determinable from verified results, though the operational pattern and authored instructions support the asset's stated approach."
   },
   "summary_for_gate": {
@@ -653,7 +593,7 @@
     "evidence_cutoff": "2026-09-06T08:47:33.000Z",
     "citations": 3,
     "execution_claims": {
-      "success": 1,
+      "success": 0,
       "failure": 0,
       "calls": 1,
       "ledgers": {
@@ -666,7 +606,7 @@
           "failure": 0
         },
         "own_transport": {
-          "success": 1,
+          "success": 0,
           "failure": 0
         }
       }
@@ -680,11 +620,11 @@
     "author_user_id": "usr-4u07qc2kuj",
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
-    "chain_complete": false,
+    "chain_complete": null,
     "pack_sha256": "bd0ab2c72016322c794636fce887a8bc327541bde5550130102b8d7cd81c82a4",
     "assessment_file": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.json"
   },
-  "rechecked_at": "2026-09-08T16:24:57.826Z",
+  "rechecked_at": "2026-09-12T10:36:02.577Z",
   "pack_sha_at_generation": "ac465d6731c2d51d807c4a16aedc36d295c10989398c07781a9262f48a048ed5",
   "pack_rebuilt": true
 }

@@ -45,7 +45,7 @@ node evaluation/tasks/exit-line-collect/report.mjs                          # �
 ## 这些数字测的是什么,不是什么
 
 无笔记 / 有笔记各 2 次只用于演示笔记能否迁移到另一个文件,不是性能对照。副本里已有正确实现可参照
-(`evaluation/gate0/verify-capture.mjs` 按真实拼写读退出行),笔记的作用是缩短定位而非提供唯一答案。
+(`evaluation/gate0/verify-capture.mjs` 按真实拼写读退出行),笔记的设计目的是帮助定位(没有单独测量定位时间,不能说已证明缩短)而非提供唯一答案。
 笔记正文点名的是另一个文件,模型把它用到这里才算迁移;没用到记 needs_review 或"未采用",照实报。
 两个消费者用户、两个任务仍由同一个人操作;`distinct_consumers=2`、`distinct_tasks=2` 说明的是闸门读到的关系,
 不是两个独立的人。

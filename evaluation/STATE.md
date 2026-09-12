@@ -182,6 +182,25 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
    `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
+## 第二人复核第二轮(2026-09-12,作者评估与两份闭环报告)已处置
+
+复核对象:`evaluation/author/`(证据包、核对器、评估)与两个闭环 REPORT。六条意见全部成立,已改在实现与生成器里:
+
+| 条 | 处置 |
+|---|---|
+| P1 作者评估在资产没有判别值时接受无关证据为"强矛盾" | 没有判别值时,**别的资产**上的结果一律记 `silent`(relevance unverifiable);同资产同版本同内容仍按身份关联(`check-citations.mjs`,先失败后通过的测试 2 个) |
+| P1 "A 的来源链完整"只是三个集合各自非空 | `chainFacts()` 取代旧 chain:去掉 `complete`,写入者作为事实保留,生产来源记 `production_link: unproven` 并写明相邻关系未验证;空集合列为 `gaps`(测试 2 个);README 的"complete"说法改写 |
+| P2 medium 是全部业务结果,不是所问领域 | 等级只由**被评估资产上**的业务结果得出,跨资产结果单列为历史(`domain_counts` / `cross_asset_history` / `scoped_to`);领域无结果 → `unknown`(测试 3 个) |
+| P2 第二任务"采用待复核 0"掩盖了一次归因待复核 | 计数改为两个口径分列:参考采纳(验收器)4/4、判定器 used+validated 3/4、仅 needs_review 1/4;并按冻结的三态口径记一次弃权,同时写明二值口径下它是 FN |
+| P2 第一任务把 v1 的解释套到 v2 的汇总上 | 按每次 apply 分别打印信号(v1:2/1/1;v2:4/2/2),并说明 v2 含第二任务的运行 |
+| P2 "缩短定位"是未经证明的收益表述 | 两份 REPORT、两份 README、PR 统一改为"设计目的是帮助定位;没有单独测量定位时间,不能说已证明缩短" |
+
+**重算结果**(`author/artifacts/assessment-recheck-2026-09-12.json`,用 `assess.mjs --recheck`,**没有重新调用模型**):
+A 对笔记 v2 medium → medium(本资产上 2 条 validated);**B 对自己候选的评估 medium → unknown**;A 的 bridge 资产 medium → low;A 的冷启动候选 medium → unknown。
+**待用户(管理员密钥,§14)**:把 B 的新评估写回 Core,否则线上那份仍是 medium:
+`bash evaluation/author/write-assessment.sh evaluation/author/artifacts/assessment-b-exit-line.json --out evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12.json`
+(注意:该脚本以 apply:true 重判闸门,会撤销手工置过的 approved;闸门只用作者评估定复核优先级,unknown → 复核优先级 high。)
+
 ## 第二人复核(2026-09-12)已完成并已处置
 
 复核对象:`attribution/CALIBRATION-batch4-reparsed-2026-09-11.md` 与主报告。五条意见全部成立,**全部改在生成器**

@@ -1,0 +1,110 @@
+{
+  "what": "第二人复核(2026-09-12)后,用 assess.mjs --recheck 在**不重新调用模型**的前提下重算全部作者评估;检查器改了两处判定边界并把能力等级按被评估资产限定",
+  "changes_in_the_checker": [
+    "没有判别值的资产:别的资产上的结果不能当支持/反驳,记 silent(relevance unverifiable);同资产同版本同内容仍按身份关联",
+    "能力等级只由被评估资产上的业务结果得出,跨资产结果作为历史单列(domain_counts / cross_asset_history / scoped_to)",
+    "证据包的 chain 改为「相关证据汇集」:去掉 complete,生产来源标 production_link=unproven,空集合列为 gaps"
+  ],
+  "competence_before_after": {
+    "assessment-a-exit-line": "medium → medium(本资产上有 2 条 validated,等级成立;29/10 条 bridge 结果移入历史)",
+    "assessment-b-exit-line": "medium → unknown(该候选自身没有业务结果;43 条其他资产结果属历史)",
+    "assessment-a-skl-sZFb3KatWY6m": "medium → low(本资产上 2 条 corrected、0 条 validated)",
+    "assessment-a-skl-ImeA29HL3Djj": "medium → unknown(候选自身无业务结果)",
+    "assessment-b-skl-lUWmwEYqsZDZ": "unknown → unknown(不变)"
+  },
+  "rows": [
+    {
+      "file": "assessment-a-exit-line.json",
+      "asset_id": "skl-pXLc38dex6Zt",
+      "competence_now": "medium",
+      "basis_now": "2 business-level success(es) (own 0, others on the author's assets 2); high is not derived without calibration;该作者在其他资产上另有 39 条业务结果(29 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+      "domain_counts": {
+        "success": 2,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 29,
+        "failure": 10
+      },
+      "asset_claim": "silent",
+      "rechecked_at": "2026-09-12T10:36:02.236Z",
+      "pack_rebuilt": false
+    },
+    {
+      "file": "assessment-b-exit-line.json",
+      "asset_id": "skl-z0V6zwphUvhB",
+      "competence_now": "unknown",
+      "basis_now": "被评估资产 skl-z0V6zwphUvhB 上没有业务结果;该作者在其他资产上另有 43 条业务结果(33 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 33,
+        "failure": 10
+      },
+      "asset_claim": "silent",
+      "rechecked_at": "2026-09-12T10:36:02.318Z",
+      "pack_rebuilt": false
+    },
+    {
+      "file": "assessment-a-skl-sZFb3KatWY6m.json",
+      "asset_id": "skl-sZFb3KatWY6m",
+      "competence_now": "low",
+      "basis_now": "2 business-level failure(s), no success (own 0, others on the author's assets 2);该作者在其他资产上另有 5 条业务结果(5 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+      "domain_counts": {
+        "success": 0,
+        "failure": 2
+      },
+      "cross_asset_history": {
+        "success": 5,
+        "failure": 0
+      },
+      "asset_claim": "contradicts",
+      "rechecked_at": "2026-09-12T10:36:02.400Z",
+      "pack_rebuilt": true
+    },
+    {
+      "file": "assessment-a-skl-ImeA29HL3Djj.json",
+      "asset_id": "skl-ImeA29HL3Djj",
+      "competence_now": "unknown",
+      "basis_now": "被评估资产 skl-ImeA29HL3Djj 上没有业务结果;该作者在其他资产上另有 7 条业务结果(5 成功 / 2 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 5,
+        "failure": 2
+      },
+      "asset_claim": "contradicts",
+      "rechecked_at": "2026-09-12T10:36:02.480Z",
+      "pack_rebuilt": true
+    },
+    {
+      "file": "assessment-b-skl-lUWmwEYqsZDZ.json",
+      "asset_id": "skl-lUWmwEYqsZDZ",
+      "competence_now": "unknown",
+      "basis_now": "被评估资产 skl-lUWmwEYqsZDZ 上没有业务结果;该作者在其他资产上另有 1 条业务结果(1 成功 / 0 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 1,
+        "failure": 0
+      },
+      "asset_claim": "silent",
+      "rechecked_at": "2026-09-12T10:36:02.577Z",
+      "pack_rebuilt": true
+    }
+  ],
+  "live_core_state": {
+    "written_before": "assessment-write-{a,b}-exit-line.json:A 与 B 的评估已由管理员签名写入 Core(2026-09-11),其中 B 的写入值是 competence=medium",
+    "now_superseded": "B 的那份与重算结果不一致(unknown);A 的仍一致(medium)",
+    "who_writes": "写入要管理员密钥,按 CLAUDE.md §14 由用户执行,不由本会话代跑",
+    "command": "bash evaluation/author/write-assessment.sh evaluation/author/artifacts/assessment-b-exit-line.json --out evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12.json",
+    "caution": "write-assessment.sh 会以 apply:true 重判闸门,会撤销手工置过的 approved;闸门读作者评估只定复核优先级(reported, not used),competence unknown → 复核优先级 high"
+  },
+  "recorded_at": "2026-09-12T10:37:05Z"
+}

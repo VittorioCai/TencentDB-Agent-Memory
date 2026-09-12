@@ -22,22 +22,32 @@
   "chain": {
     "asset_version": 1,
     "content_hash": "2baf80fc66fffad7c500e4690589e62b",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
     "producer": {
       "asset_owner_user_id": "usr-4u07qc2kuj",
       "owner_agent_id": "agt-5e0y4l8a7a",
       "wrote_this_version": "usr-4u07qc2kuj",
       "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v1"
     },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
     "source_sessions": [],
     "naming_messages": [],
     "operations": [],
     "results": [],
-    "complete": false,
-    "breaks": [
-      "source session: no L0 message at or before the cutoff names the asset or its tokens",
-      "operations: no proxy-observed call carries the asset's tokens",
-      "results: no trusted outcome is recorded on this asset at or before the cutoff"
-    ]
+    "collected": {
+      "source_sessions": 0,
+      "naming_messages": 0,
+      "operations": 0,
+      "results": 0
+    },
+    "gaps": [
+      "来源会话:截止时刻前没有 L0 消息提到该资产或它的判别值",
+      "操作:没有任何 proxy 观察到的调用带着该资产的判别值",
+      "结果:截止时刻前该资产上没有受信结果"
+    ],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
   },
   "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
   "asset_claim": "CodeBuddy spells the exit-status label 'Exit Code:' (capital C) in real tool results; a parser that only accepts 'Exit code:' reads null and records a timed-out call (curl -s without -S, exit 28) as unreadable instead of timed out, and curl 52/56 the same way; making the label case-insensitive fixes it, and a regression test should cover the capital spelling for 28, 52, 56 and the lower-case spelling",
@@ -713,28 +723,37 @@
   },
   "raw_model_output": "{\"competence\": \"unknown\",\n \"domain\": \"reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it\",\n \"claims\": [\n  {\"statement\": \"The person's bridge search command (model_intent call:4b048ab8306eadae) was answered by the bridge at transport level: the paired bridge_call row records status 200.\",\n   \"type\": \"execution_result\", \"outcome\": \"success\",\n   \"record_ids\": [\"4b048ab8306eadae\", \"da808c25b6beb119\"],\n   \"quote\": \"bridge_call search status=200\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The person deliberately echoed the shell exit code of a reachability probe under a self-chosen label EXIT_CODE=, i.e. they captured exit status via an explicit echo rather than any tool-result label.\",\n   \"type\": \"observed_operation\", \"outcome\": null,\n   \"record_ids\": [\"2c00c3073830cfd7\"],\n   \"quote\": \"EXIT_CODE=$rc ELAPSED=$((end-start))s\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The person ran repeated curl probes against the second documented bridge endpoint 127.0.0.1:47318 with --max-time 15 and echoed the shell exit code afterwards.\",\n   \"type\": \"observed_operation\", \"outcome\": null,\n   \"record_ids\": [\"54d90ed05a2c4191\"],\n   \"quote\": \"http://127.0.0.1:47318/skill-bridge/v3/skill/search\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The person ran curl probes against the primary bridge endpoint http://127.0.0.1:8096/skill-bridge/v3/... throughout the recorded sessions.\",\n   \"type\": \"observed_operation\", \"outcome\": null,\n   \"record_ids\": [\"4b048ab8306eadae\"],\n   \"quote\": \"curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/search\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"In this environment CodeBuddy persists tool results as files under ~/.codebuddy/projects/<project>/<session>/tool-results/*.txt, which the person read back.\",\n   \"type\": \"environment_applicability\", \"outcome\": null,\n   \"record_ids\": [\"04f37816e717d980\"],\n   \"quote\": \"/tool-results/call_01_84eRR2hETrcMKjfsDlIm2577.txt\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The reachability probes in this environment target host:port pairs 10.244.7.19:8096 (endpoint-a) and 127.0.0.1:47318 (endpoint-b), with 127.0.0.1:8096 as the local bridge for skill search.\",\n   \"type\": \"environment_applicability\", \"outcome\": null,\n   \"record_ids\": [\"cdfb2b9345812611\"],\n   \"quote\": \"curl -sSk --max-time 15 -X POST http://10.244.7.19:8096\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"A harness-verified result exists for this user on a different asset: the outcome record marks skl-sZFb3KatWY6m v2 as corrected(wrong).\",\n   \"type\": \"execution_result\", \"outcome\": \"failure\",\n   \"record_ids\": [\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\"],\n   \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"A harness-verified result exists for this user on a different asset: the outcome record marks skl-oBaDO5CceKnr v2 as validated.\",\n   \"type\": \"execution_result\", \"outcome\": \"success\",\n   \"record_ids\": [\"outcome:341c6cb2-1bd8-4190-9d21-d10c389100ea\"],\n   \"quote\": \"validated on asset skl-oBaDO5CceKnr v2\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The recorded activity of this user in the domain is locating/reading convention skills and probing documented bridge addresses under bounded timeouts; nothing in the records shows them inspecting, parsing or testing a tool-result exit-status label.\",\n   \"type\": \"model_inference\", \"outcome\": null,\n   \"record_ids\": [\"cdfb2b9345812611\", \"4b048ab8306eadae\"],\n   \"quote\": \"curl -sSk --max-time 15 -X POST http://10.244.7.19:8096\", \"relation_to_asset\": \"silent\"},\n  {\"statement\": \"The records contain no CodeBuddy tool-result text that spells the exit-status label (neither 'Exit Code:' nor 'Exit code:'), no acceptance-parser source, and no regression test covering the capital and lower-case spellings for curl exits 28/52/56; no trusted outcome is recorded on the exit-status-label asset at or before the cutoff.\",\n   \"type\": \"coverage_unknown\", \"outcome\": null, \"record_ids\": [], \"quote\": \"\", \"relation_to_asset\": \"silent\"}\n ],\n \"counter_evidence\": [\n  {\"statement\": \"The only harness-verified outcomes in the pack concern bridge-endpoint convention assets (skl-sZFb3KatWY6m marked corrected(wrong), skl-oBaDO5CceKnr marked validated); they neither name the exit-status label spelling nor the parser behaviour, so they cut against any reading that treats this user's record as evidence about that label.\",\n   \"type\": \"execution_result\", \"outcome\": \"failure\",\n   \"record_ids\": [\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\"],\n   \"quote\": \"corrected(wrong) on asset skl-sZFb3KatWY6m v2\", \"relation_to_asset\": \"silent\"}\n ],\n \"asset_claim_check\": {\"verdict\": \"silent\", \"type\": \"coverage_unknown\", \"outcome\": null, \"record_ids\": [], \"quote\": \"\"},\n \"summary\": \"The pack's chain establishes no session, no operation and no trusted result for asset skl-z0V6zwphUvhB: nothing quotes a CodeBuddy tool-result exit-status line, no parser or regression test for the label's casing appears, and no harness outcome touches that asset. What the records do show is this user repeatedly searching for bridge convention skills and probing 127.0.0.1:8096 / 10.244.7.19:8096 / 127.0.0.1:47318 with curl under bounded timeouts, capturing exit status only via their own echo labels. Their harness results concern separate bridge-endpoint assets. Competence in reading a CodeBuddy exit-status label and making an acceptance parser case-insensitive is therefore unknown.\"}",
   "verified": {
-    "competence": "medium",
-    "competence_basis": "32 business-level success(es) (own 32, others on the author's assets 0), 10 failure(s) beside them; transport: 1 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration",
+    "competence": "unknown",
+    "competence_basis": "被评估资产 skl-z0V6zwphUvhB 上没有业务结果;该作者在其他资产上另有 43 条业务结果(33 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级",
     "competence_as_said": "unknown",
-    "competence_downgraded": true,
+    "competence_downgraded": false,
     "execution_claims": {
-      "success": 33,
-      "failure": 10,
+      "success": 0,
+      "failure": 0,
       "calls": 43,
       "ledgers": {
         "own_business": {
-          "success": 32,
-          "failure": 10
+          "success": 0,
+          "failure": 0
         },
         "others_on_assets": {
           "success": 0,
           "failure": 0
         },
         "own_transport": {
-          "success": 1,
+          "success": 0,
           "failure": 0
         }
       },
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 33,
+        "failure": 10
+      },
+      "scoped_to": "skl-z0V6zwphUvhB",
       "harness_records": 42,
       "superseded_by_a_later_row": 1,
       "cited_transport_calls": 1
@@ -744,8 +763,10 @@
       "record_ids": [],
       "quote": null,
       "strength": null,
+      "by_identity": false,
+      "note": "statement of absence; not evidence",
       "basis": [],
-      "reason": "nothing accepted supports or contradicts the asset"
+      "reason": "statement of absence; not evidence"
     },
     "asset_claim_as_said": "silent",
     "claims_kept": [
@@ -933,32 +954,32 @@
       "citations": 9,
       "execution": 4
     },
-    "summary": "competence medium: 32 business-level success(es) (own 32, others on the author's assets 0), 10 failure(s) beside them; transport: 1 answered 2xx, 0 not (reported, not decisive); high is not derived without calibration. asset claim silent. 10 claim(s) kept, 0 dropped.",
+    "summary": "competence unknown: 被评估资产 skl-z0V6zwphUvhB 上没有业务结果;该作者在其他资产上另有 43 条业务结果(33 成功 / 10 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim silent. 10 claim(s) kept, 0 dropped.",
     "summary_as_said": "The pack's chain establishes no session, no operation and no trusted result for asset skl-z0V6zwphUvhB: nothing quotes a CodeBuddy tool-result exit-status line, no parser or regression test for the label's casing appears, and no harness outcome touches that asset. What the records do show is this user repeatedly searching for bridge convention skills and probing 127.0.0.1:8096 / 10.244.7.19:8096 / 127.0.0.1:47318 with curl under bounded timeouts, capturing exit status only via their own echo labels. Their harness results concern separate bridge-endpoint assets. Competence in reading a CodeBuddy exit-status label and making an acceptance parser case-insensitive is therefore unknown."
   },
   "summary_for_gate": {
     "schema": "author-assessment-summary-v2",
-    "competence": "medium",
+    "competence": "unknown",
     "competence_as_said": "unknown",
     "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
     "assessed_at": "2026-09-11T18:10:05.835Z",
     "evidence_cutoff": "2026-09-11T18:00:00.000Z",
     "citations": 9,
     "execution_claims": {
-      "success": 33,
-      "failure": 10,
+      "success": 0,
+      "failure": 0,
       "calls": 43,
       "ledgers": {
         "own_business": {
-          "success": 32,
-          "failure": 10
+          "success": 0,
+          "failure": 0
         },
         "others_on_assets": {
           "success": 0,
           "failure": 0
         },
         "own_transport": {
-          "success": 1,
+          "success": 0,
           "failure": 0
         }
       }
@@ -972,8 +993,9 @@
     "author_user_id": "usr-4u07qc2kuj",
     "asset_version": 1,
     "content_hash": "2baf80fc66fffad7c500e4690589e62b",
-    "chain_complete": false,
+    "chain_complete": null,
     "pack_sha256": "238738d1d154cae802ca4ba04fcf313dc19cdb9a56ac900ed7fd6555c401a1ad",
-    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/assessment-b-exit-line.json"
-  }
+    "assessment_file": "evaluation/author/artifacts/assessment-b-exit-line.json"
+  },
+  "rechecked_at": "2026-09-12T10:36:02.318Z"
 }

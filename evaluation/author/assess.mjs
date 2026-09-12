@@ -108,7 +108,7 @@ export function buildPrompt({ pack, chosen, domain, assetClaim, assetId }) {
     `Domain to assess: ${domain}`,
     `Asset claim to check${assetId ? ` (asset ${assetId}${pack.asset?.version ? ` v${pack.asset.version}` : ""})` : ""}: ${assetClaim}`,
     `Evidence cutoff: ${pack.evidence_cutoff} — every record below is dated at or before it.`,
-    pack.chain ? `Chain the pack could establish for the asset: sessions ${pack.chain.source_sessions.length}, observed operations ${pack.chain.operations.length}, results ${pack.chain.results.length}; breaks: ${pack.chain.breaks.join(" | ")}` : "",
+    pack.chain ? `Related evidence around v${pack.chain.asset_version}: wrote_this_version ${pack.chain.producer?.wrote_this_version ?? "unknown"} / agent ${pack.chain.producer?.owner_agent_id ?? "?"}; sessions ${pack.chain.collected?.source_sessions ?? 0}; operations ${pack.chain.collected?.operations ?? 0}; results ${pack.chain.collected?.results ?? 0}. Production link: UNPROVEN — ${pack.chain.production_note ?? "adjacency between records is not verified"}${(pack.chain.gaps ?? []).length ? `. Gaps: ${pack.chain.gaps.join("; ")}` : ""}` : null,
     pack.pairing ? `Call pairing: ${pack.pairing.paired} result(s) tied to their command, ${pack.pairing.ambiguous} ambiguous, ${pack.pairing.unpaired} unpaired, ${pack.pairing.intents_without_result} command(s) with no observed result.` : "",
     "",
     `Records (${chosen.length} of ${pack.record_count} in the pack; ids are the citation keys):`,
@@ -163,7 +163,7 @@ function renderMd({ pack, verified, domain, assessedAt, modelName, sel }) {
     `**Asset claim check: ${verified.asset_claim_check.verdict}**${verified.asset_claim_check.strength ? ` (${verified.asset_claim_check.strength})` : ""}${verified.asset_claim_check.record_ids.length ? ` — ${verified.asset_claim_check.record_ids.join(", ")}` : ""}${verified.asset_claim_check.quote ? ` — "${verified.asset_claim_check.quote}"` : ""} (model said ${verified.asset_claim_as_said ?? "nothing"})`, "",
     `Derived summary: ${verified.summary}`, "",
     `Model summary (as said): ${verified.summary_as_said}`, "",
-    pack.chain ? `Chain: producer ${pack.chain.producer.owner_user_id} / ${pack.chain.producer.owner_agent_id} (operator ${pack.chain.producer.operator}); sessions ${pack.chain.source_sessions.length}; operations ${pack.chain.operations.length}; results ${pack.chain.results.length}. Breaks: ${pack.chain.breaks.join(" | ")}` : "",
+    pack.chain ? `Related evidence (v${pack.chain.asset_version}): wrote_this_version ${pack.chain.producer?.wrote_this_version ?? "unknown"} / agent ${pack.chain.producer?.owner_agent_id ?? "?"}; sessions ${pack.chain.collected?.source_sessions ?? 0}; operations ${pack.chain.collected?.operations ?? 0}; results ${pack.chain.collected?.results ?? 0}; production link UNPROVEN (adjacency between records not verified)${(pack.chain.gaps ?? []).length ? `; gaps: ${pack.chain.gaps.join(" | ")}` : ""}` : "",
     "",
     `## Surviving claims (${verified.claims_kept.length})`,
     ...verified.claims_kept.map((c) => `- [${c.group} · ${c.type}${c.outcome ? ` · ${c.outcome}` : ""}${c.relation !== "silent" ? ` · ${c.relation} (${c.strength})` : ""}] ${c.statement}${c.found_in ? `\n  - ${c.record_ids.join(", ")} (${c.evidence_class}) — "${c.quote}"` : ""}`),
@@ -199,6 +199,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     let raw = {}; try { raw = JSON.parse(prev.raw_model_output); } catch { raw = {}; }
     const verified = checkAssessment(raw, packMap, opts);
     prev.verified = verified;
+    // 包里的 chain 快照也跟着更新:否则评估文件里留着旧形状(operator: unknown、complete),
+    // 与包本身矛盾(2026-09-12 第二人复核)。
+    if (pack.chain) prev.chain = pack.chain;
     prev.rechecked_at = new Date().toISOString();
     prev.summary_for_gate = summaryForGate({ pack, verified, domain: prev.domain, assessedAt: prev.assessed_at, outFile: a.recheck });
     writeFileSync(a.recheck, JSON.stringify(prev, null, 2) + "\n");

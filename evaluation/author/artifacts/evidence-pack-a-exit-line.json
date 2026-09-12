@@ -35,34 +35,40 @@
   "chain": {
     "asset_version": 2,
     "content_hash": "b230f087c6f958348d5fe6406693bdc2",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
     "producer": {
       "asset_owner_user_id": "usr-n68ea5ythq",
       "owner_agent_id": "agt-5e4hna56j9",
       "wrote_this_version": "usr-n68ea5ythq",
       "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v2"
     },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
     "source_sessions": [],
     "naming_messages": [],
     "operations": [],
     "results": [
       {
         "record_id": "outcome:6d8946ac-c5ac-457a-aeac-f38c13f48ced",
-        "state": "validated",
-        "corrected_reason": null,
         "at": "2026-09-11T15:51:10.518Z"
       },
       {
         "record_id": "outcome:591f0db4-6b17-473e-9523-006f70889287",
-        "state": "validated",
-        "corrected_reason": null,
         "at": "2026-09-11T15:50:06.824Z"
       }
     ],
-    "complete": false,
-    "breaks": [
-      "source session: no L0 message at or before the cutoff names the asset or its tokens",
-      "operations: no proxy-observed call carries the asset's tokens"
-    ]
+    "collected": {
+      "source_sessions": 0,
+      "naming_messages": 0,
+      "operations": 0,
+      "results": 2
+    },
+    "gaps": [
+      "来源会话:截止时刻前没有 L0 消息提到该资产或它的判别值",
+      "操作:没有任何 proxy 观察到的调用带着该资产的判别值"
+    ],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
   },
   "pairing": {
     "paired": 3,
@@ -926,7 +932,7 @@
         ],
         "head_version": 1,
         "version_at_cutoff": 1,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {
@@ -1610,7 +1616,7 @@
         ],
         "head_version": 4,
         "version_at_cutoff": 4,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {
@@ -1631,7 +1637,7 @@
         ],
         "head_version": 4,
         "version_at_cutoff": 4,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {
@@ -2426,7 +2432,7 @@
         "tokens": [],
         "head_version": 2,
         "version_at_cutoff": 2,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     }
   ]

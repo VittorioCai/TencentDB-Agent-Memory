@@ -249,7 +249,14 @@ export function verifyFact(claim, pack, foundIn, assetTokens = [], assetId = nul
   if (relation !== "silent") {
     if (type === "model_inference" || type === "coverage_unknown") return { ok: false, reason: `a ${type} claim cannot support or contradict the asset`, type };
     if (assetId && rec.kind === "skill" && rec.meta?.skill_id === assetId) return { ok: false, reason: `${foundIn} is the asset's own text; it cannot support or contradict its own claim`, type };
-    if (assetTokens.length > 0) {
+    if (assetTokens.length === 0) {
+      // 2026-09-12 第二人复核:原来没有判别值时整段跳过相关性检查——于是**别的资产**上一条
+      // 真实的失败记录也能被说成"矛盾/强"。引文是真的,两件事无关。同资产同版本同内容的
+      // 记录已在上面按身份关联并返回;走到这里的都不是,相关性无从验证,只能记 silent。
+      return { ok: true, type, outcome, relation: "silent", strength: null,
+        note: `相关性无法验证(relevance unverifiable):${foundIn} 不在被评估资产${assetId ? `(${assetId})` : ""}上,而该资产没有可用于核对的判别值(tokens 为空)。引文属实,但它支持或反驳的是别的东西,按 silent 记` };
+    }
+    {
       const hay = fold(rec.text);
       const q = fold(claim?.quote);
       // Exact: 10.244.7.19:9999 failing says nothing about 10.244.7.19:8096,
@@ -283,17 +290,33 @@ export function ledgerOf(rec, authorId) {
  * results (the author's own, or others' on the author's assets) decide;
  * transport results are reported. `high` is never derived.
  */
-export function deriveCompetence(execCalls) {
+export function deriveCompetence(execCalls, { assetId = null } = {}) {
+  // 2026-09-12 第二人复核:等级原来统计作者的**全部**业务结果,不按被评估的领域筛选——
+  // 39 条 bridge 地址结果也能把"退出码解析能力"读成 medium。评价范围不同,不是校准问题。
+  // 现在只有**被评估资产上**的业务结果决定等级;其余留作历史,单独报,不参与定级。
+  const inDomain = (c) => !assetId || c.asset_id === assetId;
+  const history = { success: 0, failure: 0 };
+  for (const c of execCalls) {
+    if (inDomain(c)) continue;
+    if (c.outcome === "success") history.success += 1; else if (c.outcome === "failure") history.failure += 1;
+  }
+  const scoped = execCalls.filter(inDomain);
   const ledgers = { own_business: { success: 0, failure: 0 }, others_on_assets: { success: 0, failure: 0 }, own_transport: { success: 0, failure: 0 } };
-  for (const c of execCalls) { const l = ledgers[c.ledger ?? "own_transport"]; if (c.outcome === "success") l.success += 1; else if (c.outcome === "failure") l.failure += 1; }
+  for (const c of scoped) { const l = ledgers[c.ledger ?? "own_transport"]; if (c.outcome === "success") l.success += 1; else if (c.outcome === "failure") l.failure += 1; }
   const bSuccess = ledgers.own_business.success + ledgers.others_on_assets.success;
   const bFailure = ledgers.own_business.failure + ledgers.others_on_assets.failure;
   const success = bSuccess + ledgers.own_transport.success;
   const failure = bFailure + ledgers.own_transport.failure;
   const transportNote = ledgers.own_transport.success + ledgers.own_transport.failure ? `; transport: ${ledgers.own_transport.success} answered 2xx, ${ledgers.own_transport.failure} not (reported, not decisive)` : "";
-  if (bSuccess + bFailure === 0) return { competence: "unknown", success, failure, ledgers, basis: `no business-level result${transportNote || "; no execution-grade claim survived"}` };
-  if (bSuccess === 0) return { competence: "low", success, failure, ledgers, basis: `${bFailure} business-level failure(s), no success (own ${ledgers.own_business.failure}, others on the author's assets ${ledgers.others_on_assets.failure})${transportNote}` };
-  return { competence: "medium", success, failure, ledgers, basis: `${bSuccess} business-level success(es) (own ${ledgers.own_business.success}, others on the author's assets ${ledgers.others_on_assets.success})${bFailure ? `, ${bFailure} failure(s) beside them` : ""}${transportNote}; high is not derived without calibration` };
+  const domain_counts = { success: bSuccess, failure: bFailure };
+  const history_counts = { ...history };
+  const historyNote = assetId && (history.success + history.failure)
+    ? `;该作者在其他资产上另有 ${history.success + history.failure} 条业务结果(${history.success} 成功 / ${history.failure} 纠错),属历史记录,与本次评估的领域不同,不参与定级`
+    : "";
+  const extra = { domain_counts, history_counts, scoped_to: assetId };
+  if (bSuccess + bFailure === 0) return { competence: "unknown", success, failure, ledgers, ...extra, basis: `${assetId ? `被评估资产 ${assetId} 上没有业务结果` : "no business-level result"}${historyNote}${transportNote || (assetId ? "" : "; no execution-grade claim survived")}` };
+  if (bSuccess === 0) return { competence: "low", success, failure, ledgers, ...extra, basis: `${bFailure} business-level failure(s), no success (own ${ledgers.own_business.failure}, others on the author's assets ${ledgers.others_on_assets.failure})${transportNote}${historyNote}` };
+  return { competence: "medium", success, failure, ledgers, ...extra, basis: `${bSuccess} business-level success(es) (own ${ledgers.own_business.success}, others on the author's assets ${ledgers.others_on_assets.success})${bFailure ? `, ${bFailure} failure(s) beside them` : ""}${transportNote}; high is not derived without calibration${historyNote}` };
 }
 
 /**
@@ -371,7 +394,7 @@ export function checkAssessment(raw, pack, opts = {}) {
   let ledgerRows;
   if (stamped) {
     ledgerRows = harness.filter(({ rec }) => rec.meta.final !== false)
-      .map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "core" }));
+      .map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), asset_id: rec.meta?.asset_id ?? null, from: "core" }));
   } else {
     const byCallFinal = new Map();
     const stamp = (rec) => String(rec.meta?.recorded_at ?? rec.at ?? "");
@@ -384,7 +407,7 @@ export function checkAssessment(raw, pack, opts = {}) {
       const prev = byCallFinal.get(key);
       if (!prev || stamp(rec) >= stamp(prev.rec)) byCallFinal.set(key, { id, rec });
     }
-    ledgerRows = [...byCallFinal.values()].map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), from: "pack" }));
+    ledgerRows = [...byCallFinal.values()].map(({ id, rec }) => ({ found_in: id, outcome: recordedOutcome(rec), ledger: ledgerOf(rec, authorId), asset_id: rec.meta?.asset_id ?? null, from: "pack" }));
   }
   const supersededCalls = harness.length - ledgerRows.length;
   // Cited calls carry the transport ledger; with no author known, cited
@@ -392,7 +415,7 @@ export function checkAssessment(raw, pack, opts = {}) {
   const transport = [...byCall.values()].filter((k) => recordOf(pack, k.found_in).evidence_class !== "harness_verified").map((k) => ({ ...k, ledger: "own_transport", from: "cited" }));
   const citedHarness = authorId ? [] : [...byCall.values()].filter((k) => recordOf(pack, k.found_in).evidence_class === "harness_verified").map((k) => ({ ...k, ledger: "others_on_assets", from: "cited" }));
   const execCalls = [...ledgerRows, ...citedHarness, ...transport];
-  const derived = deriveCompetence(execCalls);
+  const derived = deriveCompetence(execCalls, { assetId });
   const saidRaw = normalizeCompetence(raw?.competence);
   const said = COMPETENCE.has(saidRaw) ? saidRaw : "unknown";
 
@@ -402,9 +425,15 @@ export function checkAssessment(raw, pack, opts = {}) {
   const pick = (list) => list.find((k) => k.strength === "strong") ?? list[0];
   let assetClaim;
   const basisOf = (list) => [...new Set(list.map((k) => k.found_in))];
-  if (contradicts.length) { const c = pick(contradicts); assetClaim = { verdict: "contradicts", record_ids: c.record_ids, quote: c.quote, strength: c.strength, basis: basisOf(contradicts) }; }
-  else if (supports.length) { const s = pick(supports); assetClaim = { verdict: "supports", record_ids: s.record_ids, quote: s.quote, strength: s.strength, basis: basisOf(supports) }; }
-  else assetClaim = { verdict: "silent", record_ids: [], quote: null, strength: null, basis: [], reason: acc ? "nothing accepted supports or contradicts the asset" : "not asserted" };
+  // by_identity / note 一起带出来:同资产同版本按身份关联,和"引文里出现了判别值"不是一回事,
+  // 读的人要能分开(2026-09-12 第二人复核)。
+  if (contradicts.length) { const c = pick(contradicts); assetClaim = { verdict: "contradicts", record_ids: c.record_ids, quote: c.quote, strength: c.strength, by_identity: c.by_identity ?? false, note: c.note ?? null, basis: basisOf(contradicts) }; }
+  else if (supports.length) { const s = pick(supports); assetClaim = { verdict: "supports", record_ids: s.record_ids, quote: s.quote, strength: s.strength, by_identity: s.by_identity ?? false, note: s.note ?? null, basis: basisOf(supports) }; }
+  else {
+    // silent 的理由要带上:被丢掉/中和的那条说了什么,读的人才知道是"没人提"还是"提了但无法验证相关性"。
+    const neutralised = kept.find((k) => k.group === "asset_claim_check" && k.relation === "silent" && k.note) ?? kept.find((k) => k.relation === "silent" && k.note);
+    assetClaim = { verdict: "silent", record_ids: [], quote: null, strength: null, by_identity: false, note: neutralised?.note ?? null, basis: [], reason: acc ? (neutralised?.note ?? "nothing accepted supports or contradicts the asset") : "not asserted" };
+  }
   const accSaid = acc ? normalizeVerdict(acc.verdict) : null;
 
   const summary = [
@@ -418,7 +447,7 @@ export function checkAssessment(raw, pack, opts = {}) {
     competence_basis: derived.basis,
     competence_as_said: said,
     competence_downgraded: derived.competence !== said,
-    execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, harness_records: ledgerRows.length, superseded_by_a_later_row: supersededCalls, cited_transport_calls: transport.length },
+    execution_claims: { success: derived.success, failure: derived.failure, calls: execCalls.length, ledgers: derived.ledgers, domain_counts: derived.domain_counts ?? null, cross_asset_history: derived.history_counts ?? null, scoped_to: derived.scoped_to ?? null, harness_records: ledgerRows.length, superseded_by_a_later_row: supersededCalls, cited_transport_calls: transport.length },
     asset_claim_check: assetClaim,
     asset_claim_as_said: accSaid,
     claims_kept: kept,

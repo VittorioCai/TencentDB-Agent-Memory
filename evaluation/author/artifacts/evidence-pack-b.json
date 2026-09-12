@@ -32,12 +32,16 @@
   "chain": {
     "asset_version": 3,
     "content_hash": "50636f458d57384d9035dd04a27fadba",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
     "producer": {
       "asset_owner_user_id": "usr-4u07qc2kuj",
       "owner_agent_id": "agt-5e0y4l8a7a",
       "wrote_this_version": "usr-4u07qc2kuj",
       "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v3"
     },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
     "source_sessions": [
       "17724612-b90b-4fe5-a7cd-97ef14be9b4f",
       "f2bf3856-ba09-466d-9f36-4ea379b10d3a",
@@ -83,250 +87,176 @@
     "operations": [
       {
         "record_id": "call:4b048ab8306eadae",
-        "at": "2026-09-05T07:25:34.144Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:25:34.144Z"
       },
       {
         "record_id": "call:8c7f7ca3c8b99c9c",
-        "at": "2026-09-05T07:26:47.951Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:26:47.951Z"
       },
       {
         "record_id": "call:f1f09e70c761e061",
-        "at": "2026-09-05T07:28:23.791Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:28:23.791Z"
       },
       {
         "record_id": "call:063d9b22365fb801",
-        "at": "2026-09-05T07:29:38.271Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:29:38.271Z"
       },
       {
         "record_id": "call:4fa3b9a0349c4a0c",
-        "at": "2026-09-05T07:30:05.979Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:30:05.979Z"
       },
       {
         "record_id": "call:fe5216a358f100dc",
-        "at": "2026-09-05T07:30:30.478Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T07:30:30.478Z"
       },
       {
         "record_id": "call:0ae7828bc4301fad",
-        "at": "2026-09-05T23:35:52.390Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:52.390Z"
       },
       {
         "record_id": "call:25c1ccb1f661e388",
-        "at": "2026-09-05T23:35:55.880Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:55.880Z"
       },
       {
         "record_id": "call:842563147fbeb5c6",
-        "at": "2026-09-05T23:35:55.880Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:35:55.880Z"
       },
       {
         "record_id": "call:2764185c0de4abd8",
-        "at": "2026-09-05T23:36:07.133Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:07.133Z"
       },
       {
         "record_id": "call:832047ea6ed25577",
-        "at": "2026-09-05T23:36:07.133Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:07.133Z"
       },
       {
         "record_id": "call:e8282d03743488dd",
-        "at": "2026-09-05T23:36:15.504Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:15.504Z"
       },
       {
         "record_id": "call:ff3c4702ebc1b798",
-        "at": "2026-09-05T23:36:15.504Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:15.504Z"
       },
       {
         "record_id": "call:b22b2109b835d793",
-        "at": "2026-09-05T23:36:28.316Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:28.316Z"
       },
       {
         "record_id": "call:5bf9dfdecfed90eb",
-        "at": "2026-09-05T23:36:28.316Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:28.316Z"
       },
       {
         "record_id": "call:2cfb3793485b09ba",
-        "at": "2026-09-05T23:36:42.489Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:36:42.489Z"
       },
       {
         "record_id": "call:4dd3046104707eea",
-        "at": "2026-09-05T23:37:50.601Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:37:50.601Z"
       },
       {
         "record_id": "call:3e50b58910c2b91c",
-        "at": "2026-09-05T23:38:53.590Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-05T23:38:53.590Z"
       },
       {
         "record_id": "call:33b29b4140ec5944",
-        "at": "2026-09-06T05:48:20.634Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:20.634Z"
       },
       {
         "record_id": "call:e4b8f55b8ee4919e",
-        "at": "2026-09-06T05:48:20.634Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:20.634Z"
       },
       {
         "record_id": "call:c854c7023e0f41c5",
-        "at": "2026-09-06T05:48:46.076Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:46.076Z"
       },
       {
         "record_id": "call:c47fdcad9d2133d4",
-        "at": "2026-09-06T05:48:48.321Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T05:48:48.321Z"
       },
       {
         "record_id": "call:efe6066ceb034f83",
-        "at": "2026-09-06T06:00:29.068Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:29.068Z"
       },
       {
         "record_id": "call:38d8b59d76dd06fb",
-        "at": "2026-09-06T06:00:29.068Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:29.068Z"
       },
       {
         "record_id": "call:48d6a3fa800e4126",
-        "at": "2026-09-06T06:00:29.186Z",
-        "status": 200,
-        "kind": "bridge_call"
+        "at": "2026-09-06T06:00:29.186Z"
       },
       {
         "record_id": "call:72482f15da036b02",
-        "at": "2026-09-06T06:00:33.963Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:33.963Z"
       },
       {
         "record_id": "call:496b174e49843b9d",
-        "at": "2026-09-06T06:00:33.963Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:33.963Z"
       },
       {
         "record_id": "call:b395c72bd3c78f2a",
-        "at": "2026-09-06T06:00:41.913Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:41.913Z"
       },
       {
         "record_id": "call:4e908750a6b50288",
-        "at": "2026-09-06T06:00:41.913Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:41.913Z"
       },
       {
         "record_id": "call:0021de1e82f612a7",
-        "at": "2026-09-06T06:00:48.777Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:48.777Z"
       },
       {
         "record_id": "call:5daf88613f7b036c",
-        "at": "2026-09-06T06:00:48.777Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:00:48.777Z"
       },
       {
         "record_id": "call:389cafc567cd3b98",
-        "at": "2026-09-06T06:01:00.001Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:00.001Z"
       },
       {
         "record_id": "call:acbde3d5e1c77e30",
-        "at": "2026-09-06T06:01:00.001Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:00.001Z"
       },
       {
         "record_id": "call:d6c754e2cc1855c5",
-        "at": "2026-09-06T06:01:05.587Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:05.587Z"
       },
       {
         "record_id": "call:f7ac8e50357bf3e3",
-        "at": "2026-09-06T06:01:08.551Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:08.551Z"
       },
       {
         "record_id": "call:7da1441df6f16b51",
-        "at": "2026-09-06T06:01:08.551Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:01:08.551Z"
       },
       {
         "record_id": "call:b3512c373c35a8d3",
-        "at": "2026-09-06T06:34:08.881Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:08.881Z"
       },
       {
         "record_id": "call:7a9d083fdc3674a3",
-        "at": "2026-09-06T06:34:08.881Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:08.881Z"
       },
       {
         "record_id": "call:90f7cd79b2034e2b",
-        "at": "2026-09-06T06:34:12.552Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:12.552Z"
       },
       {
         "record_id": "call:5d1f078d3215b132",
-        "at": "2026-09-06T06:34:12.552Z",
-        "status": 0,
-        "kind": "model_intent"
+        "at": "2026-09-06T06:34:12.552Z"
       }
     ],
     "results": [],
-    "complete": false,
-    "breaks": [
-      "results: no trusted outcome is recorded on this asset at or before the cutoff"
-    ]
+    "collected": {
+      "source_sessions": 8,
+      "naming_messages": 30,
+      "operations": 40,
+      "results": 0
+    },
+    "gaps": [
+      "结果:截止时刻前该资产上没有受信结果"
+    ],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
   },
   "pairing": {
     "paired": 19,
@@ -1836,7 +1766,7 @@
         ],
         "head_version": 3,
         "version_at_cutoff": 2,
-        "operator": "unknown: the skill store records the owning agent, not who wrote each version"
+        "writer_field": "per-version writer is on the version row (skills.user_id, returned as owner_user_id by /v3/skill/versions); see chain.producer.wrote_this_version"
       }
     },
     {

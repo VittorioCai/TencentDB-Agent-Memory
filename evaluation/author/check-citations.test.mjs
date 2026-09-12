@@ -401,6 +401,66 @@ test("REPRO: a superseded result cannot contradict ANOTHER asset that shares the
   const other = checkAssessment(cite, rows, { assetTokens: tokens, assetId: "skl-c", assetVersion: 1, authorId: "usr-a" });
   assert.equal(other.asset_claim_check.verdict, "silent");
   assert.match(other.claims_kept[0].note, /superseded/);
-  // And the split is gone: the ledger counts the success, the prose says nothing.
-  assert.deepEqual(other.execution_claims.ledgers.others_on_assets, { success: 1, failure: 0 });
+  // And the split is gone: the row is counted once, as the success it finally was — but
+  // 2026-09-12 第二人复核之后,它算在**别的资产**的历史里,不进被评估资产(skl-c)的定级。
+  assert.deepEqual(other.execution_claims.ledgers.others_on_assets, { success: 0, failure: 0 });
+  assert.deepEqual(other.execution_claims.cross_asset_history, { success: 1, failure: 0 });
+  assert.equal(other.competence, "unknown");
+  assert.match(other.competence_basis, /skl-c/);
+});
+
+// --- 2026-09-12 第二人复核:作者评估的三处判定缺口 -------------------------------------
+// ① 没有 token 时,相关性检查被整段跳过,于是别的资产上的结果也能当"强矛盾"。
+// ② 能力等级统计的是作者的全部业务结果,不按被评估的领域筛选。
+// ③(见 build-evidence-pack.test.mjs)"来源链完整"只是三个集合各自非空。
+
+const otherAssetPack = new Map([
+  ["outcome:other", rec("outcome", "corrected(wrong) on asset skl-bridge v4 by usr-b (cross_user) at 2026-09-05; address 10.244.7.19:8096 timed out", { state: "corrected", asset_id: "skl-bridge", asset_version: 4, consumer_user_id: "usr-b", final: true }, "harness_verified")],
+]);
+
+test("① 资产没有判别值时,别的资产上的结果不能当支持/矛盾:保持 silent,不给强度", () => {
+  const raw = { competence: "medium", claims: [], asset_claim_check: { verdict: "contradicts", type: "execution_result", outcome: "failure", record_ids: ["outcome:other"], quote: "address 10.244.7.19:8096 timed out" } };
+  const r = checkAssessment(raw, otherAssetPack, { assetTokens: [], assetId: "skl-exitline", assetVersion: 2, authorId: "usr-a" });
+  assert.equal(r.asset_claim_check.verdict, "silent", "无法验证相关性就不能判矛盾");
+  assert.equal(r.asset_claim_check.strength ?? null, null);
+  const kept = r.claims_kept.find((k) => k.group === "asset_claim_check") ?? r.claims_kept[0];
+  assert.match(String(kept?.note ?? r.asset_claim_check.note ?? ""), /相关性|relevance/i);
+});
+
+test("① 同一资产、同一版本的结果仍按身份关联(没有 token 也算数)", () => {
+  const samePack = new Map([
+    ["outcome:same", rec("outcome", "validated on asset skl-exitline v2 by usr-b (cross_user) at 2026-09-11", { state: "validated", asset_id: "skl-exitline", asset_version: 2, content_hash: "h2", consumer_user_id: "usr-b", final: true }, "harness_verified")],
+  ]);
+  const raw = { competence: "medium", claims: [], asset_claim_check: { verdict: "supports", type: "execution_result", outcome: "success", record_ids: ["outcome:same"], quote: "validated on asset skl-exitline v2" } };
+  const r = checkAssessment(raw, samePack, { assetTokens: [], assetId: "skl-exitline", assetVersion: 2, assetContentHash: "h2", authorId: "usr-a" });
+  assert.equal(r.asset_claim_check.verdict, "supports");
+  assert.equal(r.asset_claim_check.by_identity, true);
+});
+
+test("② 能力等级只由被评估资产上的业务结果得出;别的资产上的历史另算,不足则 unknown", () => {
+  const crossAsset = Array.from({ length: 29 }, (_, i) => ({ found_in: `o${i}`, outcome: "success", ledger: "others_on_assets", asset_id: "skl-bridge" }))
+    .concat(Array.from({ length: 10 }, (_, i) => ({ found_in: `c${i}`, outcome: "failure", ledger: "others_on_assets", asset_id: "skl-bridge" })));
+  const d = deriveCompetence(crossAsset, { assetId: "skl-exitline" });
+  assert.equal(d.competence, "unknown", "39 条 bridge 结果不能说明退出码解析能力");
+  assert.match(d.basis, /skl-exitline/);
+  assert.match(d.basis, /39|其他资产|other asset/i);
+  assert.equal(d.domain_counts.success + d.domain_counts.failure, 0);
+  assert.equal(d.history_counts.success, 29);
+});
+
+test("② 被评估资产上有业务结果时,等级由这些结果得出", () => {
+  const calls = [
+    { found_in: "o1", outcome: "success", ledger: "others_on_assets", asset_id: "skl-exitline" },
+    { found_in: "o2", outcome: "success", ledger: "others_on_assets", asset_id: "skl-exitline" },
+    { found_in: "x1", outcome: "failure", ledger: "others_on_assets", asset_id: "skl-bridge" },
+  ];
+  const d = deriveCompetence(calls, { assetId: "skl-exitline" });
+  assert.equal(d.competence, "medium");
+  assert.equal(d.domain_counts.success, 2);
+  assert.equal(d.history_counts.failure, 1);
+});
+
+test("② 不指定资产时行为不变(旧调用方)", () => {
+  const d = deriveCompetence([{ found_in: "o1", outcome: "success", ledger: "own_business" }]);
+  assert.equal(d.competence, "medium");
 });
