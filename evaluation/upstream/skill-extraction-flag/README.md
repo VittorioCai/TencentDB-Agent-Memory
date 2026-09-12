@@ -127,6 +127,22 @@ base 选错会当场露怯:对着 `main` 提这个 PR,diff 会变成"新增整�
 
 ## 推送与开 PR(由你手动)
 
+`PR-BODY.md` 按上游的 `.github/PULL_REQUEST_TEMPLATE.md` 排版(Description / Related Issue /
+Change Type / Self-test Checklist / Additional Notes)—— `--body-file` 会绕过模板,所以模板的结构
+写进文件本身,勾选框也按实际情况勾好(Bug fix + Documentation update;两条自测项各附了跑过的命令
+与结果)。
+
+**上游 CI 不会跑这个 PR**:`.github/workflows/pr-ci.yml` 的触发条件是 `pull_request: branches: [main]`,
+而本 PR 的 base 是 `feat/server_team`。所以它的四个 job(install / pack / 包体积 / skill 队列隔离守卫)
+都不会自动执行,PR 正文里的自测就是唯一证据。我在本地按真实 base 跑了守卫:
+
+```bash
+cd .claude/worktrees/upstream-extract-flag/MemoryCore
+BASE_REF=origin/feat/server_team bash scripts/ci/check-skill-queue-isolation.sh   # → PASS
+npm pack --dry-run | grep -c skill-archive-extraction-flag                        # → 0(测试文件不进包)
+```
+
+
 **正文按 `PR-BODY.md` 原样提交,不加任何 AI 生成标记**(`🤖 Generated with …` 之类)。用户裁定
 (2026-09-12):这份工作是"用户主导 + 多方复核",那行标记会让人低估实际投入;提到腾讯官方仓库的 PR
 尤其不能带。`--body-file` 提交的就是文件内容,文件里也不许出现该行 —— 两个正文文件都已核过,从未有过。
