@@ -67,10 +67,9 @@ bash evaluation/upstream/skill-extraction-flag/reproduce.sh        # 默认跑�
 | API 文档 + 两个 SDK 的类型/说明 | +61 / −3 |
 | **合计** | **+212 / −5,5 个文件** |
 
-**「100 行以内」这条标准只在实现主体上成立(26 行),整个提交范围不成立。** 专家的原话是
-「新增字段需要同步 SDK 类型和说明,因此『10–15 行＋一个测试』可以是实现主体的估计,不能当
-完整提交范围」。要压到 100 行以内只能砍掉文档与 SDK 同步,那就退回成「加了个没人知道的字
-段」。取舍由你定。
+**「100 行以内」这条标准已由审阅方作废(2026-09-12 晚裁定 ①)。** 原话:那条标准是审阅方自己定的,
+与专家「10–15 行＋一个测试是实现主体的估计,不能当完整提交范围」矛盾;逻辑只有 26 行、评审成本很低,
+砍掉文档与 SDK 会退回成「加了个没人知道的字段」,反而更差。**按现在的 +212/−5 提。**
 
 ## 与已有 PR 的关系
 
@@ -90,8 +89,8 @@ bash evaluation/upstream/skill-extraction-flag/reproduce.sh        # 默认跑�
 上游 CONTRIBUTING 第 123 行起要求每个提交带 DCO 签核。两个提交都已带
 `Signed-off-by: Vittorio Cai <vittoriocaiyx@gmail.com>`,作者与提交者身份也设成同一个
 (本机 `git config` 没设 user.email,默认会落成 `vittoriocai@VittoriodeMacBook-Air.local`,
-在上游 PR 上不合适)。**签核是你本人的法律声明,推之前请确认这个身份是你要用的**;要换成别的
-(例如 GitHub noreply 邮箱),在 `.claude/worktrees/upstream-extract-flag` 里执行:
+在上游 PR 上不合适)。**身份已由用户确认(2026-09-12 晚裁定 ②):`Vittorio Cai <vittoriocaiyx@gmail.com>`,照此签核,
+两个提交都已带该签核。** 若日后要换身份,在 `.claude/worktrees/upstream-extract-flag` 里执行:
 
 ```bash
 cd /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/upstream-extract-flag
@@ -103,6 +102,28 @@ git filter-branch -f \
 # 核对:身份与签核三处一致
 git log --format='%an <%ae> | %cn <%ce>%n%B' origin/feat/server_team..HEAD | grep -E '@|Signed-off-by'
 ```
+
+## 另外两个候选:已被占,不提
+
+- **候选一**(会话/检索丢 source 字段)→ 上游 **#1348** `fix(memory-core): preserve source fields in
+  conversation search`(2026-09-11,Bryce-border)已占。
+- **候选三**(proxy 在 auth verify 调用上不带 Bearer)→ 上游 **#1349** `fix(proxy): send a configurable
+  bearer on the auth verify call`(2026-09-11,L4XB)已占。
+
+两条都在 2026-09-11 开出,晚于我们实测撞到的时间但早于我们提出,已放弃。**审阅裁定:不提。**
+
+## 开 PR 的 base 必须是 `feat/server_team`
+
+上游的默认分支是 `feat/server_team`,**不是 `main`**。`main` 是另一份**根提交都不相同**的公开分支,
+里面根本没有 skill 这套代码:
+
+```
+$ git ls-tree --name-only origin/main | grep -c MemoryCore   # → 0
+$ git rev-list --max-parents=0 origin/main                   # 7a5fce9…
+$ git rev-list --max-parents=0 origin/feat/server_team       # 另一个根,与 main 无合并基线
+```
+
+base 选错会当场露怯:对着 `main` 提这个 PR,diff 会变成"新增整个 MemoryCore"。
 
 ## 推送与开 PR(由你手动)
 

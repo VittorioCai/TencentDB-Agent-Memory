@@ -10,7 +10,7 @@
 | 分支 / PR | `topic4-attribution-gate`,远端 `mine`;**PR:https://github.com/VittorioCai/TencentDB-Agent-Memory/pull/1**(fork 内,base `feat/server_team`,2026-09-12 开,正文 = `evaluation/PR-DESCRIPTION.md`)。推送由用户手动完成 |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
 | 验证时间 | 2026-09-12 凌晨(交付复跑 `evaluation/delivery/2026-09-12b/SUMMARY.md`,线上栈;**干净克隆彩排** D:无密钥、无 Core、无 docker 的克隆 + 已烧毁值登记簿,判决类步骤全过、生成报告 diff 0——登记簿本身未入库,等用户定) |
-| 测试 | evaluation 626(2026-09-12,从仓库根跑全 0 失败;两轮第二人复核新增/改写的测试在内:运行时与闸门来源 +10、离线解析 +5、登记簿保留 +5、校准口径 +9、作者评估边界 +7);Core 122;proxy 24 |
+| 测试 | evaluation **630**(2026-09-12,从仓库根跑全 0 失败;各轮第二人复核新增/改写的测试在内:运行时与闸门来源 +10、离线解析 +5、登记簿保留 +5、校准口径 +9、作者评估边界 +7、第四轮渲染器 +2);Core 122;proxy 24。另有上游候选二的 6 个测试,在另一个 worktree 的 vitest 下跑(`upstream-extract-flag`,不在这 630 里) |
 
 ## 第 1 件"新实验条件准备齐":已验收
 
@@ -182,6 +182,34 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
    `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
+## 第五轮复核(2026-09-12 晚,只查上游候选,不查交付内容)已处置
+
+复核对象是准备提给上游的候选二。复核者**先否掉了我们自己的问题定义**:把它写成"任务永不消费"是错的——
+`trigger-service.ts` 161 写归档、179 拿 tasks mutex、209 `enqueueAgent`,归档成功时任务已登记并入队;
+worker pool 的构造只看 `skill.enabled`,提取关闭时照样启动。而且上游按存储模式有两条 extractor 构造路径
+(service 每实例一个、standalone 用进程单例,`skill-config.ts` 现在还多了 mongodb 后端),从单例缺失推不出所有部署。
+
+重新定位为**响应可观测性修复**并全部照办:标题 `fix(memory-core): expose extraction configuration in skill archive
+responses`;字段 `extraction_enabled` 而不是 `queued`,配置不可得时 `null` 不是 `false`;覆盖三个归档入口;
+测试按复核者列的五类全做(外加 force-archive 两种返回,共 6 例);复现证据必须含任务登记记录与 worker 失败日志,
+"候选池没新增"不得单独作证;PR 正文写明与 #1117 的区别,并声明不解决已排队任务的重试策略、不宣称各存储模式都遵守该开关;
+查重覆盖仓库全部历史而非只九月。产物在 `evaluation/upstream/skill-extraction-flag/`。
+
+复核者的裁定(2026-09-12 晚):**"100 行以内"这条标准作废**——它与"实现主体 10–15 行 + 一个测试不能当完整提交范围"
+自相矛盾,砍掉文档与 SDK 会退回成"加了个没人知道的字段",按 +212/−5 提;DCO 身份确认为
+`Vittorio Cai <vittoriocaiyx@gmail.com>`;base 选 `feat/server_team`。候选一与候选三**已被上游他人占位**
+(#1348 `fix(memory-core): preserve source fields in conversation search`、
+#1349 `fix(proxy): send a configurable bearer on the auth verify call`,均 2026-09-11 开),不提。
+
+## 第四轮复核(2026-09-12,口径写在文档里、代码不是那么算的)已处置
+
+两条全部成立,改在生成器与渲染器,报告与评估重新生成:
+
+| 条 | 处置 |
+|---|---|
+| 第二任务把一次假阴性写成"不计分母的弃权" | `unknown_adoption` 只适用于**参考答案不知道是否采纳**;那一次参考采纳成立(标记在新增测试里、绑到写入调用、验收 PASS)、判定器没说用,`classifyUsage({adopted:true,judgedUsed:false})` 返回 `false_negative` 且 `counts_toward_rate: true`。生成器那句、计数表那一行的标签、STATE 里第二轮的记录都已改;复核者是直接拿保存的工件调现有函数得出结论的,我复现了同一结果 |
+| 给人看的 Markdown 没跟上 JSON 的事实/推断之分 | `assess.mjs` 的 `renderMd` 重写并导出(+2 测试):标题「作者评估(资产结果概况)」、`**本资产结果概况:<level>**`、逐条先 `记录事实(程序生成)` 再 `  - 模型表述(语义未核验)`、`**程序核到哪一步**: <scope_note>`;五份评估用 `--recheck` 重新渲染(未重新调模型),并修掉 recheck 路径把页头渲染成 `classes undefined` 的问题 |
+
 ## 第三轮复核(2026-09-12,只查"事实成立但结论多走一步")已处置
 
 五条全部成立,改在生成器、核对器与 Core 里,报告重新生成:
@@ -239,7 +267,7 @@ A 对笔记 v2 medium → medium(本资产上 2 条 validated);**B 对自己候�
 | 彩排 A | 干净克隆 + 线上栈、无密钥 | 5 处缺口:gate0 夹具、REPORT 路径、probe.pid、密钥缺失即崩、重判需 Core |
 | 离线路线 | `resolve-tokens.mjs` 对**已烧毁**值走登记簿(sha256 核验;有密钥时不参与);`build-burned-registry.mjs` 用 git grep 证明值已在提交树里才登记 | 4b0bb03、30e4f78 |
 | 彩排 D → E | 干净克隆、无密钥、无 Core、无 docker;D 用会话里的登记簿,**E 用 git 带来的登记簿**(HEAD 6425619) | 套件 610/610;重判副本重生成 14;校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
-| 彩排 G(最新) | 同上,当前 HEAD(两轮复核改动之后) | 套件 626/626;校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
+| 彩排 G(最新) | 同上,当前 HEAD(两轮复核改动之后) | 套件 626/626(当时的数;现为 630);校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
 | 彩排 C | 同上但无登记簿 | 重判停在取不到值,校准 / 汇总 / 重判差异跑不了 |
 
 **已定(2026-09-12,用户"入库")**:登记簿 `evaluation/attribution/burned-tokens.json` 入库(4 条:bridge-addr v4 ×2、闭环笔记 v1 / v2)。

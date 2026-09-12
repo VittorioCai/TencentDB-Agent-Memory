@@ -58,18 +58,41 @@ PR:https://github.com/VittorioCai/TencentDB-Agent-Memory/pull/1(fork 内,base `f
 它只对已烧毁(按规则必须轮换、不再使用)的值开放,且只保留已交付批次的条目,新批次前归档旧条目。规则见 `CLAUDE.md` §16;
 每一步需要什么(纯离线 / 需登记簿 / 需线上栈)列在 `evaluation/REVIEW-GUIDE.md`。
 
-## 三轮外部复核,提出的问题全部改在代码或生成器里
+## 五轮外部复核,提出的问题全部改在代码或生成器里
 
-交付期间请了一位复核者做了三轮独立核对,共十六条意见,全部成立、全部处置,报告一律重新生成而不是手改:
+交付期间请了一位复核者做了五轮独立核对,共二十条意见,全部成立、全部处置,报告一律重新生成而不是手改:
 
 | 轮次 | 查什么 | 结果 |
 |---|---|---|
 | 第一轮 | 批次四校准报告 | 五条:送达 ≠ 采用、正式组与累计不得合并、独立性推导不成立、复算命令要是真跑过的、威胁模型措辞过满 |
 | 第二轮 | 作者评估与两份闭环报告 | 六条,其中两条是实现缺口(没有判别值时接受无关证据、能力等级跨领域统计) |
 | 第三轮 | 只查"事实成立但结论多走一步" | 五条:约定被采用 ≠ 修复来自笔记、`validated` 的操作定义、结果概况 ≠ 人的能力、程序核不了自由文本语义、回流是两条流程 |
+| 第四轮 | 口径写在文档里、代码不是那么算的 | 两条:一次 `needs_review` 被写成"弃权"(按 `classifyUsage` 实为**假阴性且计入分母**)、作者评估的 JSON 分了事实与推断而给人看的 Markdown 没跟上 |
+| 第五轮 | 给上游提的候选(不查交付内容) | 否掉了我们自己的问题定义("任务永不消费"是错的),重新定位为响应可观测性修复,并规定复现证据的下限 |
 
 逐条对照见 `evaluation/runner/COMPARISON-2026-09-11-reparsed.md` 的复核一节与 `evaluation/STATE.md`;
 `evaluation/REVIEW-GUIDE.md` 的失败案例卡里也各留了一条。
+
+## 顺手给上游提的一个修复(与本题目无关,独立分支)
+
+做题目四时实测撞到的一个产品缺陷,已按独立 PR 备好,**不在本分支里**:分支 `fix/skill-extraction-flag`,
+从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独一个 worktree,`evaluation/` 零文件混入。
+
+`/v3/skill/extract`、`/v3/skill/conversation/add`、`/v3/skill/conversation/force-archive` 三个归档入口的成功响应
+只回 `ok`/`status` + `task_id`。这句话没错——`SkillTriggerService.archive()` 在 tasks mutex 内写归档、追加
+`SkillTaskEntry`、`enqueueAgent`,三件事都做了——但它和"任务会被真正抽取"的响应长得一模一样:
+`skill.extraction.enabled=false` 时任务照样被接收,随后在当前配置下无法执行,响应里没有任何字段提示这一点。
+修复是加一个 `extraction_enabled`,只回报配置开关(`true` 不代表 worker 就绪或抽取完成;读不到配置时是 `null`
+而不是 `false`)。实现 26 行 + 6 个测试 + API 文档与两个 SDK 的类型说明。
+
+**我们自己就是在这上面吃了亏**:闭环第一轮四次写回(提取关闭)的记录里,我们当时只能写下
+"extract accepted but no new asset appeared … nothing is claimed"——那句"无法断定"正是这个字段要消除的。
+
+复现脚本、三项证据(响应原文 / `_tasks.json` 里的任务登记 / worker 的 `standalone SkillExtractor unavailable` 重试)
+与 PR 正文:`evaluation/upstream/skill-extraction-flag/`。**"候选池没有新增"没有被当作证据**——正常抽取也可能一个候选都不产出。
+
+一个容易踩的坑记在这里:**上游的默认分支是 `feat/server_team`,不是 `main`**;`main` 是另一份不相干历史的公开分支,
+根本没有 skill 这套代码(`git ls-tree origin/main` 里没有 `MemoryCore/`)。提 PR 的 base 必须选 `feat/server_team`。
 
 ## 验收命令与输出
 
@@ -127,6 +150,6 @@ Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-66bc9a
 两份记录都带备份与恢复命令。批次四与两个闭环任务当时跑在"同一 MemoryCore 代码的挂载 +
 摘要未记的上游镜像"上(重建后拉到的上游镜像已证明不是它,`core-mount-accept-failure-20260912.log`),所以运行时镜像对那些记录
 只能写"未知",对现在的线上是自建镜像的摘要。proxy 强制身份为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy
-密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **off**(2026-09-11T23:35Z 拨回并记录;产品启动脚本每次重生成配置会把它拨回 on,重起后要再关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
+密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **off**(最后一次拨回 2026-09-12T17:56Z,带 §10 记录)。**这一项曾经漂移六小时**:产品启动脚本 `start-memory-core.sh` 每次都重新生成整个挂载配置(第 55 行),11:33Z 那次切镜像因此把提取写回 on,直到 17:55Z 才被发现——我们自己在提交 c88e955 里记过这个坑,但只当成跑批次的前置、没当成切镜像后的复查项(失败案例卡里单独留了一条)。漂移范围经比对只涉及这一个开关,没有交付运行受影响(9/12 零次运行,且 `prepare.sh` 在开关不是 off 时硬失败),拨回后三条资产读回未变:`gate/artifacts/extraction-drift-20260912.json`;无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
 批次四资产 right approved / wrong failed;10 项由消费者会话提取的候选属 usr-4u07qc2kuj、private,其中 `skl-z0V6zwphUvhB` 已由所有者
 提交复核并带签名评估(2026-09-12 按复核意见重算后写回:competence unknown,闸门 pending、复核优先级 high);第二任务的产品任务实体 `task-h1k7xruuhb`(用户 c 创建)。
