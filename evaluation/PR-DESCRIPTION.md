@@ -2,6 +2,7 @@
 
 交付形式(CLAUDE.md §9):分支 + 提交号 + 验收命令及其输出 + 脚本生成的报告 + 剩余缺点与需决策事项。
 最终 HEAD 见 `git log -1`;下面每一项都指向仓库里的文件,不另抄数字。评审导读:`evaluation/REVIEW-GUIDE.md`。
+PR:https://github.com/VittorioCai/TencentDB-Agent-Memory/pull/1(fork 内,base `feat/server_team`)。
 
 ## 做了什么
 
