@@ -16,7 +16,7 @@
 3. **开发闭环,第一任务(`evaluation/tasks/exit-code-fix/`)**:一个真实缺陷(工具结果退出行拼写)→ 经验笔记入池
    (值只在 Core,仓库存 sha256)→ 冻结起点的仓库副本、每次运行新建消费者 → 验证器独立验收(自带参考测试、
    受控套件跑起点测试原内容、模型自测只记不判、TAP 对账、归因取最终新增测试与写入调用)→ 无笔记 2 次 / 有笔记
-   2 次 → 结果行可信记入 → 会话经验经产品 `/v3/skill/extract` 回流(10 项候选)→ 闸门按规则 admit。
+   3 次(2 次在 v1、1 次在 v2)→ 结果行可信记入 → 会话经验经产品 `/v3/skill/extract` 回流(10 项候选)→ 闸门按规则 admit。
    报告 `REPORT.md`(脚本生成);清单 `devloop-runs.json`;记录 `extraction-switch.jsonl`、`gate-evaluations.jsonl`、
    `gate-observations.jsonl`、`visibility-fix.json`。
 4. **开发闭环,第二任务(`evaluation/tasks/exit-line-collect/`)**:同一条笔记(轮换为 v2,正文不变只换标记)、
@@ -26,13 +26,17 @@
    按规则 admit:cross_user validated 4、distinct_consumers 2、distinct_tasks 2(`gate-evaluations.jsonl` 末条)。
    报告 `REPORT.md`;清单 `devloop-runs.json`(含作废运行与原因、配置修正)。
 5. **作者上下文评估进闭环(`evaluation/author/`)**:对作者 A 在笔记 v2 上、对消费者 B 在它自己回流出的候选上各做一次
-   评估(证据包 → 模型逐条引用 → 程序核事实 → 管理员签名写入 → 闸门读),闸门理由里出现该评估并标明
+   评估(证据包 → 模型逐条引用 → 程序核**引用真实性与结构化事实** → 管理员签名写入 → 闸门读),闸门理由里出现该评估并标明
    "reported, not used"(只定复核优先级)。证据包新增"作者作为消费者产生的结果"一本账(此前漏查,B 读成 unknown)。
    记录 `author/artifacts/assessment-{a,b}-exit-line.*`、`assessment-write-*.json`、`submit-b-*.json`。
    **2026-09-12 第二人复核后收紧**:① 资产没有判别值时,别的资产上的结果不能当支持/反驳(记 silent,relevance unverifiable);
    ② 能力等级只由被评估资产上的业务结果得出,跨资产结果单列为历史,领域无结果即 unknown——A 对笔记 medium(本资产 2 条 validated)、
    B 对自己候选 unknown(原 medium);③ 证据包不再声称"来源链完整",改为"相关证据汇集"并标 `production_link: unproven`(相邻记录
    的关系未验证)。重算用 `assess.mjs --recheck`,没有重新调用模型;记录 `author/artifacts/assessment-recheck-2026-09-12.json`。
+   **第三轮复核后再收紧**:④ 这个等级是**资产结果概况**,不是经验证的人的能力——字段名 `competence` 保持不变(已签名摘要要兼容),
+   但 Core 的闸门理由串改为 `asset-outcome profile … on this asset … a profile of results, not a verified measure of the author`
+   (因此重建镜像并切换);⑤ 程序核不了自由文本的语义与适用范围,所以每条保留的声明带程序造的 `fact_sentence`,模型原话另列
+   `model_statement`,输出带 `scope_note` 说明边界。
 6. **主分支应用闭环接受的修复**:第一任务 → `evaluation/tasks/bridge-addr/verify.mjs`(批次四复判 14 次 0 变化,
    `REPARSE-DIFF-2026-09-11-exitline.md`);第二任务 → `collect-artifacts.mjs`(批次四 14 次记录的 95 条退出行由全 null
    变为全部可读,used 事件按代码事实不受影响,`REPARSE-DIFF-2026-09-11-exitline-collect.md`)。
@@ -52,6 +56,19 @@
 登记簿新增的**不是新明文,而是「值 → 资产版本」的映射**:`tokens.json` 只有 sha256,光看记录并不知道某个字符串属于哪条资产的哪个版本。
 它只对已烧毁(按规则必须轮换、不再使用)的值开放,且只保留已交付批次的条目,新批次前归档旧条目。规则见 `CLAUDE.md` §16;
 每一步需要什么(纯离线 / 需登记簿 / 需线上栈)列在 `evaluation/REVIEW-GUIDE.md`。
+
+## 三轮外部复核,提出的问题全部改在代码或生成器里
+
+交付期间请了一位复核者做了三轮独立核对,共十六条意见,全部成立、全部处置,报告一律重新生成而不是手改:
+
+| 轮次 | 查什么 | 结果 |
+|---|---|---|
+| 第一轮 | 批次四校准报告 | 五条:送达 ≠ 采用、正式组与累计不得合并、独立性推导不成立、复算命令要是真跑过的、威胁模型措辞过满 |
+| 第二轮 | 作者评估与两份闭环报告 | 六条,其中两条是实现缺口(没有判别值时接受无关证据、能力等级跨领域统计) |
+| 第三轮 | 只查"事实成立但结论多走一步" | 五条:约定被采用 ≠ 修复来自笔记、`validated` 的操作定义、结果概况 ≠ 人的能力、程序核不了自由文本语义、回流是两条流程 |
+
+逐条对照见 `evaluation/runner/COMPARISON-2026-09-11-reparsed.md` 的复核一节与 `evaluation/STATE.md`;
+`evaluation/REVIEW-GUIDE.md` 的失败案例卡里也各留了一条。
 
 ## 验收命令与输出
 
@@ -103,9 +120,10 @@
 
 ## 线上状态(接手先看)
 
-Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-11d30eaa720d`(闸门内建、无挂载;构建提交的 MemoryCore 树 == HEAD;
-`bash evaluation/eval-core.sh status` 打印 gate built into the image),2026-09-12 由用户决定切换;切换记录、备份与恢复命令在
-`evaluation/gate/artifacts/core-image-switch-20260911T224508Z.json`。批次四与两个闭环任务当时跑在"同一 MemoryCore 代码的挂载 +
+Core 跑的是从本分支自建的镜像 `agentmemory/memory-core:topic4-66bc9aecd719`(闸门内建、无挂载;构建提交的 MemoryCore 树 == HEAD;
+`bash evaluation/eval-core.sh status` 打印 gate built into the image)。2026-09-12 切了两次:先从上游 `:latest` 切到自建镜像
+(`core-image-switch-20260911T224508Z.json`),再因第三轮复核改了闸门理由串而重建切换(`core-image-switch-20260912T113253Z.json`);
+两份记录都带备份与恢复命令。批次四与两个闭环任务当时跑在"同一 MemoryCore 代码的挂载 +
 摘要未记的上游镜像"上(重建后拉到的上游镜像已证明不是它,`core-mount-accept-failure-20260912.log`),所以运行时镜像对那些记录
 只能写"未知",对现在的线上是自建镜像的摘要。proxy 强制身份为主线消费者 `agt-5e0y4l8a7a` / 任务 `task-5e6xp4mrrw`,CodeBuddy
 密钥为身份 b(记录 `evaluation/tasks/exit-code-fix/proxy-identity-restore-2.json`);Core 提取 **off**(2026-09-11T23:35Z 拨回并记录;产品启动脚本每次重生成配置会把它拨回 on,重起后要再关);无 tdai-clickhouse 容器;闭环笔记 v2 approved(规则);
