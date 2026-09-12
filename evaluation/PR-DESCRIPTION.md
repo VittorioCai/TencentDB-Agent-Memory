@@ -112,12 +112,12 @@
 
 | 命令 | 期望 | 实际输出 |
 |---|---|---|
-| `node --test evaluation/**/*.test.mjs`(仓库根) | 0 失败 | `evaluation/delivery/2026-09-12b/suite.txt` |
-| `bash evaluation/tasks/exit-code-fix/selfcheck.sh` | 【0】起点可解释、【1】FAIL、【2】PASS、【3】0 新增失败;【4】闭环后判别值已进记录,该段失败属预期 | `evaluation/delivery/2026-09-12b/selfcheck.txt` |
-| `bash evaluation/tasks/exit-line-collect/selfcheck.sh` | 同上;链接目标冻在 conditions.json | `evaluation/delivery/2026-09-12b/selfcheck-exit-line-collect.txt` |
-| `bash evaluation/deliver-check.sh` | 各生成报告与提交副本 diff 0 | `evaluation/delivery/2026-09-12b/SUMMARY.md`(线上栈);干净克隆见 REVIEW-GUIDE 的表 |
-| `node evaluation/runner/batch-conditions.mjs --check --conditions=…batch4-conditions.json` | 批次后按设计 FAIL 的项 | `evaluation/delivery/2026-09-12b/conditions-check.txt` |
-| `bash evaluation/demo.sh --plain` | 7 段无 fixture | `evaluation/delivery/2026-09-12b/demo.txt` |
+| `node --test evaluation/**/*.test.mjs`(仓库根) | 0 失败 | `evaluation/delivery/2026-09-13b/suite.txt` |
+| `bash evaluation/tasks/exit-code-fix/selfcheck.sh` | 【0】起点可解释、【1】FAIL、【2】PASS、【3】0 新增失败;【4】闭环后判别值已进记录,该段失败属预期 | `evaluation/delivery/2026-09-13b/selfcheck.txt` |
+| `bash evaluation/tasks/exit-line-collect/selfcheck.sh` | 同上;链接目标冻在 conditions.json | `evaluation/delivery/2026-09-13b/selfcheck-exit-line-collect.txt` |
+| `bash evaluation/deliver-check.sh` | 六份生成报告与提交副本 **diff 全部为 0**;三个非零退出码(两个 selfcheck、conditions-check)是写明的按设计如此 | `evaluation/delivery/2026-09-13b/SUMMARY.md`(线上栈);干净克隆见 REVIEW-GUIDE 的表 |
+| `node evaluation/runner/batch-conditions.mjs --check --conditions=…batch4-conditions.json` | 批次后按设计 FAIL 的项 | `evaluation/delivery/2026-09-13b/conditions-check.txt` |
+| `bash evaluation/demo.sh --plain` | 7 段无 fixture | `evaluation/delivery/2026-09-13b/demo.txt` |
 
 ## 这些数字测的是什么,不是什么
 
