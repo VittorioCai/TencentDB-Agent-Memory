@@ -1,13 +1,13 @@
 # 开发闭环第二任务 `exit-line-collect`:运行报告(脚本生成)
 
-生成于 2026-09-12T09:57:19Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
+生成于 2026-09-12T10:38:49Z;清单 `evaluation/tasks/exit-line-collect/devloop-runs.json`;运行 13 次(正式样本 6,作废 7)。
 笔记 skl-pXLc38dex6Zt(eval-tool-result-exit-line v2,仓库只存 sha256 1e85dcf5dcf7…);v1 于 2026-09-11T17:55:11Z 退役(值已进 git 历史),本任务所有运行都在 v2 上。
 判据版本:repo-2026-09-11d;起点提交 141c044(与 exit-code-fix 相同),任务文本 sha256 f32af00888d3…。
 
 ## 这份数字测的是什么,不是什么
 
 - 测的是**迁移**:笔记正文写的是 `evaluation/tasks/bridge-addr/verify.mjs` 的退出行拼写,本任务的缺陷在 `evaluation/attribution/collect-artifacts.mjs`。有笔记组里"检索到笔记 → 新增带判别值的测试 → 参考测试通过"三件事同时成立才算迁移成功;缺任何一件按缺的那件记。
-- 副本里已有正确实现可参照(evaluation/gate0/verify-capture.mjs、evaluation/gate0/verify-capture.test.mjs、evaluation/runner/memory-channel.test.mjs、evaluation/tasks/bridge-addr/verify.multi-target.test.mjs、evaluation/tasks/bridge-name/verify.test.mjs),笔记的作用是缩短定位而非提供唯一答案。
+- 副本里已有正确实现可参照(evaluation/gate0/verify-capture.mjs、evaluation/gate0/verify-capture.test.mjs、evaluation/runner/memory-channel.test.mjs、evaluation/tasks/bridge-addr/verify.multi-target.test.mjs、evaluation/tasks/bridge-name/verify.test.mjs),笔记的设计目的是帮助定位、不是唯一答案;本实验没有单独测量定位时间,不能说已证明缩短定位。
 - 消费者用户是 c(零记录),与第一任务的 b 不同;两个用户仍由同一个人操作。闸门看到的 `distinct_consumers` / `distinct_tasks` 是关系计数,不是独立的人数。
 - 无笔记 / 有笔记各 2 / 4 次,只用于演示,不是性能对照。模型自报的测试结果不采信;判决只读副本。
 
@@ -112,7 +112,7 @@
 ## 迁移:笔记写的是另一个文件,这里用上了吗
 
 有笔记组 4 次:送达 4,新增测试带判别值且验收通过 4,带判别值但关联不上写入调用或验收未过 0,功能验收通过 4。无笔记组 2 次:通过 2,判别值出现 0 次(判别值随机,无笔记组出现次数必须为 0 才说明标记来自笔记)。
-其中 1 次(20260911T185430Z-devloop-note)验收器判"采用"(标记在新增测试里、绑到写入调用),但使用判定器把该次使用记为 needs_review(原因见验收明细的 used 行:标记在被记入的取用之前就经另一条 get-by-name 到达模型,使用与哪次送达绑定不能唯一确定)——没有结果行,不同步、闸门不计。这是审阅定的规则(关联不上就待复核),不是漏判。
+其中 1 次(20260911T185430Z-devloop-note)验收器判"采用"(标记在新增测试里、绑到写入调用),但使用判定器把该次使用记为 needs_review(原因见验收明细的 used 行:标记在被记入的取用之前就经另一条 get-by-name 到达模型,使用与哪次送达绑定不能唯一确定)——没有结果行,不同步、闸门不计。这是审阅定的规则(关联不上就待复核),不是漏判。。**按冻结口径怎么记(2026-09-12 第二人复核)**:校准的使用检测是三态——采纳未知单列、不进分母,所以这 1 次记一次弃权,不计入准确率;若按二值口径(未产出 used 即阴性),在参考采纳成立的前提下它就是一次假阴性。两种记法都不等于「不是漏判」,报告按冻结的三态口径记弃权,并把这句话留在这里。
 按这几次运行:笔记在另一个文件的同类缺陷上被用到了(4/4),标记只在有笔记组出现。这说明的是实现路径受笔记影响,不是"没有笔记做不出来"——无笔记组通过 2/2。
 
 ## 闸门对 v2 的判定:两个任务、两个消费者用户
@@ -162,7 +162,14 @@
 ## 计数(只描述这些运行)
 
 - 正式样本 6:无笔记 2(PASS 2),有笔记 4(PASS 4);作废 7,试跑 2。
-- 有笔记组送达 4、采用且通过 4、采用待复核 0;无笔记组判别值出现 0。
+- 有笔记组送达 4;无笔记组判别值出现 0。采用按两个口径分别计,不合并:
+
+| 口径 | 结果 |
+|---|---:|
+| 新增测试带标记且功能验收通过(参考采纳,验收器) | 4/4 |
+| 归因产生 `used` 并得到 `validated`(判定器) | 3/4 |
+| 归因仅有 `needs_review`、没有结果事件 | 1/4 |
+
 - 记忆通道:11 次干净,0 次有借入,2 次不可判。
 
 ## 成本(按组,cost.json 实测)
@@ -177,7 +184,7 @@
 ## 剩余缺点
 
 - 两个任务共享起点提交与笔记,任务文本各自只描述症状;第二任务的症状描述(exit_code 总是 null)比第一任务更接近缺陷位置,迁移难度因此偏低
-- 样本各 2 次、单模型(deepseek-v4-flash)、单操作者;有笔记组的判别值是采用证据,不是收益证据
-- 副本里已有正确实现可参照;笔记缩短定位,不是唯一答案
+- 无笔记 2 次 / 有笔记 4 次、单模型(deepseek-v4-flash)、单操作者;有笔记组的判别值是采用证据,不是收益证据
+- 副本里已有正确实现可参照。笔记的设计目的是帮助定位,但本实验没有单独测量定位时间,两组也不是严格性能对照:记录支持的只是「笔记里的测试约定出现在模型新增的测试里,并在这些运行里观察到了相应操作」,不能说已证明缩短定位
 - 运行时镜像摘要在这些运行时没有冻结,而且已不可考:重建后拉到的上游 :latest(sha256:55fec3a6…)被证明不是当时的镜像(同一套挂载文件在它上面起不来,见 gate/artifacts/core-mount-accept-failure-20260912.log)。能确定的是运行时 = 当时镜像的其余文件 + 本分支挂载的 metadata 目录与 6 个 gateway/core 文件。回填与被覆盖清单见 devloop-runs.json 的 config_fixes;自 2026-09-11 起 selfcheck 把容器镜像摘要冻进 conditions.json
 - 闸门的 distinct_consumers=2 / distinct_tasks=2 是关系计数;两个用户由同一人操作,独立性不成立
