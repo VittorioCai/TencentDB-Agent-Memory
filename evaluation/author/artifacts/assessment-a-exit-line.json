@@ -347,9 +347,17 @@
     "author_user_id": "usr-n68ea5ythq",
     "asset_version": 2,
     "content_hash": "b230f087c6f958348d5fe6406693bdc2",
-    "chain_complete": null,
+    "chain_production_link": "unproven",
+    "chain_writer_known": true,
+    "chain_collected": {
+      "source_sessions": 0,
+      "naming_messages": 0,
+      "operations": 0,
+      "results": 2
+    },
+    "chain_gaps": 2,
     "pack_sha256": "a3c0b2d9262aa16a9a03531957eb1302c62beb1a599754163dd17df489e57643",
     "assessment_file": "evaluation/author/artifacts/assessment-a-exit-line.json"
   },
-  "rechecked_at": "2026-09-12T10:36:02.236Z"
+  "rechecked_at": "2026-09-12T10:50:35.748Z"
 }

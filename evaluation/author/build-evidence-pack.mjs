@@ -491,7 +491,6 @@ export async function buildPack({ author, domain, keywords = [], assetId = null,
       }
       const versionRow = rows.find((v) => v.version === a.version) ?? null;
       const writer = versionRow?.owner_user_id ?? null;
-      const breaks = [];
       chain = chainFacts({
         assetVersion: a.version, contentHash: a.content_hash ?? null, writer,
         assetOwnerUserId: a.owner_user_id, ownerAgentId: author.agent_id,

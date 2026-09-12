@@ -149,7 +149,12 @@ export function summaryForGate({ pack, verified, domain, assessedAt, outFile }) 
     author_user_id: pack.author.user_id,
     asset_version: pack.asset?.version ?? null,
     content_hash: pack.asset?.content_hash ?? null,
-    chain_complete: pack.chain?.complete ?? null,
+    // 2026-09-12 第二人复核之后没有 `complete` 这个概念了:写进 Core 的摘要也不能留一个恒为 null
+    // 的 chain_complete,那会被读成"完整性未知"。改成把实际事实写清楚。
+    chain_production_link: pack.chain?.production_link ?? null,
+    chain_writer_known: pack.chain?.writer_known ?? null,
+    chain_collected: pack.chain?.collected ?? null,
+    chain_gaps: (pack.chain?.gaps ?? []).length || 0,
     pack_sha256: pack.sha256,
     assessment_file: outFile,
   };

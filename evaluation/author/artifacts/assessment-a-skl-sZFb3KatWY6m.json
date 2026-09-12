@@ -407,11 +407,19 @@
     "author_user_id": "usr-n68ea5ythq",
     "asset_version": 2,
     "content_hash": "163c539025f09af8205023ec6d312a38",
-    "chain_complete": null,
+    "chain_production_link": "unproven",
+    "chain_writer_known": true,
+    "chain_collected": {
+      "source_sessions": 1,
+      "naming_messages": 4,
+      "operations": 3,
+      "results": 2
+    },
+    "chain_gaps": 0,
     "pack_sha256": "be408c48e1d15417b7446b88b5c19f5eb8e068b2c0d4a76180b86ce94d8362ab",
     "assessment_file": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.json"
   },
-  "rechecked_at": "2026-09-12T10:36:02.400Z",
+  "rechecked_at": "2026-09-12T10:50:35.921Z",
   "pack_sha_at_generation": "7302daaa6d031ee827d9022dd5d540e6451799b23de26c5023f826625e6d46e8",
   "pack_rebuilt": true
 }

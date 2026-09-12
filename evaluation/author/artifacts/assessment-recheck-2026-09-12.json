@@ -3,7 +3,8 @@
   "changes_in_the_checker": [
     "没有判别值的资产:别的资产上的结果不能当支持/反驳,记 silent(relevance unverifiable);同资产同版本同内容仍按身份关联",
     "能力等级只由被评估资产上的业务结果得出,跨资产结果作为历史单列(domain_counts / cross_asset_history / scoped_to)",
-    "证据包的 chain 改为「相关证据汇集」:去掉 complete,生产来源标 production_link=unproven,空集合列为 gaps"
+    "证据包的 chain 改为「相关证据汇集」:去掉 complete,生产来源标 production_link=unproven,空集合列为 gaps",
+    "写进 Core 的摘要不再带恒为 null 的 chain_complete,改为 chain_production_link / chain_writer_known / chain_collected / chain_gaps(自检发现,2026-09-12)"
   ],
   "competence_before_after": {
     "assessment-a-exit-line": "medium → medium(本资产上有 2 条 validated,等级成立;29/10 条 bridge 结果移入历史)",
@@ -27,8 +28,9 @@
         "failure": 10
       },
       "asset_claim": "silent",
-      "rechecked_at": "2026-09-12T10:36:02.236Z",
-      "pack_rebuilt": false
+      "rechecked_at": "2026-09-12T10:50:35.748Z",
+      "pack_rebuilt": false,
+      "chain_production_link": "unproven"
     },
     {
       "file": "assessment-b-exit-line.json",
@@ -44,8 +46,9 @@
         "failure": 10
       },
       "asset_claim": "silent",
-      "rechecked_at": "2026-09-12T10:36:02.318Z",
-      "pack_rebuilt": false
+      "rechecked_at": "2026-09-12T10:50:35.837Z",
+      "pack_rebuilt": false,
+      "chain_production_link": "unproven"
     },
     {
       "file": "assessment-a-skl-sZFb3KatWY6m.json",
@@ -61,8 +64,9 @@
         "failure": 0
       },
       "asset_claim": "contradicts",
-      "rechecked_at": "2026-09-12T10:36:02.400Z",
-      "pack_rebuilt": true
+      "rechecked_at": "2026-09-12T10:50:35.921Z",
+      "pack_rebuilt": true,
+      "chain_production_link": "unproven"
     },
     {
       "file": "assessment-a-skl-ImeA29HL3Djj.json",
@@ -78,8 +82,9 @@
         "failure": 2
       },
       "asset_claim": "contradicts",
-      "rechecked_at": "2026-09-12T10:36:02.480Z",
-      "pack_rebuilt": true
+      "rechecked_at": "2026-09-12T10:50:36.010Z",
+      "pack_rebuilt": true,
+      "chain_production_link": "unproven"
     },
     {
       "file": "assessment-b-skl-lUWmwEYqsZDZ.json",
@@ -95,8 +100,9 @@
         "failure": 0
       },
       "asset_claim": "silent",
-      "rechecked_at": "2026-09-12T10:36:02.577Z",
-      "pack_rebuilt": true
+      "rechecked_at": "2026-09-12T10:50:36.097Z",
+      "pack_rebuilt": true,
+      "chain_production_link": "unproven"
     }
   ],
   "live_core_state": {
@@ -104,7 +110,9 @@
     "now_superseded": "B 的那份与重算结果不一致(unknown);A 的仍一致(medium)",
     "who_writes": "写入要管理员密钥,按 CLAUDE.md §14 由用户执行,不由本会话代跑",
     "command": "bash evaluation/author/write-assessment.sh evaluation/author/artifacts/assessment-b-exit-line.json --out evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12.json",
-    "caution": "write-assessment.sh 会以 apply:true 重判闸门,会撤销手工置过的 approved;闸门读作者评估只定复核优先级(reported, not used),competence unknown → 复核优先级 high"
+    "caution": "write-assessment.sh 会以 apply:true 重判闸门,会撤销手工置过的 approved;闸门读作者评估只定复核优先级(reported, not used),competence unknown → 复核优先级 high",
+    "written_2026_09_12": "B 的评估已按重算结果写回(competence unknown),读回 decision pending / review_priority high / assessment accepted,记录 assessment-write-b-readback-2026-09-12.json",
+    "known_cosmetic_gap": "那次写入的摘要里仍带 chain_complete: null(本次自检后才改掉这个字段)。实质字段(competence / asset_claim / 版本 / 内容哈希)都正确;要让 Core 里的摘要也换成新字段,需再写一次(管理员密钥,用户执行):bash evaluation/author/write-assessment.sh evaluation/author/artifacts/assessment-b-exit-line.json --out evaluation/author/artifacts/assessment-write-b-exit-line-2026-09-12b.json"
   },
-  "recorded_at": "2026-09-12T10:37:05Z"
+  "recorded_at": "2026-09-12T10:51:26Z"
 }
