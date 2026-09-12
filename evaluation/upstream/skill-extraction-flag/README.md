@@ -32,6 +32,19 @@
 
 ## 为什么是 bug
 
+**第一方调用方是模型本身**(2026-09-12 补查):proxy 把 `skill_extract` **无条件注入每个会话**的
+只读工具集(`skill-tools-injector.ts`),给模型的描述是「立即归档当前对话**触发一次 skill 抽取**
+(异步任务,由后台 agent 分析对话内容生成 skill)」;模型调用后,bridge 的 `sub === "extract"` 分支
+把它转发到 Core 的 `/v3/skill/conversation/force-archive`(正是本 PR 改的三个入口之一),并把 Core 的
+响应体**原样透传**回模型(`finalRespText = respText`,只有团队检索那条会改写)。所以提取关闭时,
+模型被告知"已触发抽取"、拿到 `task_id`,而答复里没有任何东西能告诉它这次不会执行。
+
+与上游 issue **#972**(仍开着)的关系:该 issue 说 `skill_extract` 被无条件注入但调用恒返回
+`40003 触发路径已下线`。**40003 那一半现在已不成立**——bridge 改成转发到 force-archive 了;
+但"承诺了却落空"那一半仍在,而且更隐蔽:现在调用会**成功**,然后什么也不产生。PR 正文按
+`Related: #972` 关联,并写明**不修 #972**(它要的是把工具从 readTools 移除,我们没做那件事)。
+
+
 归档成功的响应本身没说错:`SkillTriggerService.archive()` 在 tasks mutex 内依次写归档、
 追加 `SkillTaskEntry`、`enqueueAgent`(trigger-service.ts:161 写归档、179 进 mutex、209 入队),三件事都做了。问题在于
 调用方分不清「已接收,提取正在进行」和「已接收,但当前配置下提取不会执行」—— 两者都是

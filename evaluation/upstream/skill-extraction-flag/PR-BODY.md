@@ -14,6 +14,17 @@ a skill to appear waits forever, and a client polling `/v3/skill/list` cannot te
 empty result caused by the switch from one caused by a session with nothing worth
 keeping.
 
+One of those callers is the product's own agent-facing tool. MemoryProxy injects
+`skill_extract` into the read-only tool set of every session
+(`MemoryProxy/src/injection/injectors/skill-tools-injector.ts`), described to the model as
+"立即归档当前对话触发一次 skill 抽取（异步任务，由后台 agent 分析对话内容生成 skill）".
+When the model calls it, the bridge forwards it to Core's
+`/v3/skill/conversation/force-archive` (`skill-bridge.ts`, the `sub === "extract"` branch)
+and returns Core's envelope to the model verbatim — the response body is passed through
+unchanged except for team-search filtering. So with extraction off, the model is told it
+triggered extraction, is handed a `task_id`, and has nothing in the answer to tell it
+otherwise. With this field it does.
+
 This adds one field, `extraction_enabled`, to the success responses of those three entry
 points. It reports the configuration switch and nothing more:
 
@@ -29,8 +40,16 @@ them.
 
 ## Related Issue | 关联 Issue
 
-No existing issue — found while running the product end to end and hitting it. Related
-but not overlapping: #1117 (see Additional Notes).
+Related: #972 — `skill_extract` is injected unconditionally while the call cannot do what
+its description promises. The 40003 "trigger path retired" half of that report no longer
+applies (the bridge now forwards `extract` to `conversation/force-archive`), but the other
+half does: the tool is still advertised to every session, and when extraction is off the
+call now *succeeds* and still produces nothing. **This PR does not fix #972** — it does not
+change what is injected into the tool set, which is what that issue asks for. It makes the
+failure visible in the response instead of silent.
+
+Also related but not overlapping: #1117 (see Additional Notes). No issue was filed for this
+specific gap — it was found while running the product end to end and hitting it.
 
 ## Change Type | 修改类型
 
