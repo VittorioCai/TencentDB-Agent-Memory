@@ -2,7 +2,8 @@
 
 交付形式(CLAUDE.md §9):分支 + 提交号 + 验收命令及其输出 + 脚本生成的报告 + 剩余缺点与需决策事项。
 最终 HEAD 见 `git log -1`;下面每一项都指向仓库里的文件,不另抄数字。评审导读:`evaluation/REVIEW-GUIDE.md`。
-PR:https://github.com/VittorioCai/TencentDB-Agent-Memory/pull/1(fork 内,base `feat/server_team`)。
+交付载体是**分支本身**:https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/topic4-attribution-gate
+(导师的要求是「GitHub 分支代码 + 文档」,不要求 PR。fork 内曾开过 PR #1 作为浏览入口,2026-09-12 由用户决定关闭 —— 它的 diff 基线是上游 `feat/server_team`,会把 fork 相对上游的全部差异(2596 个文件)一起算进去,反而不如直接读分支。分支与提交历史不受影响。)
 
 ## 做了什么
 

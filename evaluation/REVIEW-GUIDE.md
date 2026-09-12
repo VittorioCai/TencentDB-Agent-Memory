@@ -4,7 +4,7 @@
 `bash evaluation/deliver-check.sh` 一次复跑所有验收命令并把生成报告与提交副本做 diff,存档在 `evaluation/delivery/<时间>/SUMMARY.md`。
 分支 `topic4-attribution-gate`;交付形式见 `evaluation/PR-DESCRIPTION.md`;状态与线上环境见 `evaluation/STATE.md`。
 
-**PR 正文一律按 `PR-DESCRIPTION.md` 原样提交,不加 AI 生成标记**(用户裁定 2026-09-12:这份工作是用户主导 + 多方复核,那行标记会让人低估实际投入;提到腾讯官方仓库的 PR 尤其不能带)。本文件与 `PR-DESCRIPTION.md` 里都没有这类行;fork 上 PR #1 的正文是建 PR 时被自动追加的,按 `gh pr edit 1 --body-file evaluation/PR-DESCRIPTION.md` 刷新即可覆盖掉。
+**PR 正文一律按 `PR-DESCRIPTION.md` 原样提交,不加 AI 生成标记**(用户裁定 2026-09-12:这份工作是用户主导 + 多方复核,那行标记会让人低估实际投入;提到腾讯官方仓库的 PR 尤其不能带)。本文件与 `PR-DESCRIPTION.md` 里都没有这类行——曾出现在 fork PR #1 的线上正文里(建 PR 时被自动追加),已用 `gh pr edit --body-file` 覆盖;该 PR 随后按用户决定关闭,交付载体改回分支本身。上游 PR #1358 的正文已核过,无该标记。
 原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)与 `20260911T1*-devloop-*`(闭环,23),每目录只少一个无脚本读取的
 `capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
