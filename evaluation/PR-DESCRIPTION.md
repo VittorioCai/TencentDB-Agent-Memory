@@ -74,13 +74,14 @@
 逐条对照见 `evaluation/runner/COMPARISON-2026-09-11-reparsed.md` 的复核一节与 `evaluation/STATE.md`;
 `evaluation/REVIEW-GUIDE.md` 的失败案例卡里也各留了一条。
 
-## 顺手给上游提的两个修复(与本题目无关,独立分支,均待审核)
+## 顺手给上游提的三个修复(与本题目无关,独立分支,均待审核)
 
-做题目四时实测撞到的两个产品缺陷,**已提给上游,都还在等审核**——
-[#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358) 与
-[#1359](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1359)(均 2026-09-12,base `feat/server_team`)。
-两条都**不在本分支里**:各自从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独的 worktree,
-`evaluation/` 零文件混入。**两条都没有自动检查结果**:上游 `pr-ci.yml` 只在 base 为 `main` 时触发,
+做题目四时实测撞到的三个产品缺陷,**已提给上游,都还在等审核**——
+[#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)、
+[#1359](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1359) 与
+[#1360](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1360)(base 均为 `feat/server_team`)。
+三条都**不在本分支里**:各自从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独的 worktree,
+`evaluation/` 零文件混入。**三条都没有自动检查结果**:上游 `pr-ci.yml` 只在 base 为 `main` 时触发,
 所以下面写的"验证"一律指本地跑的单元测试与类型检查,不是 CI 绿,更不是已合并。
 
 **#1359 `fix(proxy): honor read-only mode in skill listing instructions`**:
@@ -89,6 +90,13 @@
 `skill_patch` 修""结束前更新它"。**默认部署下,产品指示模型去用一个从未给过它的工具。**
 修法是把那两句按同一个开关渲染(开关就在隔壁一行为另一个注入器算好),`+43/−8` 实现 + 9 个测试
 (其中 3 个走真实注入路径)。归档见 `evaluation/upstream/readonly-skill-listing/`。
+
+**#1360 `fix(proxy): record completed skill download calls in telemetry`**:
+`bridge-telemetry.ts` 的契约是每次上游请求完成发一条 `bridge_call`,主路径两侧都守着;
+`files/download` 分支只补了"upstream 未响应"那一半——**而那处补丁的注释自己写着**"之前这个 catch
+分支静默 return, 导致 CH 少一条",也就是同一类洞为失败路径补过、把成功路径落下了,于是这个分支
+恰恰在**成功时**沉默。下游确有消费者:Core 的 `analytics-sql.ts` 用这些行算调用次数与会话调用率。
+实现 20 行 + 6 个测试。归档见 `evaluation/upstream/download-telemetry/`。
 
 **#1358** 的问题如下。
 
