@@ -499,3 +499,36 @@ test("每条保留的声明都带上受限事实句,模型原话另列为推断"
   // 程序没有核过这句话的适用范围,输出必须自己说清楚
   assert.match(r.scope_note ?? "", /适用范围|语义/);
 });
+
+// --- 2026-09-12 第四轮复核:给人看的 Markdown 必须与 JSON 一样分开事实与推断 -------------
+import { renderMd } from "./assess.mjs";
+
+const mdFixture = () => ({
+  pack: { author: { user_id: "usr-a" }, evidence_cutoff: "2026-09-11T18:00:00Z", sha256: "abc123def456", record_count: 10,
+    chain: { asset_version: 2, producer: { wrote_this_version: "usr-a", owner_agent_id: "agt-a" }, collected: { source_sessions: 0, operations: 0, results: 2 }, production_link: "unproven", gaps: [] } },
+  verified: { competence: "medium", competence_basis: "2 business-level success(es)", competence_as_said: "unknown",
+    execution_claims: { domain_counts: { success: 2, failure: 0 }, cross_asset_history: { success: 29, failure: 10 }, scoped_to: "skl-x" },
+    asset_claim_check: { verdict: "silent", strength: null, record_ids: [] }, summary: "s", summary_as_said: "m",
+    scope_note: "程序核对的是引用真实性……自由文本的语义与适用范围不在核对范围内",
+    claims_kept: [{ group: "claim", type: "execution_result", outcome: "success", relation: "supports", strength: "strong", found_in: "outcome:o1",
+      fact_sentence: "Core 结果记录 outcome:o1,资产 skl-x v2,state=validated", model_statement: "作者具备读退出行的能力", statement: "作者具备读退出行的能力", record_ids: ["outcome:o1"] }],
+    claims_dropped: [] },
+  domain: "d", assessedAt: "2026-09-11T18:09:25Z", modelName: "m", sel: { chosen: [1], classes: {} },
+});
+
+test("Markdown 标题不再写 Competence,而是资产结果概况,并带上定级范围", () => {
+  const md = renderMd(mdFixture());
+  assert.doesNotMatch(md, /\*\*Competence: /);
+  assert.match(md, /资产结果概况|asset-outcome profile/i);
+  assert.match(md, /不是.*能力|not a verified measure/);
+  assert.match(md, /skl-x/);           // 定级只用被评估资产
+  assert.match(md, /29/);              // 跨资产历史单列
+});
+
+test("每条保留的声明先给程序事实句,再给模型表述并标语义未核验", () => {
+  const md = renderMd(mdFixture());
+  const i = md.indexOf("Core 结果记录 outcome:o1"), j = md.indexOf("作者具备读退出行的能力");
+  assert.ok(i > 0 && j > i, "事实句必须在模型表述之前");
+  assert.match(md, /语义未核验|semantics not verified/);
+  assert.match(md, /程序核对的是引用真实性/);   // scope_note 也要出现在给人看的那份里
+});

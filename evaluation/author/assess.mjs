@@ -160,20 +160,41 @@ export function summaryForGate({ pack, verified, domain, assessedAt, outFile }) 
   };
 }
 
-function renderMd({ pack, verified, domain, assessedAt, modelName, sel }) {
+/**
+ * 给人看的那份。2026-09-12 第四轮复核:JSON 已经把"程序核过的事实"和"模型的表述"分开,
+ * Markdown 还在标题上写 `Competence: medium`、正文直接铺模型原话——读者会以为程序核实了
+ * 作者能力和那些句子。所以这里:标题改成**本资产结果概况**并带定级范围,逐条先给程序造的
+ * 事实句、再给模型表述并标"语义未核验",`scope_note` 也印在这一份里。
+ */
+export function renderMd({ pack, verified, domain, assessedAt, modelName, sel }) {
+  const ec = verified.execution_claims ?? {};
+  const dc = ec.domain_counts ?? null, hist = ec.cross_asset_history ?? null;
+  const claim = (c) => {
+    const head = `- [${c.group} · ${c.type}${c.outcome ? ` · ${c.outcome}` : ""}${c.relation && c.relation !== "silent" ? ` · ${c.relation} (${c.strength})` : ""}]`;
+    const lines = [`${head} 记录事实(程序生成):${c.fact_sentence ?? "(这条记录没有可造句的结构化事实)"}`];
+    lines.push(`  - 模型表述(语义未核验):${c.model_statement ?? c.statement ?? ""}`);
+    if (c.found_in) lines.push(`  - ${c.found_in}${c.evidence_class ? ` (${c.evidence_class})` : ""}${c.quote ? ` — "${c.quote}"` : ""}`);
+    if (c.note) lines.push(`  - 说明:${c.note}`);
+    return lines.join("\n");
+  };
   return [
-    `# Author assessment — ${pack.author.user_id} — ${domain}`, "",
-    `assessed ${assessedAt} · evidence cutoff ${pack.evidence_cutoff} · model ${modelName} · pack ${pack.sha256.slice(0, 12)} (${sel.chosen.length}/${pack.record_count} records shown; classes ${JSON.stringify(pack.by_class)})`, "",
-    `**Competence: ${verified.competence}** — ${verified.competence_basis} (model said ${verified.competence_as_said})`,
-    `**Asset claim check: ${verified.asset_claim_check.verdict}**${verified.asset_claim_check.strength ? ` (${verified.asset_claim_check.strength})` : ""}${verified.asset_claim_check.record_ids.length ? ` — ${verified.asset_claim_check.record_ids.join(", ")}` : ""}${verified.asset_claim_check.quote ? ` — "${verified.asset_claim_check.quote}"` : ""} (model said ${verified.asset_claim_as_said ?? "nothing"})`, "",
+    `# 作者评估(资产结果概况)— ${pack.author.user_id} — ${domain}`, "",
+    `assessed ${assessedAt} · evidence cutoff ${pack.evidence_cutoff} · model ${modelName} · pack ${pack.sha256.slice(0, 12)} (${sel.chosen.length}/${pack.record_count} records shown${sel.classes ? `; classes ${JSON.stringify(sel.classes)}` : " (recheck: the selection的分类明细在原评估里)"})`, "",
+    `**本资产结果概况:${verified.competence}** — ${verified.competence_basis}(模型自己说 ${verified.competence_as_said})`,
+    `这是**被评估资产上已有结果的概况,不是经过验证的人的能力**${ec.scoped_to ? `;定级只用资产 ${ec.scoped_to} 上的结果` : ""}` +
+      `${dc ? `(该资产:${dc.success} 次验证通过 / ${dc.failure} 次纠错)` : ""}${hist && (hist.success + hist.failure) ? `;该作者在其他资产上另有 ${hist.success} / ${hist.failure} 次,属历史,不参与定级` : ""}。`,
+    `**Asset claim check: ${verified.asset_claim_check.verdict}**${verified.asset_claim_check.strength ? ` (${verified.asset_claim_check.strength})` : ""}${verified.asset_claim_check.record_ids.length ? ` — ${verified.asset_claim_check.record_ids.join(", ")}` : ""}${verified.asset_claim_check.by_identity ? "(按资产身份关联)" : ""} (model said ${verified.asset_claim_as_said ?? "—"})`,
+    verified.asset_claim_check.note ? `  - 说明:${verified.asset_claim_check.note}` : "",
+    "",
+    `**程序核到哪一步**:${verified.scope_note ?? "见 author/README.md"}`, "",
     `Derived summary: ${verified.summary}`, "",
-    `Model summary (as said): ${verified.summary_as_said}`, "",
-    pack.chain ? `Related evidence (v${pack.chain.asset_version}): wrote_this_version ${pack.chain.producer?.wrote_this_version ?? "unknown"} / agent ${pack.chain.producer?.owner_agent_id ?? "?"}; sessions ${pack.chain.collected?.source_sessions ?? 0}; operations ${pack.chain.collected?.operations ?? 0}; results ${pack.chain.collected?.results ?? 0}; production link UNPROVEN (adjacency between records not verified)${(pack.chain.gaps ?? []).length ? `; gaps: ${pack.chain.gaps.join(" | ")}` : ""}` : "",
+    `Model summary (as said, 语义未核验): ${verified.summary_as_said}`, "",
+    pack.chain ? `Related evidence (v${pack.chain.asset_version}): wrote_this_version ${pack.chain.producer?.wrote_this_version ?? "unknown"} / agent ${pack.chain.producer?.owner_agent_id ?? "?"}; sessions ${pack.chain.collected?.source_sessions ?? 0}; operations ${pack.chain.collected?.operations ?? 0}; results ${pack.chain.collected?.results ?? 0}; production link ${pack.chain.production_link ?? "unproven"}${(pack.chain.gaps ?? []).length ? `; gaps: ${pack.chain.gaps.join(" | ")}` : ""}` : "",
     "",
     `## Surviving claims (${verified.claims_kept.length})`,
-    ...verified.claims_kept.map((c) => `- [${c.group} · ${c.type}${c.outcome ? ` · ${c.outcome}` : ""}${c.relation !== "silent" ? ` · ${c.relation} (${c.strength})` : ""}] ${c.statement}${c.found_in ? `\n  - ${c.record_ids.join(", ")} (${c.evidence_class}) — "${c.quote}"` : ""}`),
+    ...verified.claims_kept.map(claim),
     "", `## Dropped by the check (${verified.claims_dropped.length})`,
-    ...verified.claims_dropped.map((c) => `- [${c.group} · ${c.type}] ${c.statement} — ${c.reason}${c.record_ids.length ? ` (${c.record_ids.join(", ")})` : ""}`),
+    ...verified.claims_dropped.map((c) => `- [${c.group} · ${c.type}] ${c.model_statement ?? c.statement} — ${c.reason}${(c.record_ids ?? []).length ? ` (${c.record_ids.join(", ")})` : ""}`),
     "",
   ].join("\n");
 }

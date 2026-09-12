@@ -206,7 +206,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 | P1 作者评估在资产没有判别值时接受无关证据为"强矛盾" | 没有判别值时,**别的资产**上的结果一律记 `silent`(relevance unverifiable);同资产同版本同内容仍按身份关联(`check-citations.mjs`,先失败后通过的测试 2 个) |
 | P1 "A 的来源链完整"只是三个集合各自非空 | `chainFacts()` 取代旧 chain:去掉 `complete`,写入者作为事实保留,生产来源记 `production_link: unproven` 并写明相邻关系未验证;空集合列为 `gaps`(测试 2 个);README 的"complete"说法改写 |
 | P2 medium 是全部业务结果,不是所问领域 | 等级只由**被评估资产上**的业务结果得出,跨资产结果单列为历史(`domain_counts` / `cross_asset_history` / `scoped_to`);领域无结果 → `unknown`(测试 3 个) |
-| P2 第二任务"采用待复核 0"掩盖了一次归因待复核 | 计数改为两个口径分列:参考采纳(验收器)4/4、判定器 used+validated 3/4、仅 needs_review 1/4;并按冻结的三态口径记一次弃权,同时写明二值口径下它是 FN |
+| P2 第二任务"采用待复核 0"掩盖了一次归因待复核 | 计数改为两个口径分列:参考采纳(验收器)4/4、判定器 used+validated 3/4、仅 needs_review 1/4。**第四轮改正**:那 1 次不是"弃权",`unknown_adoption` 只适用于参考答案未知;参考采纳成立而判定器未产出 used,`classifyUsage` 给的是 **false_negative 且计入分母**,报告与生成器都已按此改 |
 | P2 第一任务把 v1 的解释套到 v2 的汇总上 | 按每次 apply 分别打印信号(v1:2/1/1;v2:4/2/2),并说明 v2 含第二任务的运行 |
 | P2 "缩短定位"是未经证明的收益表述 | 两份 REPORT、两份 README、PR 统一改为"设计目的是帮助定位;没有单独测量定位时间,不能说已证明缩短" |
 
