@@ -34,8 +34,8 @@ FAIL  proxy 配置未被改动
       期望 "76428b8b89ba"  实际 "aee1e1674898"
 PASS  proxy 已在配置修改后重启(配置生效)
 FAIL  core 容器镜像摘要 == 冻结值
-      期望 "sha256:55fec3a6067a"  实际 "sha256:72d7076eea6b"
-      修法 live image sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9 (agentmemory/memory-core@sha256:72d7076eea6b9f043f62f9d94a8e044fcab4ef8081b28640f98d792791c265c9) ≠ frozen sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed
+      期望 "sha256:55fec3a6067a"  实际 "sha256:6d0d59064a49"
+      修法 live image sha256:6d0d59064a49c49212079d7c231af48490542d95f3e2315373f2a30a643e6acc (agentmemory/memory-core@sha256:6d0d59064a49c49212079d7c231af48490542d95f3e2315373f2a30a643e6acc) ≠ frozen sha256:55fec3a6067af7cc4dbb48017f590392cf0085f378b6bcac340a91690a9707ed
 PASS  proxy 容器镜像摘要 == 冻结值
 PASS  core 闸门在线上(挂载或内建)
 FAIL  闸门来源 == 冻结值
@@ -97,11 +97,13 @@ PASS  文件未变 evaluation/runner/token-provenance.mjs
 FAIL  文件未变 evaluation/gate/core-gate.sh
       期望 "1d6f0c465bdd"  实际 "15537ccadcbf"
       修法 代码变了:要么重新冻结,要么在报告里说明差异
-PASS  文件未变 MemoryCore/src/metadata/service/asset-gate.ts
+FAIL  文件未变 MemoryCore/src/metadata/service/asset-gate.ts
+      期望 "72cc7cc6efb6"  实际 "da87ab0e3078"
+      修法 代码变了:要么重新冻结,要么在报告里说明差异
 PASS  准备运行 ≠ 对照样本:正式 run id 与 source_runs 零交集且准备运行全标 b4-prep
 PASS  闸门基线文件存在且 rules/版本一致
 PASS  pair.json 顶层消费者 == 冻结消费者
 PASS  pair.json 资产版本 == 线上版本
 
-通过 48  未过 19  未知 0  提示 2  / 共 69
+通过 47  未过 20  未知 0  提示 2  / 共 69
 结论:条件不一致,不开试跑
