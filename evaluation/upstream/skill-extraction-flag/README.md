@@ -3,9 +3,23 @@
 候选二,按 2026-09-12 专家复核的定位重做。**不是**「任务永不消费」类的缺陷 —— 那个问题
 定义是我(审阅侧)先前写错的,已作废;现在的定位是**响应可观测性修复**。
 
+**已提:上游 PR [#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)**
+(2026-09-12T18:40Z 开,base `feat/server_team`、head `VittorioCai:fix/skill-extraction-flag`,OPEN、非草稿、mergeable)。
+
 分支 `fix/skill-extraction-flag`,基于上游默认分支 `feat/server_team` 的 `0468a2a`
 (worktree `.claude/worktrees/upstream-extract-flag`,与本交付分支历史不相干,不含题目四的
 任何改动)。PR 正文见 `PR-BODY.md`。
+
+开出后的核查(机器比对,不是眼看):
+
+| 项 | 结果 |
+|---|---|
+| base / head | `feat/server_team` / `VittorioCai:fix/skill-extraction-flag` ✓ |
+| 提交与 DCO | 2 个,作者均 `Vittorio Cai <vittoriocaiyx@gmail.com>`,**两个都带 `Signed-off-by`** ✓ |
+| 改动 | +212/−5、5 个文件,与本地逐文件一致 ✓ |
+| 模板 | 五节标题与六个勾选项与 `.github/PULL_REQUEST_TEMPLATE.md` **逐字一致**(`diff <(grep '^## ' 模板) <(grep '^## ' 正文)` 无差异);勾了 Bug fix + Documentation update,自测两项都勾并附命令与结果 |
+| AI 标记 | 正文里 `🤖 / Generated with [Claude` 命中 **0** ✓ |
+| 自动检查 | `(none reported)` —— 见下 |
 
 ## 改了什么
 
@@ -125,7 +139,7 @@ $ git rev-list --max-parents=0 origin/feat/server_team       # 另一个根,与 
 
 base 选错会当场露怯:对着 `main` 提这个 PR,diff 会变成"新增整个 MemoryCore"。
 
-## 推送与开 PR(由你手动)
+## 推送与开 PR(由用户手动执行,已完成 → #1358)
 
 `PR-BODY.md` 按上游的 `.github/PULL_REQUEST_TEMPLATE.md` 排版(Description / Related Issue /
 Change Type / Self-test Checklist / Additional Notes)—— `--body-file` 会绕过模板,所以模板的结构
@@ -147,6 +161,8 @@ npm pack --dry-run | grep -c skill-archive-extraction-flag                      
 (2026-09-12):这份工作是"用户主导 + 多方复核",那行标记会让人低估实际投入;提到腾讯官方仓库的 PR
 尤其不能带。`--body-file` 提交的就是文件内容,文件里也不许出现该行 —— 两个正文文件都已核过,从未有过。
 
+
+实际用的命令(留作记录;`gh pr create` 打印的 URL 就是 #1358):
 
 ```bash
 cd /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/upstream-extract-flag

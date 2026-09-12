@@ -195,6 +195,8 @@ responses`;字段 `extraction_enabled` 而不是 `queued`,配置不可得时 `nu
 "候选池没新增"不得单独作证;PR 正文写明与 #1117 的区别,并声明不解决已排队任务的重试策略、不宣称各存储模式都遵守该开关;
 查重覆盖仓库全部历史而非只九月。产物在 `evaluation/upstream/skill-extraction-flag/`。
 
+**已提:上游 PR [#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)**(2026-09-12T18:40Z,base `feat/server_team`、head `VittorioCai:fix/skill-extraction-flag`,OPEN、非草稿、mergeable)。核过:2 个提交作者均 `Vittorio Cai <vittoriocaiyx@gmail.com>` 且都带 DCO 签核;+212/−5、5 个文件与本地一致;正文按上游 `.github/PULL_REQUEST_TEMPLATE.md` 排版(五节标题与六个勾选项与模板逐字一致,`diff` 无差异),**无 AI 生成标记**。**没有任何自动检查会跑**——`pr-ci.yml` 的触发条件是 `pull_request: branches: [main]`,而本 PR 的 base 是 `feat/server_team`,所以正文里的自测是唯一证据;本地已按真实 base 跑过 CI 里那个守卫(`BASE_REF=origin/feat/server_team bash scripts/ci/check-skill-queue-isolation.sh` → PASS)。要求维护者跑 CI 时不能把 base 改成 `main`(不相干历史),只能手动触发或本地复跑。
+
 复核者的裁定(2026-09-12 晚):**"100 行以内"这条标准作废**——它与"实现主体 10–15 行 + 一个测试不能当完整提交范围"
 自相矛盾,砍掉文档与 SDK 会退回成"加了个没人知道的字段",按 +212/−5 提;DCO 身份确认为
 `Vittorio Cai <vittoriocaiyx@gmail.com>`;base 选 `feat/server_team`。候选一与候选三**已被上游他人占位**

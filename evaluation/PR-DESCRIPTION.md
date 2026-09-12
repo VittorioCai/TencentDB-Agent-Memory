@@ -75,7 +75,9 @@ PR:https://github.com/VittorioCai/TencentDB-Agent-Memory/pull/1(fork 内,base `f
 
 ## 顺手给上游提的一个修复(与本题目无关,独立分支)
 
-做题目四时实测撞到的一个产品缺陷,已按独立 PR 备好,**不在本分支里**:分支 `fix/skill-extraction-flag`,
+做题目四时实测撞到的一个产品缺陷,**已提给上游**:
+[TencentCloud/TencentDB-Agent-Memory#1358](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1358)
+(2026-09-12,base `feat/server_team`)。它**不在本分支里**:分支 `fix/skill-extraction-flag`,
 从上游默认分支 `feat/server_team` 的 `0468a2a` 切出,单独一个 worktree,`evaluation/` 零文件混入。
 
 `/v3/skill/extract`、`/v3/skill/conversation/add`、`/v3/skill/conversation/force-archive` 三个归档入口的成功响应
