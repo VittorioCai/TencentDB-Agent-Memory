@@ -1,10 +1,10 @@
-working copy: /private/tmp/topic4-devloop-selfcheck.1t8f/repo
+working copy: /private/tmp/topic4-devloop-selfcheck.r1e5/repo
 start commit 141c044be519e53bbfe2d1ef780632ae110a8136 (tree 631aa8559a847b34b7c169236411eecd29e1d16a); 1215 tracked files, 40 test files; excluded: evaluation/runner/runs, evaluation/tasks/exit-code-fix
 runs/ present in copy: no;  task dir present in copy: no
 
 ════════════════════════════════════════════════════════════════════
 【0】冻结起点:模型动手前记下副本的提交、树、测试清单与内容、套件自身结果(读不到未受控工件的测试会失败,记为基线)
-frozen 2026-09-11T23:38:44Z: copy commit 72a0d5a (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.1t8f/start.json
+frozen 2026-09-12T08:00:54Z: copy commit 8014e29 (tree ff9b7b5, archived from 141c044), 40 test files → /private/tmp/topic4-devloop-selfcheck.r1e5/start.json
 suite at start: tests 554 pass 549 fail 3 (exit 1); baseline failing: evaluation/attribution/extract-tokens.test.mjs: 方案 2 之后,资产源文件是占位符,正文里不再含判别值; evaluation/attribution/extract-tokens.test.mjs: the right-address asset cannot document the endpoint already in the prompt; evaluation/provenance/build-early-events.test.mjs: the recorded three-channel session yields recalled and injected, and no selected
 exit 0 (expected 0 = 套件结果可解释)
 
@@ -28,7 +28,7 @@ exit 1 (expected 1 = FAIL)
 patch applied:  1 file changed, 1 insertion(+), 1 deletion(-)
 verdict PASS: reference test passed (7/7); no new identified failure in the controlled suite (561 tests over 40 original test file(s) plus the reference); 3 baseline failure(s) still failing
 reference test: tests 7 pass 7 fail 0
-compared with start 72a0d5a (frozen 2026-09-11T23:38:44Z); copy HEAD 72a0d5a, commits after start 0
+compared with start 8014e29 (frozen 2026-09-12T08:00:54Z); copy HEAD 8014e29, commits after start 0
 diff: ['evaluation/tasks/bridge-addr/verify.mjs']  out_of_scope []  touched_verifier False  deleted_tests []
 attempts: ['none: no test file was added']
 exit 0 (expected 0 = PASS)
