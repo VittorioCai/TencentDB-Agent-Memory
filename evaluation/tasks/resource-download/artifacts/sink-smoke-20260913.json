@@ -1,0 +1,39 @@
+{
+  "_what": "归因落点恢复后的冒烟证据(CLAUDE.md §10 的线上状态记录)。**只存计数与端点,不存 request_body** —— 请求体里可能带笔记判别值,那一存就是烧毁。",
+  "_why": "第三批的前提是「证据写得下来」。前提要有证据,不能只写一句「已恢复」。",
+  "run_id": "20260913T181136Z-devloop-smoke",
+  "arm": "smoke(无笔记条件,sample=false,不进任何样本)",
+  "at": "2026-09-13T18:11:36Z 起,18:13:46Z 记录",
+  "verdict": "FAIL(无笔记组解不出来是允许的结果,不是作废理由)",
+  "contaminated": false,
+  "memory_channel_ok": true,
+  "rows_exported": 51,
+  "kind_counts": {
+    "model_intent": 42,
+    "bridge_call": 9
+  },
+  "bridge_call": {
+    "n": 9,
+    "all_2xx": true,
+    "endpoints": {
+      "search": 4,
+      "get": 5
+    },
+    "sources": [
+      "skill-bridge/proxy"
+    ],
+    "agent_source": [
+      "codebuddy"
+    ]
+  },
+  "provenance": {
+    "bridge_and_wire": 1,
+    "wire_only": 2,
+    "unpaired_responses": 2,
+    "note": "有行不等于配得上 —— 3 个来源事件里只有 1 个配上了服务端行。这一条写进了 batch3-conditions.json 的 cannot_establish。"
+  },
+  "used_events": 0,
+  "what_this_does_not_show": "冒烟走无笔记条件,used-events 为空。它证明行写得下来、配得上,证明不了 used 拿得到。",
+  "compare_with": "2026-09-13 之前第三任务 36 次运行:bridge_call 0 行(第一任务 53 行 / 8 次里 6 次,第二任务 152 行 / 13 次全有)。",
+  "restore_record": "evaluation/gate/artifacts/clickhouse-restore-20260913.json"
+}

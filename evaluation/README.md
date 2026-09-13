@@ -122,7 +122,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 767 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
+Full suite: 772 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
 acceptance compares this number with what the run actually reports, so it cannot go stale
 quietly again — it had, twice.
 

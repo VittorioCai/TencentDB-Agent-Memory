@@ -1,0 +1,85 @@
+{
+  "_meta": {
+    "what": "第三个闭环任务第三批的条件冻结。**在任何一次运行之前写下并提交**(CLAUDE.md §12);run-arm.sh 现在会核对这个文件已入库且与 HEAD 一致,否则一次也不跑。",
+    "frozen_at": "2026-09-13T18:22:23Z",
+    "why_this_batch": "前两批 36 次运行的使用判定全是 needs_review,原因在 2026-09-13 查清了:归因落点(ClickHouse context_proxy.tool_call_logs)那段时间不可达,**证据从来没有被写下**。第一任务写下了 53 行(8 次里 6 次有),第二任务 152 行(13 次全有),第三任务 0 行(36 次全无)。证据没写下,重判也捞不回来。落点已于 2026-09-13 恢复并做成每次运行的硬前置。这一批**只问一件事**:在证据写得下来的条件下,采用归因闭不闭合。",
+    "not_a_bigger_sample": "不是把 6 加到 12。换了条件就另跑另报,**永不与第一、二批合并**(CLAUDE.md:更换条件不与旧口径合并)。"
+  },
+  "changed_from_batch_2": {
+    "the_only_change": "归因落点可达。ClickHouse 容器恢复,并写进 runner/prepare.sh 的 verify_ready —— 不可达或未启用时判未就绪,和提取开关同等,跑不起来。",
+    "restore_record": "evaluation/gate/artifacts/clickhouse-restore-20260913.json(镜像摘要、重建的启动命令、已核对项、以及当时尚未核对的那一项)",
+    "evidence_it_works": {
+      "smoke_run": "20260913T181136Z-devloop-smoke",
+      "note": "**冒烟,不进任何样本**。devloop-runs.json 里它的 batch 标成 2(脚本默认值),sample=false,任何报告都不会数到它。",
+      "bridge_call_rows": 9,
+      "distribution": "export.log:bridge_call / skill-bridge / 9 行 / ok_2xx 9;另有 model_intent 42 行",
+      "also_observed": "provenance 出现 1 个 bridge+wire 事件 —— 前 36 次一次都没有过的配对形态",
+      "what_it_does_not_show": "冒烟走的是无笔记条件,used-events 为空。它只证明**行写得下来、配得上**,证明不了 used 拿得到 —— 那要这一批的有笔记组才看得见。这句话在开跑前写下。"
+    }
+  },
+  "unchanged_from_batch_2": {
+    "start_commit": "9e3752feb767c97b40bb71749e97461b748a5399(与第二批同一棵树)",
+    "archive_excludes": "同第二批,含 evaluation/upstream 与 evaluation/PR-DESCRIPTION.md",
+    "note_asset": "同一份 v2,未轮换 —— 判别值没有随第二批的记录进入提交树(提交树里 0 个文件含 bt- 值),没被烧毁",
+    "reference_test": "同一份,不改",
+    "sample_size": "同为 6+6",
+    "interleaving": "同为分块交错四段",
+    "void_rules": "同第二批四条,另加一条落点条款(见下)",
+    "model_and_identity": "同为服务端 deepseek-flash、消费者身份 c",
+    "why_listed": "只有一个条件动了,其余逐条列出来,读的人能自己核对这一点。"
+  },
+  "frozen": {
+    "note_asset": { "asset_id": "skl-XAzqAgejM7O4", "name": "eval-skill-resource-download", "version": 2, "visibility": "team",
+      "token_sha256_registered_in": "evaluation/tasks/resource-download/tokens.json",
+      "note": "本任务的采用判定靠行为(零字节、信封透传、请求打到哪个子路径),不靠这个值" },
+    "archive_excludes_required": ["evaluation/upstream", "evaluation/PR-DESCRIPTION.md"],
+    "start_commit": "9e3752feb767c97b40bb71749e97461b748a5399",
+    "acceptance_version": "repo-2026-09-11d",
+    "contamination_rules_version": "contamination-2026-09-13c",
+    "reference_test": "evaluation/tasks/resource-download/reference/regression.reference.mjs(5 条行为断言,与前两批同一份)",
+    "consumer_identity": "c(零记录用户),每次运行新建消费者 agent",
+    "product_task_id": "task-h1k7xruuhb",
+    "model": "服务端 deepseek-flash",
+    "core_extraction": "off(prepare.sh 在不是 off 时硬失败)",
+    "clickhouse": {
+      "required": "可达,prepare.sh 的硬前置",
+      "ping": "http://127.0.0.1:8123/ping 回 Ok.",
+      "table": "context_proxy.tool_call_logs",
+      "image_digest_observed": "sha256:d73903d1b61dfe825fc3810542f252966f33d3fd8efb3b3edcbbafb46b524b04",
+      "digest_not_enforced": "运行时只核可达性,不核摘要 —— 摘要只是记录,别把它当成被验过的约束"
+    }
+  },
+  "design": {
+    "sample_size": { "no-note": 6, "note": 6, "why": "与第二批同量级,才谈得上同口径看这一个条件的变化;这个量级只说方向,不说幅度" },
+    "interleaving": "四段:no-note ×3 → 准入 → note ×3 → 撤回 → no-note ×3 → 准入 → note ×3 → 撤回。段间要改 Core 里的 status(管理员密钥,用户的步骤)。",
+    "batch_tag": "每次运行记 batch=\"3\";报告按批分节,不给合计。"
+  },
+  "void_rules": {
+    "pre_registered": "下列情形该次运行作废,不进样本 —— **开跑前写死,不在看到结果之后才定**",
+    "rules": [
+      "污染检查不是明确的干净(contaminated 非 false,含未知)",
+      "memory-channel 报 ok=false(记忆通道有残留或借用)",
+      "笔记状态与组别不符(run-arm.sh 开跑前就会拒跑)",
+      "harness 自身失败(判决为 ERROR、没有 verdict.json、没有 capture)",
+      "**新增**:落点在这次运行期间不可达 —— export.log 报连接失败或没有产出 tool-call-logs-all.jsonl。这一批的前提就是证据写得下来,写不下来的那次测的不是我们要测的东西。"
+    ],
+    "zero_rows_is_not_void": "**落点可达但这次一行 bridge_call 都没有,是结果,不是作废** —— 那说明消费者根本没经代理取过东西。只有「落点本身不可达」才作废。这两件事开跑前就分开写。",
+    "not_a_void_reason": "判决是 FAIL 不是作废理由 —— FAIL 是结果。"
+  },
+  "what_would_close_the_attribution": {
+    "the_single_cell": "有笔记组里**至少一次**运行,对 skl-XAzqAgejM7O4 给出 used(不是 fetched、不是 needs_review)。",
+    "if_it_comes_out": "那就第一次能说「这次改动确实用了这条被取回的笔记」,题目要求的「检索到的记忆如何影响后续操作」才算有一条闭合的证据链。",
+    "if_it_does_not": "如实写「落点恢复后仍未闭合」,并给出卡在哪一步(fetched 未升格 / 配不上服务端行 / 消费者抢跑)。**不因为不闭合而加跑、换条件或挑样本。**"
+  },
+  "accepted_outcomes": {
+    "statement": "**接受差异缩小、打平,以及归因仍不闭合。** 这三种都是结果,不是失败。",
+    "no_rerun_for_a_better_number": "不因为结果不合意而加跑、换条件或挑样本。要再跑只能作为第四批,另行冻结另行报。"
+  },
+  "cannot_establish": [
+    "**有行不等于配得上。** 冒烟那次 3 个来源事件里只有 1 个是 bridge+wire,另 2 个 wire_only;还有 2 个响应「没有服务端行承载这个请求」配不上。所以即使这一批每次都有 bridge_call 行,仍可能大面积 needs_review。",
+    "**消费者抢跑没有改动。** 前两批 needs_review 的直接形态是:消费者自己 curl 了 skill bridge 取回笔记,早于被记账的那次 fetch。这一批没有改这条链路 —— 只恢复了落点。如果抢跑才是主因,这一批照样不闭合。",
+    "样本量仍小、仍是单模型;6+6 说方向,不说幅度,不做显著性检验。",
+    "产品源码仍在副本里(按设计),所以这一批**也不能**证明「这条知识只能来自笔记」。",
+    "冒烟那次是无笔记条件,它对 used 可达性**没有任何证据**;把它当成预演成功是过度解读。"
+  ]
+}

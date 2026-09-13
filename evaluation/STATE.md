@@ -9,7 +9,8 @@
 | **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-66bc9aecd719`(**2026-09-12T11:33Z 第二次切换**:第三轮复核改了闸门理由串,必须重建;构建提交 66bc9ae 的 MemoryCore 树 == HEAD;记录 `gate/artifacts/core-image-switch-20260912T113253Z.json`;上一版 topic4-11d30eaa720d 的切换记录仍在),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **off**(**2026-09-12T17:56:07Z 第二次拨回**,记录在 `tasks/exit-code-fix/extraction-switch.jsonl` 末条,审阅裁定 ③)。**注意这里曾经漂移过 6 小时**:11:33Z 的第二次镜像切换用 `start-memory-core.sh` 起容器,而该脚本会重新生成整个挂载配置(`start-memory-core.sh:55` 的 `cat > "$CORE_CONFIG_FILE"`),把提取写回 on —— 正是提交 c88e955 记下的那个坑,切镜像后没有复查。17:55Z 发现(文件 sha `cdb5b484…`、容器读到 `enabled:true`、Core 11:33Z 日志 `extraction=true`),17:56Z 拨回并校验(sha `66ebab0a…`、文件与容器一致、Core healthy);漂移范围经比对只涉及这一个开关(见 `gate/artifacts/extraction-drift-20260912.json`)。**没有交付运行受影响**:9/12 全天零次运行,且 `runner/prepare.sh:81` 在提取不是 off 时硬失败、162 行会就地拨回,错的只是线上状态与 STATE 对它的描述。拨回后读回:批次四两条 v4 与闭环笔记 v2 均未变(`gate/artifacts/core-status-after-extraction-off-20260912.json`、`core-status-note-after-extraction-off-20260912.json`);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
 | 分支 / 交付载体 | `topic4-attribution-gate`,远端 `mine`;**交付载体是分支本身**:https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/topic4-attribution-gate(导师要求为「分支代码 + 文档」,不要求 PR)。fork 内的 PR #1 曾作为浏览入口,**2026-09-12 用户决定关闭**—— 其 diff 基线是上游 `feat/server_team`,会把 fork 相对上游的 2596 个文件差异一并计入,不如直接读分支;关闭不影响分支与提交历史,`evaluation/PR-DESCRIPTION.md` 继续作为交付说明书。另:上游 PR **#1358** 是独立分支的贡献,仍然开着。推送由用户手动完成 |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | **2026-09-13T16:09Z(交付复跑 `evaluation/delivery/2026-09-13T160920Z/SUMMARY.md`,受测提交 `f8c1a7f`,**与已推送的 HEAD 一致**)**:套件 767/767;离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
+| 验证时间 | **2026-09-13T16:09Z(交付复跑 `evaluation/delivery/2026-09-13T160920Z/SUMMARY.md`,受测提交 `f8c1a7f`,**与已推送的 HEAD 一致**)**:套件 767/767(当时的数);离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
+| 套件现状 | 套件 772/772(2026-09-13,从仓库根全跑 0 失败;比 `f8c1a7f` 那次多的 5 个是 `check-frozen-conditions.test.mjs`)。**完整验收要等第三批跑完再重跑一次** —— 现在跑一次会被那一批的报告改动作废 |
 | 测试 | evaluation **633**(2026-09-12,从仓库根跑全 0 失败;各轮第二人复核新增/改写的测试在内:运行时与闸门来源 +10、离线解析 +5、登记簿保留 +5、校准口径 +9、作者评估边界 +7、第四轮渲染器 +2);Core 122;proxy 24。另有上游候选二的 6 个测试,在另一个 worktree 的 vitest 下跑(`upstream-extract-flag`,不在这 630 里) |
 
 ## 第 1 件"新实验条件准备齐":已验收
@@ -180,7 +181,13 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 容器 `clickhouse`、别名 `clickhouse`、网络 `tdai-memory-stack`;proxy 重连后自建四张表,连通性检查 `clickhouse: ok`。
 原始启动命令(9/4)没有记录,本次按现行 proxy 配置反推,tag 未固定、以摘要为准。
 `prepare.sh` 从此把它当**硬前置**(与提取开关同等):`verify_ready` 在不可达或未启用时判未就绪;`--status` 显示 `clickhouse:` 一行。
-**尚未验证**:一次真实运行后 `tool-call-logs-all.jsonl` 里是否出现 `bridge_call` —— 由冒烟运行确认,冒烟不进样本。
+**已验证(2026-09-13 18:11Z 冒烟一次,`20260913T181136Z-devloop-smoke`,无笔记条件,`sample=false` 不进任何样本)**:
+导出 51 行,其中 `bridge_call` **9 行、全部 2xx**(`skill-bridge/proxy`,端点 search 4 / get 5),另 `model_intent` 42 行;
+污染 `false`、记忆通道 `ok=true`;来源判定里出现 **1 个 `bridge+wire`** —— 前 36 次一次都没有过的配对形态。
+计数存档 `tasks/resource-download/artifacts/sink-smoke-20260913.json`(**只存计数与端点,不存 `request_body`** —— 请求体可能带判别值)。
+**它不证明什么**:冒烟走的是无笔记条件,`used-events` 为空,所以「`used` 拿不拿得到」仍未知;
+而且 3 个来源事件里只有 1 个配上了服务端行,另 2 个 `wire_only`、2 个响应配不上 —— **有行不等于配得上**。
+这两句都在开跑前写进了 `batch3-conditions.json` 的 `cannot_establish`,不是看到结果之后补的。
 
 **第九轮复核(2026-09-13 晚)两条报告收尾 + 一条追查:**
 **① 主结果分了批,曝光统计还在合并** —— 已改:曝光表、条件说明、样本量全部按批输出,顶层不再给合计。
@@ -198,6 +205,16 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 这一行现在由 `report.mjs` 逐批算出来印在报告里。**这是可修的环境缺口** —— 也正因为如此,
 第三批只有在「先把 ClickHouse 恢复、能记下真实取回与后续操作的绑定」之后才值得跑;
 原样重复 6+6 补不上这条链。
+
+**第三批条件已冻结并入库(开跑前)**:`tasks/resource-download/batch3-conditions.json`。
+**与第二批只差一个条件** —— 归因落点可达;start_commit、排除清单、笔记 v2(判别值未随第二批记录进入提交树,
+提交树里 0 个文件含 `bt-` 值,没被烧毁)、参考测试、样本量 6+6、分块交错四段、消费者身份 c、模型,逐条未动,
+文件里列了出来好让人自己核对。同时把 `run-arm.sh` 的冻结闸门从「只在第二批核对」改成**按批取 `batch<N>-conditions.json`,
+取不到就不许跑**,并要求该文件**已入库且与 HEAD 一致** —— 光靠文件自己写的 `frozen_at`,看到结果再回头改一行照样好看,
+入库才拦得住(`check-frozen-conditions.mjs`,5 个测试;三种状态实测:第三批未冻结拒跑、第二批通过、第二批文件被改拒跑)。
+预登记的单格:**有笔记组至少一次对 `skl-XAzqAgejM7O4` 给出 `used`**;不出来就如实写「落点恢复后仍未闭合」并给出卡在哪一步,
+**不因为不闭合而加跑、换条件或挑样本**。作废规则另加一条「落点在该次运行期间不可达」,同时写明
+**落点可达但 0 行 `bridge_call` 是结果不是作废** —— 这两件事开跑前就分开写。
 
 **第八轮复核(2026-09-13 傍晚,只读 + 内存反例)三条:**
 **① 前两处阻断漏洞已在 `7429693` 修完并推送**,复核方读的是更早的树。当场用真程序复验:三次 `chain-cli` 用不存在的 case

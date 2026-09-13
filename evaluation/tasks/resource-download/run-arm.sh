@@ -44,23 +44,12 @@ node "$REPO/evaluation/runner/contamination.mjs" --preflight --task="$HERE" \
   --extra-roots="$(ls -d /private/tmp/* 2>/dev/null | grep -v -e '/topic4-runs$' -e '/topic4-sessions$' | tr '\n' ',' | sed 's/,$//')" \
   || { echo "开跑前检查没过,一次也没跑。" >&2; exit 2; }
 
-# 第二批:开跑前核对冻结条件还成立(排除清单、笔记版本)——冻结文件先写,运行后跑
-if [[ "$BATCH" == "2" ]]; then
-  python3 - "$HERE" <<'PYCHK' || { echo "冻结条件核对没过,一次也没跑。" >&2; exit 2; }
-import json,sys
-h=sys.argv[1]
-c=json.load(open(f"{h}/batch2-conditions.json")); t=json.load(open(f"{h}/task.json")); tok=json.load(open(f"{h}/tokens.json"))
-bad=[]
-for x in c["changed_from_batch_1"]["archive_excludes_added"]:
-    if x not in t["archive_excludes"]: bad.append(f"archive_excludes 少了 {x}")
-if t["start_commit"] != c["frozen"]["start_commit"]: bad.append("start_commit 与冻结值不符")
-aid=c["frozen"]["note_asset"]["asset_id"]
-if aid not in tok: bad.append(f"tokens.json 里没有 {aid}")
-elif tok[aid]["version"] != c["frozen"]["note_asset"]["version"]: bad.append(f"笔记版本 {tok[aid]['version']} != 冻结的 {c['frozen']['note_asset']['version']}")
-for b in bad: print("  冻结条件不符:", b, file=sys.stderr)
-sys.exit(1 if bad else 0)
-PYCHK
-  echo "冻结条件核对:通过(排除清单、start_commit、笔记版本均与 batch2-conditions.json 一致)"
+# 冻结条件:按批取 batch<N>-conditions.json,**取不到就不许跑**(原来写死只在第二批核对,
+# 第三批会安静跳过 —— 那等于没有闸门)。还要求冻结文件已入库且与 HEAD 一致,否则「先冻结再跑」
+# 只剩文件自己写的时间戳,证不出来。冒烟不进样本,不走这道闸门。
+if [[ "$ARM" != "smoke" ]]; then
+  ( cd "$REPO" && node evaluation/tasks/resource-download/check-frozen-conditions.mjs --batch="$BATCH" ) \
+    || { echo "冻结条件核对没过,一次也没跑。" >&2; exit 2; }
 fi
 
 TASK_SHA="$(shasum -a 256 "$HERE/task.md" | cut -c1-64)"
