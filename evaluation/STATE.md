@@ -150,8 +150,17 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 (`task.json` 的 `copy_exposure`)。**③ 污染规则改过两版**(b:按访问判不按文本判,首版误报 4 次;c:自查补三处),
 每条运行保留历次判定(`contamination_history`),两次真污染在三版下都被抓住。
 
-**待办**:① 用户 `admit-note.sh --revoke` 置回 candidate;② 决定要不要清掉 PR 归档后两组重跑(实施者倾向不清,如实报);
-③ 归档运行前先按 §16 登记已烧毁的判别值并轮换 —— capture 里有明文,入库即烧毁。
+**收尾(2026-09-13 下午,用户逐项定)**:① 用户已 `admit-note.sh --revoke`,笔记回到 candidate(记录 `artifacts/note-admission-20260913T131034Z.json`)。
+② 运行已归档(0f08a78):8 次样本 + 2 次事故运行全量,14 次作废运行只留 verdict 与污染判定(各目录 `ARCHIVE-MINIMAL.md`);
+v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` 用 `git grep` 证明(≥44 个已提交文件)并登记;笔记已轮换到 **v2**
+(仍 candidate/team,记录 `artifacts/note-rotated-2026-09-13.json`),v1 规格由 `fill-note.mjs` 自动退进 `tokens.json._history`。
+③ PR 归档**不清**,报告如实写(用户定);若再加样本须改 `archive_excludes` 后两组一起另跑另报。④ 不写显著性。
+⑤ 第三任务已接进 `deliver-check.sh`:`devloop-report-3`(diff 0)与 `contamination-3`(样本批检,污染与未知同样阻断)。
+⑥ `needs_review` 如实写,归因器不改(用户定)。⑦ 归档范围同②。
+**验收复跑(HEAD 1f5cf3e,`delivery/2026-09-13T133832Z`)离线全过、线上一项未登记:`proxy 强制身份 task`** —— 8 次运行把 proxy 强制身份
+留在最后一个消费者(`agt-k9ic54p94e` / `task-h1k7xruuhb`),按前两个任务的收尾要恢复到主线消费者 b + `task-5e6xp4mrrw`
+(`FRESH_CONSUMER_TASK=task-5e6xp4mrrw bash evaluation/runner/prepare.sh --identity b; bash evaluation/tasks/bridge-addr/use-identity.sh b`,
+备份 + `proxy-identity-restore-3.json`),线上状态改动待用户点头(§10);恢复后重跑验收。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 

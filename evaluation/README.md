@@ -150,6 +150,20 @@ and diffs them against the committed copies):
   resulting code passed independent acceptance**. It does not separately show
   that the root-cause diagnosis came from the note, and it does not show the
   defect would have gone unfixed without it.
+- **The dev loop, a different kind of work** (`tasks/resource-download/REPORT.md`):
+  adding a tool rather than fixing one, judged by behaviour rather than by a
+  marker — the reference test asserts zero bytes for an empty resource, the
+  error envelope surfacing, and the request going to `files/download`, a
+  subpath the injected tool list never names. On this branch's samples the
+  no-note arm is 0/4, every run failing that one assertion, and the note arm
+  4/4. Said with it, not after it: every use event is `needs_review`, because
+  the consumers fetched the note by calling the skill bridge themselves rather
+  than through the credited fetch; the working copy also carried this
+  repository's own upstream PR write-up, which states in prose that
+  `files/download` returns raw bytes — both arms had it, six of eight runs read
+  it, two no-note runs read it and still failed; and the first no-note batch of
+  sixteen was voided because the implementer had left the reference
+  implementation on disk, which the runner now checks for and would refuse.
 - **The author dimension** (`author/README.md`): a context-based assessment
   read from the author's own records, cited and machine-checked, used by the
   gate for review priority only.

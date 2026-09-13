@@ -72,7 +72,7 @@
 | 条 | 对应 | 文件 |
 |---|---|---|
 | ① 置信度是入池 / 回池门禁,系统辅助人判断;离线 + 在线两类指标 | 闸门在 Core 写 status;confidence = 跨人结果中 validated 占比,带分母,无证据为 null;人可推翻、可撤回结果行;pending 资产带复核优先级排队 | `gate/README.md`、`MemoryCore/src/metadata/service/asset-gate.ts` |
-| ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
+| ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移;第三任务换一类工作(新增功能)、换一份笔记、采用靠行为判定(`tasks/resource-download/REPORT.md`:0/4 对 4/4,使用判定全部 needs_review,副本里含本仓库自己的 PR 归档,作废批次与污染检查同页写明)。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
 
 ## 离线 / 在线两类指标,对应到代码里的名字
 
@@ -141,5 +141,5 @@ unknown,闸门据此把复核优先级提到 high,admit/reject 不变——作�
 
 ## 每份报告都有"测的是什么,不是什么"
 
-批次四:`runner/COMPARISON-2026-09-11-reparsed.md` 开头;闭环:`tasks/exit-code-fix/REPORT.md`、`tasks/exit-line-collect/REPORT.md` 第一节;作者:`author/README.md` "Limits, stated"。
+批次四:`runner/COMPARISON-2026-09-11-reparsed.md` 开头;闭环:`tasks/exit-code-fix/REPORT.md`、`tasks/exit-line-collect/REPORT.md` 第一节,`tasks/resource-download/REPORT.md` 末节(另有"工作副本里本不该有的那份说明"与"作废批次"两节);作者:`author/README.md` "Limits, stated"。
 共同的局限:单操作者操作全部身份(跨人是两个用户 id,不是两个人)、单模型、小样本、判别值进过 git 的版本已烧毁。

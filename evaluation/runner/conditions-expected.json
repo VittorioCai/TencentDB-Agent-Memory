@@ -109,6 +109,11 @@
       "item": "来源扫描无缺口",
       "class": "record_gap",
       "why": "20260911T175839Z-devloop-smoke 缺 capture.jsonl,来源扫描因此不完整。**这是记录缺口,不是按设计如此** —— 该次是冒烟运行、不在任何正式样本名单里,但缺口本身要如实记为缺口"
+    },
+    {
+      "item": "文件未变 evaluation/runner/token-provenance.mjs",
+      "class": "post_batch",
+      "why": "2026-09-13 把「最小归档」(作废批次只留 verdict 与污染判定,capture 按记录未入库)从「记录缺口」里分出来单独报;两者仍都算没扫到、结论仍是未知。提交 1f5cf3e,测试 token-provenance.test.mjs 末条。"
     }
   ]
 }
