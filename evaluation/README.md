@@ -190,9 +190,14 @@ Since 2026-09-12 the delivery also carries, each with its own record:
   branches independent of this one and all still pending review with no automated checks
   (`upstream/README.md` — it also records one reproduced defect deliberately **not**
   submitted, because that project's CONTRIBUTING routes such reports to private email);
-- **a port of the gate onto today's upstream** (`gate/PORT-TO-UPSTREAM.md`): 21 files,
-  four conflicts, all of them import lists, and a tree that builds and passes 132 tests
-  with no `evaluation/` in it — evidence that the gate is product code, not a harness.
+- **a port of the gate onto today's upstream** (`gate/PORT-TO-UPSTREAM.md`; branch
+  `gate-core-minimal`, commit `c372d80`, based on `feat/server_team@0468a2a`): this
+  branch differs from upstream in 3675 files, and the gate is 21 of them; four conflicts,
+  all of them import lists; a tree with no `evaluation/` in it that builds and passes
+  132 tests; and `typecheck:metadata`, compared after normalising away line numbers,
+  adds no new error and leaves 5 fewer than pristine upstream (118 against 123, the
+  `src/metadata` share 11 → 6). This is the direct answer to "the gate has to live in
+  Core": product code, not a harness.
 
 A configuration note worth recording: the knowledge service ships its own
 ClickHouse telemetry writing the *same* `tool_call_logs` table, tagged

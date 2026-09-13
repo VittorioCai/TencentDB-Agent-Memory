@@ -84,6 +84,13 @@ export function buildReport(manifest, load, exposure = null) {
       : `有笔记组反而低 ${(-gain * 100).toFixed(0)} 个百分点(${b.pass}/${b.counted} 对 ${a.pass}/${a.counted});按此样本量不足以说明笔记有害,只能说没测出正向作用。` };
 }
 
+/** 样本量的限制由计入样本数算出来;只说方向与幅度,不写显著性检验(§6:结论句不模板写死)。 */
+export function sampleSizeLine(rep) {
+  const a = rep.arms["no-note"].counted, b = rep.arms["note"].counted;
+  if (!a || !b) return `- 样本量:无笔记 ${a} 次、有笔记 ${b} 次,尚不构成两组比较。`;
+  return `- 样本量:无笔记 ${a} 次、有笔记 ${b} 次。这个量级只能说明方向,说不了幅度——两组的百分点差不该被读成效应大小的估计;要更有底,须在同一条件下另跑一批。`;
+}
+
 export function render(rep, manifest) {
   const L = [`# 第三个开发闭环任务:resource-download`, "",
     `任务类型:**新增一个功能**(前两个是修已有缺陷)。采用判定靠**行为**,不靠标记。`, "",
@@ -128,6 +135,7 @@ export function render(rep, manifest) {
     `- 测的是:在这一个新增功能任务上,一份写着两条实测行为的笔记,能不能让一个全新消费者把请求打到 \`files/download\`、把空内容当合法内容、把错误信封原样带出。`,
     `- 不测:笔记对其他任务的作用;也不测产品在其他场景下的检索质量。`,
     `- 允许零增益:同样的知识读 MemoryProxy 源码也能得到,所以两组打平是一个合理结果,不构成失败。`,
+    sampleSizeLine(rep),
     `- 样本偏在:消费者同为一个模型,身份同为 identity c;两组之间除笔记的准入状态外不做其他变动。`,
     `- 生成:\`node evaluation/tasks/resource-download/report.mjs\`,数据来自 \`devloop-runs.json\` 与各次运行记录。`);
   return L.join("\n") + "\n";

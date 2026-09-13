@@ -26,6 +26,6 @@
       "files/download`, success",
       "`files/download` 分支**只有后者**"
     ],
-    "not_excluded_because": "这 8 次样本是在含它的副本上跑的;现在改 archive_excludes 会让后续样本与它们不可比。要清掉就得两组一起重跑,交给用户决定。"
+    "not_excluded_because": "用户已定(2026-09-13):不清,如实报。这 8 次样本在含它的副本上跑,两组条件相同;若再加样本,须先把 `evaluation/upstream/` 与 `evaluation/PR-DESCRIPTION.md` 加进 archive_excludes,两组各跑一遍,作为第二批另跑另报,不与这 8 次合并。"
   }
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assertionsFromTap, buildReport, render, sampleState } from "./report.mjs";
+import { assertionsFromTap, buildReport, render, sampleSizeLine, sampleState } from "./report.mjs";
 
 const TAP = `TAP version 13
 ok 1 - 1. 非空资源:拿到的是原始字节,不是信封
@@ -110,4 +110,13 @@ test("污染规则改过几版,报告就列几版 —— 上一版的理由不�
   assert.match(md, /重判\(c\)/); assert.match(md, /重判\(b\)/);
   assert.match(md, /b 为什么/); assert.match(md, /b 备注/);
   assert.ok(md.indexOf("重判(c)") < md.indexOf("重判(b)"), "最新的在前");
+});
+
+test("样本量那句由计入样本数算出,只说方向不说幅度,没有 p 值", () => {
+  const m = { runs: [run({ run_id: "a1" }), run({ run_id: "a2" }), run({ run_id: "b1", arm: "note" })] };
+  const line = sampleSizeLine(buildReport(m, load));
+  assert.match(line, /无笔记 2 次、有笔记 1 次/);
+  assert.match(line, /只能说明方向/);
+  assert.ok(!/p\s*[=≈<]/.test(line) && !/显著/.test(line), "不写显著性");
+  assert.match(sampleSizeLine(buildReport({ runs: [run({})] }, load)), /尚不构成两组比较/);
 });
