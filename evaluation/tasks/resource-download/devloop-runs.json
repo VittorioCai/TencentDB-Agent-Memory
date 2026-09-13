@@ -485,6 +485,16 @@
       "n": 4,
       "identity": "c",
       "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T12:01:01Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 0,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
     }
   ],
   "voided_batches": [
