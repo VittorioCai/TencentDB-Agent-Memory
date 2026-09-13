@@ -1,0 +1,22 @@
+运行 20260911T185119Z-devloop-note —— 候选怎么变成上下文
+
+池中 7 项
+
+① 准入过滤(产品闸门做的,与任务无关)
+   放行 5 项;挡下 2 项:
+     - eval-bridge-endpoint-c(skl-ImeA29HL3Djj):闸门状态 candidate —— 模型路径只放行 approved
+     - eval-bridge-endpoint-a(skl-sZFb3KatWY6m):闸门状态 failed —— 模型路径只放行 approved
+   这一层与任务无关:同一份资产在任何任务下都是同样的准入结果。
+
+② 任务相关性筛选(模型自己做的)
+   模型检索 1 次,从已准入的 5 项里取回 1 项;其余 4 项是「已准入但模型没要」,与闸门无关。
+   取回:eval-tool-result-exit-line
+   已准入但没要:deploy-lookup-note-a、deploy-lookup-note-b、tdc-312fad、eval-bridge-endpoint-b
+
+③ 最终进入上下文
+   进入上下文的是取回内容,共 2729 **字符**(不是 token —— 这里没有分词器,未测量 token 数)。
+
+④ 够不够完成任务
+   留下的内容够不够完成任务,只看独立验收:PASS(reference test passed (6/6); no new identified failure in th)。这里不另下结论。
+
+复算:node evaluation/attribution/selection-cli.mjs --run=20260911T185119Z-devloop-note

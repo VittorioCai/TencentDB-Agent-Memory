@@ -1,4 +1,17 @@
-# Author assessment from the author's own records
+# 作者评估:从作者自己的记录里读出来的一页
+
+**这页是干什么的。** 一条候选资产等着人复核时,系统先把**与这条资产有关的历史记录**整理成一份材料,
+交给模型给出**每条都带引用**的判断,再由程序去核对那些引用和结构化事实。产出是一页给复核人看的材料。
+
+**程序能核什么、不能核什么。** 它能核:记录是否真的存在、引文与记录是否一字不差、
+结果是否属于**被评估的这个资产版本**。它**不能**核模型对「这个人行不行」「换个环境还成不成立」这类解释 ——
+所以报告把**已核对的记录事实**和**模型的推断**分开显示,不混在一起。
+
+**它影响什么。** 它影响候选资产的**复核优先级**,**不直接决定放不放行**。
+页面上的等级说的是**这个资产已经有过什么结果**,不是作者的总体能力。
+
+<details>
+<summary>展开:这套做法是怎么来的(两轮复核的修订史)</summary>
 
 Review (2026-09-07) rejected the smoothed ratio `(V + α·μ) / (V + C + α)`:
 two counts compressed into a number that says nothing about what the person
@@ -9,6 +22,22 @@ version checked the citation but not the fact: a quote that really is in
 the record could still carry the wrong conclusion. **v2** checks both, and
 derives the conclusions itself.
 
+</details>
+
+## 每个文件负责什么(一句话)
+
+| 文件 | 一句话职责 |
+|---|---|
+| `build-evidence-pack.mjs` | 用作者自己的密钥收集与该资产有关的历史记录,逐条编号并标明证据类别 |
+| `assess.mjs` | 把材料给模型,拿回带引用的判断;不采信没有引用的话 |
+| `check-citations.mjs` | 核引用是否真实、结构化事实是否对得上;只核结构,不核自由文本的含义 |
+| `write-assessment.sh` | 用管理员密钥把给闸门看的摘要写到资产上 |
+| `demo-cold-start.sh` | 从建资产到闸门读到评估,走一遍完整流程 |
+| `artifacts/` | 材料、提示词、评估结果与原始模型输出的归档 |
+
+<details>
+<summary>展开:每个文件的完整说明(含参数、边界与已修缺陷)</summary>
+
 | File | Does |
 |---|---|
 | `build-evidence-pack.mjs` | The author's records, read with the author's own key on the management path, each with a stable id and an **evidence class**: `call:<id>` proxy_observed (one row, one id — the same request from two sessions is two calls; calls the proxy itself logged, with the upstream HTTP status — from `gate0/export-tool-call-logs.sh` with `USER_ID=`), `outcome:<id>` harness_verified (**the rows Core says the gate may read**: every row comes back from `asset/outcome/list` stamped with `gate_validity` — usable / trusted / retracted / bound — computed by the same function the decision uses, and the pack keeps or drops by that stamp instead of re-deriving the rule; untrusted and retracted rows are counted and left out, and the pack records whether the stamp came from Core or from the local fallback. The record carries the version, the **content hash**, `bound` and the recorded time beside the event time, and names the tokens of the outcome's own asset **at that version**), `l0:<id>` user_instruction / assistant_report (L0 keeps user and assistant messages only; tool results are not stored, so an assistant's account of a command is a narration), `l1:<id>` derived_memory (provenance `source_unavailable` — the query API returns no source message ids), `persona:<v>:<line>` team_principles (L3, stored per team + agent: the team's working principles, not the person's record), `skill:<id>@<v>` authored_text (the version that existed at the cutoff, not the head; the writer of each version is unknown). **Pairing**: each bridge_call is tied to the model_intent it answered (same session, within 30 s, endpoint named in the command, a body value present in the command) — and the match must be unique **from both sides**: exactly one candidate command *and* no other result claiming that command → paired; anything else → ambiguous (the result is real, but which command it answered is not known); none → unpaired. Checking one side only (until 2026-09-08d) let two results claim one command — a duplicated service record, a retry, or the other result's own command missing from the export — and the second silently overwrote the first, so both were counted as paired. **Cutoff**: a record is dated by its last modification (`updated_at` for a memory), so a memory changed after the cutoff is excluded and counted — the earlier text is not kept anywhere; undated records and a persona updated after the cutoff are excluded too. For the asset under assessment: version, content hash, exact tokens from its body, and a chain *version → producer → source sessions → operations → results* with every break named |
@@ -17,6 +46,8 @@ derives the conclusions itself.
 | `write-assessment.sh` | Puts `summary_for_gate` onto the asset through `/v3/meta/asset/gate/assessment` with the **admin key**: Core admits only a team admin or reviewer (never the author), checks the binding — author, asset version, content hash, `evidence_cutoff` — signs it (`written_by`, `written_at`) and re-decides. An assessment merged into `metadata_json` through `asset/update` is dropped by the audit-field guard; an unsigned one on file is ignored by the gate |
 | `demo-cold-start.sh` | A new skill by A → candidate → pack (calls exported, cutoff now) → assessment → written through the route → the gate's priority reflects it |
 | `artifacts/` | Packs, prompts, assessments (`.json` with the raw model output beside the verified result; `.md` for reading), write records |
+
+</details>
 
 ## 归档件里的旧字段(读的时候要知道)
 
