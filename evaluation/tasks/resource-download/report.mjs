@@ -42,6 +42,32 @@ export function sampleState(run) {
  * @param exposure task.json 的 copy_exposure:副本里本不该有的那份说明,以及认它的原话。
  *   计数由数据算出来,不写死(§6):每次运行的上下文里命中几条。
  */
+/** 一批样本的统计:两组各自的计数与通过率,以及能不能比。 */
+export function statsOf(runs) {
+  const arms = {};
+  for (const arm of ["no-note", "note"]) {
+    const all = runs.filter((r) => r.arm === arm);
+    const counted = all.filter((r) => r.counted);
+    const pass = counted.filter((r) => r.verdict === "PASS").length;
+    arms[arm] = { total: all.length, counted: counted.length, pass,
+      rate: counted.length ? pass / counted.length : null, excluded: all.length - counted.length };
+  }
+  const a = arms["no-note"], b = arms["note"];
+  const comparable = a.counted > 0 && b.counted > 0;
+  return { runs, arms, comparable, gain: comparable ? b.rate - a.rate : null };
+}
+
+/** 结论句由数字决定,不预设方向(§6);一批一句。 */
+export function conclusionOf(st) {
+  const a = st.arms["no-note"], b = st.arms["note"], gain = st.gain;
+  if (!st.comparable) {
+    return `未知:${a.counted === 0 ? "无笔记组" : ""}${a.counted === 0 && b.counted === 0 ? "与" : ""}${b.counted === 0 ? "有笔记组" : ""}没有可计样本,两组无法比较。`;
+  }
+  if (gain > 0) return `有笔记组高出 ${(gain * 100).toFixed(0)} 个百分点(${b.pass}/${b.counted} 对 ${a.pass}/${a.counted})。`;
+  if (gain === 0) return `两组持平(各 ${b.pass}/${b.counted} 与 ${a.pass}/${a.counted});这是结果,不是失败 —— 这条知识读 MemoryProxy 源码同样得得到。`;
+  return `有笔记组反而低 ${(-gain * 100).toFixed(0)} 个百分点(${b.pass}/${b.counted} 对 ${a.pass}/${a.counted});按此样本量不足以说明笔记有害,只能说没测出正向作用。`;
+}
+
 export function buildReport(manifest, load, exposure = null) {
   const needles = exposure?.needles ?? [];
   const runs = (manifest.runs ?? []).map((r) => {
@@ -55,33 +81,26 @@ export function buildReport(manifest, load, exposure = null) {
       use_states: rec.useStates ?? null,
       exposure_hits: text === null ? null : needles.filter((n) => text.includes(n)).length };
   });
-  const arms = {};
-  for (const arm of ["no-note", "note"]) {
-    const all = runs.filter((r) => r.arm === arm);
-    const counted = all.filter((r) => r.counted);
-    const pass = counted.filter((r) => r.verdict === "PASS").length;
-    arms[arm] = { total: all.length, counted: counted.length, pass,
-      rate: counted.length ? pass / counted.length : null,
-      excluded: all.length - counted.length };
-  }
-  const a = arms["no-note"], b = arms["note"];
-  const comparable = a.counted > 0 && b.counted > 0;
-  const gain = comparable ? b.rate - a.rate : null;
+  // 按批次分组:**两批永不合并**(CLAUDE.md:更换条件不与旧口径合并)。
+  // 第二批换的是工作副本的排除清单,条件不同,合在一起算出来的比率没有意义。
+  const batches = {};
+  for (const r of runs) (batches[r.batch ?? "1"] ??= []).push(r);
+  const byBatch = {};
+  for (const [id, list] of Object.entries(batches)) byBatch[id] = statsOf(list);
+  const first = byBatch[Object.keys(byBatch).sort()[0]] ?? statsOf([]);
+  const { arms, comparable, gain } = first;
   const exposureSeen = {};
   for (const arm of ["no-note", "note"]) {
     const c = runs.filter((r) => r.arm === arm && r.counted);
     exposureSeen[arm] = { counted: c.length, read_it: c.filter((r) => (r.exposure_hits ?? 0) > 0).length,
       unknown: c.filter((r) => r.exposure_hits === null).length };
   }
-  return { arms, comparable, gain, runs, exposure, exposure_seen: exposureSeen,
+  for (const st of Object.values(byBatch)) st.conclusion = conclusionOf(st);
+  return { arms, comparable, gain, runs, batches: byBatch, exposure, exposure_seen: exposureSeen,
     rejudged: manifest.contamination_rejudged ?? null,
     voided_batches: manifest.voided_batches ?? [],
     // 结论句由数字决定,不预设方向(§6)
-    conclusion: !comparable
-      ? `未知:${a.counted === 0 ? "无笔记组" : ""}${a.counted === 0 && b.counted === 0 ? "与" : ""}${b.counted === 0 ? "有笔记组" : ""}没有可计样本,两组无法比较。`
-      : gain > 0 ? `有笔记组高出 ${(gain * 100).toFixed(0)} 个百分点(${b.pass}/${b.counted} 对 ${a.pass}/${a.counted})。`
-      : gain === 0 ? `两组持平(各 ${b.pass}/${b.counted} 与 ${a.pass}/${a.counted});这是结果,不是失败 —— 这条知识读 MemoryProxy 源码同样得得到。`
-      : `有笔记组反而低 ${(-gain * 100).toFixed(0)} 个百分点(${b.pass}/${b.counted} 对 ${a.pass}/${a.counted});按此样本量不足以说明笔记有害,只能说没测出正向作用。` };
+    conclusion: conclusionOf(first) };
 }
 
 /** 样本量的限制由计入样本数算出来;只说方向与幅度,不写显著性检验(§6:结论句不模板写死)。 */
@@ -92,12 +111,24 @@ export function sampleSizeLine(rep) {
 }
 
 export function render(rep, manifest) {
+  const NAME = { "1": "第一批", "2": "第二批", "3": "第三批" };
   const L = [`# 第三个开发闭环任务:resource-download`, "",
-    `任务类型:**新增一个功能**(前两个是修已有缺陷)。采用判定靠**行为**,不靠标记。`, "",
-    `## 结论`, "", rep.conclusion, ""];
-  L.push(`## 样本`, "", `| 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |`, `|---|---|---|---|---|---|`);
-  for (const [arm, a] of Object.entries(rep.arms)) {
-    L.push(`| ${arm} | ${a.total} | ${a.counted} | ${a.excluded} | ${a.pass} | ${a.rate === null ? "未知(无样本)" : (a.rate * 100).toFixed(0) + "%"} |`);
+    `任务类型:**新增一个功能**(前两个是修已有缺陷)。采用判定靠**行为**,不靠标记。`, ""];
+  const ids = Object.keys(rep.batches ?? {}).sort();
+  // 每批一节,各自的结论与样本表。**不给合计** —— 两批条件不同,合起来算没有意义。
+  for (const id of ids) {
+    const st = rep.batches[id];
+    const label = `${NAME[id] ?? "第 " + id + " 批"}`;
+    L.push(`## ${label}:结论`, "", st.conclusion, "");
+    L.push(`### ${label}:样本`, "", `| 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |`, `|---|---|---|---|---|---|`);
+    for (const [arm, a] of Object.entries(st.arms)) {
+      L.push(`| ${arm} | ${a.total} | ${a.counted} | ${a.excluded} | ${a.pass} | ${a.rate === null ? "未知(无样本)" : (a.rate * 100).toFixed(0) + "%"} |`);
+    }
+    L.push("");
+  }
+  if (ids.length > 1) {
+    L.push(`**两批不合并。** 它们的工作副本排除清单不同(第二批排掉了本仓库自己的上游 PR 归档),`
+      + `条件不同的样本合在一起算出来的比率没有意义(CLAUDE.md:更换条件不与旧口径合并)。`, "");
   }
   L.push("", `## 每次运行`, "", `| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 笔记提及 | 使用判定 | 读到副本里那份说明 | 不计入的原因 |`, `|---|---|---|---|---|---|---|---|---|`);
   for (const r of rep.runs) {

@@ -1,0 +1,51 @@
+{
+  "_meta": {
+    "what": "第三个闭环任务第二批的条件冻结。**在任何一次运行之前写下**(CLAUDE.md §12:新实验条件先冻结自己的清单与基线,再跑第一次)。",
+    "frozen_at": "2026-09-13T16:20:00Z",
+    "why_this_batch": "第一批的工作副本里带着本仓库自己的上游 PR 归档,它用大白话写着 files/download 返回原始字节;两组读到的次数还不一样(有笔记 4/4、无笔记 2/4)。第二批**只问一件事**:把这个已知的替代来源从副本里排掉之后,组间差异还在不在。",
+    "not_a_bigger_sample": "这一批的价值不是「把 4 次加到 6 次」,而是换掉一个条件后看结果还复不复现。所以它与第一批**另跑另报,永不合并**。"
+  },
+  "changed_from_batch_1": {
+    "archive_excludes_added": ["evaluation/upstream", "evaluation/PR-DESCRIPTION.md"],
+    "verified_effect": "按 start_commit 9e3752fe 实测:排除后副本内 1541 个文件中,提到 files/download 的只剩 MemoryProxy/src/skill/skill-bridge.ts —— 产品源码,**按设计保留**(无笔记组读源码自己想到 files/download 是允许的结果,不是污染)。",
+    "still_present_by_design": "产品源码;以及 gate0 的一份 capture 里产品**自己注入**的工具说明(它说 files_read「默认返回 JSON 信封,要下载就加 -o」—— 那是笔记要纠正的误导,不是答案)。"
+  },
+  "frozen": {
+    "note_asset": { "asset_id": "skl-XAzqAgejM7O4", "name": "eval-skill-resource-download", "version": 2, "visibility": "team",
+      "token_sha256_registered_in": "evaluation/tasks/resource-download/tokens.json",
+      "note": "v1 的判别值已随第一批记录进入提交树即烧毁,已登记并轮换到 v2(artifacts/note-rotated-2026-09-13.json)" },
+    "start_commit": "9e3752feb767c97b40bb71749e97461b748a5399",
+    "acceptance_version": "repo-2026-09-11d",
+    "contamination_rules_version": "contamination-2026-09-13c",
+    "reference_test": "evaluation/tasks/resource-download/reference/regression.reference.mjs(5 条行为断言,与第一批同一份,不改)",
+    "consumer_identity": "c(零记录用户),每次运行新建消费者 agent",
+    "product_task_id": "task-h1k7xruuhb",
+    "model": "服务端 deepseek-flash(与第一批同)",
+    "core_extraction": "off(runner/prepare.sh 在不是 off 时硬失败)"
+  },
+  "design": {
+    "sample_size": { "no-note": 6, "note": 6, "why": "复核方建议 ≥6;再多就超出本轮可投入的机器时间,而且这个量级本来就只说方向不说幅度" },
+    "interleaving": "分块交错,四段:no-note ×3 → 准入 → note ×3 → 撤回 → no-note ×3 → 准入 → note ×3 → 撤回。每段之间要改 Core 里的 status(管理员密钥,用户的步骤),所以按 3 次一段分块,而不是逐次交替 —— 逐次交替要 12 次管理员操作。分块仍能把两组分散在时间上,防住模型或机器状态的单向漂移。",
+    "batch_tag": "每次运行在 devloop-runs.json 里记 batch=\"2\";报告按批分节,不给合计。"
+  },
+  "void_rules": {
+    "pre_registered": "下列情形该次运行作废,不进样本 —— **开跑前写死,不在看到结果之后才定**",
+    "rules": [
+      "污染检查不是明确的干净(contaminated 非 false,含未知)",
+      "memory-channel 报 ok=false(记忆通道有残留或借用)",
+      "笔记状态与组别不符(run-arm.sh 开跑前就会拒跑)",
+      "harness 自身失败(判决为 ERROR、没有 verdict.json、没有 capture)"
+    ],
+    "not_a_void_reason": "判决是 FAIL 不是作废理由 —— FAIL 是结果。作废只针对「这次运行测的不是我们要测的东西」。"
+  },
+  "accepted_outcomes": {
+    "statement": "**接受差异缩小或打平。** 排掉替代来源后如果两组打平,那是结果,不是失败 —— 它会说明第一批测到的差异里有多少可能来自那份说明。",
+    "no_rerun_for_a_better_number": "不因为结果不合意而加跑、换条件或挑样本。要再跑只能作为第三批,另行冻结另行报。"
+  },
+  "cannot_establish": [
+    "**采用归因仍可能不闭合**:第一批 8 次的使用判定全是 needs_review(消费者自己 curl 了 skill bridge 取回笔记,早于被记账的那次 fetch)。如果第二批仍然全是 needs_review,那么**即使出现 0/6 对 6/6,也只能加强「两组任务表现有差异」,补不上「确实因为采用了这条笔记」**。这一条开跑前就写在这里,不在看到结果后再补。",
+    "不为了拿到正例放松规则:归因口径、参考测试、作废规则一律不动。",
+    "样本量仍小、仍是单模型;6+6 说方向,不说幅度,不做显著性检验。",
+    "产品源码仍在副本里(按设计),所以这一批**也不能**证明「这条知识只能来自笔记」。"
+  ]
+}

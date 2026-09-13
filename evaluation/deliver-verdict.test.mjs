@@ -21,7 +21,7 @@ const row = (step, exit = 0, diff = null, note = "") => ({ step, exit, diff_line
 
 /** 一组全绿的行(含两个期望非零的步骤),作为各用例的基准。 */
 const green = () => [
-  row("suite", 0, null, "ℹ tests 754 ℹ pass 754 ℹ fail 0"),
+  row("suite", 0, null, "ℹ tests 757 ℹ pass 757 ℹ fail 0"),
   row("selfcheck", 1, null, "结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1) 已出现于 [task] task:REPORT.md"),
   row("selfcheck-exit-line-collect", 1, null, "结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1) 已出现于 [record] devloop-runs.json"),
   row("rejudge-regenerate", 0, null, "14 copies"),
@@ -34,7 +34,7 @@ const green = () => [
   row("devloop-report-3", 0, 0, "计入样本 8 次"),
   row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
   row("author-recheck", 0, 0, "5 份重验"),
-  row("stated-suite-size", 0, null, "套件实际 754 个测试;文档里声明当前规模的地方 2 处,全部一致"),
+  row("stated-suite-size", 0, null, "套件实际 757 个测试;文档里声明当前规模的地方 2 处,全部一致"),
   row("generated-reports", 0, null, "入库 .md 73 份:叙述 44 份,登记的报告 29 份 —— regenerated 12,figures_checked 1,not_regenerable 1,historical 15;未登记 0 份"),
   row("seal-record", 0, 0, "evaluation/SEAL-CHECK.md ← 22 步"),
   row("reports-executed", 0, null, "登记为要重算的 14 份,逐份核对本轮的执行记录与产物,全部对上"),

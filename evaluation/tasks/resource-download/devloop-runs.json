@@ -51,7 +51,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -101,7 +102,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -151,7 +153,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -207,7 +210,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -257,7 +261,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -307,7 +312,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -357,7 +363,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -411,7 +418,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T111005Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -461,7 +469,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -511,7 +520,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -561,7 +571,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -612,7 +623,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T112941Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -662,7 +674,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -712,7 +725,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -764,7 +778,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -814,7 +829,8 @@
           "ARCHIVE-MINIMAL.md"
         ],
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -855,7 +871,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T121409Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -896,7 +913,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T121636Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -937,7 +955,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T121823Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "no-note",
@@ -978,7 +997,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T121937Z-devloop-no-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "note",
@@ -1021,7 +1041,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T123427Z-devloop-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "note",
@@ -1062,7 +1083,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T123631Z-devloop-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "note",
@@ -1103,7 +1125,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T123828Z-devloop-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     },
     {
       "arm": "note",
@@ -1146,7 +1169,8 @@
         "mode": "full",
         "to": "evaluation/runner/runs/20260913T124050Z-devloop-note",
         "at": "2026-09-13T13:32:56Z"
-      }
+      },
+      "batch": "1"
     }
   ],
   "status_observations": [
@@ -1217,6 +1241,16 @@
       "note_version": 1,
       "arm": "note",
       "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T16:16:50Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "no-note",
+      "n": 0,
       "identity": "c",
       "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
     }

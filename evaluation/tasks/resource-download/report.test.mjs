@@ -120,3 +120,36 @@ test("样本量那句由计入样本数算出,只说方向不说幅度,没有 p 
   assert.ok(!/p\s*[=≈<]/.test(line) && !/显著/.test(line), "不写显著性");
   assert.match(sampleSizeLine(buildReport({ runs: [run({})] }, load)), /尚不构成两组比较/);
 });
+
+// ── 第二批开跑前定死形状:两批**永不合并**(CLAUDE.md:更换条件不与旧口径合并) ──
+test("按批次分组,各批各报,绝不合在一起算", () => {
+  const m = { runs: [
+    run({ run_id: "a1", batch: "1", verdict: "FAIL" }),
+    run({ run_id: "b1", batch: "1", arm: "note", verdict: "PASS" }),
+    run({ run_id: "a2", batch: "2", verdict: "FAIL" }),
+    run({ run_id: "b2", batch: "2", arm: "note", verdict: "FAIL" }),
+  ] };
+  const rep = buildReport(m, load);
+  assert.deepEqual(Object.keys(rep.batches).sort(), ["1", "2"]);
+  assert.equal(rep.batches["1"].arms["note"].pass, 1);
+  assert.equal(rep.batches["2"].arms["note"].pass, 0, "第二批的结果不能被第一批带上去");
+  assert.equal(rep.batches["1"].gain, 1);
+  assert.equal(rep.batches["2"].gain, 0);
+});
+
+test("没标批次的旧运行归入第一批,不丢", () => {
+  const rep = buildReport({ runs: [run({ run_id: "x" })] }, load);
+  assert.ok(rep.batches["1"], JSON.stringify(Object.keys(rep.batches)));
+});
+
+test("渲染时每批一节,并各自带自己的结论句", () => {
+  const m = { runs: [
+    run({ run_id: "a1", batch: "1", verdict: "FAIL" }), run({ run_id: "b1", batch: "1", arm: "note", verdict: "PASS" }),
+    run({ run_id: "a2", batch: "2", verdict: "PASS" }), run({ run_id: "b2", batch: "2", arm: "note", verdict: "PASS" }) ] };
+  const md = render(buildReport(m, load), m);
+  assert.match(md, /第一批/);
+  assert.match(md, /第二批/);
+  assert.match(md, /持平/, "第二批打平要如实写成持平");
+  assert.match(md, /两批不合并/, "必须明说不合并");
+  assert.ok(!/两批合计|合计通过率|总体通过率/.test(md), "不得给出合计口径");
+});

@@ -6,7 +6,9 @@
     "evaluation/runner/runs",
     "evaluation/tasks/exit-code-fix",
     "evaluation/tasks/exit-line-collect",
-    "evaluation/tasks/resource-download"
+    "evaluation/tasks/resource-download",
+    "evaluation/upstream",
+    "evaluation/PR-DESCRIPTION.md"
   ],
   "scope": [
     "evaluation/gate/"
@@ -27,5 +29,18 @@
       "`files/download` 分支**只有后者**"
     ],
     "not_excluded_because": "用户已定(2026-09-13):不清,如实报。这 8 次样本在含它的副本上跑。**要判断它的影响,只能另做一批排除它之后的对照**:把 `evaluation/upstream/` 与 `evaluation/PR-DESCRIPTION.md` 加进 archive_excludes,冻结条件后两组交错各跑若干次,单独报告,接受差异缩小或打平 —— 那一批问的是「排除已知替代来源后结果还复现吗」,不是「把 4 次加到 6 次」。不与这 8 次合并(CLAUDE.md:更换条件不与旧口径合并)。"
+  },
+  "archive_excludes_history": {
+    "batch_1": [
+      "evaluation/runner/runs",
+      "evaluation/tasks/exit-code-fix",
+      "evaluation/tasks/exit-line-collect",
+      "evaluation/tasks/resource-download"
+    ],
+    "batch_2_added": [
+      "evaluation/upstream",
+      "evaluation/PR-DESCRIPTION.md"
+    ],
+    "why": "第二批排掉本仓库自己的上游 PR 归档与交付说明 —— 它们用大白话写着 files/download 返回原始字节。产品源码保留(按设计)。条件冻结见 batch2-conditions.json。"
   }
 }

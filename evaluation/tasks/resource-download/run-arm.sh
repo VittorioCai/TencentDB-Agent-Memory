@@ -14,9 +14,9 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
-ARM=""; N=1; IDENTITY="${DEVLOOP_IDENTITY:-c}"
+ARM=""; N=1; IDENTITY="${DEVLOOP_IDENTITY:-c}"; BATCH="${DEVLOOP_BATCH:-2}"
 # --identity: whose user the fresh consumer agent is created under (identities.json: b = the mainline consumer user, c = a user with no records)
-while [[ $# -gt 0 ]]; do case "$1" in --arm) ARM="$2"; shift 2;; --n) N="$2"; shift 2;; --identity) IDENTITY="$2"; shift 2;; *) echo "unknown: $1" >&2; exit 2;; esac; done
+while [[ $# -gt 0 ]]; do case "$1" in --arm) ARM="$2"; shift 2;; --n) N="$2"; shift 2;; --identity) IDENTITY="$2"; shift 2;; --batch) BATCH="$2"; shift 2;; *) echo "unknown: $1" >&2; exit 2;; esac; done
 case "$IDENTITY" in b|c) ;; *) echo "--identity must be b or c" >&2; exit 2;; esac
 case "$ARM" in no-note|note|smoke) ;; *) echo "--arm must be no-note, note or smoke" >&2; exit 2;; esac
 MANIFEST="$HERE/devloop-runs.json"
@@ -44,8 +44,27 @@ node "$REPO/evaluation/runner/contamination.mjs" --preflight --task="$HERE" \
   --extra-roots="$(ls -d /private/tmp/* 2>/dev/null | grep -v -e '/topic4-runs$' -e '/topic4-sessions$' | tr '\n' ',' | sed 's/,$//')" \
   || { echo "开跑前检查没过,一次也没跑。" >&2; exit 2; }
 
+# 第二批:开跑前核对冻结条件还成立(排除清单、笔记版本)——冻结文件先写,运行后跑
+if [[ "$BATCH" == "2" ]]; then
+  python3 - "$HERE" <<'PYCHK' || { echo "冻结条件核对没过,一次也没跑。" >&2; exit 2; }
+import json,sys
+h=sys.argv[1]
+c=json.load(open(f"{h}/batch2-conditions.json")); t=json.load(open(f"{h}/task.json")); tok=json.load(open(f"{h}/tokens.json"))
+bad=[]
+for x in c["changed_from_batch_1"]["archive_excludes_added"]:
+    if x not in t["archive_excludes"]: bad.append(f"archive_excludes 少了 {x}")
+if t["start_commit"] != c["frozen"]["start_commit"]: bad.append("start_commit 与冻结值不符")
+aid=c["frozen"]["note_asset"]["asset_id"]
+if aid not in tok: bad.append(f"tokens.json 里没有 {aid}")
+elif tok[aid]["version"] != c["frozen"]["note_asset"]["version"]: bad.append(f"笔记版本 {tok[aid]['version']} != 冻结的 {c['frozen']['note_asset']['version']}")
+for b in bad: print("  冻结条件不符:", b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PYCHK
+  echo "冻结条件核对:通过(排除清单、start_commit、笔记版本均与 batch2-conditions.json 一致)"
+fi
+
 TASK_SHA="$(shasum -a 256 "$HERE/task.md" | cut -c1-64)"
-echo "note $NOTE_ID status in Core: $STATUS, visibility $VISIBILITY, v$NOTE_VERSION (arm $ARM, consumer under identity $IDENTITY); task.md sha256 ${TASK_SHA:0:12}…"
+echo "note $NOTE_ID status in Core: $STATUS, visibility $VISIBILITY, v$NOTE_VERSION (第 $BATCH 批,arm $ARM, consumer under identity $IDENTITY); task.md sha256 ${TASK_SHA:0:12}…"
 # every invocation records what it observed, so the report can show when the note was approved and when it was set back
 python3 - "$MANIFEST" "$STATUS" "$ARM" "$N" "$TASK_SHA" "$VISIBILITY" "$NOTE_VERSION" "$IDENTITY" <<'PY'
 import json, sys, datetime
@@ -61,7 +80,7 @@ for i in $(seq 1 "$N"); do
   DEVLOOP_ARM="$ARM" bash "$REPO/evaluation/runner/run-once.sh" --task "$HERE" --auto --fresh-consumer --identity "$IDENTITY" --label "devloop-$ARM" > "$log" 2>&1; rc=$?
   rid="$(grep -oE 'run [0-9TZ]+-devloop-[a-z-]+(-[0-9]+)? →' "$log" | head -1 | sed -E 's/^run //; s/ →$//')"
   dir="$(grep -oE '/private/tmp/topic4-runs/[^ ]+' "$log" | tail -1)"
-  NOTE_VISIBILITY="$VISIBILITY" NOTE_VERSION="$NOTE_VERSION" IDENTITY="$IDENTITY" python3 - "$MANIFEST" "$ARM" "$i" "${rid:-unknown}" "$rc" "$dir" "$STATUS" "$TASK_SHA" <<'PY'
+  NOTE_VISIBILITY="$VISIBILITY" NOTE_VERSION="$NOTE_VERSION" IDENTITY="$IDENTITY" BATCH_TAG="$BATCH" python3 - "$MANIFEST" "$ARM" "$i" "${rid:-unknown}" "$rc" "$dir" "$STATUS" "$TASK_SHA" <<'PY'
 import json, sys, os, datetime
 m, arm, i, rid, rc, d, status, task_sha = sys.argv[1:9]
 doc = json.load(open(m))
@@ -71,7 +90,7 @@ def load(n):
     except ValueError: return None
 run, verdict, consumer, mc = load("run.json"), load("verdict.json"), load("consumer.json"), load("memory-channel.json")
 contam = load("contamination.json")
-doc["runs"].append({"arm": arm, "sample": arm != "smoke", "seq": int(i), "run_id": rid, "exit": int(rc), "dir": d,
+doc["runs"].append({"arm": arm, "batch": os.environ.get("BATCH_TAG", "2"), "sample": arm != "smoke", "seq": int(i), "run_id": rid, "exit": int(rc), "dir": d,
   "note_status_at_start": status, "note_visibility_at_start": os.environ.get("NOTE_VISIBILITY"), "note_version_at_start": (int(os.environ["NOTE_VERSION"]) if os.environ.get("NOTE_VERSION", "").isdigit() else os.environ.get("NOTE_VERSION")), "identity": os.environ.get("IDENTITY"), "task_md_sha256": task_sha,
   "consumer_agent_id": (consumer or {}).get("agent_id"),
   "verdict": (verdict or {}).get("verdict"), "attempts": [a.get("value") for a in (verdict or {}).get("attempts", [])],
