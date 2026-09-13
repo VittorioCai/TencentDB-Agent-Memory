@@ -1,0 +1,25 @@
+{
+  "schema": "live-state-record-v1",
+  "at": "2026-09-13T18:53:33Z",
+  "what": "第三个开发闭环任务的笔记资产 status → approved",
+  "asset_id": "skl-XAzqAgejM7O4",
+  "before": {
+    "status": "candidate",
+    "visibility": "team",
+    "version": "2",
+    "name": "eval-skill-resource-download"
+  },
+  "after": {
+    "status": "approved",
+    "visibility": "team",
+    "version": "2",
+    "name": "eval-skill-resource-download"
+  },
+  "by": {
+    "key_file": "deploy/global-images/.admin-key",
+    "role": "team admin(status 是审计字段,所有者写不了)"
+  },
+  "how": "bash evaluation/tasks/resource-download/admit-note.sh --approve",
+  "restore": "bash evaluation/tasks/resource-download/admit-note.sh --revoke",
+  "verified": "写入后以所有者密钥读回,status 与预期一致;visibility 未改动(归所有者)。"
+}

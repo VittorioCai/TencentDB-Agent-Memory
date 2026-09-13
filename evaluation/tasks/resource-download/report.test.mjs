@@ -151,7 +151,7 @@ test("渲染时每批一节,并各自带自己的结论句", () => {
   assert.match(md, /第一批/);
   assert.match(md, /第二批/);
   assert.match(md, /持平/, "第二批打平要如实写成持平");
-  assert.match(md, /两批不合并/, "必须明说不合并");
+  assert.match(md, /这 2 批不合并/, "必须明说不合并,且批数由数据决定");
   assert.ok(!/两批合计|合计通过率|总体通过率/.test(md), "不得给出合计口径");
 });
 
@@ -232,9 +232,9 @@ test("归因为什么闭不上:逐批数服务端受信行,0 行要明说是证�
     run({ run_id: "b2", batch: "2", arm: "note", bc: 0, uses: [] }),
   ] };
   const rep = buildReport(m, ld);
-  assert.equal(rep.batches["1"].bridge_calls.total, 11);
-  assert.equal(rep.batches["2"].bridge_calls.total, 0);
-  assert.equal(rep.batches["2"].bridge_calls.runs_with_rows, 0);
+  assert.equal(rep.batches["1"].bridge_calls.runs_with_rows, 1);
+  assert.equal(rep.batches["1"].bridge_calls.max, 11, "给的是这次运行自己的行数,不是跨运行的和");
+  assert.equal(rep.batches["2"].bridge_calls.runs_with_rows, 0, "一次都没有");
   const md = render(rep, m);
   assert.match(md, /服务端受信行/);
   assert.match(md, /0 行/);
@@ -244,5 +244,64 @@ test("受信行数读不出来是未知,不当成 0", () => {
   const ld = () => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: null, noteId: "skl-a", useStates: [], bridgeCalls: null });
   const rep = buildReport({ runs: [run({ run_id: "x", batch: "1" })] }, ld);
   assert.equal(rep.batches["1"].bridge_calls.unknown, 1);
-  assert.equal(rep.batches["1"].bridge_calls.total, null);
+  assert.equal(rep.batches["1"].bridge_calls.max, null, "读不出来就没有分布,不折成 0");
+  assert.equal(rep.batches["1"].bridge_calls.unknown, 1);
+});
+
+// ── 第三批(2026-09-13 晚):落点恢复之后,受信行与采用判定这两格都要说对 ──
+
+test("受信行只数这次运行自己的:导出窗口是 30 分钟,文件里装着别的运行的行", () => {
+  const m = { runs: [
+    run({ run_id: "a", batch: "3", bc: 3 }),
+    run({ run_id: "b", batch: "3", arm: "note", bc: 3 }),
+  ] };
+  const ld = (r) => ({ ...load(r), bridgeCalls: r.bc });
+  const bc = buildReport(m, ld).batches["3"].bridge_calls;
+  assert.equal(bc.runs_with_rows, 2);
+  assert.equal(bc.per_run_own, true, "必须声明这是每次运行自己的行");
+  const md = render(buildReport(m, ld), m);
+  assert.ok(!/合计 \*\*\d+ 行\*\*/.test(md), "跨运行相加没有意义,不许给出一个合计数");
+  assert.match(md, /不给跨运行的合计/);
+  assert.match(md, /每次运行自己的/);
+});
+
+test("采用判定按批汇总:有没有 used,没有就说卡在哪一步", () => {
+  const m = { runs: [
+    run({ run_id: "a", batch: "3", arm: "note", st: ["needs_review", "needs_review"] }),
+    run({ run_id: "b", batch: "3", arm: "note", st: ["needs_review"] }),
+  ] };
+  const ld = (r) => ({ ...load(r), noteId: "skl-a", useStates: r.st ?? [] });
+  const at = buildReport(m, ld).batches["3"].attribution;
+  assert.equal(at.runs_with_used, 0);
+  assert.equal(at.runs_with_needs_review, 2);
+  assert.equal(at.closed, false);
+  const md = render(buildReport(m, ld), m);
+  assert.match(md, /0 次.*used/);
+  assert.match(md, /未闭合/);
+});
+
+test("有 used 就如实说闭合,不写死成失败", () => {
+  const m = { runs: [run({ run_id: "a", batch: "3", arm: "note", st: ["used"] })] };
+  const ld = (r) => ({ ...load(r), noteId: "skl-a", useStates: r.st ?? [] });
+  const at = buildReport(m, ld).batches["3"].attribution;
+  assert.equal(at.runs_with_used, 1);
+  assert.equal(at.closed, true);
+  assert.match(render(buildReport(m, ld), m), /闭合/);
+});
+
+test("读不出来的运行算未知,不折成 0(§2)", () => {
+  const m = { runs: [run({ run_id: "a", batch: "3", arm: "note" })] };
+  const ld = (r) => ({ ...load(r), noteId: "skl-a", useStates: null, bridgeCalls: null });
+  const st = buildReport(m, ld).batches["3"];
+  assert.equal(st.attribution.unknown, 1);
+  assert.equal(st.bridge_calls.unknown, 1);
+  assert.match(render(buildReport(m, ld), m), /未知/);
+});
+
+test("批数由数据决定,不写死成「两批」", () => {
+  const ld = (r) => ({ ...load(r), noteId: "skl-a", useStates: [] });
+  const m = { runs: [run({ run_id: "a", batch: "1" }), run({ run_id: "b", batch: "2" }), run({ run_id: "c", batch: "3" })] };
+  const md = render(buildReport(m, ld), m);
+  assert.match(md, /这 3 批不合并/);
+  assert.match(md, /第三批与第二批只差一个条件/, "第三批变的是落点,要说出来");
 });

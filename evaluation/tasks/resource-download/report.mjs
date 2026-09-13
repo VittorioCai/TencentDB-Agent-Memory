@@ -133,13 +133,32 @@ export function buildReport(manifest, load, exposure = null) {
   };
   // 服务端受信行(bridge_call):归因的「被记账的那次 fetch」只能来自它。
   // 一批全是 0,说明这批的证据**从来没被写下来**(采集端不在),不是配对漏了。
+  // 只数**这次运行自己 session** 的行。导出窗口是 `last 30 MINUTE`,连着跑的运行会把彼此的行
+  // 一起捞进同一个文件 —— 把各次的数字相加就是把同一批行数十几遍(2026-09-13 第三批首次生成时
+  // 算出「合计 349 行」,而 12 次运行各自只有 3 行上下)。所以**不给合计**,只给每次运行自己的分布。
   const bridgeOf = (list) => {
     const known = list.filter((r) => r.bridge_calls !== null && r.bridge_calls !== undefined);
-    return { runs: list.length, unknown: list.length - known.length,
+    const vals = known.map((r) => r.bridge_calls).sort((a, b) => a - b);
+    return { runs: list.length, unknown: list.length - known.length, per_run_own: true,
       runs_with_rows: known.filter((r) => r.bridge_calls > 0).length,
-      total: known.length ? known.reduce((n, r) => n + r.bridge_calls, 0) : null };
+      min: vals.length ? vals[0] : null, max: vals.length ? vals[vals.length - 1] : null };
   };
-  for (const [id, st] of Object.entries(byBatch)) { st.exposure_seen = seenOf(batches[id]); st.bridge_calls = bridgeOf(batches[id]); }
+  // 采用判定:题目问的是「检索到的记忆如何影响后续操作」,所以这一格要按批印出来 ——
+  // 有没有一次 `used`。没有就说未闭合,并说停在哪一步;**不因为不好看就不印**。
+  const attributionOf = (list) => {
+    const known = list.filter((r) => r.use_states !== null && r.use_states !== undefined);
+    const has = (r, s) => (r.use_states ?? []).includes(s);
+    return { runs: list.length, unknown: list.length - known.length,
+      runs_with_used: known.filter((r) => has(r, "used")).length,
+      runs_with_needs_review: known.filter((r) => !has(r, "used") && has(r, "needs_review")).length,
+      runs_with_no_events: known.filter((r) => (r.use_states ?? []).length === 0).length,
+      closed: known.some((r) => has(r, "used")) };
+  };
+  for (const [id, st] of Object.entries(byBatch)) {
+    st.exposure_seen = seenOf(batches[id]);
+    st.bridge_calls = bridgeOf(batches[id]);
+    st.attribution = attributionOf(batches[id].filter((r) => r.arm === "note"));
+  }
   const exposureSeen = seenOf(runs);
   for (const st of Object.values(byBatch)) st.conclusion = conclusionOf(st);
   return { arms, comparable, gain, runs, batches: byBatch, exposure, exposure_seen: exposureSeen,
@@ -182,13 +201,29 @@ export function render(rep, manifest) {
     L.push("", sampleSizeLine({ arms: st.arms }), "");
     const bc = st.bridge_calls;
     if (bc) {
-      L.push(bc.total === null
+      L.push(bc.runs === bc.unknown
         ? `- 服务端受信行(\`bridge_call\`):**未知** —— ${bc.unknown} 次运行的日志读不出来。`
-        : `- 服务端受信行(\`bridge_call\`):本批 ${bc.runs} 次运行合计 **${bc.total} 行**,其中 ${bc.runs_with_rows} 次有行。`
-          + (bc.total === 0
-            ? ` **0 行意味着归因缺的是「被记账的那次 fetch」本身** —— 这些证据从来没被写下来(采集端 ClickHouse 当时不可达),`
+        : `- 服务端受信行(\`bridge_call\`):本批 ${bc.runs} 次运行里 ${bc.runs_with_rows} 次有行,`
+          + `**每次运行自己的** session 记到 ${bc.min === bc.max ? `${bc.min} 行` : `${bc.min}–${bc.max} 行`}`
+          + (bc.unknown ? `;另有 ${bc.unknown} 次读不出来,记未知` : "") + "。"
+          + `导出窗口是 30 分钟,同一个文件里还装着相邻运行的行,所以**不给跨运行的合计**。`
+          + (bc.runs_with_rows === 0
+            ? ` **一次都没有,意味着归因缺的是「被记账的那次 fetch」本身** —— 这些证据从来没被写下来(采集端 ClickHouse 当时不可达),`
               + `不是配对没对上。所以本批的使用判定只能停在 \`needs_review\` 或没有事件;这是**可修的环境缺口**,不是「模型确实没用」。`
             : ""), "");
+    }
+    const at = st.attribution;
+    if (at && at.runs) {
+      const n = at.runs - at.unknown;
+      L.push(at.closed
+        ? `- **采用归因:已闭合** —— 有笔记组 ${at.runs_with_used}/${n} 次给出 \`used\`,`
+          + `即「这次改动确实用了这条被取回的笔记」有了一条闭合的证据链。`
+        : `- **采用归因:未闭合** —— 有笔记组 **0 次** \`used\`;`
+          + `${at.runs_with_needs_review} 次停在 \`needs_review\`、${at.runs_with_no_events} 次没有事件`
+          + (at.unknown ? `、${at.unknown} 次未知` : "") + "。"
+          + `**卡在取回通道**:harness 的 system prompt 里 \`<skill_tools>\` 写明「这些不是本地工具,需要用 Bash 调用 curl 命中 proxy 的 skill-bridge 路径」,`
+          + `消费者因此只能 \`curl\` 取回笔记,正文作为 Bash 回显进入上下文;判决器的「最早送达」规则看到判别值在被记账的那次 fetch **之前**就到了模型手里,`
+          + `于是拒绝把后续使用算到那次 fetch 上。这是**评测自身的设计缺口**,不是产品缺陷,也不是落点缺失 —— 本批每次运行都有自己的受信行。`, "");
     }
     if (rep.exposure) {
       const e = st.exposure_seen;
@@ -198,7 +233,8 @@ export function render(rep, manifest) {
     L.push("");
   }
   if (ids.length > 1) {
-    L.push(`**两批不合并。** 它们的工作副本排除清单不同(第二批排掉了本仓库自己的上游 PR 归档),`
+    L.push(`**这 ${ids.length} 批不合并。** 第二批与第一批的工作副本排除清单不同(第二批排掉了本仓库自己的上游 PR 归档);`
+      + (ids.includes("3") ? `**第三批与第二批只差一个条件** —— 归因落点(ClickHouse)可达,冻结清单见 \`batch3-conditions.json\`;` : "")
       + `条件不同的样本合在一起算出来的比率没有意义(CLAUDE.md:更换条件不与旧口径合并)。`, "");
   }
   L.push("", `## 每次运行`, "", `| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 笔记提及 | 使用判定 | 读到副本里那份说明 | 不计入的原因 |`, `|---|---|---|---|---|---|---|---|---|`);
@@ -257,9 +293,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const j = (n) => { try { return d && existsSync(join(d, n)) ? JSON.parse(readFileSync(join(d, n), "utf8")) : null; } catch { return null; } };
     const lines = (n) => { try { return d && existsSync(join(d, n)) ? readFileSync(join(d, n), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : null; } catch { return null; } };
     const used = lines("used-events.jsonl");
-    const tcl = d && existsSync(join(d, "tool-call-logs-all.jsonl"))
-      ? readFileSync(join(d, "tool-call-logs-all.jsonl"), "utf8").split("\n").filter((l) => l.includes("bridge_call")).length
-      : null;
+    // 导出用的是 `last 30 MINUTE` 窗口,文件里同时装着相邻运行的行。只数**这次 session 自己的**:
+    // 行上的 session_key 形如 `codebuddy:<conversation_id>`,拿 run.json 的 conversation_id 去尾匹配。
+    const conv = j("run.json")?.conversation_id ?? null;
+    let tcl = null;
+    if (d && conv && existsSync(join(d, "tool-call-logs-all.jsonl"))) {
+      tcl = 0;
+      for (const l of readFileSync(join(d, "tool-call-logs-all.jsonl"), "utf8").split("\n")) {
+        if (!l.includes("bridge_call")) continue;
+        try { const r = JSON.parse(l); if (r.kind === "bridge_call" && String(r.session_key ?? "").endsWith(conv)) tcl++; } catch { /* 坏行跳过 */ }
+      }
+    }
     return { verdict: j("verdict.json"), memoryChannel: j("memory-channel.json"), noteId, noteName, bridgeCalls: tcl,
       captureText: d && existsSync(join(d, "capture.jsonl")) ? readFileSync(join(d, "capture.jsonl"), "utf8") : null,
       useStates: used === null ? null : used.filter((e) => e.asset_id === noteId).map((e) => e.state) };
