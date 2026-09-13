@@ -43,6 +43,7 @@ test("线上依赖那一节逐步给出本次实际记到的说明;缺这一步�
 
 test("提交号与链接来自参数,不写死在正文里", () => {
   const md = render([row("suite")], OPTS);
+  assert.match(md, /HEAD 会比它新一个提交/, "页里的提交号必然早于分支 HEAD,要说明差的是什么");
   assert.match(md, /abc1234/);
   assert.match(md, /example\.invalid\/repo\/tree\/topic4-attribution-gate/);
   assert.match(md, /compare\/0468a2a\.\.\.c372d80/);
@@ -72,4 +73,12 @@ test("真文件:入库的 SEAL-CHECK.md 与从入库 rows.jsonl 重算的一致"
 test("实跑重判**不再**是干净克隆上跑不了的那一类 —— 判别值已烧毁并登记,离线可解析", () => {
   const md = render([row("suite")], OPTS);
   assert.ok(!/\| `rejudge-execute` \|/.test(md), "不该再列进「按设计不通过」那张表");
+});
+
+test("可见性这一条要写成「已核过什么」,并说明它证明不了什么", () => {
+  const md = render([row("suite")], OPTS);
+  assert.match(md, /- \[x\] \*\*上面两个链接任何人都打得开\*\*/);
+  assert.match(md, /private = false/);
+  assert.match(md, /证明不了某位评委那一侧/, "不能把「公开可访问」说成「评委一定打得开」");
+  assert.match(md, /- \[ \] \*\*提交渠道已收到材料\*\*/, "这一条实施者做不到,必须留空");
 });

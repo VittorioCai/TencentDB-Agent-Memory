@@ -40,6 +40,7 @@ export function render(rows, { commit, url, archive }) {
   L.push(`那次验收的逐步记录与做法在 \`${archive}\`(同目录 \`HOW.md\` 写明克隆命令与环境)。`, "");
   L.push("## 交付提交", "", "| | |", "|---|---|");
   L.push(`| 提交号 | \`${commit}\` |`);
+  L.push("| 与分支 HEAD 的关系 | HEAD 会比它新一个提交:**本页与它的记录文件本身要提交进去**,页里不可能写自己的提交号。差异仅此一项,`git log` 可核 |");
   L.push("| 分支 | `topic4-attribution-gate` |");
   L.push(`| 浏览入口 | <${url}/tree/topic4-attribution-gate> |`);
   L.push(`| 辅助材料(闸门抽取) | 分支 \`gate-core-minimal\` \`c372d80\`,固定比较区间 <${url}/compare/0468a2a...c372d80> |`, "");
@@ -65,9 +66,12 @@ export function render(rows, { commit, url, archive }) {
   }
   L.push("", `\`demo\` 也会降级:无 Core 时第 1 段用夹具、第 5 段不跑(本次 ${String(by.demo?.note ?? "?")})。`);
   L.push("离线能跑到什么程度、各需要什么,逐行在 `evaluation/REVIEW-GUIDE.md` 的「干净克隆上什么能复算」一节。", "");
-  L.push("## 还要人工确认的两件(实施者做不到)", "");
-  L.push("- [ ] 评委能打开上面两个链接(fork 可见性)");
-  L.push("- [ ] 提交渠道已收到材料", "");
+  L.push("## 还要人工确认的两件", "");
+  L.push("- [x] **上面两个链接任何人都打得开** —— 2026-09-13 用**未登录**的 GitHub API 核过:仓库 `private = false`");
+  L.push("  (公开 fork,上游 `TencentCloud/TencentDB-Agent-Memory`);`topic4-attribution-gate` 与 `gate-core-minimal`");
+  L.push("  两个分支都存在;比较区间两端 `0468a2a`、`c372d80` 都解析得到。**它只证明「公开可访问」**,");
+  L.push("  证明不了某位评委那一侧的网络或账号没有别的限制 —— 那一层仍要人去点一次。");
+  L.push("- [ ] **提交渠道已收到材料** —— 只有交材料的人能确认,实施者做不到。", "");
   L.push("## 剩余缺点(交付时如实列出)", "");
   L.push("- **小样本、单模型**:批次四 5+5,前两个闭环任务各 2+2,第三个跑了三批,**条件不同,不合并**;");
   L.push("  逐批样本量与通过率见 `evaluation/tasks/resource-download/REPORT.md`(每次验收重算,这里不抄数)。");
