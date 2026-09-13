@@ -163,6 +163,18 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 备份 + `proxy-identity-restore-3.json`)。**用户已于 13:45:32Z 恢复**(配置 sha `4453c5fd…`,与 9/11 两次恢复后一致),记录已入库。
 **验收复跑(HEAD 16189f9,`delivery/2026-09-13T134641Z`):离线通过、线上通过、缺依赖无**;套件 702/702、
 `devloop-report-3` diff 0、`contamination-3` 8 次样本全干净、`conditions-check` 21 项 FAIL 全部登记(15 / 5 / 1),未登记 0。
+**两条分支已推(2026-09-13):** `topic4-attribution-gate`(`26808ce`)与 `gate-core-minimal`(`c372d80`),推后读回远端 SHA 与本地一致。
+闸门抽取那份的措辞按复核方收紧:去掉「没有一处语义冲突」、比较基线钉在 `0468a2a...c372d80`、原始输出入库
+(`gate/artifacts/port-*`);留档时纠出一处 —— 「新增 0 条」只对 `src/metadata` 成立(11 → 6),全树是 123 → 118、新增 2
+(同两个未定义名字换了错误码),比较由 `compare-typecheck.mjs` 可复算。
+
+**验收漏检收口(HEAD e488459,`delivery/2026-09-13T142640Z` 全绿,套件 729/729):** 验收此前不知道仓库里一共有哪些生成报告。
+`check-generated-reports.mjs` 穷举 `evaluation/` 下 73 份入库 .md,逐份归类(叙述 44;regenerated 12、figures_checked 1、
+historical 15、not_regenerable 1),**未登记即阻断**。由此补上两处真漏检:五份作者评估此前无人复核,现由 `author-recheck`
+从 `raw_model_output` 重验并 diff(5 份全部 0 行);`REPARSE-DIFF-2026-09-11-exitline.md` 确实无法在验收里重算,
+**登记为缺点**并写明代价与替代。另 `check-comparison-figures.mjs` 把对照报告主表与生成 summary 逐格钉住,首跑即抓到
+「均墙钟 s」被抄成 47 / 15(应为 47.2 / 15.4),已按生成值改回。
+
 **再复跑(HEAD 8f8eceb,`delivery/2026-09-13T135245Z`)同样全绿**:README 补齐闸门抽取的尺度与类型检查数字、③ 措辞按用户决定改定、④ 报告加一句算出来的样本量限制(不写 p 值)。套件 703/703。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
