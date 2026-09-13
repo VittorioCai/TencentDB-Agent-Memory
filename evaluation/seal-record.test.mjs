@@ -63,11 +63,11 @@ test("剩余缺点一节必须在,且写明第三任务的归因补了什么、�
 });
 
 test("真文件:入库的 SEAL-CHECK.md 与从入库 rows.jsonl 重算的一致", () => {
-  const rows = parseRows(readFileSync("evaluation/delivery/SEAL-8a640af/rows.jsonl", "utf8"));
+  const rows = parseRows(readFileSync("evaluation/delivery/SEAL-1891601/rows.jsonl", "utf8"));
   const md = render(rows, {
-    commit: "8a640af5bcf8cade6fd423eb637c48bf2215d42c",
+    commit: "189160174184c2a459e296e0e91f5f8898565e13",
     url: "https://github.com/VittorioCai/TencentDB-Agent-Memory",
-    archive: "evaluation/delivery/SEAL-8a640af/rows.jsonl",
+    archive: "evaluation/delivery/SEAL-1891601/rows.jsonl",
   });
   assert.equal(md, readFileSync("evaluation/SEAL-CHECK.md", "utf8"));
 });

@@ -94,10 +94,10 @@ export function render(rows, { commit, url, archive }) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (n, d) => (process.argv.find((a) => a.startsWith(`--${n}=`)) ?? `--${n}=${d}`).slice(n.length + 3);
-  const rowsPath = arg("rows", "evaluation/delivery/SEAL-8a640af/rows.jsonl");
+  const rowsPath = arg("rows", "evaluation/delivery/SEAL-1891601/rows.jsonl");
   const rows = parseRows(readFileSync(rowsPath, "utf8"));
   const md = render(rows, {
-    commit: arg("commit", "8a640af5bcf8cade6fd423eb637c48bf2215d42c"),
+    commit: arg("commit", "189160174184c2a459e296e0e91f5f8898565e13"),
     url: arg("url", "https://github.com/VittorioCai/TencentDB-Agent-Memory"),
     archive: dirname(rowsPath) + "/" + basename(rowsPath),
   });
