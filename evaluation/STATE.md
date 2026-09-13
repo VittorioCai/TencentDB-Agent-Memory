@@ -160,7 +160,9 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 **验收复跑(HEAD 1f5cf3e,`delivery/2026-09-13T133832Z`)离线全过、线上一项未登记:`proxy 强制身份 task`** —— 8 次运行把 proxy 强制身份
 留在最后一个消费者(`agt-k9ic54p94e` / `task-h1k7xruuhb`),按前两个任务的收尾要恢复到主线消费者 b + `task-5e6xp4mrrw`
 (`FRESH_CONSUMER_TASK=task-5e6xp4mrrw bash evaluation/runner/prepare.sh --identity b; bash evaluation/tasks/bridge-addr/use-identity.sh b`,
-备份 + `proxy-identity-restore-3.json`),线上状态改动待用户点头(§10);恢复后重跑验收。
+备份 + `proxy-identity-restore-3.json`)。**用户已于 13:45:32Z 恢复**(配置 sha `4453c5fd…`,与 9/11 两次恢复后一致),记录已入库。
+**验收复跑(HEAD 16189f9,`delivery/2026-09-13T134641Z`):离线通过、线上通过、缺依赖无**;套件 702/702、
+`devloop-report-3` diff 0、`contamination-3` 8 次样本全干净、`conditions-check` 21 项 FAIL 全部登记(15 / 5 / 1),未登记 0。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
