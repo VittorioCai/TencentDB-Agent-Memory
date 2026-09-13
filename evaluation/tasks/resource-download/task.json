@@ -12,7 +12,7 @@
     "evaluation/gate/"
   ],
   "reference_test_dest": "evaluation/gate/fetch-resource.reference.test.mjs",
-  "note": "第三个开发闭环任务(2026-09-13):**换一类工作**——前两个是修已有缺陷,这个是新增一个功能。换一份笔记(eval-skill-resource-download),内容是我们实测 skill-bridge 得到的两条事实(files/read 无论加不加 -o 都回 JSON 信封,真正返回字节的是 files/download;合法空文件被当异常)。**采用判定不靠标记靠行为**:参考测试断言的是零字节、错误信封透传,以及请求打到哪个子路径——子路径是一个设计决定,抄不来。允许零增益:无笔记组完全可能读 MemoryProxy 源码自己想到,那就是结果,不是失败。",
+  "note": "第三个开发闭环任务(2026-09-13):**换一类工作**——前两个是修已有缺陷,这个是新增一个功能。换一份笔记(eval-skill-resource-download),内容是我们实测 skill-bridge 得到的两条事实(files/read 无论加不加 -o 都回 JSON 信封,真正返回字节的是 files/download;合法空文件被当异常)。**采用判定不靠标记靠行为**:参考测试断言的是零字节、错误信封透传,以及请求打到哪个子路径——子路径**未在注入的工具清单里直接给出** —— 但产品源码与本仓库的 PR 归档仍可能提供它,所以这里只说「没直接给」。允许零增益:无笔记组完全可能读 MemoryProxy 源码自己想到,那就是结果,不是失败。",
   "product_task_id": "task-h1k7xruuhb",
   "product_task_note": "沿用第二个任务的产品任务实体;闸门按该 id 数不同任务。",
   "copy_exposure": {
