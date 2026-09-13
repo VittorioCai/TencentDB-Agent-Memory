@@ -171,8 +171,21 @@ export function taskNeedles(taskDir) {
 }
 
 /** 清单里算样本的运行:没作废、没标成非样本。作废批次不在此列 —— 它们的判定另有记录。 */
+/**
+ * 要逐次重新扫盘的那些运行。
+ *
+ * **已判污染的不在内**:清单只追加,污染的运行永远留在里面,而报告对它们返回 `counted:false`
+ * (表里记成「记录 6 / 计入 5 / 排除 1」)。两边都把它们排除在样本之外,只有这里没排,
+ * 于是「样本里有污染」永真、验收永远红(2026-09-13 第三批之后复现)。作废本来就是对付污染的正解。
+ * 去掉的只有这一点:**真正计入的那些仍逐次重新扫盘,未知与污染照样阻断**(见 batchVerdict)。
+ */
 export function sampleRunsOf(manifest) {
-  return (manifest.runs ?? []).filter((r) => !r.voided && r.sample !== false);
+  return (manifest.runs ?? []).filter((r) => !r.voided && r.sample !== false && r.contaminated !== true);
+}
+
+/** 因污染被排除在扫描集之外的运行 —— 数出来印在总判那行,不让它们悄悄消失。 */
+export function excludedForContamination(manifest) {
+  return (manifest.runs ?? []).filter((r) => !r.voided && r.sample !== false && r.contaminated === true);
 }
 
 /** 一批样本的总判:任何一次不是明确的「干净」(false)就不过 —— 未知与污染同样阻断。 */
@@ -234,7 +247,10 @@ export async function main(argv) {
     });
     const v = batchVerdict(results);
     for (const r of results) console.log(`${r.contaminated === false ? "干净" : r.contaminated === true ? "污染" : "未知"}  ${r.run_id}  ${r.arm}  ${r.verdict ?? "-"}${r.findings?.length ? "  " + r.findings.map((f) => f.rule).join(",") : ""}${r.why ? "  " + r.why : ""}`);
-    console.log(`样本 ${v.total} 次:污染 ${v.contaminated},未知 ${v.unknown},规则 ${RULES_VERSION}${v.ok ? ";全部干净" : ";不通过:" + v.bad.join(", ")}`);
+    const skipped = excludedForContamination(manifest);
+    for (const r of skipped) console.log(`已排除  ${r.run_id}  ${r.arm}  ${r.verdict ?? "-"}  开跑时已判污染(${(r.contamination_rules ?? []).join("、") || "未记规则"}),报告里同样不计入`);
+    console.log(`样本 ${v.total} 次:污染 ${v.contaminated},未知 ${v.unknown},规则 ${RULES_VERSION}${v.ok ? ";全部干净" : ";不通过:" + v.bad.join(", ")}`
+      + (skipped.length ? `;另有 ${skipped.length} 次已判污染、不计入(${skipped.map((r) => r.run_id).join(", ")})` : ""));
     return v.ok ? 0 : 1;
   }
   if (!existsSync(join(runDir, "capture.jsonl"))) { console.error(`没有 capture.jsonl:${join(runDir, "capture.jsonl")}`); return 2; }

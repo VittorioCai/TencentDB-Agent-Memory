@@ -41,6 +41,11 @@
       "why": "批次结束后 proxy 身份已恢复为主线消费者,记录见 proxy-identity-restore-2.json"
     },
     {
+      "item": "proxy 强制身份 task",
+      "class": "post_batch",
+      "why": "第三个闭环任务有自己的产品任务实体 task-h1k7xruuhb;runner/prepare.sh:297 在每次运行前把 debugForceIdentity.task_id 置成本次任务的 id,**跑完不还原**,所以批次之后它停在最后一次运行的任务上,而基线冻结的是第一个闭环任务的 task-5e6xp4mrrw。与上面那条 agent 同类:批次后的正常残留,不是配置被人改坏。2026-09-13 第三批之后首次出现(此前的验收恰好跑在第二任务之后)。"
+    },
+    {
       "item": "proxy 配置未被改动",
       "class": "post_batch",
       "why": "同上,恢复身份即改动了该配置,备份与哈希在记录里"

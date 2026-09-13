@@ -103,7 +103,7 @@ row "devloop-report-3" "node evaluation/tasks/resource-download/report.mjs" "$e"
 
 echo "[6d] third task's samples re-scanned for contamination (any run not explicitly clean blocks)"
 node evaluation/runner/contamination.mjs --batch=evaluation/tasks/resource-download/devloop-runs.json --task=evaluation/tasks/resource-download > "$OUT/contamination-resource-download.txt" 2>&1; e=$?
-row "contamination-3" "contamination.mjs --batch=resource-download/devloop-runs.json" "$e" "exit 0;每一次计入样本的运行都明确判为干净(污染或未知同样阻断)" "$(tail -1 "$OUT/contamination-resource-download.txt")"
+row "contamination-3" "contamination.mjs --batch=resource-download/devloop-runs.json" "$e" "exit 0;每一次计入样本的运行都明确判为干净(污染或未知同样阻断);已判污染的不进扫描集,但会被逐条点名" "$(tail -1 "$OUT/contamination-resource-download.txt")"
 
 echo "[6e] author assessments re-verified from their saved model output (citations and facts re-checked, the rendered page reproduced)"
 : > "$OUT/author-recheck.txt"; ae=0; ad=0

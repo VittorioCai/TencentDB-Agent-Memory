@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { RULES_VERSION, batchVerdict, commandsFromCapture, main, referenceFingerprints, sampleRunsOf, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
+import { RULES_VERSION, batchVerdict, commandsFromCapture, excludedForContamination, main, referenceFingerprints, sampleRunsOf, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const REF = `
@@ -159,4 +159,26 @@ test("没给的参数就是「没给」,不能变成字符串 'null'", async () 
   const rc = await main([`--run=${d}`, `--task=${task}`, "--arm=no-note"]);
   assert.equal(rc, 0, "没给 --batch 时不该崩,也不该被当成批量模式");
   assert.ok(readFileSync(join(d, "capture.jsonl"), "utf8").length > 0);
+});
+
+// ── 2026-09-13:检查器与报告对「样本」的定义打架,导致验收永远红 ──
+// 清单只追加,污染的运行永远留在里面;报告对它们返回 counted:false(记录 6 / 计入 5 / 排除 1),
+// 而 sampleRunsOf 把它们当样本,于是「样本里有污染」永真。作废本来就是对付污染的正解。
+// 改法**只去掉这一点**:已判污染的不进扫描集;真正计入的那些仍逐次重新扫盘,未知照样阻断。
+test("已判污染的运行不进扫描集 —— 报告也不计入它们", () => {
+  const m = { runs: [
+    { run_id: "a", sample: true, contaminated: false },
+    { run_id: "b", sample: true, contaminated: true },
+    { run_id: "c", sample: false },
+    { run_id: "d", sample: true, voided: { batch: "x" } },
+  ] };
+  assert.deepEqual(sampleRunsOf(m).map((r) => r.run_id), ["a"]);
+  assert.equal(excludedForContamination(m).length, 1, "排掉的要数出来,不能悄悄消失");
+  assert.equal(excludedForContamination(m)[0].run_id, "b");
+});
+
+test("严格性不变:计入的那些里出现未知或污染,照样不过", () => {
+  assert.equal(batchVerdict([{ run_id: "a", contaminated: false }]).ok, true);
+  assert.equal(batchVerdict([{ run_id: "a", contaminated: null }]).ok, false, "未知同样阻断");
+  assert.equal(batchVerdict([{ run_id: "a", contaminated: true }]).ok, false, "重新扫盘扫出来的污染仍要阻断");
 });
