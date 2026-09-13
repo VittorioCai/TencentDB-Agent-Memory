@@ -17,6 +17,26 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * 特征文本在**输入侧**出现了几条 —— 只数工具回显与 user 消息,**不数 assistant**。
+ * 原来在整份抓包上做字符串包含,模型自己在推理里写出那段文字也被记成「读到」
+ * (2026-09-13 第九轮复核构造的反例,已复现)。这仍然只是「输入侧命中归档特征文本」,
+ * **不等于「读到了那份归档」** —— 后者还要核对读取调用;报告按前者的口径措辞。
+ */
+export function hitsOnInputSide(captureText, needles) {
+  let msgs = [];
+  for (const line of String(captureText ?? "").split("\n")) {
+    if (!line.trim()) continue;
+    let row; try { row = JSON.parse(line); } catch { continue; }
+    const m = row?.body?.json?.messages;
+    if (Array.isArray(m) && m.length > msgs.length) msgs = m;
+  }
+  const input = msgs.filter((m) => m?.role === "tool" || m?.role === "user")
+    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "")))
+    .join("\n");
+  return needles.filter((n) => input.includes(n)).length;
+}
+
 /** TAP 输出 → 每条断言过没过。解析失败返回 null(未知),不返回空表。 */
 export function assertionsFromTap(tap) {
   if (typeof tap !== "string" || !tap.trim()) return null;
@@ -90,7 +110,8 @@ export function buildReport(manifest, load, exposure = null) {
       memory_reads: rec.memoryChannel?.reads ?? null,
       note_mentions: text === null ? null : (rec.noteId ? text.split(rec.noteId).length - 1 : 0) + (rec.noteName ? text.split(rec.noteName).length - 1 : 0),
       use_states: rec.useStates ?? null,
-      exposure_hits: text === null ? null : needles.filter((n) => text.includes(n)).length };
+      bridge_calls: rec.bridgeCalls ?? null,
+      exposure_hits: text === null ? null : hitsOnInputSide(text, needles) };
   });
   // 按批次分组:**两批永不合并**(CLAUDE.md:更换条件不与旧口径合并)。
   // 第二批换的是工作副本的排除清单,条件不同,合在一起算出来的比率没有意义。
@@ -100,12 +121,26 @@ export function buildReport(manifest, load, exposure = null) {
   for (const [id, list] of Object.entries(batches)) byBatch[id] = statsOf(list);
   const first = byBatch[Object.keys(byBatch).sort()[0]] ?? statsOf([]);
   const { arms, comparable, gain } = first;
-  const exposureSeen = {};
-  for (const arm of ["no-note", "note"]) {
-    const c = runs.filter((r) => r.arm === arm && r.counted);
-    exposureSeen[arm] = { counted: c.length, read_it: c.filter((r) => (r.exposure_hits ?? 0) > 0).length,
-      unknown: c.filter((r) => r.exposure_hits === null).length };
-  }
+  // 曝光统计**也按批次**:第二批换的正是这个条件,合起来报没有意义(第九轮复核)
+  const seenOf = (list) => {
+    const out = {};
+    for (const arm of ["no-note", "note"]) {
+      const c = list.filter((r) => r.arm === arm && r.counted);
+      out[arm] = { counted: c.length, read_it: c.filter((r) => (r.exposure_hits ?? 0) > 0).length,
+        unknown: c.filter((r) => r.exposure_hits === null).length };
+    }
+    return out;
+  };
+  // 服务端受信行(bridge_call):归因的「被记账的那次 fetch」只能来自它。
+  // 一批全是 0,说明这批的证据**从来没被写下来**(采集端不在),不是配对漏了。
+  const bridgeOf = (list) => {
+    const known = list.filter((r) => r.bridge_calls !== null && r.bridge_calls !== undefined);
+    return { runs: list.length, unknown: list.length - known.length,
+      runs_with_rows: known.filter((r) => r.bridge_calls > 0).length,
+      total: known.length ? known.reduce((n, r) => n + r.bridge_calls, 0) : null };
+  };
+  for (const [id, st] of Object.entries(byBatch)) { st.exposure_seen = seenOf(batches[id]); st.bridge_calls = bridgeOf(batches[id]); }
+  const exposureSeen = seenOf(runs);
   for (const st of Object.values(byBatch)) st.conclusion = conclusionOf(st);
   return { arms, comparable, gain, runs, batches: byBatch, exposure, exposure_seen: exposureSeen,
     rejudged: manifest.contamination_rejudged ?? null,
@@ -144,6 +179,22 @@ export function render(rep, manifest) {
           + `但它这次恰好对结论有利,所以两个数并列,由读的人判断。`);
       }
     }
+    L.push("", sampleSizeLine({ arms: st.arms }), "");
+    const bc = st.bridge_calls;
+    if (bc) {
+      L.push(bc.total === null
+        ? `- 服务端受信行(\`bridge_call\`):**未知** —— ${bc.unknown} 次运行的日志读不出来。`
+        : `- 服务端受信行(\`bridge_call\`):本批 ${bc.runs} 次运行合计 **${bc.total} 行**,其中 ${bc.runs_with_rows} 次有行。`
+          + (bc.total === 0
+            ? ` **0 行意味着归因缺的是「被记账的那次 fetch」本身** —— 这些证据从来没被写下来(采集端 ClickHouse 当时不可达),`
+              + `不是配对没对上。所以本批的使用判定只能停在 \`needs_review\` 或没有事件;这是**可修的环境缺口**,不是「模型确实没用」。`
+            : ""), "");
+    }
+    if (rep.exposure) {
+      const e = st.exposure_seen;
+      L.push(`### ${label}:输入侧命中归档特征文本的次数`, "", `| 组 | 计入样本 | 其中命中 | 未知 |`, `|---|---|---|---|`,
+        ...Object.entries(e).map(([arm, v]) => `| ${arm} | ${v.counted} | ${v.read_it} | ${v.unknown} |`), "");
+    }
     L.push("");
   }
   if (ids.length > 1) {
@@ -173,9 +224,10 @@ export function render(rep, manifest) {
   if (rep.exposure) {
     const e = rep.exposure_seen;
     L.push("", `## 工作副本里本不该有的那份说明`, "", rep.exposure.why, "",
-      `它在这些位置:${rep.exposure.paths.map((p) => `\`${p}\``).join("、")}。`, "",
-      `| 组 | 计入样本 | 其中读到了它 | 未知 |`, `|---|---|---|---|`,
-      ...Object.entries(e).map(([arm, v]) => `| ${arm} | ${v.counted} | ${v.read_it} | ${v.unknown} |`), "",
+      `它在这些位置:${rep.exposure.paths.map((p) => `\`${p}\``).join("、")}(**第二批起已从副本排除**)。`, "",
+      `逐批的命中次数见上面各批那一节。**这个指标的名字就是它的口径**:「输入侧命中归档特征文本」——`
+      + `只数工具回显与 user 消息里的命中,不数模型自己写出来的;**它也不等于「读到了那份归档」**,`
+      + `后者还要核对对应的读取调用。「文件已从副本排除」与「抓包未命中特征文本」是两句话,分开说。`, "",
       `没有清掉的原因:${rep.exposure.not_excluded_because}`);
   }
   // 规则改过几版就列几版,最新的在前;每一版的理由与影响都保留,不只显示最后一版
@@ -186,7 +238,6 @@ export function render(rep, manifest) {
     `- 测的是:在这一个新增功能任务上,一份写着两条实测行为的笔记,能不能让一个全新消费者把请求打到 \`files/download\`、把空内容当合法内容、把错误信封原样带出。`,
     `- 不测:笔记对其他任务的作用;也不测产品在其他场景下的检索质量。`,
     `- 允许零增益:同样的知识读 MemoryProxy 源码也能得到,所以两组打平是一个合理结果,不构成失败。`,
-    sampleSizeLine(rep),
     `- 样本偏在:消费者同为一个模型,身份同为 identity c;两组之间除笔记的准入状态外不做其他变动。`,
     `- 生成:\`node evaluation/tasks/resource-download/report.mjs\`,数据来自 \`devloop-runs.json\` 与各次运行记录。`);
   return L.join("\n") + "\n";
@@ -206,7 +257,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const j = (n) => { try { return d && existsSync(join(d, n)) ? JSON.parse(readFileSync(join(d, n), "utf8")) : null; } catch { return null; } };
     const lines = (n) => { try { return d && existsSync(join(d, n)) ? readFileSync(join(d, n), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : null; } catch { return null; } };
     const used = lines("used-events.jsonl");
-    return { verdict: j("verdict.json"), memoryChannel: j("memory-channel.json"), noteId, noteName,
+    const tcl = d && existsSync(join(d, "tool-call-logs-all.jsonl"))
+      ? readFileSync(join(d, "tool-call-logs-all.jsonl"), "utf8").split("\n").filter((l) => l.includes("bridge_call")).length
+      : null;
+    return { verdict: j("verdict.json"), memoryChannel: j("memory-channel.json"), noteId, noteName, bridgeCalls: tcl,
       captureText: d && existsSync(join(d, "capture.jsonl")) ? readFileSync(join(d, "capture.jsonl"), "utf8") : null,
       useStates: used === null ? null : used.filter((e) => e.asset_id === noteId).map((e) => e.state) };
   };

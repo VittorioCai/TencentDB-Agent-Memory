@@ -9,7 +9,7 @@
 | **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-66bc9aecd719`(**2026-09-12T11:33Z 第二次切换**:第三轮复核改了闸门理由串,必须重建;构建提交 66bc9ae 的 MemoryCore 树 == HEAD;记录 `gate/artifacts/core-image-switch-20260912T113253Z.json`;上一版 topic4-11d30eaa720d 的切换记录仍在),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **off**(**2026-09-12T17:56:07Z 第二次拨回**,记录在 `tasks/exit-code-fix/extraction-switch.jsonl` 末条,审阅裁定 ③)。**注意这里曾经漂移过 6 小时**:11:33Z 的第二次镜像切换用 `start-memory-core.sh` 起容器,而该脚本会重新生成整个挂载配置(`start-memory-core.sh:55` 的 `cat > "$CORE_CONFIG_FILE"`),把提取写回 on —— 正是提交 c88e955 记下的那个坑,切镜像后没有复查。17:55Z 发现(文件 sha `cdb5b484…`、容器读到 `enabled:true`、Core 11:33Z 日志 `extraction=true`),17:56Z 拨回并校验(sha `66ebab0a…`、文件与容器一致、Core healthy);漂移范围经比对只涉及这一个开关(见 `gate/artifacts/extraction-drift-20260912.json`)。**没有交付运行受影响**:9/12 全天零次运行,且 `runner/prepare.sh:81` 在提取不是 off 时硬失败、162 行会就地拨回,错的只是线上状态与 STATE 对它的描述。拨回后读回:批次四两条 v4 与闭环笔记 v2 均未变(`gate/artifacts/core-status-after-extraction-off-20260912.json`、`core-status-note-after-extraction-off-20260912.json`);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
 | 分支 / 交付载体 | `topic4-attribution-gate`,远端 `mine`;**交付载体是分支本身**:https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/topic4-attribution-gate(导师要求为「分支代码 + 文档」,不要求 PR)。fork 内的 PR #1 曾作为浏览入口,**2026-09-12 用户决定关闭**—— 其 diff 基线是上游 `feat/server_team`,会把 fork 相对上游的 2596 个文件差异一并计入,不如直接读分支;关闭不影响分支与提交历史,`evaluation/PR-DESCRIPTION.md` 继续作为交付说明书。另:上游 PR **#1358** 是独立分支的贡献,仍然开着。推送由用户手动完成 |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | **2026-09-13T16:09Z(交付复跑 `evaluation/delivery/2026-09-13T160920Z/SUMMARY.md`,受测提交 `f8c1a7f`,**与已推送的 HEAD 一致**)**:套件 760/760;离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
+| 验证时间 | **2026-09-13T16:09Z(交付复跑 `evaluation/delivery/2026-09-13T160920Z/SUMMARY.md`,受测提交 `f8c1a7f`,**与已推送的 HEAD 一致**)**:套件 767/767;离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
 | 测试 | evaluation **633**(2026-09-12,从仓库根跑全 0 失败;各轮第二人复核新增/改写的测试在内:运行时与闸门来源 +10、离线解析 +5、登记簿保留 +5、校准口径 +9、作者评估边界 +7、第四轮渲染器 +2);Core 122;proxy 24。另有上游候选二的 6 个测试,在另一个 worktree 的 vitest 下跑(`upstream-extract-flag`,不在这 630 里) |
 
 ## 第 1 件"新实验条件准备齐":已验收
@@ -175,6 +175,23 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 还剩两件实施者做不到、要人工确认的:**评委能否打开两个链接**、**提交渠道是否已收到材料**,列在该页的勾选框里。
 同轮按复核方意见把「抄不来」改成「未在注入的工具清单里直接给出」—— 源码与 PR 归档仍可能提供那条路径,原话说满了;
 四个源头(task.json、参考测试注释、PR-DESCRIPTION、STATE)逐处改,生成的报告重算。
+
+**第九轮复核(2026-09-13 晚)两条报告收尾 + 一条追查:**
+**① 主结果分了批,曝光统计还在合并** —— 已改:曝光表、条件说明、样本量全部按批输出,顶层不再给合计。
+**② 「读到了归档」证据不足** —— 复核方把那行特征文本只放进 `assistant` 消息,仍被记成「读到」(已复现)。
+根因是在**整份抓包**上做字符串包含。已改为只数**输入侧**(工具回显与 user 消息),指标同时改名为
+**「输入侧命中归档特征文本」**;并写明它**不等于**「读到了那份归档」——后者还要核对读取调用,
+而「文件已从副本排除」与「抓包未命中特征文本」是两句话,分开陈述。作废那次的措辞也按复核方改成
+**「触发预注册的共享目录扫描排除规则,未证实读到外部答案」**(空回显不取消规则,也不能写成实际泄漏)。
+
+**③ 追查「归因未闭合是采集漏了还是本来就没有」—— 答案是采集端不在了。**
+逐运行数服务端受信行 `bridge_call`:第一任务(9/11 上午)8 次里 6 次有、合计 53 行;第二任务(9/11 晚)13 次全有、合计 152 行;
+**第三任务(9/13,两批共 36 次)0 次有、合计 0 行**。导出日志写着 `ClickHouse unreachable ... 127.0.0.1:8123`,
+现在机器上**没有任何 clickhouse 容器**。所以第三任务的使用判定停在 `needs_review` 或没有事件,
+**缺的是「被记账的那次 fetch」本身,那些证据从来没被写下来**,不是配对没对上,更不是「模型确实没用」。
+这一行现在由 `report.mjs` 逐批算出来印在报告里。**这是可修的环境缺口** —— 也正因为如此,
+第三批只有在「先把 ClickHouse 恢复、能记下真实取回与后续操作的绑定」之后才值得跑;
+原样重复 6+6 补不上这条链。
 
 **第八轮复核(2026-09-13 傍晚,只读 + 内存反例)三条:**
 **① 前两处阻断漏洞已在 `7429693` 修完并推送**,复核方读的是更早的树。当场用真程序复验:三次 `chain-cli` 用不存在的 case

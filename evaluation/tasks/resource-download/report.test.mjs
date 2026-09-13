@@ -82,11 +82,12 @@ test("作废批次必须出现在报告正文里,连同没解决的那一半", (
 
 test("副本里那份说明:命中数由数据算,两组分别报;读不到上下文时是未知不是 0", () => {
   const exposure = { why: "w", paths: ["evaluation/upstream/"], needles: ["raw bytes", "只有后者"], not_excluded_because: "x" };
+  const cap = (t) => JSON.stringify({ body: { json: { messages: [{ role: "tool", content: t }] } } });
   const load = (r) => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: r.text ?? null, noteId: "skl-a", useStates: [] });
   const m = { runs: [
-    run({ run_id: "a1", text: "…the success path returns raw bytes…" }),
-    run({ run_id: "a2", text: "什么都没读到" }),
-    run({ run_id: "b1", arm: "note", text: "raw bytes 和 只有后者 都读到了" }),
+    run({ run_id: "a1", text: cap("…the success path returns raw bytes…") }),
+    run({ run_id: "a2", text: cap("什么都没读到") }),
+    run({ run_id: "b1", arm: "note", text: cap("raw bytes 和 只有后者 都读到了") }),
     run({ run_id: "b2", arm: "note" }),
   ] };
   const rep = buildReport(m, load, exposure);
@@ -176,4 +177,72 @@ test("作废不影响或压低某组时,不标「更好看」", () => {
   ] };
   const st = buildReport(m, load).batches["2"];
   assert.equal(st.void_flatters.includes("note"), false);
+});
+
+// ── 第九轮复核:整份抓包扫字符串,模型自己写出来的也被记成「读到」 ──
+const capOf = (msgs) => JSON.stringify({ body: { json: { messages: msgs } } });
+const NEEDLE = "| `files/download`, success | **0** |";
+const EXP = { why: "w", paths: ["evaluation/upstream/"], needles: [NEEDLE], not_excluded_because: "x" };
+const loadCap = (r) => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: r.cap ?? null, noteId: "skl-a", useStates: [] });
+
+test("模型自己在 assistant 消息里写出特征文本,不算输入侧命中", () => {
+  const m = { runs: [run({ run_id: "r1", cap: capOf([{ role: "assistant", content: "我猜是 " + NEEDLE }]) })] };
+  const rep = buildReport(m, loadCap, EXP);
+  assert.equal(rep.runs[0].exposure_hits, 0, "assistant 自己写的不算");
+});
+
+test("工具回显或 user 消息里出现,才算输入侧命中", () => {
+  for (const role of ["tool", "user"]) {
+    const m = { runs: [run({ run_id: "r1", cap: capOf([{ role, content: "Stdout: " + NEEDLE }]) })] };
+    assert.equal(buildReport(m, loadCap, EXP).runs[0].exposure_hits, 1, role);
+  }
+});
+
+test("抓包读不出来仍是未知,不折成 0", () => {
+  const m = { runs: [run({ run_id: "r1" })] };
+  assert.equal(buildReport(m, loadCap, EXP).runs[0].exposure_hits, null);
+});
+
+test("曝光统计按批次分开,不合并", () => {
+  const m = { runs: [
+    run({ run_id: "a1", batch: "1", cap: capOf([{ role: "tool", content: NEEDLE }]) }),
+    run({ run_id: "a2", batch: "2", cap: capOf([{ role: "tool", content: "什么都没有" }]) }),
+  ] };
+  const rep = buildReport(m, loadCap, EXP);
+  assert.equal(rep.batches["1"].exposure_seen["no-note"].read_it, 1);
+  assert.equal(rep.batches["2"].exposure_seen["no-note"].read_it, 0);
+  const md = render(rep, m);
+  assert.ok(!/无笔记 \| 10 \|/.test(md), "不得出现两批合计的曝光数");
+});
+
+test("样本量那句也按批次给", () => {
+  const m = { runs: [
+    run({ run_id: "a1", batch: "1" }), run({ run_id: "b1", batch: "1", arm: "note" }),
+    run({ run_id: "a2", batch: "2" }), run({ run_id: "b2", batch: "2", arm: "note" }) ] };
+  const md = render(buildReport(m, loadCap, EXP), m);
+  assert.equal((md.match(/样本量:/g) ?? []).length, 2, "两批各一句");
+});
+
+test("归因为什么闭不上:逐批数服务端受信行,0 行要明说是证据没被写下来", () => {
+  const ld = (r) => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: null,
+    noteId: "skl-a", useStates: r.uses ?? [], bridgeCalls: r.bc ?? null });
+  const m = { runs: [
+    run({ run_id: "a1", batch: "1", bc: 11, uses: ["needs_review"] }),
+    run({ run_id: "b1", batch: "2", bc: 0, uses: ["needs_review"] }),
+    run({ run_id: "b2", batch: "2", arm: "note", bc: 0, uses: [] }),
+  ] };
+  const rep = buildReport(m, ld);
+  assert.equal(rep.batches["1"].bridge_calls.total, 11);
+  assert.equal(rep.batches["2"].bridge_calls.total, 0);
+  assert.equal(rep.batches["2"].bridge_calls.runs_with_rows, 0);
+  const md = render(rep, m);
+  assert.match(md, /服务端受信行/);
+  assert.match(md, /0 行/);
+});
+
+test("受信行数读不出来是未知,不当成 0", () => {
+  const ld = () => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: null, noteId: "skl-a", useStates: [], bridgeCalls: null });
+  const rep = buildReport({ runs: [run({ run_id: "x", batch: "1" })] }, ld);
+  assert.equal(rep.batches["1"].bridge_calls.unknown, 1);
+  assert.equal(rep.batches["1"].bridge_calls.total, null);
 });
