@@ -96,6 +96,18 @@ Scope, stated plainly:
   injector returns no block when the listing is `(none)` — so this changes nothing for
   those sessions.
 
+### The replacement wording is yours, not mine
+
+One part of this is a product decision I had to make to open the PR, and it should be
+yours: the sentence the read-only branch renders. What the model is told is prompt
+surface, so treat that text as a placeholder — happy to take whatever phrasing you
+prefer, or to drop the clause entirely and simply omit the write instructions with no
+replacement. The gating is the part this PR is actually about.
+
+The one thing I would keep for a non-taste reason: whatever replaces it, better not to
+name a write tool. Something like "you cannot use `skill_patch` here" puts the tool name
+back in front of the model, which is what invites the 403 in the first place.
+
 ### Overlap with #1281
 
 [#1281](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1281)
