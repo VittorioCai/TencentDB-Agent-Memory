@@ -1,0 +1,14 @@
+20260910T231329Z-b4-prep           verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T231329Z-b4-prep
+20260910T231900Z-b4-prep           verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T231900Z-b4-prep
+20260910T232209Z-trial-gate-off    verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232209Z-trial-gate-off
+20260910T232305Z-trial-gate-on     verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232305Z-trial-gate-on
+20260910T232424Z-gate-off          verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232424Z-gate-off
+20260910T232507Z-gate-on           verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232507Z-gate-on
+20260910T232522Z-gate-off          verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232522Z-gate-off
+20260910T232611Z-gate-on           verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232611Z-gate-on
+20260910T232627Z-gate-off          verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232627Z-gate-off
+20260910T232715Z-gate-on           verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232715Z-gate-on
+20260910T232730Z-gate-off          verdict=ERROR verify.exit=2 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232730Z-gate-off
+20260910T232818Z-gate-on           verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232818Z-gate-on
+20260910T232835Z-gate-off          verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232835Z-gate-off
+20260910T232924Z-gate-on           verdict=PASS  verify.exit=0 outcomes.exit=0 → /private/tmp/topic4-rejudge/fresh2-20260913T095827Z/20260910T232924Z-gate-on

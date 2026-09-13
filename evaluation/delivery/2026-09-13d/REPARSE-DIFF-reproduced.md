@@ -1,5 +1,5 @@
-# Re-judge diff — 2026-09-11 
-Before: `evaluation/runner/runs` (records as written at run time). After: re-judged copies (path is environment-specific and deliberately not printed) (re-judged by rejudge-runs.mjs; acceptance attempts-2026-09-11). Formal sample: the 10 run ids in `evaluation/gate/artifacts/batch4-runs.json`. 
+# Re-judge diff 
+Before: `evaluation/runner/runs` (records as written at run time). After: `/private/tmp/topic4-rejudge/fresh-20260913T095621Z` (copies re-judged by rejudge-runs.mjs; acceptance attempts-2026-09-11). Formal sample: the 10 run ids in `evaluation/gate/artifacts/batch4-runs.json`. 
 ### Formal sample (the manifest)
 
 | run | verdict before → after | attempts before | attempts after | outcomes before | outcomes after | changed |

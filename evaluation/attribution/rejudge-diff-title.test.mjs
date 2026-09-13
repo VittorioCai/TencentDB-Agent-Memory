@@ -26,3 +26,22 @@ test("路径里没有日期就不编一个:返回 null,标题里省掉那段", (
   assert.equal(titleDate("/private/tmp/topic4-rejudge/copies"), null);
   assert.equal(titleDate(""), null);
 });
+
+/**
+ * 2026-09-13 用全新目录从原始记录重建时暴露:同样的输入,只因复判副本的目录名不同,
+ * 报告就差两行 —— 标题日期取自目录名,正文还把绝对路径印了出来。
+ * 环境相关的东西不该进报告正文,否则它在别的机器上永远对不上。
+ */
+import { describeAfter } from "./rejudge-diff.mjs";
+
+test("日期优先取自数据里的验收版本,与副本目录名无关", () => {
+  assert.equal(titleDate("/tmp/fresh-20260913T095621Z", ["attempts-2026-09-11"]), "2026-09-11");
+  assert.equal(titleDate("/tmp/2026-09-99", ["attempts-2026-09-11"]), "2026-09-11", "数据优先于目录名");
+  assert.equal(titleDate("/tmp/whatever", []), null, "都没有就不写,不编");
+});
+
+test("正文不印复判副本的绝对路径", () => {
+  const s = describeAfter("/private/tmp/topic4-rejudge/fresh-20260913T095621Z");
+  assert.doesNotMatch(s, /private|tmp|\//);
+  assert.equal(describeAfter("/a/b"), describeAfter("/c/d"), "换个目录,这句话必须一模一样");
+});

@@ -140,7 +140,7 @@
 | `node --test evaluation/**/*.test.mjs`(仓库根) | 0 失败 | `evaluation/delivery/2026-09-13b/suite.txt` |
 | `bash evaluation/tasks/exit-code-fix/selfcheck.sh` | 【0】起点可解释、【1】FAIL、【2】PASS、【3】0 新增失败;【4】闭环后判别值已进记录,该段失败属预期 | `evaluation/delivery/2026-09-13b/selfcheck.txt` |
 | `bash evaluation/tasks/exit-line-collect/selfcheck.sh` | 同上;链接目标冻在 conditions.json | `evaluation/delivery/2026-09-13b/selfcheck-exit-line-collect.txt` |
-| `bash evaluation/deliver-check.sh` | 六份生成报告与提交副本 **diff 全部为 0**;三个非零退出码(两个 selfcheck、conditions-check)是写明的按设计如此 | `evaluation/delivery/2026-09-13b/SUMMARY.md`(线上栈);干净克隆见 REVIEW-GUIDE 的表 |
+| `bash evaluation/deliver-check.sh` | 六份生成报告与提交副本 **diff 全部为 0**;判决分离线/线上两侧,每个步骤都有明示策略,缺步骤与未登记异常一律阻断,脚本以判决结果退出 | `evaluation/delivery/2026-09-13b/SUMMARY.md`(线上栈);干净克隆见 REVIEW-GUIDE 的表 |
 | `node evaluation/runner/batch-conditions.mjs --check --conditions=…batch4-conditions.json` | 批次后按设计 FAIL 的项 | `evaluation/delivery/2026-09-13b/conditions-check.txt` |
 | `bash evaluation/demo.sh --plain` | 7 段无 fixture | `evaluation/delivery/2026-09-13b/demo.txt` |
 
@@ -169,6 +169,13 @@
   (2026-09-12T10:44:33Z,管理员密钥由用户执行,CLAUDE.md §14):`competence` 由 medium 改为 unknown,读回核对见
   `evaluation/author/artifacts/assessment-write-b-readback-2026-09-12.json` —— 闸门据此把复核优先级提到 high,
   admit/reject 未变,这正是"作者信号只排队、不定生死"的线上证据。
+- **`conditions-check` 的 20 项 FAIL 不都是"按设计如此"。** 逐项登记在
+  `runner/conditions-expected.json`,分三类:**批次后的正常变化/已记录的有意改动 14 项**
+  (资产状态、判别值已烧毁、两次镜像切换、proxy 身份恢复、七个文件因复核而变)、
+  **已载明的实验限制 5 项**(同一个根因:跨运行记忆隔离缺口,profile 快照不覆盖 atomic/conversation)、
+  **证据缺口 1 项**(`来源扫描无缺口` —— `20260911T175839Z-devloop-smoke` 缺 `capture.jsonl`,
+  来源扫描因此不完整;该次是冒烟运行、不在任何正式样本名单里,**但缺口就是缺口,不属于"按设计"**)。
+  未登记的 FAIL 一律阻断验收。
 - **部分结论仍依赖未入库的批次三运行。** 16 个运行目录(`20260908T*`,约 65 MB)留在本地未提交,
   而已提交的工件引用着它们:证据包 17 条记录的 `meta.run_id`、`isolation-findings.json`、
   `COMPARISON-2026-09-08.md`,以及套件里一处字符串夹具。**准确的范围**(第六轮复核指出后重查):

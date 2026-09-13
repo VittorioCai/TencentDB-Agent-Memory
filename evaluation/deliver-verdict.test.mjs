@@ -32,7 +32,7 @@ const green = () => [
   row("devloop-report", 0, 0),
   row("devloop-report-2", 0, 0),
   row("demo", 0, null, "Segments: 2 live, 5 record, 0 fixture"),
-  row("conditions-check", 1, null, "47 PASS / 20 FAIL lines"),
+  row("conditions-check", 1, null, "47 PASS / 20 FAIL;conditions-check 的 20 项 FAIL:批次后的正常变化 14 项、已知限制 5 项、**记录缺口 1 项**;未登记 0 项;登记了但本次未失败 0 项。"),
   row("live-state", 0, null, "skill.extraction.enabled: file=false container=enabled:false"),
 ];
 
@@ -74,6 +74,14 @@ test("期望非零的两个步骤:符合写明的形态算通过,并单列出来
   const v = verdict(green());
   assert.equal(v.expected_failures.length, 3);   // 两个 selfcheck + conditions-check
   assert.ok(v.expected_failures.every((e) => e.why));
+});
+
+test("conditions-check 出现未登记的 FAIL → 阻断(放行条件是「未登记 0 项」)", () => {
+  const rows = green().map((r) => (r.step === "conditions-check"
+    ? { ...r, note: "47 PASS / 21 FAIL;…;未登记 1 项(某新项)。" } : r));
+  const v = verdict(rows);
+  assert.equal(v.ok, false);
+  assert.ok(v.failures.some((f) => f.step === "conditions-check"));
 });
 
 test("selfcheck 变成别的失败形态就不再是'期望之内'", () => {

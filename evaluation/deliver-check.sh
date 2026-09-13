@@ -100,9 +100,11 @@ echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
 row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/fixture counted" "$(grep -E '^Segments:' "$OUT/demo.txt")"
 
-echo "[8] batch-4 conditions check (post-batch: known FAIL items are the design working)"
+echo "[8] batch-4 conditions check (every allowed FAIL is registered with its class and reason)"
 node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json > "$OUT/conditions-check.txt" 2>&1; e=$?
-row "conditions-check" "batch-conditions.mjs --check --conditions=batch4-conditions.json" "$e" "post-batch: exit 1 with the FAIL items listed in STATE.md (trace burned, atomic footprint, run-once.sh changed; since 2026-09-12 also the runtime rows: core image digest, gate source mount→image)" "$(grep -c -E 'PASS' "$OUT/conditions-check.txt") PASS / $(grep -c -E 'FAIL' "$OUT/conditions-check.txt") FAIL lines"
+cls="$(node evaluation/runner/conditions-classify.mjs "$OUT/conditions-check.txt" 2>&1)"; ce=$?
+echo "$cls" > "$OUT/conditions-classified.txt"
+row "conditions-check" "batch-conditions.mjs --check; conditions-classify.mjs" "$e" "exit 1 是常态;**每一项 FAIL 必须在 conditions-expected.json 里登记性质与原因**,未登记即阻断。三类:批次后的正常变化 / 已载明的实验限制 / 证据缺口(后者属于缺点,不属于按设计)" "$(grep -c -E 'PASS' "$OUT/conditions-check.txt") PASS / $(grep -c -E 'FAIL' "$OUT/conditions-check.txt") FAIL;$cls"
 
 echo "[9] live state"
 { bash evaluation/runner/core-extraction.sh status; bash evaluation/runner/prepare.sh --status 2>&1 | head -6; node evaluation/tasks/exit-code-fix/gate-observe.mjs --label="delivery re-run $STAMP" --out="$OUT/gate-observation.jsonl"; } > "$OUT/live-state.txt" 2>&1; e=$?

@@ -69,13 +69,28 @@ function table(ids, title) {
  * delivery that claims generated reports match their committed copies. Same copy in,
  * same title out; a path with no date in it gets no date rather than an invented one.
  */
-export const titleDate = (dir) => (String(dir ?? "").match(/(\d{4}-\d{2}-\d{2})/) ?? [])[1] ?? null;
+export const titleDate = (dir, acceptanceVersions = []) => {
+  // 先从**数据**取:验收版本形如 `attempts-2026-09-11`,它随记录走,不随目录名走。
+  for (const v of acceptanceVersions) {
+    const m = String(v ?? "").match(/(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+  }
+  // 退而求其次才看副本目录名;两者都没有就不写日期,不编一个。
+  return (String(dir ?? "").match(/(\d{4}-\d{2}-\d{2})/) ?? [])[1] ?? null;
+};
+
+/**
+ * 复判副本的位置是环境相关的(`/private/tmp/...`,换台机器就不同),写进正文会让这份报告
+ * 永远无法在别处复现 —— 2026-09-13 用全新目录从原始记录重建时就是这么暴露的:同样的输入,
+ * 只因目录名不同,报告差了两行。所以正文只说"复判副本",路径不进正文。
+ */
+export const describeAfter = (dir) => "re-judged copies (path is environment-specific and deliberately not printed)";
 
 if (RUN_AS_SCRIPT) {
 const versions = new Set(formal.map((id) => view(after, id).version));
-const stamp = titleDate(after);
+const stamp = titleDate(after, [...versions]);
 console.log(`# Re-judge diff${stamp ? ` — ${stamp}` : ""}`, "");
-console.log(`Before: \`${before}\` (records as written at run time). After: \`${after}\` (copies re-judged by rejudge-runs.mjs; acceptance ${[...versions].join(", ")}). Formal sample: the ${formal.length} run ids in \`${manifestPath}\`.`, "");
+console.log(`Before: \`${before}\` (records as written at run time). After: ${describeAfter(after)} (re-judged by rejudge-runs.mjs; acceptance ${[...versions].join(", ")}). Formal sample: the ${formal.length} run ids in \`${manifestPath}\`.`, "");
 console.log(table(formal, "Formal sample (the manifest)"));
 if (extra.length) console.log(table(extra, "Not samples: preparation and trial runs"));
 }

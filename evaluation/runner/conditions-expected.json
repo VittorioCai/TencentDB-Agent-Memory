@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "what": "conditions-check 允许出现的 FAIL,逐项登记性质与原因",
+    "why": "原来整块写成\"按设计如此\",把三种性质混在一起:批次后的正常变化、已知实验限制、以及记录缺口。记录缺口不能被前两者概括。",
+    "rule": "只有登记在册的 FAIL 才允许;**未登记的 FAIL 一律阻断**;登记了却不再失败的项要清掉(说明冻结值该更新)。",
+    "classes": {
+      "post_batch": "批次跑完后的正常变化,或复核带来的有意改动,各有记录",
+      "known_limitation": "已载明的实验限制,不因本次复跑而改变",
+      "record_gap": "证据本身有缺口 —— 属于缺点,不属于\"按设计\""
+    }
+  },
+  "allowed": [
+    {
+      "item": "asset wrong 开跑前状态",
+      "class": "post_batch",
+      "why": "批次跑完后闸门按规则改了该资产状态;开跑前的状态只对批次当时成立"
+    },
+    {
+      "item": "asset wrong 判别值来源唯一且不可从部署推导",
+      "class": "post_batch",
+      "why": "该判别值已随运行记录进入仓库(CLAUDE.md §16 已烧毁),再用须先轮换"
+    },
+    {
+      "item": "asset right 判别值来源唯一且不可从部署推导",
+      "class": "post_batch",
+      "why": "同上"
+    },
+    {
+      "item": "core 容器镜像摘要 == 冻结值",
+      "class": "post_batch",
+      "why": "2026-09-11/12 两次切到自建镜像,各有 §10 记录与读回"
+    },
+    {
+      "item": "闸门来源 == 冻结值",
+      "class": "post_batch",
+      "why": "闸门由挂载改为内建于镜像,同上两次切换记录"
+    },
+    {
+      "item": "proxy 强制身份 agent == 消费者",
+      "class": "post_batch",
+      "why": "批次结束后 proxy 身份已恢复为主线消费者,记录见 proxy-identity-restore-2.json"
+    },
+    {
+      "item": "proxy 配置未被改动",
+      "class": "post_batch",
+      "why": "同上,恢复身份即改动了该配置,备份与哈希在记录里"
+    },
+    {
+      "item": "文件未变 evaluation/tasks/bridge-addr/verify.mjs",
+      "class": "post_batch",
+      "why": "第一轮复核改判定边界后重判(报告已重新生成)"
+    },
+    {
+      "item": "文件未变 evaluation/attribution/calibration.mjs",
+      "class": "post_batch",
+      "why": "第一/四轮复核改校准口径"
+    },
+    {
+      "item": "文件未变 evaluation/attribution/calibrate-runs.mjs",
+      "class": "post_batch",
+      "why": "同上"
+    },
+    {
+      "item": "文件未变 evaluation/attribution/judge-outcome.mjs",
+      "class": "post_batch",
+      "why": "同上"
+    },
+    {
+      "item": "文件未变 evaluation/runner/run-once.sh",
+      "class": "post_batch",
+      "why": "批次四发现的快照先于清理缺陷,已修(STATE 缺陷 2)"
+    },
+    {
+      "item": "文件未变 evaluation/gate/core-gate.sh",
+      "class": "post_batch",
+      "why": "闸门读写路径随 Core 内建化调整"
+    },
+    {
+      "item": "文件未变 MemoryCore/src/metadata/service/asset-gate.ts",
+      "class": "post_batch",
+      "why": "第三轮复核改了闸门理由串,并因此重建镜像"
+    },
+    {
+      "item": "消费者 atomic 记忆足迹为空(records/*.jsonl 与 skill_buffer/;profile 快照不覆盖)",
+      "class": "known_limitation",
+      "why": "跨运行记忆隔离缺口:profile 快照不覆盖 atomic/conversation 通道。冻结时未检测到,STATE 缺陷 1 已载明;批次五之前要定方案,批次五未跑"
+    },
+    {
+      "item": "消费者记忆范围哈希 == 冻结值",
+      "class": "known_limitation",
+      "why": "同一根因:消费者记忆已非冻结时的空基线"
+    },
+    {
+      "item": "消费者记忆文件数 == 冻结值",
+      "class": "known_limitation",
+      "why": "同上"
+    },
+    {
+      "item": "消费者基线干净(token + 观察行)",
+      "class": "known_limitation",
+      "why": "同上"
+    },
+    {
+      "item": "消费者基线为空(files==0,空基线批次的硬要求)",
+      "class": "known_limitation",
+      "why": "同上"
+    },
+    {
+      "item": "来源扫描无缺口",
+      "class": "record_gap",
+      "why": "20260911T175839Z-devloop-smoke 缺 capture.jsonl,来源扫描因此不完整。**这是记录缺口,不是按设计如此** —— 该次是冒烟运行、不在任何正式样本名单里,但缺口本身要如实记为缺口"
+    }
+  ]
+}
