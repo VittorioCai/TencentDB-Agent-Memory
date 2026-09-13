@@ -32,6 +32,7 @@ const green = () => [
   row("devloop-report", 0, 0),
   row("devloop-report-2", 0, 0),
   row("demo", 0, null, "Segments: 2 live, 5 record, 0 fixture"),
+  row("chain", 0, null, "21 个环节,其中未证明 3 个"),
   row("conditions-check", 1, null, "47 PASS / 20 FAIL;conditions-check 的 20 项 FAIL:批次后的正常变化 14 项、已知限制 5 项、**记录缺口 1 项**;未登记 0 项;登记了但本次未失败 0 项。"),
   row("live-state", 0, null, "skill.extraction.enabled: file=false container=enabled:false"),
 ];

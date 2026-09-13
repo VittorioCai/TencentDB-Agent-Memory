@@ -100,6 +100,12 @@ echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
 row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/fixture counted" "$(grep -E '^Segments:' "$OUT/demo.txt")"
 
+echo "[7b] closed-loop walkthrough: the main chain and the two counterexamples"
+{ for c in main delivered_not_adopted adopted_but_flagged; do
+    echo "══════ $c ══════"; node evaluation/receipt/chain-cli.mjs --case="$c" --expand; echo;
+  done; } > "$OUT/chain.txt" 2>&1; e=$?
+row "chain" "receipt/chain-cli.mjs --case=main|delivered_not_adopted|adopted_but_flagged --expand" "$e" "exit 0;三条链都渲染出来,未证明的环节按原样保留" "$(grep -c '^[1-7]\. ' "$OUT/chain.txt") 个环节,其中未证明 $(grep -c '未证明' "$OUT/chain.txt") 个"
+
 echo "[8] batch-4 conditions check (every allowed FAIL is registered with its class and reason)"
 node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json > "$OUT/conditions-check.txt" 2>&1; e=$?
 cls="$(node evaluation/runner/conditions-classify.mjs "$OUT/conditions-check.txt" 2>&1)"; ce=$?

@@ -130,3 +130,33 @@ node --test evaluation/receipt/*.test.mjs
   `--stale-days`) produces a review prompt worded "review suggested, not
   judged expired". The threshold is a parameter of this evaluation with no
   empirical basis, and the wording says so. It never reaches the gate.
+
+## 闭环展示(`chain-cli.mjs`)
+
+按次回执回答的是"这次用了哪些资产、状态如何";它回答不了评委真正会追的那条线。
+`chain-cli.mjs` 把一次真实运行按七环展开,每一环都能打开看证据文件与字段:
+
+    原始经验 → 笔记与适用条件 → 检索与取回 → 实际新增的测试/代码 → 独立验收 → Core 判定 → 新候选
+
+```bash
+node evaluation/receipt/chain-cli.mjs                              # 主链条
+node evaluation/receipt/chain-cli.mjs --expand                     # 逐环展开证据
+node evaluation/receipt/chain-cli.mjs --case=delivered_not_adopted # 反例一
+node evaluation/receipt/chain-cli.mjs --case=adopted_but_flagged   # 反例二
+```
+
+**硬规则:某一环没有证据就显示「未证明」并说明原因,绝不拿相邻证据顶替。**
+主链条那次运行现在是**七环已证六环**——第 7 环(新候选)对**这一次运行**没有证据,
+候选是后来开着提取的那次写回产生的,属于另一条流程。把它标成未证明,而不是从别处借一条,
+正是这套东西要展示的态度:链条允许断,不允许糊。
+
+三条链各自的资产来源也随案例走:反例一用的是 bridge-addr 那对只差地址的资产,不是退出码笔记
+——早先版本把笔记硬编码给了所有案例,等于替那次运行编了一个它没有的来源,已修。
+
+两个反例分别证明:
+
+- **反例一(送达 5 次、采用 1 次)**:系统按"操作是否实际用了它"判定,不按"内容是否到过模型"判定。
+- **反例二(参考采纳成立、判定器未产出 used)**:按现行校准记一次**假阴性且计入分母**,不是弃权;
+  `needs_review` 说明的是它为什么保守拒判,不是把它移出分母的理由。
+
+`deliver-check.sh` 每次复跑都会渲染这三条链并存档(`chain.txt`),渲染失败会让验收失败。

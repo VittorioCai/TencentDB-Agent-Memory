@@ -32,6 +32,7 @@ export const POLICY = {
   "devloop-report":              { kind: "offline", exit: 0, diff: true, what: "第一任务闭环报告" },
   "devloop-report-2":            { kind: "offline", exit: 0, diff: true, what: "第二任务闭环报告" },
   "demo":                        { kind: "offline", exit: 0, diff: false, what: "演示脚本" },
+  "chain":                       { kind: "offline", exit: 0, diff: false, what: "闭环展示:主链条 + 两个反例" },
   "conditions-check":            { kind: "live", exit: "expected", diff: false, what: "批次条件核对",
     expect: /未登记 0 项/, why: "exit 1 是常态;放行条件是每一项 FAIL 都在 conditions-expected.json 里登记了性质与原因(三类:批次后的正常变化 / 已载明的实验限制 / 证据缺口),未登记即阻断" },
   "live-state":                  { kind: "live", exit: 0, diff: false, what: "线上状态记录" },
