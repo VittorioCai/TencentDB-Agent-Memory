@@ -1,0 +1,21 @@
+# 归一化比较(evaluation/gate/compare-typecheck.mjs,按「文件 + 错误码 + 消息」,消息里的绝对路径折成 …/src/…)
+
+## 全树
+基线 123 条,搬运后 118 条
+按「文件 + 错误码 + 消息」归一化后:新增 2 条,消掉 7 条
+  + src/gateway/generated/schemas.ts TS2552 Cannot find name 'wikiCreateRequestSchema'. Did you mean 'skillCreateRequestSchema'?
+  + src/gateway/generated/schemas.ts TS2552 Cannot find name 'CreateWikiMutationResponse'. Did you mean 'CreateSkillMutationResponse'?
+  - src/gateway/generated/schemas.ts TS2304 Cannot find name 'wikiCreateRequestSchema'.
+  - src/gateway/generated/schemas.ts TS2304 Cannot find name 'CreateWikiMutationResponse'.
+  - src/metadata/service/metadata-service.ts TS2322 Type '"active"' is not assignable to type 'AssetStatus | undefined'.
+  - src/metadata/store/metadata-store.contract.ts TS2322 Type '"active"' is not assignable to type 'AssetStatus | undefined'. ×2
+  - src/metadata/store/mongodb-adapter.ts TS2304 Cannot find name 'IMetadataStore'.
+  - src/metadata/store/sqlite-adapter.ts TS2304 Cannot find name 'IMetadataStore'.
+
+## 只看 src/metadata
+基线 11 条,搬运后 6 条(只看 src/metadata)
+按「文件 + 错误码 + 消息」归一化后:新增 0 条,消掉 5 条
+  - src/metadata/service/metadata-service.ts TS2322 Type '"active"' is not assignable to type 'AssetStatus | undefined'.
+  - src/metadata/store/metadata-store.contract.ts TS2322 Type '"active"' is not assignable to type 'AssetStatus | undefined'. ×2
+  - src/metadata/store/mongodb-adapter.ts TS2304 Cannot find name 'IMetadataStore'.
+  - src/metadata/store/sqlite-adapter.ts TS2304 Cannot find name 'IMetadataStore'.

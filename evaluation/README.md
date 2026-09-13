@@ -194,10 +194,16 @@ Since 2026-09-12 the delivery also carries, each with its own record:
   `gate-core-minimal`, commit `c372d80`, based on `feat/server_team@0468a2a`): this
   branch differs from upstream in 3675 files, and the gate is 21 of them; four conflicts,
   all of them import lists; a tree with no `evaluation/` in it that builds and passes
-  132 tests; and `typecheck:metadata`, compared after normalising away line numbers,
-  adds no new error and leaves 5 fewer than pristine upstream (118 against 123, the
-  `src/metadata` share 11 → 6). This is the direct answer to "the gate has to live in
-  Core": product code, not a harness.
+  132 tests; and `typecheck:metadata`, compared after normalising away line numbers and
+  the absolute paths TypeScript embeds in some messages, adds nothing in `src/metadata`,
+  where the gate lives (11 → 6), and two in the tree as a whole (123 → 118) — the same
+  two undefined names upstream reports as TS2304, restated as TS2552 with a "did you
+  mean" suggestion. Raw outputs and the comparison are in `gate/artifacts/port-*`, and
+  the baseline is pinned at `0468a2a...c372d80` rather than a moving "latest upstream".
+  The four merge conflicts were textual, all of them import lists; behaviour
+  compatibility after deployment is **not** verified, so this supports "the port is
+  feasible", not "ready to merge upstream or to run in production". It is the direct
+  answer to "the gate has to live in Core": product code, not a harness.
 
 A configuration note worth recording: the knowledge service ships its own
 ClickHouse telemetry writing the *same* `tool_call_logs` table, tagged

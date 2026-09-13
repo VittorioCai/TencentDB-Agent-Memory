@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/gate-core-minimal/MemoryCore
+
+
+ Test Files  3 passed (3)
+      Tests  132 passed (132)
+   Start at  16:05:25
+   Duration  441ms (transform 376ms, setup 0ms, import 576ms, tests 270ms, environment 0ms)
+

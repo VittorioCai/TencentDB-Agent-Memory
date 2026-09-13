@@ -8,7 +8,7 @@
 原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)与 `20260911T1*-devloop-*`(闭环,23),每目录只少一个无脚本读取的
 `capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
-**闸门装得进今天的产品**:分支 `gate-core-minimal`(`c372d80`)以上游 `feat/server_team@0468a2a` 为基线重拆,21 文件 `+4043/−34`,四处冲突全是 import 列表;`build:plugin` 通过、`npm test` 132 个全过;`build` 与 `typecheck:metadata` 红,但纯净上游同样红(新增 0 条)。**不是上游 PR,三个阻碍未收口,分支未推送。**见 `evaluation/gate/PORT-TO-UPSTREAM.md`。
+**闸门装得进今天的产品**:分支 `gate-core-minimal`(`c372d80`)以上游 `feat/server_team@0468a2a` 为基线重拆,21 文件 `+4043/−34`,四处**文本合并**冲突全是 import 列表;`build:plugin` 通过、`npm test` 132 个全过;`build` 与 `typecheck:metadata` 红,但纯净上游同样红(`src/metadata` 子树 11 → 6、新增 0;全树 123 → 118、新增 2,那 2 条是同两个未定义名字换了错误码)。**部署后的行为兼容性尚未验证;它支持「具备移植可行性」,不支持「已达上游合入或生产条件」。** 比较基线钉在 `0468a2a...c372d80`。见 `evaluation/gate/PORT-TO-UPSTREAM.md`,原始输出在 `gate/artifacts/port-*`。
 
 ## 干净克隆上什么能复算,什么需要线上(2026-09-12 彩排实测)
 
