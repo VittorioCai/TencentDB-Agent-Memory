@@ -106,6 +106,10 @@ echo "[7b] closed-loop walkthrough: the main chain and the two counterexamples"
   done; } > "$OUT/chain.txt" 2>&1; e=$?
 row "chain" "receipt/chain-cli.mjs --case=main|delivered_not_adopted|adopted_but_flagged --expand" "$e" "exit 0;三条链都渲染出来,未证明的环节按原样保留" "$(grep -c '^[1-7]\. ' "$OUT/chain.txt") 个环节,其中未证明 $(grep -c '未证明' "$OUT/chain.txt") 个"
 
+echo "[7c] relevance selection: pool → admission → task relevance → context"
+node evaluation/attribution/selection-cli.mjs > "$OUT/selection.txt" 2>&1; e=$?
+row "selection" "attribution/selection-cli.mjs" "$e" "exit 0;两层过滤分开报(准入与任务相关性)" "$(grep -oE '池中 [0-9]+ 项' "$OUT/selection.txt" | head -1);$(grep -oE '放行 [0-9]+ 项;挡下 [0-9]+ 项' "$OUT/selection.txt" | head -1)"
+
 echo "[8] batch-4 conditions check (every allowed FAIL is registered with its class and reason)"
 node evaluation/runner/batch-conditions.mjs --check --conditions=evaluation/gate/artifacts/batch4-conditions.json > "$OUT/conditions-check.txt" 2>&1; e=$?
 cls="$(node evaluation/runner/conditions-classify.mjs "$OUT/conditions-check.txt" 2>&1)"; ce=$?

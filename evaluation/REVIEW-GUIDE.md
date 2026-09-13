@@ -61,7 +61,7 @@
 | 任务 | 做了什么 | 证据文件 | 复算命令 |
 |---|---|---|---|
 | 一 历史经验学习 | 经验笔记从批次四记录与代码整理而来,入池只存 sha256;任务结束由产品 `/v3/skill/extract` 从会话提取候选 | `tasks/exit-code-fix/assets/note.md`(占位符)、`write-back.json` 各运行目录、`REPORT.md` "新经验回流候选池" | `node evaluation/tasks/exit-code-fix/report.mjs` |
-| 二 检索与最小上下文 | 未另建检索;送达只经产品自己的 `skill_search`,注入块对新 agent 为空(这是产品事实,报告写明) | `tasks/exit-code-fix/README.md`、`LESSONS.md` "送达机制" | — |
+| 二 检索与最小上下文 | 未另建检索;送达只经产品自己的 `skill_search`,注入块对新 agent 为空。**两层过滤分开展示**:准入由产品闸门做(与任务无关),任务相关性由模型检索时做 | `node evaluation/attribution/selection-cli.mjs` —— 一次真实运行:池中 7 项 → 闸门挡下 2 项(candidate / failed)→ 已准入 5 项 → 模型取回 1 项 → 进入上下文 2729 **字符**(未测量 token,没有分词器就不报)→ 够不够只引独立验收(PASS 6/6),不另下结论 |
 | 三 使用链路与可信归因 | recalled / injected / fetched / used / validated / corrected 六态;结果按调用不按运行;关系 cross_user 由服务端推导;只读受信行 | `evaluation/README.md`、`gate/README.md` "The rules"、`attribution/` | `node evaluation/attribution/calibrate-runs.mjs …`(命令在报告开头) |
 | 四 用户可感知回执 | 一资产一行一标记;来源与消费者同行;"相关测试 X 通过"措辞;低置信风险来自闸门 confidence | `receipt/README.md`、各运行 `receipt.txt` | `node evaluation/receipt/render-cli.mjs <run>/receipt.json` |
 | 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环无 / 有笔记各 2 次 ×2 任务(演示,非性能对照) | `runner/COMPARISON-2026-09-11-reparsed.md`、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
