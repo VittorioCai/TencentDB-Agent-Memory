@@ -38,13 +38,22 @@ export function sampleState(run) {
  * @param manifest devloop-runs.json
  * @param load     (run) => { verdict, memoryChannel } —— 由调用方决定从哪读,便于测试
  */
-export function buildReport(manifest, load) {
+/**
+ * @param exposure task.json 的 copy_exposure:副本里本不该有的那份说明,以及认它的原话。
+ *   计数由数据算出来,不写死(§6):每次运行的上下文里命中几条。
+ */
+export function buildReport(manifest, load, exposure = null) {
+  const needles = exposure?.needles ?? [];
   const runs = (manifest.runs ?? []).map((r) => {
     const st = sampleState(r);
     const rec = load(r) ?? {};
     const tap = rec.verdict?.checks?.reference_test?.output ?? null;
+    const text = rec.captureText ?? null;
     return { ...r, counted: st.counted, not_counted_why: st.why, assertions: assertionsFromTap(tap),
-      memory_reads: rec.memoryChannel?.reads ?? null, note_returned: rec.noteReturned ?? null };
+      memory_reads: rec.memoryChannel?.reads ?? null,
+      note_mentions: text === null ? null : (rec.noteId ? text.split(rec.noteId).length - 1 : 0) + (rec.noteName ? text.split(rec.noteName).length - 1 : 0),
+      use_states: rec.useStates ?? null,
+      exposure_hits: text === null ? null : needles.filter((n) => text.includes(n)).length };
   });
   const arms = {};
   for (const arm of ["no-note", "note"]) {
@@ -58,7 +67,14 @@ export function buildReport(manifest, load) {
   const a = arms["no-note"], b = arms["note"];
   const comparable = a.counted > 0 && b.counted > 0;
   const gain = comparable ? b.rate - a.rate : null;
-  return { arms, comparable, gain, runs,
+  const exposureSeen = {};
+  for (const arm of ["no-note", "note"]) {
+    const c = runs.filter((r) => r.arm === arm && r.counted);
+    exposureSeen[arm] = { counted: c.length, read_it: c.filter((r) => (r.exposure_hits ?? 0) > 0).length,
+      unknown: c.filter((r) => r.exposure_hits === null).length };
+  }
+  return { arms, comparable, gain, runs, exposure, exposure_seen: exposureSeen,
+    rejudged: manifest.contamination_rejudged ?? null,
     voided_batches: manifest.voided_batches ?? [],
     // 结论句由数字决定,不预设方向(§6)
     conclusion: !comparable
@@ -76,10 +92,12 @@ export function render(rep, manifest) {
   for (const [arm, a] of Object.entries(rep.arms)) {
     L.push(`| ${arm} | ${a.total} | ${a.counted} | ${a.excluded} | ${a.pass} | ${a.rate === null ? "未知(无样本)" : (a.rate * 100).toFixed(0) + "%"} |`);
   }
-  L.push("", `## 每次运行`, "", `| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 记忆读取 | 不计入的原因 |`, `|---|---|---|---|---|---|---|`);
+  L.push("", `## 每次运行`, "", `| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 笔记提及 | 使用判定 | 读到副本里那份说明 | 不计入的原因 |`, `|---|---|---|---|---|---|---|---|---|`);
   for (const r of rep.runs) {
     const asserts = r.assertions === null ? "未知" : r.assertions.map((x) => (x.ok ? "✓" : "✗")).join("");
-    L.push(`| ${r.run_id} | ${r.arm} | ${r.counted ? "是" : "否"} | ${r.verdict ?? "无"} | ${asserts} | ${r.memory_reads ?? "未知"} | ${r.not_counted_why ?? ""} |`);
+    const uses = r.use_states === null ? "未知" : (r.use_states.length ? [...new Set(r.use_states)].join(",") : "无");
+    const exp = r.exposure_hits === null ? "未知" : r.exposure_hits > 0 ? `是(${r.exposure_hits} 条)` : "否";
+    L.push(`| ${r.run_id} | ${r.arm} | ${r.counted ? "是" : "否"} | ${r.verdict ?? "无"} | ${asserts} | ${r.note_mentions ?? "未知"} | ${uses} | ${exp} | ${r.not_counted_why ?? ""} |`);
   }
   if (rep.runs.some((r) => r.assertions)) {
     const names = rep.runs.find((r) => r.assertions)?.assertions.map((x) => `${x.n}. ${x.name.replace(/^\d+\.\s*/, "")}`);
@@ -94,6 +112,17 @@ export function render(rep, manifest) {
       `- **未解决**:${v.not_fixed}`,
       `- 前两个任务:${v.earlier_tasks}`);
   }
+  if (rep.exposure) {
+    const e = rep.exposure_seen;
+    L.push("", `## 工作副本里本不该有的那份说明`, "", rep.exposure.why, "",
+      `它在这些位置:${rep.exposure.paths.map((p) => `\`${p}\``).join("、")}。`, "",
+      `| 组 | 计入样本 | 其中读到了它 | 未知 |`, `|---|---|---|---|`,
+      ...Object.entries(e).map(([arm, v]) => `| ${arm} | ${v.counted} | ${v.read_it} | ${v.unknown} |`), "",
+      `没有清掉的原因:${rep.exposure.not_excluded_because}`);
+  }
+  if (rep.rejudged) {
+    L.push("", `## 污染判定重判(${rep.rejudged.rules_version})`, "", rep.rejudged.why, "", rep.rejudged.effect, "", rep.rejudged.note);
+  }
   L.push("", `## 这份数字测的是什么,不是什么`, "",
     `- 测的是:在这一个新增功能任务上,一份写着两条实测行为的笔记,能不能让一个全新消费者把请求打到 \`files/download\`、把空内容当合法内容、把错误信封原样带出。`,
     `- 不测:笔记对其他任务的作用;也不测产品在其他场景下的检索质量。`,
@@ -107,13 +136,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
   const manifest = JSON.parse(readFileSync(opt("manifest") ?? join(HERE, "devloop-runs.json"), "utf8"));
+  const task = JSON.parse(readFileSync(join(HERE, "task.json"), "utf8"));
+  const tokens = JSON.parse(readFileSync(join(HERE, "tokens.json"), "utf8"));
+  const noteId = Object.keys(tokens).find((k) => !k.startsWith("_")) ?? null;
+  const noteName = noteId ? tokens[noteId]?.name ?? null : null;
   const load = (r) => {
     const repoCopy = join(resolve(HERE, "../../.."), "evaluation/runner/runs", r.run_id);
     const d = r.dir && existsSync(r.dir) ? r.dir : existsSync(repoCopy) ? repoCopy : null;
     const j = (n) => { try { return d && existsSync(join(d, n)) ? JSON.parse(readFileSync(join(d, n), "utf8")) : null; } catch { return null; } };
-    return { verdict: j("verdict.json"), memoryChannel: j("memory-channel.json") };
+    const lines = (n) => { try { return d && existsSync(join(d, n)) ? readFileSync(join(d, n), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : null; } catch { return null; } };
+    const used = lines("used-events.jsonl");
+    return { verdict: j("verdict.json"), memoryChannel: j("memory-channel.json"), noteId, noteName,
+      captureText: d && existsSync(join(d, "capture.jsonl")) ? readFileSync(join(d, "capture.jsonl"), "utf8") : null,
+      useStates: used === null ? null : used.filter((e) => e.asset_id === noteId).map((e) => e.state) };
   };
-  const rep = buildReport(manifest, load);
+  const rep = buildReport(manifest, load, task.copy_exposure ?? null);
   const md = render(rep, manifest);
   if (args.includes("--md")) process.stdout.write(md);
   else { const out = opt("out") ?? join(HERE, "REPORT.md"); writeFileSync(out, md); console.log(`${out} ← ${rep.runs.length} 次运行,计入样本 ${rep.runs.filter((r) => r.counted).length} 次`); }

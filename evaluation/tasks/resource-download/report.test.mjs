@@ -79,3 +79,26 @@ test("作废批次必须出现在报告正文里,连同没解决的那一半", (
   assert.match(md, /未解决/);
   assert.match(md, /同一用户的 shell/);
 });
+
+test("副本里那份说明:命中数由数据算,两组分别报;读不到上下文时是未知不是 0", () => {
+  const exposure = { why: "w", paths: ["evaluation/upstream/"], needles: ["raw bytes", "只有后者"], not_excluded_because: "x" };
+  const load = (r) => ({ verdict: { checks: { reference_test: { output: TAP } } }, captureText: r.text ?? null, noteId: "skl-a", useStates: [] });
+  const m = { runs: [
+    run({ run_id: "a1", text: "…the success path returns raw bytes…" }),
+    run({ run_id: "a2", text: "什么都没读到" }),
+    run({ run_id: "b1", arm: "note", text: "raw bytes 和 只有后者 都读到了" }),
+    run({ run_id: "b2", arm: "note" }),
+  ] };
+  const rep = buildReport(m, load, exposure);
+  assert.deepEqual(rep.exposure_seen["no-note"], { counted: 2, read_it: 1, unknown: 0 });
+  assert.deepEqual(rep.exposure_seen["note"], { counted: 2, read_it: 1, unknown: 1 });
+  assert.equal(rep.runs.find((r) => r.run_id === "b2").exposure_hits, null, "没有上下文就是未知,不能算 0");
+  const md = render(rep, m);
+  assert.match(md, /工作副本里本不该有的那份说明/);
+  assert.match(md, /没有清掉的原因/);
+});
+
+test("没有 copy_exposure 时不生造这一节", () => {
+  const md = render(buildReport({ runs: [run({})] }, load), { runs: [] });
+  assert.ok(!/工作副本里本不该有/.test(md));
+});

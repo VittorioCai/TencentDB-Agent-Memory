@@ -4,39 +4,43 @@
 
 ## 结论
 
-未知:有笔记组没有可计样本,两组无法比较。
+有笔记组高出 100 个百分点(4/4 对 0/4)。
 
 ## 样本
 
 | 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |
 |---|---|---|---|---|---|
 | no-note | 20 | 4 | 16 | 0 | 0% |
-| note | 0 | 0 | 0 | 0 | 未知(无样本) |
+| note | 4 | 4 | 0 | 4 | 100% |
 
 ## 每次运行
 
-| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 记忆读取 | 不计入的原因 |
-|---|---|---|---|---|---|---|
-| 20260913T105239Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T105451Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T105648Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T105810Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T110459Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T110646Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T110815Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T111005Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T112310Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T112523Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T112733Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T112941Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T113300Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T113435Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T113621Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T113923Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
-| 20260913T121409Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
-| 20260913T121636Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
-| 20260913T121823Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
-| 20260913T121937Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
+| 运行 | 组 | 计入 | 判决 | 五项行为断言 | 笔记提及 | 使用判定 | 读到副本里那份说明 | 不计入的原因 |
+|---|---|---|---|---|---|---|---|---|
+| 20260913T105239Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T105451Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
+| 20260913T105648Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T105810Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
+| 20260913T110459Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
+| 20260913T110646Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T110815Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T111005Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T112310Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
+| 20260913T112523Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T112733Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T112941Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
+| 20260913T113300Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
+| 20260913T113435Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T113621Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T113923Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T121409Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) |  |
+| 20260913T121636Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T121823Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T121937Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) |  |
+| 20260913T123427Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 278 | needs_review | 是(2 条) |  |
+| 20260913T123631Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 234 | needs_review | 是(2 条) |  |
+| 20260913T123828Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 321 | needs_review | 是(1 条) |  |
+| 20260913T124050Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 193 | needs_review | 是(2 条) |  |
 
 五项断言依次是:
 
@@ -60,6 +64,27 @@
   - verify.mjs:判别值必须对得上 tokens.json 里登记的 sha256(含退休旧值),否则 registered=false 且 needs_review
 - **未解决**:同一用户的 shell 面前,磁盘上没有真正读不到的位置。历次运行记录必然含答案,清不掉;这一半靠检测发现并作废,不靠隔离。
 - 前两个任务:前两个任务的 23 次归档运行已全部重扫:无一引用别的运行目录,无一碰过 scen-check(当时它还不存在)。唯一没有 capture 的 20260911T175839Z-devloop-smoke 是已登记的记录缺口,且是冒烟不是样本。
+
+## 工作副本里本不该有的那份说明
+
+工作副本里除了产品源码(**按设计保留** —— 无笔记组读 MemoryProxy 自己想到 files/download 是允许的结果),还有我们自己写的上游 PR 归档,它用大白话写着 files/download 的成功路径返回原始字节。这不是产品的一部分,是评测与被测对象同仓库带来的副产物。两组副本完全相同,所以它只会让无笔记组这个基线更强、让测出的差值更保守;但读者有权知道它在,并知道有几次真的读到了。
+
+它在这些位置:`evaluation/upstream/download-telemetry/`、`evaluation/PR-DESCRIPTION.md`。
+
+| 组 | 计入样本 | 其中读到了它 | 未知 |
+|---|---|---|---|
+| no-note | 4 | 2 | 0 |
+| note | 4 | 4 | 0 |
+
+没有清掉的原因:这 8 次样本是在含它的副本上跑的;现在改 archive_excludes 会让后续样本与它们不可比。要清掉就得两组一起重跑,交给用户决定。
+
+## 污染判定重判(contamination-2026-09-13b)
+
+首版规则按文本找别的运行 id,把「读到的文字里引用过那条路径」当成了「访问过那个目录」。仓库自己的交付报告(evaluation/delivery/…)引用着历次运行的命令行,消费者在自己的副本里读到它们并不是污染。改为按**访问**判:只取 tool_calls 的参数,工具回显的内容一概不算;省略号写法(…/session)不算路径。
+
+20 次重判,4 次改判为干净(20260913T105239Z、20260913T113621Z 两次作废批次内的,以及有笔记组 20260913T123427Z、20260913T124050Z)。两次真污染仍被抓住:20260913T111005Z(reference_leak + 访问)、20260913T112941Z(枚举共享根目录)。
+
+每条运行保留 contamination_at_run_time,即当时那版规则给出的判定,不静默改写。作废批次不因重判恢复 —— 作废的理由是运行环境里有答案,与规则版本无关。
 
 ## 这份数字测的是什么,不是什么
 

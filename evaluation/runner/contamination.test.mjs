@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { referenceFingerprints, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
+import { RULES_VERSION, commandsFromCapture, referenceFingerprints, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const REF = `
@@ -20,17 +20,47 @@ test("用例标题就是指纹,太短的标题不算", () => {
   assert.ok(f[1].includes("files/download"));
 });
 
-test("上下文里出现别的运行 id —— 消费者编不出这种 id,一定是读到了别人的目录", () => {
-  const text = 'Command: grep -rln x /private/tmp/topic4-sessions/\n/private/tmp/topic4-sessions/20260913T111005Z-devloop-no-note.0r6T/session/a.mjs';
-  const r = scanCapture({ text, runId: "20260913T112941Z-devloop-no-note", fingerprints: [] });
+const OWN = "/private/tmp/topic4-sessions/20260913T112941Z-devloop-no-note.k26K/session";
+
+test("把共享根目录整个列一遍就是在枚举别人的运行", () => {
+  const cmds = ["ls -la /private/tmp/topic4-sessions/ && grep -rln x /private/tmp/topic4-sessions/"];
+  const r = scanCapture({ text: "", runId: "20260913T112941Z-devloop-no-note", ownPaths: [OWN], commands: cmds });
   assert.equal(r.contaminated, true);
-  assert.deepEqual(r.findings.map((f) => f.rule), ["foreign_run"]);
-  assert.deepEqual(r.findings[0].sample, ["20260913T111005Z-devloop-no-note"]);
+  assert.deepEqual(r.findings.map((f) => f.rule), ["foreign_run_access"]);
 });
 
-test("自己的运行目录不算污染", () => {
-  const text = "/private/tmp/topic4-runs/20260913T112941Z-devloop-no-note.k26K/run.json";
-  assert.equal(scanCapture({ text, runId: "20260913T112941Z-devloop-no-note" }).contaminated, false);
+test("命令点到别的运行的目录 —— 污染", () => {
+  const cmds = ["cat /private/tmp/topic4-sessions/20260913T111005Z-devloop-no-note.0r6T/session/a.mjs"];
+  assert.equal(scanCapture({ text: "", runId: "20260913T112941Z-devloop-no-note", ownPaths: [OWN], commands: cmds }).contaminated, true);
+});
+
+test("自己的目录不算污染,自己目录的父目录也不算(run.json 里就记着它)", () => {
+  const cmds = [`cd ${OWN} && git status`, `ls ${OWN}/..`];
+  assert.equal(scanCapture({ text: "", runId: "20260913T112941Z-devloop-no-note", ownPaths: [OWN, OWN.replace(/\/session$/, "")], commands: cmds }).contaminated, false);
+});
+
+test("别的运行的路径出现在**读到的文本**里不算污染 —— 仓库自己的交付文档就引用着它们", () => {
+  // 2026-09-13 三次因此被误报:它们只是在自己的副本里读了 evaluation/delivery/… 那些报告
+  const rows = [{ body: { json: { messages: [
+    { role: "assistant", tool_calls: [{ function: { arguments: JSON.stringify({ command: `cat ${OWN}/evaluation/delivery/2026-09-13c/REPORT.md` }) } }] },
+    { role: "tool", content: "Stdout: needs_review ← Bash cd /private/tmp/topic4-sessions/20260911T185119Z-devloop-note.1pXe/session && node --test" },
+  ] } } }];
+  const text = JSON.stringify(rows[0]);
+  const r = scanCapture({ text, runId: "20260913T124050Z-devloop-note", ownPaths: [OWN], commands: commandsFromCapture(rows) });
+  assert.equal(r.contaminated, false, JSON.stringify(r.findings));
+});
+
+test("省略号写出来的路径不是路径(文档里的 …/session)", () => {
+  const r = scanCapture({ text: "", runId: "r1", ownPaths: [OWN], commands: ["grep x /private/tmp/topic4-sessions/.../session"] });
+  assert.equal(r.contaminated, false);
+});
+
+test("commandsFromCapture 只取 tool_calls 的参数,工具回显一概不算", () => {
+  const rows = [{ body: { json: { messages: [
+    { role: "assistant", tool_calls: [{ function: { arguments: JSON.stringify({ command: "ls /a" }) } }, { function: { arguments: JSON.stringify({ path: "/c" }) } }] },
+    { role: "tool", content: 'Command: cat /b' },
+  ] } } }];
+  assert.deepEqual(commandsFromCapture(rows), ["ls /a", "/c"]);
 });
 
 test("参考测试的标题出现在上下文里 —— 它只在验收时才写进工作副本,模型不该见过", () => {
@@ -73,4 +103,10 @@ test("taskNeedles 从任务目录读出指纹与哈希,退休掉的旧值也要�
   assert.equal(n.fingerprints.length, 2);
   assert.ok(n.tokenSha256.includes(sha("bt-current")), "当前值要在册");
   assert.ok(n.tokenSha256.includes(sha("bt-retired")), "退休的旧值也要在册 —— 旧值同样泄露答案");
+});
+
+test("每份判定都带规则版本 —— 规则改过,旧判定不能被静默改写", () => {
+  const r = scanCapture({ text: "", runId: "r1" });
+  assert.equal(r.rules_version, RULES_VERSION);
+  assert.match(RULES_VERSION, /^contamination-\d{4}-\d{2}-\d{2}[a-z]$/);
 });

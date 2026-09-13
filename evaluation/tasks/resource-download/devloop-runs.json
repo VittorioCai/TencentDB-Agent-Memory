@@ -21,14 +21,20 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-13T10:52:39Z",
       "recorded_at": "2026-09-13T10:54:51Z",
-      "contaminated": true,
-      "contamination_rules": [
-        "foreign_run"
-      ],
+      "contaminated": false,
+      "contamination_rules": [],
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -55,7 +61,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -82,7 +94,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -106,12 +124,20 @@
       "recorded_at": "2026-09-13T11:00:09Z",
       "contaminated": true,
       "contamination_rules": [
-        "foreign_run"
+        "foreign_run_access"
       ],
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -138,7 +164,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -165,7 +197,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -192,7 +230,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -216,13 +260,22 @@
       "recorded_at": "2026-09-13T11:16:13Z",
       "contaminated": true,
       "contamination_rules": [
-        "foreign_run",
+        "foreign_run_access",
         "reference_leak"
       ],
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run",
+          "reference_leak"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -249,7 +302,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -276,7 +335,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -303,7 +368,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -327,12 +398,20 @@
       "recorded_at": "2026-09-13T11:32:43Z",
       "contaminated": true,
       "contamination_rules": [
-        "foreign_run"
+        "foreign_run_access"
       ],
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -359,7 +438,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -386,7 +471,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -408,14 +499,20 @@
       "memory_channel_ok": true,
       "started_at": "2026-09-13T11:36:21Z",
       "recorded_at": "2026-09-13T11:39:23Z",
-      "contaminated": true,
-      "contamination_rules": [
-        "foreign_run"
-      ],
+      "contaminated": false,
+      "contamination_rules": [],
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -442,7 +539,13 @@
       "voided": {
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
-      }
+      },
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -465,7 +568,13 @@
       "started_at": "2026-09-13T12:14:09Z",
       "contaminated": false,
       "contamination_rules": [],
-      "recorded_at": "2026-09-13T12:16:36Z"
+      "recorded_at": "2026-09-13T12:16:36Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -488,7 +597,13 @@
       "started_at": "2026-09-13T12:16:36Z",
       "contaminated": false,
       "contamination_rules": [],
-      "recorded_at": "2026-09-13T12:18:23Z"
+      "recorded_at": "2026-09-13T12:18:23Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -511,7 +626,13 @@
       "started_at": "2026-09-13T12:18:23Z",
       "contaminated": false,
       "contamination_rules": [],
-      "recorded_at": "2026-09-13T12:19:37Z"
+      "recorded_at": "2026-09-13T12:19:37Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     },
     {
       "arm": "no-note",
@@ -534,7 +655,133 @@
       "started_at": "2026-09-13T12:19:37Z",
       "contaminated": false,
       "contamination_rules": [],
-      "recorded_at": "2026-09-13T12:21:38Z"
+      "recorded_at": "2026-09-13T12:21:38Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T123427Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T123427Z-devloop-note.3LuD/20260913T123427Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k87pyx7jgo",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-pvxahxcppk3"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:34:27Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:36:31Z",
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T123631Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T123631Z-devloop-note.2X7E/20260913T123631Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k9a5u0eqlv",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:36:31Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:38:28Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T123828Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T123828Z-devloop-note.XTES/20260913T123828Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k9eezp469n",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:38:28Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:40:50Z",
+      "contamination_at_run_time": {
+        "contaminated": false,
+        "rules": [],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
+    },
+    {
+      "arm": "note",
+      "sample": true,
+      "seq": 4,
+      "run_id": "20260913T124050Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T124050Z-devloop-note.3OKT/20260913T124050Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k9ic54p94e",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:40:50Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:42:22Z",
+      "contamination_at_run_time": {
+        "contaminated": true,
+        "rules": [
+          "foreign_run"
+        ],
+        "rules_version": "contamination-2026-09-13a"
+      },
+      "contamination_rules_version": "contamination-2026-09-13b"
     }
   ],
   "status_observations": [
@@ -597,6 +844,16 @@
       "n": 4,
       "identity": "c",
       "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T12:34:27Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "note",
+      "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
     }
   ],
   "voided_batches": [
@@ -632,5 +889,12 @@
       "not_fixed": "同一用户的 shell 面前,磁盘上没有真正读不到的位置。历次运行记录必然含答案,清不掉;这一半靠检测发现并作废,不靠隔离。",
       "earlier_tasks": "前两个任务的 23 次归档运行已全部重扫:无一引用别的运行目录,无一碰过 scen-check(当时它还不存在)。唯一没有 capture 的 20260911T175839Z-devloop-smoke 是已登记的记录缺口,且是冒烟不是样本。"
     }
-  ]
+  ],
+  "contamination_rejudged": {
+    "at": "2026-09-13T12:51:36Z",
+    "rules_version": "contamination-2026-09-13b",
+    "why": "首版规则按文本找别的运行 id,把「读到的文字里引用过那条路径」当成了「访问过那个目录」。仓库自己的交付报告(evaluation/delivery/…)引用着历次运行的命令行,消费者在自己的副本里读到它们并不是污染。改为按**访问**判:只取 tool_calls 的参数,工具回显的内容一概不算;省略号写法(…/session)不算路径。",
+    "effect": "20 次重判,4 次改判为干净(20260913T105239Z、20260913T113621Z 两次作废批次内的,以及有笔记组 20260913T123427Z、20260913T124050Z)。两次真污染仍被抓住:20260913T111005Z(reference_leak + 访问)、20260913T112941Z(枚举共享根目录)。",
+    "note": "每条运行保留 contamination_at_run_time,即当时那版规则给出的判定,不静默改写。作废批次不因重判恢复 —— 作废的理由是运行环境里有答案,与规则版本无关。"
+  }
 }

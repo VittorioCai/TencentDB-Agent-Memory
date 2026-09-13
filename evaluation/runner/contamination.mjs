@@ -19,10 +19,17 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
+// a: 首版(按文本找别的运行 id)。b: 改为按**访问**判 —— 只看 tool_calls 的参数,
+// 工具回显的内容不算(仓库自己的交付报告里引用着历次运行的命令行,首版因此误报 4 次)。
+export const RULES_VERSION = "contamination-2026-09-13b";
 export const SHARED_ROOTS = ["/private/tmp/topic4-sessions", "/private/tmp/topic4-runs"];
-const RUN_REF = /topic4-(?:sessions|runs)\/(\d{8}T\d{6}Z-[A-Za-z0-9-]+)/g;
+// 共享根目录下被**命令**点到的路径。判访问,不判文本:仓库自己的交付文档里就写着历次运行的
+// 路径(evaluation/delivery/… 引用过 20260911T185119Z),消费者在自己的副本里读到它们不是污染
+// —— 2026-09-13 有笔记组两次就是这样被误报的。真正的污染是它**去访问**了别人的目录,
+// 而那必须在命令里写出路径,或者把共享根目录整个列一遍。
+const SHARED_PATH = /\/private\/tmp\/topic4-(?:sessions|runs)(?:\/[^\s"'`,)\]]*)?/g;
 
 /** 参考测试的用例标题 —— 模型从没见过它们,出现即泄漏。 */
 export function referenceFingerprints(source) {
@@ -46,11 +53,47 @@ export function tokensIn(text, { tokenPattern, tokenSha256 = [] }) {
  * @param {string[]} o.fingerprints 参考测试用例标题
  * @param {boolean} o.noteExpected 本组是否本来就该看到笔记
  */
-export function scanCapture({ text, runId, fingerprints = [], tokenPattern = null, tokenSha256 = [], noteExpected = false }) {
+/**
+ * 模型**执行过**的命令与工具参数 —— 按结构取,不在整段文本上找。
+ * 工具回显的内容一概不算:仓库自己的交付报告里就引用着历次运行的命令行
+ * (`evaluation/delivery/…` 里有 `cd /private/tmp/topic4-sessions/20260911T185119Z…`),
+ * 消费者读到那段文字不等于它执行过 —— 2026-09-13 第一版规则正是这样误报了三次。
+ */
+export function commandsFromCapture(rows) {
+  const out = [];
+  let longest = [];
+  for (const row of rows) {
+    const msgs = row?.body?.json?.messages;
+    if (Array.isArray(msgs) && msgs.length > longest.length) longest = msgs;
+  }
+  for (const m of longest) {
+    for (const tc of Array.isArray(m?.tool_calls) ? m.tool_calls : []) {
+      let a = tc?.function?.arguments;
+      if (typeof a === "string") { try { a = JSON.parse(a); } catch { out.push(a); continue; } }
+      if (a && typeof a === "object") for (const k of ["command", "path", "file_path", "pattern"]) if (typeof a[k] === "string") out.push(a[k]);
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {string[]} o.ownPaths 本次运行自己的目录(session cwd、run dir)—— 指向它们的命令不算
+ * @param {string[]} o.commands  模型执行过的命令(commandsFromCapture),不是回显的文本
+ */
+export function scanCapture({ text, runId, fingerprints = [], tokenPattern = null, tokenSha256 = [], noteExpected = false, ownPaths = [], commands = [] }) {
   const findings = [];
-  const foreign = [...new Set([...text.matchAll(RUN_REF)].map((m) => m[1]))].filter((id) => id !== runId);
-  if (foreign.length) {
-    findings.push({ rule: "foreign_run", detail: `上下文里出现了 ${foreign.length} 个别的运行 id`, sample: foreign.slice(0, 5) });
+  const mine = [...ownPaths, runId].filter(Boolean);
+  const foreign = new Set();
+  for (const cmd of commands) {
+    for (const p of cmd.match(SHARED_PATH) ?? []) {
+      if (p.includes("...") || p.includes("…")) continue;   // 省略写法(文档里的 `…/session`),不是真路径
+      if (mine.some((own) => p.startsWith(own) || own.startsWith(p + "/"))) continue;
+      // 根目录本身被点到就是在枚举别人的运行(2026-09-13 那次 `grep -rln … /private/tmp/topic4-sessions/`)
+      foreign.add(p);
+    }
+  }
+  if (foreign.size) {
+    findings.push({ rule: "foreign_run_access", detail: `命令里点到了 ${foreign.size} 个不属于本次运行的共享路径`, sample: [...foreign].slice(0, 5) });
   }
   const leaked = fingerprints.filter((f) => text.includes(f));
   if (leaked.length) {
@@ -60,7 +103,7 @@ export function scanCapture({ text, runId, fingerprints = [], tokenPattern = nul
   if (tokens.length && !noteExpected) {
     findings.push({ rule: "token_outside_note", detail: "无笔记组的上下文里出现了判别值", sample: tokens });
   }
-  return { run_id: runId, contaminated: findings.length > 0, findings };
+  return { run_id: runId, rules_version: RULES_VERSION, contaminated: findings.length > 0, findings };
 }
 
 /**
@@ -138,8 +181,11 @@ export async function main(argv) {
   }
   const cap = join(runDir, "capture.jsonl");
   if (!existsSync(cap)) { console.error(`没有 capture.jsonl:${cap}`); return 2; }
-  const runId = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8")).run_id;
-  const res = scanCapture({ text: readFileSync(cap, "utf8"), runId, fingerprints, tokenPattern, tokenSha256, noteExpected: arm !== "no-note" });
+  const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
+  const ownPaths = [runJson.session?.cwd, runJson.session?.cwd ? dirname(runJson.session.cwd) : null, runDir, dirname(runDir)].filter(Boolean);
+  const text = readFileSync(cap, "utf8");
+  const rows = text.split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const res = scanCapture({ text, runId: runJson.run_id, fingerprints, tokenPattern, tokenSha256, noteExpected: arm !== "no-note", ownPaths, commands: commandsFromCapture(rows) });
   console.log(JSON.stringify(res, null, 2));
   return res.contaminated ? 1 : 0;
 }

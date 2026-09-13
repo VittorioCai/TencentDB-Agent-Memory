@@ -14,5 +14,18 @@
   "reference_test_dest": "evaluation/gate/fetch-resource.reference.test.mjs",
   "note": "第三个开发闭环任务(2026-09-13):**换一类工作**——前两个是修已有缺陷,这个是新增一个功能。换一份笔记(eval-skill-resource-download),内容是我们实测 skill-bridge 得到的两条事实(files/read 无论加不加 -o 都回 JSON 信封,真正返回字节的是 files/download;合法空文件被当异常)。**采用判定不靠标记靠行为**:参考测试断言的是零字节、错误信封透传,以及请求打到哪个子路径——子路径是一个设计决定,抄不来。允许零增益:无笔记组完全可能读 MemoryProxy 源码自己想到,那就是结果,不是失败。",
   "product_task_id": "task-h1k7xruuhb",
-  "product_task_note": "沿用第二个任务的产品任务实体;闸门按该 id 数不同任务。"
+  "product_task_note": "沿用第二个任务的产品任务实体;闸门按该 id 数不同任务。",
+  "copy_exposure": {
+    "why": "工作副本里除了产品源码(**按设计保留** —— 无笔记组读 MemoryProxy 自己想到 files/download 是允许的结果),还有我们自己写的上游 PR 归档,它用大白话写着 files/download 的成功路径返回原始字节。这不是产品的一部分,是评测与被测对象同仓库带来的副产物。两组副本完全相同,所以它只会让无笔记组这个基线更强、让测出的差值更保守;但读者有权知道它在,并知道有几次真的读到了。",
+    "paths": [
+      "evaluation/upstream/download-telemetry/",
+      "evaluation/PR-DESCRIPTION.md"
+    ],
+    "needles": [
+      "the success path still returns the raw bytes",
+      "files/download`, success",
+      "`files/download` 分支**只有后者**"
+    ],
+    "not_excluded_because": "这 8 次样本是在含它的副本上跑的;现在改 archive_excludes 会让后续样本与它们不可比。要清掉就得两组一起重跑,交给用户决定。"
+  }
 }
