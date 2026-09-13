@@ -52,7 +52,9 @@ test("剩余缺点一节必须在,且写明第三任务的归因未闭合", () =
   const md = render([row("suite")], OPTS);
   assert.match(md, /剩余缺点/);
   assert.match(md, /needs_review/);
-  assert.match(md, /尚不能确定它对组间差异的影响/);
+  assert.match(md, /卡在取回通道/);
+  assert.match(md, /评测设计的缺口,不是产品缺陷/);
+  assert.match(md, /都不是根因/, "早先两次归因错了要如实留着,不能抹掉");
 });
 
 test("真文件:入库的 SEAL-CHECK.md 与从入库 rows.jsonl 重算的一致", () => {
