@@ -127,6 +127,11 @@ echo "[6g] the comparison report's figures still agree with the generated summar
 node evaluation/runner/check-comparison-figures.mjs > "$OUT/comparison-figures.txt" 2>&1; e=$?
 row "comparison-figures" "check-comparison-figures.mjs" "$e" "exit 0;逐格一致" "$(head -1 "$OUT/comparison-figures.txt")"
 
+echo "[6i] the sealing page reproduced from the archived clone run"
+node evaluation/seal-record.mjs --out="$OUT/SEAL-CHECK-reproduced.md" > "$OUT/seal-record.txt" 2>&1; e=$?
+d="$(mddiff evaluation/SEAL-CHECK.md "$OUT/SEAL-CHECK-reproduced.md" "$OUT/SEAL-CHECK.diff")"
+row "seal-record" "node evaluation/seal-record.mjs" "$e" "exit 0, diff 0 vs SEAL-CHECK.md" "$(head -1 "$OUT/seal-record.txt")" "$d"
+
 # 排在所有产出报告的步骤之后:它读的是本轮已经写好的 rows.jsonl
 echo "[6h] each registered report actually ran this time: its step, its own artifact, its own diff"
 node evaluation/check-generated-reports.mjs --run-out="$OUT" > "$OUT/reports-executed.txt" 2>&1; e=$?

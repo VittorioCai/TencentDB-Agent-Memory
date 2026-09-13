@@ -39,6 +39,7 @@ export const POLICY = {
     note: "这个数漂过两次(彩排 E 修过一回,9/13 又漂成 643 对 729);叙述里抄一个会变的数,只能靠每次比" },
   "generated-reports":           { kind: "offline", exit: 0, diff: false, what: "生成报告登记核对",
     note: "未登记的生成报告一律阻断 —— 验收此前不知道仓库里一共有哪几份,少查一份不会有人发现" },
+  "seal-record":                 { kind: "offline", exit: 0, diff: true, what: "封版核对页(从入库的克隆验收记录重算)" },
   "reports-executed":            { kind: "offline", exit: 0, diff: false, what: "登记的报告本轮真的跑过",
     note: "登记完整不等于执行完整:改个不存在的步骤名、或多登记一份而循环没跑它,只核登记都穿得过去" },
   "comparison-figures":          { kind: "offline", exit: 0, diff: false, what: "对照报告主表与生成 summary 逐格比对" },

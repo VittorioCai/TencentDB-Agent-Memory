@@ -179,6 +179,13 @@
       "step": "author-recheck",
       "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
       "artifact": "assessment-b-skl-lUWmwEYqsZDZ.diff"
+    },
+    {
+      "path": "evaluation/SEAL-CHECK.md",
+      "class": "regenerated",
+      "step": "seal-record",
+      "artifact": "SEAL-CHECK.diff",
+      "why": "封版核对页,由 seal-record.mjs 从入库的 delivery/SEAL-f8c1a7f/rows.jsonl 重算;那份 rows 是**从远端重新克隆封版提交**跑出来的,做法见同目录 HOW.md"
     }
   ],
   "narrative_rules": [
