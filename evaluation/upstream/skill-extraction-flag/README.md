@@ -120,7 +120,7 @@ bash evaluation/upstream/skill-extraction-flag/reproduce.sh        # 默认跑�
 两个提交都已带该签核。** 若日后要换身份,在 `.claude/worktrees/upstream-extract-flag` 里执行:
 
 ```bash
-cd /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/upstream-extract-flag
+cd <upstream-extract-flag 这个 worktree 的目录>
 N="<名字>"; E="<邮箱>"
 git filter-branch -f \
   --env-filter "export GIT_AUTHOR_NAME='$N' GIT_AUTHOR_EMAIL='$E' GIT_COMMITTER_NAME='$N' GIT_COMMITTER_EMAIL='$E'" \
