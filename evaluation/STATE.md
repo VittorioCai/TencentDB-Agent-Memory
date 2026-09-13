@@ -9,7 +9,7 @@
 | **线上状态(接手先看)** | **2026-09-12 00:48Z(用户定"切")**:Core 跑的是**从本分支自建的镜像** `agentmemory/memory-core:topic4-66bc9aecd719`(**2026-09-12T11:33Z 第二次切换**:第三轮复核改了闸门理由串,必须重建;构建提交 66bc9ae 的 MemoryCore 树 == HEAD;记录 `gate/artifacts/core-image-switch-20260912T113253Z.json`;上一版 topic4-11d30eaa720d 的切换记录仍在),用产品的 `start-memory-core.sh` 起(`.env` 的 `MEMORY_CORE_IMAGE` 改指该 tag),**闸门内建于镜像、无挂载**(`eval-core.sh status`:gate built into the image,gate 路由 401 非 404);切换记录、备份与恢复命令 `gate/artifacts/core-image-switch-20260911T224508Z.json`;切换后读回:批次四两条 v4(right approved/admit、wrong failed/reject)与闭环笔记 v2(approved/admit)均与记录一致(`core-status-after-image-switch-20260912.json`、`core-status-note-after-image-switch-20260912.json`)。**与历史运行时的关系**:批次四与闭环跑在"同一 MemoryCore 代码的挂载 + 摘要未知的上游镜像"上,现在是"同一代码内建的自建镜像",`batch-conditions --check` 对旧清单报 `闸门来源 == 冻结值` FAIL 是故意的。Core 提取 **off**(**2026-09-12T17:56:07Z 第二次拨回**,记录在 `tasks/exit-code-fix/extraction-switch.jsonl` 末条,审阅裁定 ③)。**注意这里曾经漂移过 6 小时**:11:33Z 的第二次镜像切换用 `start-memory-core.sh` 起容器,而该脚本会重新生成整个挂载配置(`start-memory-core.sh:55` 的 `cat > "$CORE_CONFIG_FILE"`),把提取写回 on —— 正是提交 c88e955 记下的那个坑,切镜像后没有复查。17:55Z 发现(文件 sha `cdb5b484…`、容器读到 `enabled:true`、Core 11:33Z 日志 `extraction=true`),17:56Z 拨回并校验(sha `66ebab0a…`、文件与容器一致、Core healthy);漂移范围经比对只涉及这一个开关(见 `gate/artifacts/extraction-drift-20260912.json`)。**没有交付运行受影响**:9/12 全天零次运行,且 `runner/prepare.sh:81` 在提取不是 off 时硬失败、162 行会就地拨回,错的只是线上状态与 STATE 对它的描述。拨回后读回:批次四两条 v4 与闭环笔记 v2 均未变(`gate/artifacts/core-status-after-extraction-off-20260912.json`、`core-status-note-after-extraction-off-20260912.json`);proxy 强制身份 `agt-5e0y4l8a7a` / `task-5e6xp4mrrw`,上游直连、探针未路由;**无 tdai-clickhouse 容器**;备份 `~/Desktop/topic4-backup/core-data-20260911T224508Z-before-image-switch.tar.gz`(切换前停容器后取,sha256 在切换记录里)与更早的 `core-data.tar.gz` |
 | 分支 / 交付载体 | `topic4-attribution-gate`,远端 `mine`;**交付载体是分支本身**:https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/topic4-attribution-gate(导师要求为「分支代码 + 文档」,不要求 PR)。fork 内的 PR #1 曾作为浏览入口,**2026-09-12 用户决定关闭**—— 其 diff 基线是上游 `feat/server_team`,会把 fork 相对上游的 2596 个文件差异一并计入,不如直接读分支;关闭不影响分支与提交历史,`evaluation/PR-DESCRIPTION.md` 继续作为交付说明书。另:上游 PR **#1358** 是独立分支的贡献,仍然开着。推送由用户手动完成 |
 | 上次验证的实现提交 | 本文件所在提交;本次改动见 `git log -1 -- evaluation/STATE.md` |
-| 验证时间 | **2026-09-13T15:09Z(交付复跑 `evaluation/delivery/2026-09-13T150929Z/SUMMARY.md`,受测提交 `7429693`,**与已推送的 HEAD 一致**)**:套件 745/745;离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
+| 验证时间 | **2026-09-13T15:09Z(交付复跑 `evaluation/delivery/2026-09-13T150929Z/SUMMARY.md`,受测提交 `7429693`,**与已推送的 HEAD 一致**)**:套件 746/746;离线复算通过、线上检查通过、缺依赖无;十三份登记为重算的报告逐份对上本轮产物,其中十一份带 diff 的全为 0。**干净克隆彩排 I(同日 15:12Z,从 fork 克隆同一提交 `7429693`,无密钥、无 Core、无 docker)**:同样 745/745,离线全部通过(含新加的 `reports-executed` 与 `chain 3/3`);`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |
 | 测试 | evaluation **633**(2026-09-12,从仓库根跑全 0 失败;各轮第二人复核新增/改写的测试在内:运行时与闸门来源 +10、离线解析 +5、登记簿保留 +5、校准口径 +9、作者评估边界 +7、第四轮渲染器 +2);Core 122;proxy 24。另有上游候选二的 6 个测试,在另一个 worktree 的 vitest 下跑(`upstream-extract-flag`,不在这 630 里) |
 
 ## 第 1 件"新实验条件准备齐":已验收
@@ -94,7 +94,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 验证 cross_user,消费者 user usr-4u07qc2kuj ≠ 作者 usr-n68ea5ythq,但同一消费者用户、同一任务);用户批准后
 `gate-evaluate.mjs --apply`(16:54:11Z):decision admit,status candidate → **approved(规则判定,非人工准入)**,
 与试算一致。记录 `gate-evaluations.jsonl`、`gate-observations.jsonl`。
-**主分支**:无笔记第 1 次的修复(不含判别值)已应用(fb4edfa),参考测试 7/7、套件 580/580;批次四 14 次
+**主分支**:无笔记第 1 次的修复(不含判别值)已应用(fb4edfa),参考测试 7/7、套件 580/580(当时的数);批次四 14 次
 运行按此代码复判(`/private/tmp/topic4-rejudge/2026-09-11b`),0 变化,差异文档
 `evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline.md`,既有报告数字不变。
 运行清单 `evaluation/tasks/exit-code-fix/devloop-runs.json`(驱动 `run-arm.sh`);报告由
@@ -146,7 +146,7 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 三件必须连着讲的事:**① 使用判定全是 `needs_review`** —— 消费者自己 curl 了 skill bridge 取回笔记,早于被记账的那次 fetch,
 归因不把说不清的算成用了(判别值确实在它写的 diff 里)。**② 工作副本里有我们自己的上游 PR 归档**
 (`evaluation/upstream/download-telemetry/`、`evaluation/PR-DESCRIPTION.md`),用大白话写着 files/download 返回原始字节;
-8 次里 6 次真读到了,含 2 次无笔记组 —— 读了仍失败。两组副本相同,它只让基线更强、差值更保守;报告按 capture 逐次计数
+8 次里 6 次真读到了,但**两组读到的次数不同**(有笔记 4/4、无笔记 2/4)。**存在这样一个共同的替代信息源,尚不能确定它对组间差异的影响** —— 它可能与笔记共同作用于同一行为,凭这 8 次判断不出方向(第八轮复核指出,原写「只让基线更强、差值更保守」是没有依据的因果结论,已改)。报告按 capture 逐次计数
 (`task.json` 的 `copy_exposure`)。**③ 污染规则改过两版**(b:按访问判不按文本判,首版误报 4 次;c:自查补三处),
 每条运行保留历次判定(`contamination_history`),两次真污染在三版下都被抓住。
 
@@ -161,12 +161,27 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 留在最后一个消费者(`agt-k9ic54p94e` / `task-h1k7xruuhb`),按前两个任务的收尾要恢复到主线消费者 b + `task-5e6xp4mrrw`
 (`FRESH_CONSUMER_TASK=task-5e6xp4mrrw bash evaluation/runner/prepare.sh --identity b; bash evaluation/tasks/bridge-addr/use-identity.sh b`,
 备份 + `proxy-identity-restore-3.json`)。**用户已于 13:45:32Z 恢复**(配置 sha `4453c5fd…`,与 9/11 两次恢复后一致),记录已入库。
-**验收复跑(HEAD 16189f9,`delivery/2026-09-13T134641Z`):离线通过、线上通过、缺依赖无**;套件 702/702、
+**验收复跑(HEAD 16189f9,`delivery/2026-09-13T134641Z`):离线通过、线上通过、缺依赖无**;套件 702/702(当时的数)、
 `devloop-report-3` diff 0、`contamination-3` 8 次样本全干净、`conditions-check` 21 项 FAIL 全部登记(15 / 5 / 1),未登记 0。
 **两条分支已推(2026-09-13):** `topic4-attribution-gate`(`26808ce`)与 `gate-core-minimal`(`c372d80`),推后读回远端 SHA 与本地一致。
 闸门抽取那份的措辞按复核方收紧:去掉「没有一处语义冲突」、比较基线钉在 `0468a2a...c372d80`、原始输出入库
 (`gate/artifacts/port-*`);留档时纠出一处 —— 「新增 0 条」只对 `src/metadata` 成立(11 → 6),全树是 123 → 118、新增 2
 (同两个未定义名字换了错误码),比较由 `compare-typecheck.mjs` 可复算。
+
+**第八轮复核(2026-09-13 傍晚,只读 + 内存反例)三条:**
+**① 前两处阻断漏洞已在 `7429693` 修完并推送**,复核方读的是更早的树。当场用真程序复验:三次 `chain-cli` 用不存在的 case
+真失败 → 外层 `ce=1`、`0/3 条 case 成功`;登记里填不存在的步骤 → `reports-executed` rc=1 并指名道姓。
+需要说明的是 `checkRegistry` 本身确实不核步骤(复核方引的就是那一行)—— 那是**故意分成两步**:
+`generated-reports` 只管登记完整,`reports-executed` 管执行完整,后者才是阻断点。
+**② 套件规模检查漏掉 STATE 的当前值 —— 这条成立,已复现**(把「验证时间」行改成 999/999 照样通过)。
+根因是我**用「带日期或提交号就算历史」去猜**,而当前声明恰恰也带日期和提交号。已改成**默认全查、历史必须显式标注**
+(`当时的数` / `历史记录` / `<!-- suite-size:historical -->`);STATE 里五处历史记录逐行补了标注,当前声明从 1 处变成 **2 处**,
+反例复验阻断。方向是有意选的:漏判的代价是放过一个陈旧数字,所以默认必须是「查」。
+**③ 第三任务那句因果结论已收**:原写「两组副本相同,所以它只会让基线更强、让差值更保守」——
+报告自己的表就写着**有笔记 4/4、无笔记 2/4**,两组读到的次数并不同,这句没有依据。改在生成器(`task.json` 的 `copy_exposure`)
+并重新生成:**存在共同的替代信息源,尚不能确定它对组间差异的影响**;要判断只能另做一批排除它之后的对照。
+同一句话在 `STATE.md` 与 `README.md` 里也各有一处,一并改。第二批的目的也按复核方的说法写进 `task.json`:
+**问的是「排除已知替代来源后结果还复现吗」,不是把 4 次加到 6 次。**
 
 **第七轮复核(2026-09-13 下午,只读核实 + 不落盘反例)四条已全部处置:**
 **① 闭环展示的失败被最后一个 `echo` 掩盖**(已复现:三次调用全返回 7,外层仍是 0)。改为逐次保留退出码并记 `3/3 条 case 成功`;
@@ -183,14 +198,14 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 修的过程中自己又暴露两处:`reports-executed` 原本排在 `comparison-figures` 之前,读不到它的行(顺序错,已挪后);
 `live-state` 逐条累计退出码后报 141,查出是 `| head -6` 提前关管道造成的 SIGPIPE,不是 `prepare.sh` 真失败 —— 改成先整份落盘再截断。
 
-**验收漏检收口(HEAD e488459,`delivery/2026-09-13T142640Z` 全绿,套件 729/729):** 验收此前不知道仓库里一共有哪些生成报告。
+**验收漏检收口(HEAD e488459,`delivery/2026-09-13T142640Z` 全绿,套件 729/729(当时的数)):** 验收此前不知道仓库里一共有哪些生成报告。
 `check-generated-reports.mjs` 穷举 `evaluation/` 下 73 份入库 .md,逐份归类(叙述 44;regenerated 12、figures_checked 1、
 historical 15、not_regenerable 1),**未登记即阻断**。由此补上两处真漏检:五份作者评估此前无人复核,现由 `author-recheck`
 从 `raw_model_output` 重验并 diff(5 份全部 0 行);`REPARSE-DIFF-2026-09-11-exitline.md` 确实无法在验收里重算,
 **登记为缺点**并写明代价与替代。另 `check-comparison-figures.mjs` 把对照报告主表与生成 summary 逐格钉住,首跑即抓到
 「均墙钟 s」被抄成 47 / 15(应为 47.2 / 15.4),已按生成值改回。
 
-**再复跑(HEAD 8f8eceb,`delivery/2026-09-13T135245Z`)同样全绿**:README 补齐闸门抽取的尺度与类型检查数字、③ 措辞按用户决定改定、④ 报告加一句算出来的样本量限制(不写 p 值)。套件 703/703。
+**再复跑(HEAD 8f8eceb,`delivery/2026-09-13T135245Z`)同样全绿(套件 703/703,当时的数)**:README 补齐闸门抽取的尺度与类型检查数字、③ 措辞按用户决定改定、④ 报告加一句算出来的样本量限制(不写 p 值)。套件 703/703。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
@@ -379,7 +394,7 @@ A 对笔记 v2 medium → medium(本资产上 2 条 validated);**B 对自己候�
 | 入库 | 14 + 23 个运行目录强制入库(只排 `capture-before.jsonl`;真实密钥值扫描无命中) | eddefd0,pack 47 MiB |
 | 彩排 A | 干净克隆 + 线上栈、无密钥 | 5 处缺口:gate0 夹具、REPORT 路径、probe.pid、密钥缺失即崩、重判需 Core |
 | 离线路线 | `resolve-tokens.mjs` 对**已烧毁**值走登记簿(sha256 核验;有密钥时不参与);`build-burned-registry.mjs` 用 git grep 证明值已在提交树里才登记 | 4b0bb03、30e4f78 |
-| 彩排 D → E | 干净克隆、无密钥、无 Core、无 docker;D 用会话里的登记簿,**E 用 git 带来的登记簿**(HEAD 6425619) | 套件 610/610;重判副本重生成 14;校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
+| 彩排 D → E | 干净克隆、无密钥、无 Core、无 docker;D 用会话里的登记簿,**E 用 git 带来的登记簿**(HEAD 6425619) | 套件 610/610(当时的数);重判副本重生成 14;校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
 | 彩排 G(最新) | 同上,当前 HEAD(两轮复核改动之后) | 套件 626/626(当时的数;现为 630);校准 / 汇总 / reparse / 两份 REPORT diff 0;判决类步骤全过 |
 | 彩排 C | 同上但无登记簿 | 重判停在取不到值,校准 / 汇总 / 重判差异跑不了 |
 | 彩排 I(最新,2026-09-13 15:12Z) | 从 fork 克隆 `7429693`(第七轮复核修完之后),无密钥、无 Core、无 docker | 套件 **745/745**;离线**全部通过**,含新加的 `reports-executed`(13 份逐份对上)与 `chain 3/3 条 case`;`conditions-check` 41 项 FAIL 属 C 组按设计不通过 |

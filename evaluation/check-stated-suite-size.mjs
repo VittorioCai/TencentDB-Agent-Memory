@@ -7,8 +7,8 @@
  * 它是典型的「叙述里抄了一个会变的数」——和对照报告主表同一类毛病,所以同一种治法:
  * 不靠人记得改,靠每次验收比一次。
  *
- * 只认**当前值**的写法(`Full suite: N tests` / `套件 N/N`)。带提交号或日期的历史记录
- * 不在此列 —— 那些是当时的数,本来就不该跟着变(STATE.md 里的彩排表、逐轮复跑记录)。
+ * 认所有 `Full suite: N tests` / `套件 N/N` 的写法,**默认都比**;只有行里显式标了
+ * 「当时的数」「历史记录」或 `<!-- suite-size:historical -->` 的才当历史放过。
  */
 import { readFileSync } from "node:fs";
 
@@ -18,16 +18,21 @@ export function actualFromSuiteOutput(text) {
   return m ? Number(m[1]) : null;
 }
 
-/** 文档里声明的当前套件规模,连行号一起给出;没有声明返回 []。 */
+/**
+ * 历史记录的标记。**默认全查**,只有显式标了的才不比 —— 原来靠「带日期或提交号就算历史」
+ * 去猜,而当前声明恰恰也带日期和提交号(STATE 的「验证时间」行),于是把那一行改成
+ * 999/999 照样通过(2026-09-13 第八轮复核的反例,已复现)。猜的方向错了:
+ * 漏判的代价是放过一个陈旧数字,所以默认必须是「查」。
+ */
+export const HISTORICAL_MARK = /当时的数|历史记录|<!--\s*suite-size:historical\s*-->/;
+
+/** 文档里每一处套件规模声明,连行号与「是不是历史」一起给出;没有声明返回 []。 */
 export function statedSizes(md) {
   const out = [];
-  const lines = String(md ?? "").split("\n");
-  lines.forEach((line, i) => {
-    if (/[0-9a-f]{7,40}|20\d{2}-\d{2}-\d{2}|彩排/.test(line)) return;      // 带提交号 / 日期 / 彩排的是历史记录
+  String(md ?? "").split("\n").forEach((line, i) => {
     const m = /Full suite:\s*(\d+)\s*tests|套件\s*(\d+)\s*\/\s*(\d+)/.exec(line);
     if (!m) return;
-    const n = Number(m[1] ?? m[2]);
-    out.push({ line: i + 1, stated: n, text: line.trim().slice(0, 100) });
+    out.push({ line: i + 1, stated: Number(m[1] ?? m[2]), historical: HISTORICAL_MARK.test(line), text: line.trim().slice(0, 100) });
   });
   return out;
 }
@@ -36,7 +41,7 @@ export function statedSizes(md) {
 export function checkStated(suiteOutput, docs) {
   const actual = actualFromSuiteOutput(suiteOutput);
   const stated = [];
-  for (const [path, md] of Object.entries(docs)) for (const s of statedSizes(md)) stated.push({ path, ...s });
+  for (const [path, md] of Object.entries(docs)) for (const s of statedSizes(md)) if (!s.historical) stated.push({ path, ...s });
   if (actual === null) {
     return { ok: false, actual: null, stated, mismatches: [], why: "从套件输出里读不到 `ℹ tests N`,无法判断文档里的数字对不对" };
   }

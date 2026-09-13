@@ -17,12 +17,6 @@ test("只认当前值的写法", () => {
   assert.deepEqual(statedSizes("这里没有数字"), []);
 });
 
-test("带提交号、日期或「彩排」的是历史记录,不参与比较", () => {
-  assert.deepEqual(statedSizes("验收复跑(HEAD 16189f9)套件 702/702"), []);
-  assert.deepEqual(statedSizes("2026-09-12 的那次:套件 633/633"), []);
-  assert.deepEqual(statedSizes("| 彩排 G | 套件 626/626(当时的数)|"), []);
-});
-
 test("对不上就失败,并指出文件、行号、两边各是什么", () => {
   const r = checkStated(OUT, { "a.md": "Full suite: 643 tests" });
   assert.equal(r.ok, false);
@@ -39,11 +33,30 @@ test("一致就通过;实际数读不出来时不通过 —— 未知不能当�
   assert.match(unknown.why, /读不到/);
 });
 
-test("真文档:README 与 STATE 里声明的当前套件规模都与实际一致", () => {
+// ── 2026-09-13 第八轮复核:靠日期猜历史是错的,当前声明也带日期和提交号 ──
+test("带日期或提交号的行**不再**自动算历史 —— STATE 的「验证时间」行就是当前声明", () => {
+  const line = "| 验证时间 | **2026-09-13T15:09Z(受测提交 `7429693`)**:套件 999/999;离线通过 |";
+  const s = statedSizes(line);
+  assert.equal(s.length, 1, "必须被认出来");
+  assert.equal(s[0].stated, 999);
+  assert.equal(s[0].historical, false);
+  assert.equal(checkStated(OUT, { "STATE.md": line }).ok, false, "对不上就要失败");
+});
+
+test("历史记录靠**显式标注**,不靠猜", () => {
+  const marked = "| 彩排 G | 套件 626/626(当时的数)| ";
+  assert.equal(statedSizes(marked)[0].historical, true);
+  assert.equal(checkStated(OUT, { "a.md": marked }).ok, true, "标了就不比");
+  const unmarked = "早先那次:套件 626/626";
+  assert.equal(statedSizes(unmarked)[0].historical, false, "没标就得比");
+  assert.equal(checkStated(OUT, { "a.md": unmarked }).ok, false);
+});
+
+test("真文档:当前声明不止一处,且全部与实跑一致", () => {
   const docs = {};
   for (const p of ["evaluation/README.md", "evaluation/STATE.md"]) docs[p] = readFileSync(p, "utf8");
-  const stated = Object.entries(docs).flatMap(([p, md]) => statedSizes(md).map((s) => ({ p, ...s })));
-  assert.ok(stated.length >= 1, "至少 README 里要有一处声明");
-  const n = stated[0].stated;
-  for (const s of stated) assert.equal(s.stated, n, `${s.p}:${s.line} 与其他声明不一致`);
+  const cur = Object.entries(docs).flatMap(([p, md]) => statedSizes(md).filter((s) => !s.historical).map((s) => ({ p, ...s })));
+  assert.ok(cur.length >= 2, `当前声明应不止 README 一处,实际 ${cur.length} 处`);
+  const n = cur[0].stated;
+  for (const s of cur) assert.equal(s.stated, n, `${s.p}:${s.line} 与其他当前声明不一致`);
 });

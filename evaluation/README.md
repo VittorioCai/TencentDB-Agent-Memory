@@ -122,7 +122,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 745 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
+Full suite: 746 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
 acceptance compares this number with what the run actually reports, so it cannot go stale
 quietly again — it had, twice.
 
@@ -162,8 +162,11 @@ and diffs them against the committed copies):
   the consumers fetched the note by calling the skill bridge themselves rather
   than through the credited fetch; the working copy also carried this
   repository's own upstream PR write-up, which states in prose that
-  `files/download` returns raw bytes — both arms had it, six of eight runs read
-  it, two no-note runs read it and still failed; and the first no-note batch of
+  `files/download` returns raw bytes. Both arms had it in their copy, but they did
+  not read it equally often — four of four note runs and two of four no-note runs
+  did — so it is a shared alternative source whose effect on the gap between the
+  arms cannot be determined from these eight runs, in either direction; settling
+  that needs a separate batch with it excluded. And the first no-note batch of
   sixteen was voided because the implementer had left the reference
   implementation on disk, which the runner now checks for and would refuse.
 - **The author dimension** (`author/README.md`): a context-based assessment
