@@ -25,10 +25,11 @@
     ],
     "needles": [
       "the success path still returns the raw bytes",
-      "files/download`, success",
+      "| `files/download`, success | **0** |",
       "`files/download` 分支**只有后者**"
     ],
-    "not_excluded_because": "用户已定(2026-09-13):不清,如实报。这 8 次样本在含它的副本上跑。**要判断它的影响,只能另做一批排除它之后的对照**:把 `evaluation/upstream/` 与 `evaluation/PR-DESCRIPTION.md` 加进 archive_excludes,冻结条件后两组交错各跑若干次,单独报告,接受差异缩小或打平 —— 那一批问的是「排除已知替代来源后结果还复现吗」,不是「把 4 次加到 6 次」。不与这 8 次合并(CLAUDE.md:更换条件不与旧口径合并)。"
+    "not_excluded_because": "用户已定(2026-09-13):不清,如实报。这 8 次样本在含它的副本上跑。**要判断它的影响,只能另做一批排除它之后的对照**:把 `evaluation/upstream/` 与 `evaluation/PR-DESCRIPTION.md` 加进 archive_excludes,冻结条件后两组交错各跑若干次,单独报告,接受差异缩小或打平 —— 那一批问的是「排除已知替代来源后结果还复现吗」,不是「把 4 次加到 6 次」。不与这 8 次合并(CLAUDE.md:更换条件不与旧口径合并)。",
+    "needles_note": "第 2 条原来写成 \"files/download`, success\",太短 —— 它会匹配到模型自己写的推理(2026-09-13 第二批一次运行即如此)。已收紧为归档里那一整行表格,只有真读到那份文件才会命中。"
   },
   "archive_excludes_history": {
     "batch_1": [

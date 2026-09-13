@@ -1,0 +1,44 @@
+# 资产使用回执 — 运行 20260913T170534Z-devloop-no-note · 会话 b30ecca7 · 任务 task-h1k7xruuhb · 2026-09-13T17:07:53Z
+
+本次应用 3 项团队资产
+- Skill：deploy-lookup-note-b — 已取回——正文已读取，采用未成立
+- Skill：deploy-lookup-note-a — 已取回——正文已读取，采用未成立
+- Skill：eval-bridge-endpoint-b — 已取回——正文已读取，采用未成立
+
+效果状态
+- 3 项仅作为背景参考（取回或提供），效果待验证
+
+○ deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (unknown)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 1 of 4 (score 0.97)
+    证据
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_W4Zomm3qPbKIp2SK6Qtj7545  — skill:get answered at message 18; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (unknown)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 2 of 4 (score 0.97)
+    证据
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_W4Zomm3qPbKIp2SK6Qtj7545  — skill:get answered at message 18; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (unknown)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 3 of 4 (score 0.62)
+    证据
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_hydAMjiq52hJ0NqNZSez5858  — skill:get answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

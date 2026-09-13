@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-llvhsyzlkg",
+  "started_at": "2026-09-13T17:07:55Z",
+  "own_session": "d021ab8a-083c-4fbf-b787-30ab6bc865e5",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

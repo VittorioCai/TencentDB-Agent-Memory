@@ -153,3 +153,27 @@ test("渲染时每批一节,并各自带自己的结论句", () => {
   assert.match(md, /两批不合并/, "必须明说不合并");
   assert.ok(!/两批合计|合计通过率|总体通过率/.test(md), "不得给出合计口径");
 });
+
+test("作废让某组更好看时,必须同时给出「把作废的按原判决计回去」的数 —— 由计算得出,不手写", () => {
+  const m = { runs: [
+    run({ run_id: "a1", batch: "2", verdict: "FAIL" }),
+    run({ run_id: "b1", batch: "2", arm: "note", verdict: "PASS" }),
+    run({ run_id: "b2", batch: "2", arm: "note", verdict: "FAIL", contaminated: true, contamination_rules: ["foreign_run_access"] }),
+  ] };
+  const st = buildReport(m, load).batches["2"];
+  assert.equal(st.arms["note"].counted, 1);
+  assert.equal(st.arms["note"].pass, 1);
+  assert.deepEqual(st.if_voided_counted["note"], { counted: 2, pass: 1 }, "计回去应当是 1/2");
+  assert.equal(st.void_flatters.includes("note"), true, "作废抬高了该组,必须标出来");
+  const md = render(buildReport(m, load), m);
+  assert.match(md, /把被作废的.*计回去/);
+});
+
+test("作废不影响或压低某组时,不标「更好看」", () => {
+  const m = { runs: [
+    run({ run_id: "b1", batch: "2", arm: "note", verdict: "PASS" }),
+    run({ run_id: "b2", batch: "2", arm: "note", verdict: "PASS", contaminated: true, contamination_rules: ["x"] }),
+  ] };
+  const st = buildReport(m, load).batches["2"];
+  assert.equal(st.void_flatters.includes("note"), false);
+});

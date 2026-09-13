@@ -1171,6 +1171,320 @@
         "at": "2026-09-13T13:32:56Z"
       },
       "batch": "1"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T164731Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T164731Z-devloop-no-note.tWOa/20260913T164731Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lkxhtncq75",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:47:31Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T16:49:20Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T164920Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T164920Z-devloop-no-note.McyI/20260913T164920Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lk0i6kuhul",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:49:20Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T16:51:33Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T165133Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T165133Z-devloop-no-note.L4Q9/20260913T165133Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lk37gwe3to",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:51:33Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T16:53:23Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T165325Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T165325Z-devloop-note.xMSd/20260913T165325Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lk7bosqnav",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:53:25Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T16:55:35Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T165535Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T165535Z-devloop-note.Xiuz/20260913T165535Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-llax4mjka9",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:55:35Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T16:58:13Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T165813Z-devloop-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T165813Z-devloop-note.jOCY/20260913T165813Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-llfb80ec3c",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T16:58:13Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:00:41Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T170043Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T170043Z-devloop-no-note.q8cB/20260913T170043Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lljhv7gajq",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:00:43Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:03:27Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T170327Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T170327Z-devloop-no-note.fHyK/20260913T170327Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-lln1rm4bx6",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:03:27Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:05:34Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "no-note",
+      "batch": "2",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T170534Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T170534Z-devloop-no-note.IHyZ/20260913T170534Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-llrl955p0p",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:05:34Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:07:53Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T170755Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T170755Z-devloop-note.VAjY/20260913T170755Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-llvhsyzlkg",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:07:55Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:09:59Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T170959Z-devloop-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T170959Z-devloop-note.qABD/20260913T170959Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-llyxxqmi85",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:09:59Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run_access"
+      ],
+      "recorded_at": "2026-09-13T17:12:04Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
+    },
+    {
+      "arm": "note",
+      "batch": "2",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T171204Z-devloop-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T171204Z-devloop-note.2chX/20260913T171204Z-devloop-note",
+      "note_status_at_start": "approved",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 2,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-ll2f20h267",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-pu6nyfhmu2v"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T17:12:04Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T17:14:10Z",
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_note": "跑完当时检查器因 --batch 默认值被拼成字符串 'null' 而崩溃(contamination.log 有 ENOENT open 'null'),没有产出判定;修复后按同一规则版本 contamination-2026-09-13c 对原记录补跑,记录本身未改动。"
     }
   ],
   "status_observations": [
@@ -1253,6 +1567,46 @@
       "n": 0,
       "identity": "c",
       "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T16:47:31Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "no-note",
+      "n": 3,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T16:53:25Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 3,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T17:00:43Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "no-note",
+      "n": 3,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T17:07:55Z",
+      "note_status": "approved",
+      "note_visibility": "team",
+      "note_version": 2,
+      "arm": "note",
+      "n": 3,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
     }
   ],
   "voided_batches": [
@@ -1301,5 +1655,22 @@
       "effect": "20 次重判,4 次改判为干净(20260913T105239Z、20260913T113621Z 两次作废批次内的,以及有笔记组 20260913T123427Z、20260913T124050Z)。两次真污染仍被抓住:20260913T111005Z(reference_leak + 访问)、20260913T112941Z(枚举共享根目录)。",
       "note": "每条运行保留 contamination_at_run_time,即当时那版规则给出的判定,不静默改写。作废批次不因重判恢复 —— 作废的理由是运行环境里有答案,与规则版本无关。"
     }
+  },
+  "batch2": {
+    "frozen": "evaluation/tasks/resource-download/batch2-conditions.json(开跑前写)",
+    "ran_at": "2026-09-13T16:47Z–17:14Z",
+    "design": "分块交错 no-note×3 → note×3 → no-note×3 → note×3,四段之间由用户改 Core 里的 status",
+    "result": "无笔记 0/6;有笔记 4/5(按冻结的作废规则),把作废那次按原判决计回去则 4/6",
+    "voided": [
+      {
+        "run_id": "20260913T170959Z-devloop-note",
+        "why": "foreign_run_access:执行了 `grep -rln \"fetchResource\\|fetch-resource\" /private/tmp/topic4-sessions/`,把共享根目录整个搜了一遍",
+        "what_it_found": "该命令回显为空 —— 工作副本跑完即删,当时没有别的副本可搜",
+        "note": "它是有笔记组的一次 FAIL,作废它让结果更好看;规则是开跑前冻结的、机械执行,报告同时给出两种算法"
+      }
+    ],
+    "exposure": "两组都 0/6 与 0/5 —— 排除生效。期间发现探针第 2 条太短会匹配模型自己写的推理(一次误报),已收紧为归档里那一整行表格并重算,第一批的数字不受影响(2/4、4/4)。",
+    "use_events": "仍未闭合:有笔记组 6 次里 5 次是 needs_review、1 次完全没有使用事件。按冻结条件里写明的,这一批**补不上**「确实因为采用了这条笔记」。",
+    "contamination_check_crashed": "12 次跑完当时检查器崩了(--batch 默认值被拼成字符串 'null',去 open('null')),没有产出判定;修复后按同一规则版本对原记录补跑,记录未改动。"
   }
 }

@@ -1,0 +1,27 @@
+[18:53:36] model custom-local:deepseek-v4-flash
+[18:53:36] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Team experience search turned up one directly relevant skill, `eval-skill-resource-download` (`bt-pu6nyfhmu2v`), which shaped the implementation.
+
+## 改了什么
+
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+- POST `${bridgeBase}/files/download`,body `{ skill_id, path, encoding: "base64" }`。
+- `fetcher` 可注入,缺省 `globalThis.fetch`(绑定 `globalThis`)。
+- 成功返回原始字节 `Buffer`。资源内容为空 → 零字节 `Buffer`(空文件合法)。
+- 上游 `code !== 0` 的错误信封 → 抛 `Error`,message 带上信封的 `message`,不吞。
+- `code === 0` 但 `content` 非字符串(字段缺失/类型不对)才视为异常。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 5 条:`Buffer` 一致、请求形状、空内容零字节、base64 信封解码、错误信封抛错带 message、坏信封报错。
+
+## 为什么这么写
+
+- 选 `files/download` 而不是 `files/read`:后者永远回 JSON 信封,直接落盘写的是 JSON 不是文件;`download` 才是按原始字节返回的路径。
+- 空内容特判:bridge 用 `!parsed.data?.content` 判失败,空字符串是 falsy,于是空文件返回的是整个信封而非 0 字节 —— 所以读取端必须在 `code === 0` 且 `content === ""` 时产出零字节,而不是把它当错误。
+- 用 `content-type`/body 首字符判别「原始字节 vs 信封」,两者走同一响应通道:成功非空是原始字节,出错或空文件才是信封。
+
+只新增了这两个文件,未改动任何既有文件,既有行为不变。
+
+## 验证
+
+`node --test "evaluation/**/*.test.mjs"`:`tests 644 / pass 642 / fail 0 / skipped 2`(改前 639 / 637 / 0 / 2,新增 5 条全过)。

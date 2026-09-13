@@ -1,0 +1,25 @@
+[18:47:42] model custom-local:deepseek-v4-flash
+[18:47:42] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Two new files, no existing files touched.
+
+## What I changed
+
+**`evaluation/gate/fetch-resource.mjs`** (new) — exports `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POSTs `{ skill_id, path }` to `<bridgeBase>/files/read`, trims trailing slashes on the base.
+- Returns the resource's raw bytes as a `Buffer`, decoding `data.content` according to `data.encoding` (`base64` vs default `utf-8`) — so binary and text both round-trip.
+- Empty resource (or missing `content`) → `Buffer.alloc`-equivalent zero-length `Buffer`, since an empty file is legal.
+- `code !== 0` → throws `Error` carrying the envelope's `message` (no swallowing).
+- `fetcher` defaults to `globalThis.fetch`; also tolerates a stub that returns the decoded envelope directly.
+
+**`evaluation/gate/fetch-resource.test.mjs`** (new) — 5 tests: bytes + encoding, empty file (both `""` and missing content), error-envelope message survival, request shape (URL/body), and default-`globalThis.fetch` fallback.
+
+## Why
+
+The task asked for a small helper that pulls a team skill's resource bytes to local disk with the leftover edge cases (empty file, error envelope, injectable HTTP) handled explicitly. I kept it dependency-free and did not alter any existing behavior.
+
+## Verification
+- Targeted: `node --test evaluation/gate/fetch-resource.test.mjs` → 5/5 pass.
+- Full suite: `node --test $(find evaluation -name '*.test.mjs' -not -path '*/node_modules/*')` → **644 tests, 642 pass, 0 fail, 2 skipped** (baseline was 639/637/0/2; +5 new, no regressions).
+
+Note on the team-experience search: `skill_search` returned only unrelated/bridge-endpoint notes (one pointed at a `:47318` address and a fixed trace header that don't match this repo's `:8096` bridge), so I based the implementation on the repo's own `files/read` contract (`MemoryCore/src/gateway/skill-handlers.ts:758`, `sdk/.../skill-types.ts:226`) rather than those notes.

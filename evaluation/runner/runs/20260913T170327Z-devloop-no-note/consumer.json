@@ -1,0 +1,23 @@
+{
+  "agent_id": "agt-lln1rm4bx6",
+  "name": "Topic4-Consumer-20260913T170327Z-devloop-no-note",
+  "owner_user_id": "usr-8ypylzex49",
+  "team_id": "team-5ezfoladb5",
+  "identity": "c",
+  "key_file": "deploy/global-images/.topic4-user-key-c",
+  "created_at": "2026-09-13T17:03:27Z",
+  "footprint_at_creation": {
+    "profile_files": 0,
+    "records_lines": 0,
+    "buffer_sessions": 0
+  },
+  "note": "one consumer per run; created with the consumer user's own key; the proxy's debugForceIdentity is switched to it by prepare.sh and recorded by run-once.sh",
+  "proxy_switch": {
+    "config": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml",
+    "sha256_before": "220284fd4df25b3f54c5dfd9c2afddacb1dffb88d1ce243b8528a8f582d9d09d",
+    "sha256_after": "367aaac724739da1cd060d12d2f82d0f8c0f4a5acd4e83d314d6fab2d9535675",
+    "backup": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml.bak-20260913T170327Z-devloop-no-note",
+    "restore": "cp /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml.bak-20260913T170327Z-devloop-no-note /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.proxy-config/config.yaml && docker restart tdai-proxy",
+    "verify": "docker logs tdai-proxy 2>&1 | grep -F '\u2192 initialized' | tail -1"
+  }
+}

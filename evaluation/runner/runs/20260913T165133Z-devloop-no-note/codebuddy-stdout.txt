@@ -1,0 +1,19 @@
+[18:51:44] model custom-local:deepseek-v4-flash
+[18:51:44] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. All evaluation tests pass: **645 total, 643 pass, 2 skipped, 0 fail** (baseline was 639/637/2/0 — 6 new tests added).
+
+## What I changed
+
+- **`evaluation/gate/fetch-resource.mjs`** (new) — exports `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+  - POSTs `{ skill_id, path }` to `<bridgeBase>/files/read` and decodes the envelope's `data.content` per `data.encoding` (`base64` or `utf-8`) into a `Buffer` — the resource's original bytes.
+  - Empty content (`""`, or a missing `content`) returns a **zero-byte `Buffer`**, not an error.
+  - `code !== 0` throws `new Error(envelope.message)` — the upstream message is preserved, not swallowed.
+  - `fetcher` defaults to `globalThis.fetch`; accepts either a `Response` (`res.json()`) or a plain envelope object.
+- **`evaluation/gate/fetch-resource.test.mjs`** (new) — 6 tests: base64 round-trip + request shape, utf-8 + trailing-slash base, empty → zero bytes, missing content → zero bytes, error envelope throws with its message, plain-envelope stub accepted.
+
+## Why
+
+The bridge's `files/read` returns a JSON envelope (`MemoryCore` `handleFilesRead` → `core.readFile`: `{path, content, encoding, size_bytes, mime_type, version}`). Notably the bridge's own download path (`MemoryProxy/src/skill/skill-bridge.ts:820`) treats empty content as an error with `!parsed.data?.content` — exactly the bug this tool must avoid, since an empty file is legitimate. The tool only gates on `code !== 0`.
+
+Note on team-skill search: I searched the team knowledge base before starting. The hit `eval-bridge-endpoint-b` records the bridge at port `47318`, but this session's proxy is `127.0.0.1:8096`; the tool takes `bridgeBase` as a parameter so it doesn't hardcode either, and I didn't adopt that record's port or `x-team-trace` header convention.

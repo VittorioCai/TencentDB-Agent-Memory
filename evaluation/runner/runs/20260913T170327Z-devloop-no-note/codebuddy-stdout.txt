@@ -1,0 +1,24 @@
+[19:03:38] model custom-local:deepseek-v4-flash
+[19:03:38] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+新增两个文件，未改动任何现有文件：
+
+- `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`。
+- `evaluation/gate/fetch-resource.test.mjs` — 4 条测试。
+
+## 为什么这样实现
+
+- **真正的原始字节**：`files/read` 的成功信封是 `{ code: 0, data: { content, encoding, ... } }`，`content` 是字符串、由 `encoding` 说明编码（已对照 `MemoryCore/src/gateway/skill-handlers.ts:745` 与 `MemoryProxy/src/skill/skill-bridge.ts:827` 的解码逻辑）。因此请求时带 `encoding: "base64"`，再按 `data.encoding` 解码回 `Buffer`——base64 往返不丢字节，utf-8 资源也能正确还原。
+- **空文件合法**：`content` 缺省为 `""`，`Buffer.from("", "base64")` 就是零字节，不当成缺失值。
+- **不吞错**：`code !== 0` 直接 `throw new Error(envelope.message)`（无 message 时有回退文案）。
+- **可注入**：`fetcher` 缺省 `globalThis.fetch`；桩既支持返回 `Response`（用 `.json()`），也兼容直接返回信封对象。
+- **不硬编码地址**：`bridgeBase` 是入参，拼 `${bridgeBase}/files/read`。团队检索到的 `eval-bridge-endpoint-b` 笔记记录了一个固定端口，但本实现无需也不应依赖它，避免把可疑的端点写死。
+
+## 验证
+
+- 新增测试：4 pass / 0 fail（覆盖原始字节、空资源、错误信封、utf-8 与缺省 fetcher）。
+- 全量 `node --test evaluation/**/*.test.mjs`：**641 pass, 0 fail, 2 skipped**（基线 637 pass，新增 4 条后符合预期）。

@@ -1,0 +1,27 @@
+[19:08:06] model custom-local:deepseek-v4-flash
+[19:08:06] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。检索团队经验命中一条高度相关的笔记 `eval-skill-resource-download`,并按其两条结论实现。
+
+## 改动
+
+**新增 `evaluation/gate/fetch-resource.mjs`** —— 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POST 到 `${bridgeBase}/files/download`,body 为 `{ skill_id, path }`。选 `files/download` 而不是 `files/read`:团队笔记实测只有前者直接回原始字节,后者永远回 JSON 信封(注入给模型的文档里"加 `curl -o` 就回原始字节"的说法不成立,`-o` 是客户端参数,服务端看不见)。
+- 成功 → 读 `arrayBuffer` 返回原始字节 `Buffer`。
+- 空资源 → 返回零字节 `Buffer`。笔记实测 bridge 的 download 分支用 `!parsed.data?.content` 判失败,空字符串是 falsy,所以真实存在的空文件会回整个信封;因此把 `data.content` 是字符串(含 `""`)当作合法内容解码,只有字段缺失/类型不对才算异常。
+- 错误信封(`code !== 0`)→ 抛 `Error`,message 用信封自己的 `message`,不吞。
+- 用 `headers` + 首字节 `{` 作提示、以数值 `code` 字段判定信封,避免把 JSON 资源文件误判成信封。
+- `fetcher` 缺省 `globalThis.fetch`。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** —— 4 条用例:原始字节 + 校验走 `/files/download` 且带上 `skill_id`/`path`;空资源零字节;base64 解码;错误信封抛出且 message 一致。
+
+## 为什么不带笔记里的判别值
+
+笔记正文附了一个"追踪值"并建议实现/测试引用。`CLAUDE.md §16` 明确规定判别值明文只存在于 Core,不进仓库,所以我只在注释里按名字引用了该笔记(`eval-skill-resource-download`),没有摘抄该值。
+
+## 验证
+
+- 基线:`node --test evaluation/**/*.test.mjs` → tests 639, pass 637, fail 0, skipped 2。
+- 改动后:同命令 → tests 643, pass 641, fail 0, skipped 2(+4 条新用例,已有行为不变)。
+
+只新增了上面两个文件,未改动其它文件。

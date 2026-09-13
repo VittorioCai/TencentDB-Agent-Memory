@@ -1,0 +1,104 @@
+{
+  "verdict": "PASS",
+  "reason": "reference test passed (5/5); no new identified failure in the controlled suite (646 tests over 47 original test file(s) plus the reference); 0 baseline failure(s) still failing; note: the model's own tests (1 added or rewritten file(s)): 6/6 pass (recorded, not a verdict input)",
+  "acceptance_version": "repo-2026-09-11d",
+  "attempts": [
+    {
+      "kind": "added_test",
+      "value": "bt-pu6nyfhmu2v",
+      "file": "evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs",
+      "where": [
+        "file name",
+        "test title"
+      ],
+      "registered": true,
+      "call_id": "call_00_GLN0gnipToUVxnkVj7gc3970",
+      "message_index": 53,
+      "written_via": "Write",
+      "ok": true,
+      "why": "reference test passed on the changed copy",
+      "needs_review": false,
+      "review_why": null,
+      "evidence": [
+        "bt-pu6nyfhmu2v in the file name and test title of the added test file evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs",
+        "written by call call_00_GLN0gnipToUVxnkVj7gc3970 (Write, message 53)"
+      ]
+    }
+  ],
+  "checks": {
+    "start": {
+      "commit": "f967f512aa30347b35179cf8a10ced5166e578bc",
+      "tree": "f80036ae87d34299b82639e6703646236dd96cef",
+      "frozen_at": "2026-09-13T17:12:16Z",
+      "test_files": 47
+    },
+    "history": {
+      "head": "f967f512aa30347b35179cf8a10ced5166e578bc",
+      "commits_after_start": 0
+    },
+    "diff": {
+      "against": "f967f512aa30347b35179cf8a10ced5166e578bc",
+      "files": [
+        {
+          "status": "A",
+          "file": "evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs"
+        },
+        {
+          "status": "A",
+          "file": "evaluation/gate/fetch-resource.mjs"
+        }
+      ],
+      "stat": ".../gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs    | 94 ++++++++++++++++++++++\n evaluation/gate/fetch-resource.mjs                 | 92 +++++++++++++++++++++\n 2 files changed, 186 insertions(+)",
+      "touched_verifier": false,
+      "out_of_scope": [],
+      "deleted_tests": [],
+      "diff_file": "/private/tmp/topic4-runs/20260913T171204Z-devloop-note.2chX/20260913T171204Z-devloop-note/final.diff"
+    },
+    "tests_kept": {
+      "baseline": 47,
+      "missing": [],
+      "modified": [],
+      "added": [
+        "evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs"
+      ]
+    },
+    "model_tests": {
+      "files": [
+        "evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs"
+      ],
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "exit": 0,
+      "failures": [],
+      "note": "the model's own tests as it left them (added files and rewritten originals); recorded, not a verdict input"
+    },
+    "reference_test": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "exit": 0,
+      "explained": true,
+      "problems": [],
+      "failures": [],
+      "output": "TAP version 13\n# Subtest: 1. 非空资源:拿到的是原始字节,不是信封\nok 1 - 1. 非空资源:拿到的是原始字节,不是信封\n  ---\n  duration_ms: 9.688209\n  type: 'test'\n  ...\n# Subtest: 2. 空资源:零字节,而不是一个装着 JSON 的文件\nok 2 - 2. 空资源:零字节,而不是一个装着 JSON 的文件\n  ---\n  duration_ms: 0.175541\n  type: 'test'\n  ...\n# Subtest: 3. base64 的空资源同样是零字节\nok 3 - 3. base64 的空资源同样是零字节\n  ---\n  duration_ms: 0.127584\n  type: 'test'\n  ...\n# Subtest: 4. 请求打到 files/download —— files/read 无论加不加 -o 都只回 JSON 信封\nok 4 - 4. 请求打到 files/download —— files/read 无论加不加 -o 都只回 JSON 信封\n  ---\n  duration_ms: 0.14725\n  type: 'test'\n  ...\n# Subtest: 5. 错误信封:抛错并带上 message,不吞掉\nok 5 - 5. 错误信封:抛错并带上 message,不吞掉\n  ---\n  duration_ms: 0.256417\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44.104708\n"
+    },
+    "suite": {
+      "files": 48,
+      "tests": 646,
+      "pass": 644,
+      "fail": 0,
+      "cancelled": 0,
+      "exit": 0,
+      "explained": true,
+      "problems": [],
+      "state": "OK",
+      "why": null,
+      "failures": [],
+      "new_failures": [],
+      "baseline_still_failing": [],
+      "baseline_size": 0
+    },
+    "markers_elsewhere": []
+  }
+}

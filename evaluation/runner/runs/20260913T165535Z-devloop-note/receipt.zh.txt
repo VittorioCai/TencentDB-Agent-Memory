@@ -1,0 +1,61 @@
+# 资产使用回执 — 运行 20260913T165535Z-devloop-note · 会话 0fcff87f · 任务 task-h1k7xruuhb · 2026-09-13T16:58:13Z
+
+本次应用 2 项团队资产
+- Skill：eval-bridge-endpoint-b — 已取回——正文已读取，采用未成立
+- 资产未声明：skl-XAzqAgejM7O4 — its value bt-pu6nyfhmu2v was used in tool call call_00_DvXmnLBDQDVIqEtdYAOS7594 (message 73), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+
+效果状态
+- 4 项仅作为背景参考（取回或提供），效果待验证
+
+○ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (unknown)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 4 of 5 (score 0.62) for the query "fetch resource skill bridge bytes buffer http fetcher"
+    证据
+      capture_line    0fcff87f-a7d7-4746-9684-f462b5964dab:call_01_O4rfrPHPtSCP2KN6B5VW7075  — skill:get answered at message 7; carrying content; version 4; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ skl-XAzqAgejM7O4  v?  skill
+    来源         unknown  (unknown)
+    类型         资产未声明
+    状态         已取回——正文已读取，采用未成立
+    影响         its value bt-pu6nyfhmu2v was used in tool call call_00_DvXmnLBDQDVIqEtdYAOS7594 (message 73), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    作用点        tool_call
+    证据
+      tool_arg        request(d011592a-6768-4f43-8bba-9ecdaeff3a3b):msg[73]:call_00_DvXmnLBDQDVIqEtdYAOS7594:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      tool_arg        request(ef5dc8ec-29a4-4a24-8743-27d8d2cb82ba):msg[77]:call_00_ET_mPF0j1ymgoo5PVLoyEME6254:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.mjs:1-89  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.test.mjs:1-58  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    闸门 待定 · 作者尚无跨人验证
+    风险         待复核: token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    风险         闸门待定: needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content
+    风险         低置信: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (unknown)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 2 of 5 (score 0.97) for the query "fetch resource skill bridge bytes buffer http fetcher"
+    证据
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 33 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 5 candidate(s), this one at rank 2; present in 33 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (unknown)
+    类型         Skill
+    状态         已提供——出现在候选或上下文中，从未取回
+    为何提供       offered at rank 3 of 5 (score 0.97) for the query "fetch resource skill bridge bytes buffer http fetcher"
+    证据
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 33 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 5 candidate(s), this one at rank 3; present in 33 captured turn(s)
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

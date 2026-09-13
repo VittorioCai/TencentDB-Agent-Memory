@@ -13,6 +13,21 @@
 | no-note | 20 | 4 | 16 | 0 | 0% |
 | note | 4 | 4 | 0 | 4 | 100% |
 
+## 第二批:结论
+
+有笔记组高出 80 个百分点(4/5 对 0/6)。
+
+### 第二批:样本
+
+| 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |
+|---|---|---|---|---|---|
+| no-note | 6 | 6 | 0 | 0 | 0% |
+| note | 6 | 5 | 1 | 4 | 80% |
+
+**作废抬高了 note 组的数字,所以这里把两种算法都给出来。** 按冻结的作废规则,该组计入 4/5;**把被作废的按原判决计回去**则是 4/6。作废规则是开跑前写死的、机械执行的(见 `batch2-conditions.json`),不因结果调整;但它这次恰好对结论有利,所以两个数并列,由读的人判断。
+
+**两批不合并。** 它们的工作副本排除清单不同(第二批排掉了本仓库自己的上游 PR 归档),条件不同的样本合在一起算出来的比率没有意义(CLAUDE.md:更换条件不与旧口径合并)。
+
 
 ## 每次运行
 
@@ -42,6 +57,18 @@
 | 20260913T123631Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 234 | needs_review | 是(2 条) |  |
 | 20260913T123828Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 321 | needs_review | 是(1 条) |  |
 | 20260913T124050Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 193 | needs_review | 是(2 条) |  |
+| 20260913T164731Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T164920Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T165133Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T165325Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 279 | needs_review | 否 |  |
+| 20260913T165535Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 408 | needs_review | 否 |  |
+| 20260913T165813Z-devloop-note | note | 是 | FAIL | ✓✓✓✗✓ | 452 | needs_review | 否 |  |
+| 20260913T170043Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T170327Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T170534Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
+| 20260913T170755Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 208 | 无 | 否 |  |
+| 20260913T170959Z-devloop-note | note | 否 | FAIL | ✓✓✓✗✓ | 278 | needs_review | 否 | 污染:foreign_run_access |
+| 20260913T171204Z-devloop-note | note | 是 | PASS | ✓✓✓✓✓ | 136 | needs_review | 否 |  |
 
 五项断言依次是:
 
@@ -74,8 +101,8 @@
 
 | 组 | 计入样本 | 其中读到了它 | 未知 |
 |---|---|---|---|
-| no-note | 4 | 2 | 0 |
-| note | 4 | 4 | 0 |
+| no-note | 10 | 2 | 0 |
+| note | 9 | 4 | 0 |
 
 没有清掉的原因:用户已定(2026-09-13):不清,如实报。这 8 次样本在含它的副本上跑。**要判断它的影响,只能另做一批排除它之后的对照**:把 `evaluation/upstream/` 与 `evaluation/PR-DESCRIPTION.md` 加进 archive_excludes,冻结条件后两组交错各跑若干次,单独报告,接受差异缩小或打平 —— 那一批问的是「排除已知替代来源后结果还复现吗」,不是「把 4 次加到 6 次」。不与这 8 次合并(CLAUDE.md:更换条件不与旧口径合并)。
 

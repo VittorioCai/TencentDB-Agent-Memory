@@ -1,0 +1,24 @@
+[19:10:10] model custom-local:deepseek-v4-flash
+[19:10:10] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 完成
+
+先检索了团队经验,命中直接相关的 skill `eval-skill-resource-download`(skl-XAzqAgejM7O4,tracker `bt-pu6nyfhmu2v`),按其中两条要点实现:空内容是合法内容走解码、错误信封不吞 message。
+
+### 改动
+
+**新增 `evaluation/gate/fetch-resource.mjs`**
+- `fetchResource({ skillId, path, bridgeBase, fetcher })` 向 `${bridgeBase}/files/read` POST `{skill_id, path}`,把返回信封解成原始字节 Buffer。
+- 按 `data.encoding` 解码:`base64` → `Buffer.from(content,"base64")`,否则 utf-8。
+- **空内容不做 falsy 判断**:`""` 正常解码为零字节 Buffer(这正是 bridge 自己 `files/download` 分支 `!parsed.data?.content` 会踩的坑)。只有 `data.content` 缺失/非字符串才算异常。
+- `code !== 0` 时 `throw new Error(envelope.message)`,message 原样带出、不吞。
+- `fetcher` 缺省用 `globalThis.fetch`;用 `arrayBuffer()` 读 body 避免 UTF-8 破坏二进制;非信封 body 直接透传(防御性,兼容 download 形态)。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`**(6 条)
+utf-8 解码 + 请求形态断言、base64 二进制、空文件→零字节、错误信封→message、缺 `data.content`→报错、缺省 `globalThis.fetch`。
+
+### 验证
+`node --test $(find evaluation -name '*.test.mjs')`:**645 tests,643 pass,2 skipped,0 fail**(2 skipped 为改动前既有)。已新增行为,未改动任何既有文件。
+
+### 说明
+选择 `files/read` 而非 `files/download`:前者永远返回信封,工具自行解码即可绕开 download 对空文件的处理缺陷,且恰好对应 task 里"空文件合法""错误信封"两条要求;请求字段也与文档化的 `skill_files_read`(skill_id/path)一致。

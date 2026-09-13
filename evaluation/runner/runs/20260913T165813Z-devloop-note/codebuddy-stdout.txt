@@ -1,0 +1,25 @@
+[18:58:24] model custom-local:deepseek-v4-flash
+[18:58:24] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Two new files, no existing files touched.
+
+## 改了什么
+
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher = globalThis.fetch })`：
+- 向 `${bridgeBase}/files/read` POST `{ skill_id, path }`，从响应的 JSON 信封里解码 `data.content`，按 `data.encoding === "base64"` 走 base64、否则 utf-8，返回 `Buffer`。
+- 空内容（`content === ""`）走解码得到零字节 `Buffer`，不当作错误；只有 `content` 缺失或不是字符串才抛错。
+- `code !== 0` 时抛 `Error`，message 原样带上信封的 `message`。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 5 个用例，全部注入桩 `fetcher`：正常字节、空文件为零字节、base64 解码、错误信封透传 message、缺 content 报错。
+
+## 为什么这样实现
+
+动手前检索了团队 skill，命中 `eval-skill-resource-download`（追踪值 `bt-pu6nyfhmu2v`），并在源码里核实了它的两条结论：
+
+- `MemoryProxy/src/skill/skill-bridge.ts:820` 的 `!parsed.data?.content` 确实把空字符串当失败——所以取回逻辑必须自己解码信封、把空内容当合法。
+- `files/read` 永远回 JSON 信封（`MemoryCore/src/core/skill/skill-core.ts:535` 的 `readFile` 返回 `{path, content, encoding, size_bytes, mime_type, version}`，`content` 为 `string`），这与任务要求的「错误信封 `code !== 0`」一致，因此选 `files/read` 并在此处解码，而不是用会吞掉空文件的 `files/download`。
+
+## 验证
+
+- 新测试：`5 pass / 0 fail`。
+- 全量：`node --test`（evaluation 下所有 `*.test.mjs`）→ `644 tests, 642 pass, 0 fail, 2 skipped`。新增的 5 条即我加的那些，既有行为不变。

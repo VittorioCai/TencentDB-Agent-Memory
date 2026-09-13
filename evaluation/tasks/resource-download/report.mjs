@@ -52,9 +52,20 @@ export function statsOf(runs) {
     arms[arm] = { total: all.length, counted: counted.length, pass,
       rate: counted.length ? pass / counted.length : null, excluded: all.length - counted.length };
   }
+  // 作废可能让某一组更好看 —— 那就得把「按原判决计回去」的数一并给出,由读的人自己看。
+  // 2026-09-13 第二批就出现了这种情况:被作废的是有笔记组的一次 FAIL。
+  const ifVoided = {}, flatters = [];
+  for (const arm of ["no-note", "note"]) {
+    const all = runs.filter((r) => r.arm === arm && r.verdict);
+    const counted = all.length, pass = all.filter((r) => r.verdict === "PASS").length;
+    ifVoided[arm] = { counted, pass };
+    const now = arms[arm];
+    if (now.counted && counted > now.counted && pass / counted < now.rate) flatters.push(arm);
+  }
   const a = arms["no-note"], b = arms["note"];
   const comparable = a.counted > 0 && b.counted > 0;
-  return { runs, arms, comparable, gain: comparable ? b.rate - a.rate : null };
+  return { runs, arms, comparable, gain: comparable ? b.rate - a.rate : null,
+    if_voided_counted: ifVoided, void_flatters: flatters };
 }
 
 /** 结论句由数字决定,不预设方向(§6);一批一句。 */
@@ -123,6 +134,15 @@ export function render(rep, manifest) {
     L.push(`### ${label}:样本`, "", `| 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |`, `|---|---|---|---|---|---|`);
     for (const [arm, a] of Object.entries(st.arms)) {
       L.push(`| ${arm} | ${a.total} | ${a.counted} | ${a.excluded} | ${a.pass} | ${a.rate === null ? "未知(无样本)" : (a.rate * 100).toFixed(0) + "%"} |`);
+    }
+    if (st.void_flatters.length) {
+      for (const arm of st.void_flatters) {
+        const v = st.if_voided_counted[arm], now = st.arms[arm];
+        L.push("", `**作废抬高了 ${arm} 组的数字,所以这里把两种算法都给出来。** 按冻结的作废规则,该组计入 `
+          + `${now.pass}/${now.counted};**把被作废的按原判决计回去**则是 ${v.pass}/${v.counted}。`
+          + `作废规则是开跑前写死的、机械执行的(见 \`batch2-conditions.json\`),不因结果调整;`
+          + `但它这次恰好对结论有利,所以两个数并列,由读的人判断。`);
+      }
     }
     L.push("");
   }

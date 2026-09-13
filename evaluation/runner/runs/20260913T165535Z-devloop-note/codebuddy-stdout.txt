@@ -1,0 +1,30 @@
+[18:55:46] model custom-local:deepseek-v4-flash
+[18:55:46] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Only two new files added; no existing file touched.
+
+## What I changed
+
+**`evaluation/gate/fetch-resource.mjs`** — new tool exporting `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POSTs to the bridge's **`files/download`** subpath (the one that actually returns raw bytes; `files/read` always returns a JSON envelope).
+- Reads the response once as bytes, then:
+  - envelope with `code !== 0` → `throw new Error(...)` carrying the envelope's `message` (not swallowed);
+  - envelope with `code === 0` → decodes `data.content` by `data.encoding`, so an **empty `content` yields a zero-byte `Buffer`**;
+  - anything else → the raw downloaded bytes as a `Buffer`.
+- `fetcher` defaults to `globalThis.fetch`.
+- Requests `encoding: "base64"` so arbitrary resource bytes survive the JSON transport intact.
+
+**`evaluation/gate/fetch-resource.test.mjs`** — covers raw-byte return + subpath, empty resource via envelope (the product's falsy-`""` bug) and via a genuinely zero-byte body, error-envelope throw, and the `globalThis.fetch` fallback.
+
+## Why
+
+I searched the team knowledge base first and found `eval-skill-resource-download`, which records exactly the two sharp edges this tool must absorb:
+1. the raw-bytes subpath is `files/download` (`-o` on `files/read` doesn't help — `-o` is client-side, the bridge dispatches on subpath);
+2. an empty file is legal (`content: z.string()` with no `.min(1)`), but the download branch's `!parsed.data?.content` test makes it return the whole envelope — so empty content must be decoded, not thrown, and only a real error envelope should surface its `message`.
+
+The repo's `evaluation/STATE.md:216` lists this as an open product defect (②③). The tool is the workaround, and both files reference the note's tracking value `bt-pu6nyfhmu2v` as the note asks.
+
+## Verification
+
+- `node --test evaluation/gate/fetch-resource.test.mjs` → 5/5 pass.
+- Full suite (`node --test $(find evaluation -name '*.test.mjs' ...)`) → **644 tests, 642 pass, 0 fail, 2 skipped** (the 2 skips are pre-existing).

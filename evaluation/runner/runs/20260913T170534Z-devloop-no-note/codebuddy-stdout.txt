@@ -1,0 +1,23 @@
+[19:05:46] model custom-local:deepseek-v4-flash
+[19:05:46] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Full suite: **644 tests, 642 pass, 0 fail, 2 skipped** (baseline was 639/637/0/2 — the +5 are the new file's tests). Only two new files; no existing file touched.
+
+## 团队经验检索
+先做了一次 `skill_search`。命中的 `eval-bridge-endpoint-b`（团队约定：从 agent session 访问 skill bridge）确认了 bridge 的形态是 `<base>/skill-bridge/v3/skill` + `/<op>`（如 `/search`）。这与本会话工具里 `<bridge> = .../skill-bridge/v3/skill` 一致，所以我按 **`bridgeBase` 是 skill API 基地址、工具追加 `/files/read`** 来实现。该 skill 里记的端口/追踪头属于“如何发请求”的部署约定，与本纯函数的契约无关，未硬编码进去。
+
+另外从仓库本身核对了真实响应形状（`MemoryProxy/src/skill/skill-bridge.ts:1272`、`MemoryCore/src/core/skill/skill-core.ts:561`）：成功信封 `{code, message, data}`，`data = {path, content, encoding, size_bytes, mime_type, version}`，`encoding` 默认 `utf-8`，`base64` 时可无损还原任意字节。
+
+## 改了什么
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+- POST `${bridgeBase}/files/read`（去掉尾部斜杠），请求体 `{skill_id, path, encoding:"base64"}`。
+- 返回 `Buffer` 原始字节；请求 base64 是为了二进制资源不被 utf-8 读坏。
+- `data.encoding === "utf-8"` 时按 utf-8 解码，否则按 base64 —— 兼顾两种上游回答。
+- 空资源 = `Buffer.from("", ...)` → **零字节 Buffer**，不当作“缺失”。
+- `code !== 0` 时抛 `Error`，message 用信封自己的 `message`，不吞。
+- `fetcher` 缺省 `globalThis.fetch`；兼容返回 Response 或直接返回信封的桩。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 5 条：精确字节 + URL/请求体断言、空文件零字节、utf-8 回答按 utf-8 解、错误信封抛出且带上游 message、缺省走 `globalThis.fetch`。
+
+## 为什么这么实现
+需求里“原始字节 / 空文件合法 / 错误信封不吞 / fetcher 可注入”四条各自对应一个易错点：utf-8 读会损坏二进制、空内容被误判为缺失、错误被静默成空结果、测试无法脱网。这几处都按契约直接落到位，未额外加 HTTP 状态码分支或 URL 猜测等需求外逻辑。

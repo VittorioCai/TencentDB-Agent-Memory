@@ -1,0 +1,5 @@
+HEAD eda9d57aa9675a71f08181247c4629bfd2dacdaa
+eda9d57 start 9e3752feb767c97b40bb71749e97461b748a5399
+--- status ---
+ A evaluation/gate/fetch-resource.mjs
+ A evaluation/gate/fetch-resource.test.mjs

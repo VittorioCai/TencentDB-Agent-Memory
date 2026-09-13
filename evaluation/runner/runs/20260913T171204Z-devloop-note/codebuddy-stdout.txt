@@ -1,0 +1,25 @@
+[19:12:16] model custom-local:deepseek-v4-flash
+[19:12:16] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+## 改了什么
+
+新增两个文件,未改动任何现有文件:
+
+- `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`。
+- `evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs` — 6 条测试(含代理桩与 `globalThis.fetch` 缺省路径)。
+
+## 为什么这样做
+
+动手前检索了团队经验,命中一条正好对应本任务的笔记 `eval-skill-resource-download`(token `bt-pu6nyfhmu2v`),里面两条会咬人的点直接决定了实现:
+
+1. **取原始字节要走 `files/download`,不是 `files/read`。** `files/read` 永远回 JSON 信封 —— 注入的工具说明里"curl 加 `-o` 就回原始字节"不成立(`-o` 是客户端参数,服务端按子路径分流)。`evaluation/gate/fetch-resource.mjs:40` 因此 POST 到 `${bridgeBase}/files/download`。
+2. **空文件是合法文件。** download 分支用 `!parsed.data?.content` 判失败,空串 falsy,于是空资源返回整个信封而不是 0 字节。所以 `decodeEnvelope`(`fetch-resource.mjs:26`)对 `content: ""` 照常解码为**零字节 Buffer**;只有 `code !== 0`、或 `data.content` 缺失/非字符串才算异常,且异常时把信封的 `message` 抛进 `Error`,不吞掉。
+
+实现同时兼容"裸字节响应"与"JSON 信封响应":非空走裸字节,空文件/错误走信封解码,因此不管上游是 download 的哪种返回形态都能正确处理。`fetcher` 未传时回退 `globalThis.fetch`。
+
+## 验证
+
+- 新测试:`6 pass / 0 fail`。
+- 全量 `node --test evaluation/**/*.test.mjs`:**645 tests, 643 pass, 0 fail, 2 skipped**(基线 639 → 新增 6,无回归)。
+
+按团队约定,采纳笔记的测试在**文件名和测试标题**里都带上了判别值 `bt-pu6nyfhmu2v`,便于归因。

@@ -194,7 +194,13 @@ function scanRunDir(runDir, taskDir, arm) {
 }
 
 export async function main(argv) {
-  const arg = (n, d = null) => (argv.find((a) => a.startsWith(`--${n}=`)) ?? `--${n}=${d}`).slice(n.length + 3);
+  // 没给就是没给:默认值原样返回,**不经字符串拼接** —— 原来 `--${n}=${d}` 会把 null
+  // 拼成字符串 "null",而 "null" 是真值,于是 `--batch` 缺省时走进批量分支去 open('null')
+  // 而崩溃,第二批 12 次运行因此全都没拿到污染判定(2026-09-13,已复现)。
+  const arg = (n, d = null) => {
+    const hit = argv.find((a) => a.startsWith(`--${n}=`));
+    return hit === undefined ? d : hit.slice(n.length + 3);
+  };
   // 判别值那条规则只对明确的无笔记组开火:有笔记组见到判别值是正常的,
   // 组别不明(闸门实验等)时也不该按污染报——宁可漏报,不可冤枉。
   const runDir = arg("run"), taskDir = arg("task"), arm = arg("arm", "unknown");

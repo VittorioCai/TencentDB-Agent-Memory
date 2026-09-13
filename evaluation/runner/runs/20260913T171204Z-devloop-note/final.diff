@@ -1,0 +1,198 @@
+diff --git a/evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs b/evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs
+new file mode 100644
+index 0000000..5ee226f
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs
+@@ -0,0 +1,94 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++const SKILL = "skl-ImeA29HL3Djj";
++const PATH = "scripts/run.sh";
++const BRIDGE = "http://127.0.0.1:8096/skill-bridge/v3/skill";
++
++/** A fetcher stub that answers every call with one Response. */
++function stub(response) {
++  const calls = [];
++  const fetcher = async (url, init) => {
++    calls.push({ url, init });
++    return response;
++  };
++  return { fetcher, calls };
++}
++
++const jsonResponse = (body, status = 200) =>
++  new Response(JSON.stringify(body), {
++    status,
++    headers: { "content-type": "application/json" },
++  });
++
++test("bt-pu6nyfhmu2v: download returns raw bytes, and the tool hands them back unchanged", async () => {
++  const raw = Buffer.from("#!/bin/sh\necho hi\n", "utf-8");
++  const { fetcher, calls } = stub(
++    new Response(raw, { headers: { "content-type": "text/x-shellscript" } }),
++  );
++
++  const out = await fetchResource({ skillId: SKILL, path: PATH, bridgeBase: BRIDGE, fetcher });
++
++  assert.ok(Buffer.isBuffer(out));
++  assert.deepEqual(out, raw);
++  assert.equal(calls.length, 1);
++  assert.equal(calls[0].url, `${BRIDGE}/files/download`);
++  assert.deepEqual(JSON.parse(calls[0].init.body), { skill_id: SKILL, path: PATH });
++});
++
++test("an empty resource is a legal file, not an error: the empty-content envelope decodes to zero bytes", async () => {
++  // files/download answers an empty file with the whole envelope (its `!content`
++  // check is falsy for ""). That is a real, empty resource — not a failure.
++  const { fetcher } = stub(jsonResponse({ code: 0, data: { content: "", encoding: "utf-8" } }));
++
++  const out = await fetchResource({ skillId: SKILL, path: PATH, bridgeBase: BRIDGE, fetcher });
++
++  assert.ok(Buffer.isBuffer(out));
++  assert.equal(out.length, 0);
++});
++
++test("base64 envelopes decode to the original bytes", async () => {
++  const original = Buffer.from([0x00, 0x01, 0xfe, 0xff]);
++  const { fetcher } = stub(
++    jsonResponse({ code: 0, data: { content: original.toString("base64"), encoding: "base64" } }),
++  );
++
++  const out = await fetchResource({ skillId: SKILL, path: PATH, bridgeBase: BRIDGE, fetcher });
++
++  assert.deepEqual(out, original);
++});
++
++test("an error envelope throws with the envelope's message, not a swallowed one", async () => {
++  const { fetcher } = stub(jsonResponse({ code: 40001, message: "SKILL_RESOURCE_NOT_FOUND: nope" }));
++
++  await assert.rejects(
++    () => fetchResource({ skillId: SKILL, path: "missing.sh", bridgeBase: BRIDGE, fetcher }),
++    /SKILL_RESOURCE_NOT_FOUND: nope/,
++  );
++});
++
++test("a zero code with a missing or non-string content is malformed, not empty", async () => {
++  const { fetcher } = stub(jsonResponse({ code: 0, data: { encoding: "utf-8" } }));
++  await assert.rejects(
++    () => fetchResource({ skillId: SKILL, path: PATH, bridgeBase: BRIDGE, fetcher }),
++    /data\.content/,
++  );
++});
++
++test("fetcher defaults to globalThis.fetch when it is not injected", async () => {
++  const raw = Buffer.from("hello", "utf-8");
++  const original = globalThis.fetch;
++  let seen = null;
++  globalThis.fetch = async (url, init) => {
++    seen = { url, init };
++    return new Response(raw, { headers: { "content-type": "application/octet-stream" } });
++  };
++  try {
++    const out = await fetchResource({ skillId: SKILL, path: PATH, bridgeBase: BRIDGE });
++    assert.deepEqual(out, raw);
++    assert.equal(seen.url, `${BRIDGE}/files/download`);
++  } finally {
++    globalThis.fetch = original;
++  }
++});
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..dfc8edd
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,92 @@
++/**
++ * Fetch one team-skill resource file as raw bytes, ready to be written to disk.
++ *
++ * The bridge exposes two read paths and they are not interchangeable:
++ *
++ *   files/read       always answers with a JSON envelope, `curl -o` or not —
++ *                    `-o` is a client flag the server never sees. A file saved
++ *                    from it is JSON, not the resource.
++ *   files/download   answers with the decoded bytes. This is the one to use
++ *                    when the point is to put the file on disk.
++ *
++ * `files/download` has one wart: its success check is `!parsed.data?.content`,
++ * and the empty string is falsy. A resource that really is empty therefore comes
++ * back as the whole JSON envelope instead of a zero-byte body. An empty file is
++ * a legal file (core accepts a zero-length `content` in both encodings), so this
++ * module does not treat it as a failure: when it sees an envelope it decodes
++ * `data.content`, and zero length decodes to a zero-byte Buffer.
++ *
++ * Only an envelope whose `code` is non-zero, or whose payload is missing or
++ * mistyped, is an error — and then the envelope's own `message` is surfaced,
++ * not swallowed.
++ */
++
++/** Decode an envelope's `data` into bytes. Empty content is legal. */
++function decodeEnvelope(envelope) {
++  if (envelope.code !== 0) {
++    throw new Error(envelope.message ?? `skill resource fetch failed (code ${envelope.code})`);
++  }
++  const data = envelope.data;
++  // The contract is a string `content` (possibly empty) plus an encoding. A
++  // missing or non-string field is a malformed response, not an empty file.
++  if (!data || typeof data.content !== "string") {
++    throw new Error(
++      envelope.message || "skill resource fetch failed: response has no string data.content",
++    );
++  }
++  return data.encoding === "base64"
++    ? Buffer.from(data.content, "base64")
++    : Buffer.from(data.content, "utf-8");
++}
++
++/**
++ * @param skillId    the asset id, e.g. "skl-xxx"
++ * @param path       the resource path taken from the skill manifest
++ * @param bridgeBase the skill bridge base, up to and including "/skill"
++ * @param fetcher    HTTP implementation to use; defaults to globalThis.fetch
++ * @returns {Promise<Buffer>} the resource's raw bytes (zero-length for an empty file)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher }) {
++  const doFetch = fetcher ?? globalThis.fetch;
++  if (typeof doFetch !== "function") {
++    throw new Error("fetchResource: no fetch implementation available");
++  }
++
++  const base = String(bridgeBase ?? "").replace(/\/+$/, "");
++  const url = `${base}/files/download`;
++  const response = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const bytes = typeof response.arrayBuffer === "function"
++    ? Buffer.from(await response.arrayBuffer())
++    : Buffer.from(await response.text(), "utf-8");
++
++  // An envelope is JSON. The raw-bytes response carries the resource's own
++  // content type (or application/octet-stream), so JSON marks the envelope —
++  // the empty-content fallback and the pass-through error both use it.
++  const contentType = (response.headers?.get?.("content-type") ?? "").toLowerCase();
++  const text = bytes.toString("utf-8");
++  if (contentType.includes("json") || text.trimStart().startsWith("{")) {
++    let envelope;
++    try {
++      envelope = JSON.parse(text);
++    } catch {
++      envelope = null;
++    }
++    if (envelope && typeof envelope === "object" && typeof envelope.code === "number") {
++      return decodeEnvelope(envelope);
++    }
++  }
++
++  // Not an envelope: bytes are the resource. If the HTTP call itself failed and
++  // there is no envelope to explain it, do not hand back a corrupt "success".
++  if (response.ok === false) {
++    throw new Error(
++      `skill resource fetch failed: HTTP ${response.status}${text ? `: ${text.slice(0, 200)}` : ""}`,
++    );
++  }
++  return bytes;
++}

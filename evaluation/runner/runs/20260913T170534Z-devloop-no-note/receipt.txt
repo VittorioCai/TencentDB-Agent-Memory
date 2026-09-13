@@ -1,0 +1,46 @@
+# Receipt — run 20260913T170534Z-devloop-no-note · session b30ecca7 · task task-h1k7xruuhb · 2026-09-13T17:07:53Z
+
+applied 3 team asset(s)
+- skill：deploy-lookup-note-b — fetched — body retrieved; use not established
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 1 of 4 (score 0.97)
+    evidence
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_W4Zomm3qPbKIp2SK6Qtj7545  — skill:get answered at message 18; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 4 (score 0.97)
+    evidence
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_W4Zomm3qPbKIp2SK6Qtj7545  — skill:get answered at message 18; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (unknown)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 4 (score 0.62)
+    evidence
+      capture_line    b30ecca7-e111-406f-8524-16fdb0906e28:call_00_hydAMjiq52hJ0NqNZSez5858  — skill:get answered at message 6; carrying content; version 4; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T170534Z-devloop-no-note.IHyZ/20260913T170534Z-devloop-no-note/receipt.json

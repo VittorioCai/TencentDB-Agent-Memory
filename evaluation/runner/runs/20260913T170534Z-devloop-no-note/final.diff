@@ -1,0 +1,171 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..2986b65
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,64 @@
++/**
++ * Fetch one resource file of a team skill through the skill bridge, as bytes.
++ *
++ * A skill resource is a file — SKILL.md, a script, an image — so what the
++ * caller wants is exactly the bytes that were stored, to write straight to
++ * disk. Two things follow from "bytes" and neither is optional:
++ *
++ *   - ask for `encoding: "base64"`. A utf-8 read would be fine for text and
++ *     would silently mangle a binary resource; base64 round-trips any byte.
++ *   - an empty resource is a legitimate file, so an empty body must come back
++ *     as a zero-length Buffer. Deciding "empty means missing" would turn a
++ *     valid empty file into an error and lose it.
++ *
++ * The bridge answers with the standard envelope
++ * `{code, message, request_id, data?}`, where a successful `files/read` has
++ * `data = {path, content, encoding, size_bytes, mime_type, version}` and
++ * `content` encoded per `data.encoding`. Anything with `code !== 0` is a
++ * refusal (missing skill, missing path, not admitted) and is raised as an
++ * Error carrying the envelope's own `message`, so a caller is never left
++ * guessing at a silent empty result.
++ *
++ * `fetcher` exists so tests can inject a stub; it defaults to the runtime's
++ * `fetch` and is called as `fetcher(url, {method, headers, body})`.
++ */
++
++/** The bridge's resource read, appended to the caller-supplied base. */
++export const FILES_READ_PATH = "/files/read";
++
++/**
++ * @param {object} args
++ * @param {string} args.skillId          the skill that owns the resource
++ * @param {string} args.path             resource path inside the skill
++ * @param {string} args.bridgeBase       base of the skill bridge API, e.g.
++ *                                       `http://127.0.0.1:8096/skill-bridge/v3/skill`
++ * @param {Function} [args.fetcher]      fetch-compatible implementation; defaults to globalThis.fetch
++ * @returns {Promise<Buffer>}            the resource's raw bytes (possibly empty)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher } = {}) {
++  const doFetch = fetcher ?? globalThis.fetch;
++  if (typeof doFetch !== "function") {
++    throw new Error("fetchResource: no fetch implementation (pass `fetcher` or run where globalThis.fetch exists)");
++  }
++
++  const base = String(bridgeBase ?? "").replace(/\/+$/, "");
++  const url = `${base}${FILES_READ_PATH}`;
++  const res = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path, encoding: "base64" }),
++  });
++
++  // Real fetch answers a Response; a stub may hand back the parsed envelope.
++  const envelope = typeof res?.json === "function" ? await res.json() : res;
++
++  if (!envelope || envelope.code !== 0) {
++    throw new Error(String(envelope?.message ?? `skill resource read failed (code ${envelope?.code})`));
++  }
++
++  const data = envelope.data ?? {};
++  // We asked for base64, so an absent/unknown encoding is read as base64;
++  // an explicit utf-8 answer is honoured rather than decoded as base64.
++  const encoding = data.encoding === "utf-8" ? "utf8" : "base64";
++  return Buffer.from(String(data.content ?? ""), encoding);
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..939123f
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,95 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++
++import { fetchResource, FILES_READ_PATH } from "./fetch-resource.mjs";
++
++const BASE = "http://127.0.0.1:8096/skill-bridge/v3/skill";
++
++/** A Response-like stub carrying `envelope` as its JSON body. */
++const answering = (envelope) => async () => ({ ok: envelope.code === 0, status: 200, json: async () => envelope });
++
++test("a resource comes back as its exact bytes, fetched from the bridge's files/read", async () => {
++  const seen = [];
++  const fetcher = async (url, init) => {
++    seen.push({ url, init, body: JSON.parse(init.body) });
++    return {
++      ok: true,
++      status: 200,
++      json: async () => ({
++        code: 0,
++        message: "ok",
++        data: {
++          path: "scripts/run.sh",
++          content: Buffer.from("#!/bin/sh\necho hi\n", "utf8").toString("base64"),
++          encoding: "base64",
++          size_bytes: 18,
++          mime_type: "text/x-shellscript",
++          version: 3,
++        },
++      }),
++    };
++  };
++
++  const bytes = await fetchResource({ skillId: "skl-abc", path: "scripts/run.sh", bridgeBase: BASE, fetcher });
++
++  assert.ok(Buffer.isBuffer(bytes), "raw bytes, not a string");
++  assert.equal(bytes.toString("utf8"), "#!/bin/sh\necho hi\n");
++  // base64 is requested so binary resources survive; the path is appended to the base.
++  assert.equal(seen[0].url, `${BASE}${FILES_READ_PATH}`);
++  assert.deepEqual(seen[0].body, { skill_id: "skl-abc", path: "scripts/run.sh", encoding: "base64" });
++});
++
++test("an empty resource is a zero-byte Buffer, not an error", async () => {
++  const bytes = await fetchResource({
++    skillId: "skl-empty",
++    path: "notes/empty.md",
++    bridgeBase: BASE,
++    fetcher: answering({ code: 0, message: "ok", data: { path: "notes/empty.md", content: "", encoding: "base64", size_bytes: 0, mime_type: "text/markdown", version: 1 } }),
++  });
++
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.length, 0);
++});
++
++test("a utf-8 answer is decoded as utf-8, not as base64", async () => {
++  const bytes = await fetchResource({
++    skillId: "skl-text",
++    path: "SKILL.md",
++    bridgeBase: BASE,
++    fetcher: answering({ code: 0, message: "ok", data: { path: "SKILL.md", content: "# Титул", encoding: "utf-8", size_bytes: 9, mime_type: "text/markdown", version: 1 } }),
++  });
++
++  assert.equal(bytes.toString("utf8"), "# Титул");
++});
++
++test("an error envelope is raised with the upstream message, never swallowed", async () => {
++  await assert.rejects(
++    fetchResource({
++      skillId: "skl-missing",
++      path: "nope.md",
++      bridgeBase: BASE,
++      fetcher: answering({ code: 40401, message: "SKILL_NOT_FOUND: path nope.md not in manifest of v2", request_id: "req-1" }),
++    }),
++    (err) => {
++      assert.ok(err instanceof Error);
++      assert.match(err.message, /SKILL_NOT_FOUND: path nope\.md not in manifest of v2/);
++      return true;
++    },
++  );
++});
++
++test("fetcher defaults to the runtime's fetch", async () => {
++  const original = globalThis.fetch;
++  let called = "";
++  globalThis.fetch = async (url) => {
++    called = url;
++    return { ok: true, status: 200, json: async () => ({ code: 0, message: "ok", data: { content: "", encoding: "base64" } }) };
++  };
++  try {
++    const bytes = await fetchResource({ skillId: "skl-x", path: "a", bridgeBase: BASE });
++    assert.equal(called, `${BASE}${FILES_READ_PATH}`);
++    assert.equal(bytes.length, 0);
++  } finally {
++    globalThis.fetch = original;
++  }
++});

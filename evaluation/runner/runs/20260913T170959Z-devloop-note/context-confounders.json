@@ -1,0 +1,35 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-13T17:12:04.632Z",
+  "system_prompt": {
+    "chars": 22884,
+    "sha1": "5a5d75f53053806f50f318a5fe8689710478cf2a"
+  },
+  "profile_memory": {
+    "present": false
+  },
+  "available_skills": {
+    "names": [],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [],
+  "pool": {
+    "asset_ids": [
+      "skl-KPVMV2uB5rXM",
+      "skl-eM1xP28pXiYA",
+      "skl-MyrdnecjeYSb",
+      "skl-ImeA29HL3Djj",
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "deploy-lookup-note-a",
+      "deploy-lookup-note-b",
+      "tdc-312fad",
+      "eval-bridge-endpoint-c",
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": []
+}

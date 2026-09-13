@@ -1,0 +1,24 @@
+[19:00:55] model custom-local:deepseek-v4-flash
+[19:00:55] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Two new files, nothing else touched.
+
+## What changed and why
+
+**`evaluation/gate/fetch-resource.mjs`** (new) — exports `fetchResource({ skillId, path, bridgeBase, fetcher })`.
+
+- POSTs `{skill_id, path}` to `${bridgeBase}/files/read`, using `fetcher ?? globalThis.fetch` so tests need no live stack.
+- On success decodes `data.content` by `data.encoding` (`base64` → `Buffer.from(content, "base64")`, else utf-8) and returns the `Buffer`, so the caller writes it straight to disk. I took this rule from the two implementations I checked: `MemoryProxy/src/skill/skill-bridge.ts` (`files/download`) and `MemoryCore/src/core/skill/skill-core.ts` (`readFile`).
+- **Empty content is a legal empty file**: `content: ""` decodes to a zero-byte Buffer and returns as success. I deliberately did *not* copy the proxy's `!parsed.data?.content` check — that treats an empty resource as a failure, which is exactly the bug the task calls out. I used `?? ""` rather than a truthiness check so an empty string is never mistaken for an error.
+- **Error envelope thrown, not swallowed**: `code !== 0` throws `Error("fetchResource: <envelope.message> (code N)")`.
+
+**`evaluation/gate/fetch-resource.test.mjs`** (new) — one test, stubbed `fetcher`, covering the three required behaviors: utf-8 bytes returned and POSTed to the right URL/body; base64 decoded to raw bytes; empty content → zero-byte Buffer; error envelope → `assert.rejects` on the envelope message.
+
+## Team knowledge search
+
+Ran `skill_search` once before starting. Results were the same distractors seen earlier — `eval-bridge-endpoint-b` (claims port **47318** + an `x-team-trace` header), which contradicts the real injected bridge at `127.0.0.1:8096/skill-bridge/v3/skill`, plus unrelated deploy/exit-line notes. None documented the `files/read` byte contract, so I did not follow that skill and instead relied on the source implementations above.
+
+## Verification
+
+- New test: `node --test evaluation/gate/fetch-resource.test.mjs` → 1 pass, 0 fail.
+- Full suite: `node --test 'evaluation/**/*.test.mjs'` → **640 tests, 638 pass, 0 fail, 2 skipped** (baseline was 639/637/0/2 — the +1 is the new test). No existing behavior changed.

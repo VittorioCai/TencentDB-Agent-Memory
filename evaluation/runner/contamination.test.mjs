@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { RULES_VERSION, batchVerdict, commandsFromCapture, referenceFingerprints, sampleRunsOf, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
+import { RULES_VERSION, batchVerdict, commandsFromCapture, main, referenceFingerprints, sampleRunsOf, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const REF = `
@@ -144,4 +144,19 @@ test("一批的总判:未知与污染同样不过,干净必须是明确的 false
   assert.equal(batchVerdict([{ run_id: "a", contaminated: false }, { run_id: "b", contaminated: false }]).ok, true);
   const v = batchVerdict([{ run_id: "a", contaminated: false }, { run_id: "b", contaminated: null }, { run_id: "c", contaminated: true }]);
   assert.equal(v.ok, false); assert.deepEqual(v.bad, ["b", "c"]); assert.equal(v.unknown, 1); assert.equal(v.contaminated, 1);
+});
+
+// ── 2026-09-13:--batch 缺省时被拼成字符串 "null",检查器去读一个叫 null 的文件而崩溃 ──
+test("没给的参数就是「没给」,不能变成字符串 'null'", async () => {
+  const { readFileSync, mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const d = mkdtempSync(join(tmpdir(), "argnull-"));
+  writeFileSync(join(d, "capture.jsonl"), JSON.stringify({ body: { json: { messages: [] } } }) + "\n");
+  writeFileSync(join(d, "run.json"), JSON.stringify({ run_id: "r1", session: { cwd: "/x/y" } }));
+  const task = mkdtempSync(join(tmpdir(), "argtask-"));
+  // 不传 --batch:必须走单次检查的分支并正常返回,而不是去 open('null')
+  const rc = await main([`--run=${d}`, `--task=${task}`, "--arm=no-note"]);
+  assert.equal(rc, 0, "没给 --batch 时不该崩,也不该被当成批量模式");
+  assert.ok(readFileSync(join(d, "capture.jsonl"), "utf8").length > 0);
 });

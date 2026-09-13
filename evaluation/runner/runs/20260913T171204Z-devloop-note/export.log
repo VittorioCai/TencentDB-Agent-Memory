@@ -1,0 +1,5 @@
+[19:14:07] ClickHouse http://127.0.0.1:8123  db=context_proxy  window=last 30 MINUTE
+[error] ClickHouse unreachable or auth failed: http://127.0.0.1:8123
+  curl: (7) Failed to connect to 127.0.0.1 port 8123 after 0 ms: Could not connect to server
+  is the container running?  docker ps --filter name=clickhouse
+  credentials come from:    PROXY_CLICKHOUSE_USER / _PASSWORD in /Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/deploy/global-images/.env

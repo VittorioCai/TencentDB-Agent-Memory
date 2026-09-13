@@ -1,0 +1,2 @@
+frozen 2026-09-13T16:53:36Z: copy commit 579f47b (tree f80036a, archived from 9e3752f), 47 test files → /private/tmp/topic4-runs/20260913T165325Z-devloop-note.xMSd/20260913T165325Z-devloop-note/start.json
+suite at start: tests 641 pass 639 fail 0 (exit 0); baseline failing: none
