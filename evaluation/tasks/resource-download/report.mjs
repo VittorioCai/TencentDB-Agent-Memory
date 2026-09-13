@@ -218,12 +218,12 @@ export function render(rep, manifest) {
       L.push(at.closed
         ? `- **采用归因:已闭合** —— 有笔记组 ${at.runs_with_used}/${n} 次给出 \`used\`,`
           + `即「这次改动确实用了这条被取回的笔记」有了一条闭合的证据链。`
-        : `- **采用归因:未闭合** —— 有笔记组 **0 次** \`used\`;`
-          + `${at.runs_with_needs_review} 次停在 \`needs_review\`、${at.runs_with_no_events} 次没有事件`
+        : `- **采用归因(按运行当时的记录):0 次 \`used\`** —— ${at.runs_with_needs_review} 次停在 \`needs_review\`、${at.runs_with_no_events} 次没有事件`
           + (at.unknown ? `、${at.unknown} 次未知` : "") + "。"
-          + `**卡在取回通道**:harness 的 system prompt 里 \`<skill_tools>\` 写明「这些不是本地工具,需要用 Bash 调用 curl 命中 proxy 的 skill-bridge 路径」,`
-          + `消费者因此只能 \`curl\` 取回笔记,正文作为 Bash 回显进入上下文;判决器的「最早送达」规则看到判别值在被记账的那次 fetch **之前**就到了模型手里,`
-          + `于是拒绝把后续使用算到那次 fetch 上。这是**评测自身的设计缺口**,不是产品缺陷,也不是落点缺失 —— 本批每次运行都有自己的受信行。`, "");
+          + `原因**不在判决规则,在喂给它的资产池**:本任务的笔记从来不在冻结的池快照里(快照在笔记还是 \`candidate\` 时冻结,之后才准入),`
+          + `\`provenance/build-events.mjs\` 对不在快照里的资产直接跳过,连 \`fetched\` 都不写,判决器手上没有可记账的取回。`
+          + `另两个闭环任务本来就各自带着快照,第三个漏了这一步。**补上快照后的重判见 \`REJUDGE-POOL.md\`**(判据先冻结在 \`rejudge-criteria.json\`,`
+          + `含两组保真对照);本表仍是**运行当时记录的原样**,不回填。`, "");
     }
     if (rep.exposure) {
       const e = st.exposure_seen;

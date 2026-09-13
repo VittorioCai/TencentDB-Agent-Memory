@@ -1,0 +1,8 @@
+skill.extraction.enabled: file=false container=enabled:false
+  probe:            running (pid 97176)
+  proxy upstream:   http://host.docker.internal:18097
+  forced identity:  agt-lqyapl6l4e  (neither evaluation agent)
+  core auto-extraction: OFF  (pool frozen for the comparison)
+  clickhouse:       reachable at http://127.0.0.1:8123/ping  (bridge_call rows will be written)
+  candidate log: OFF
+2026-09-13T19:46:09Z [delivery re-run 2026-09-13T194502Z] skl-pXLc38dex6Zt: status approved, visibility team, evidence_revision 10, gate admit decided_at 2026-09-11T19:08:30.973Z (online validated 4, used 0, corrected 0)

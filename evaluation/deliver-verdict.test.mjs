@@ -32,6 +32,7 @@ const green = () => [
   row("devloop-report", 0, 0),
   row("devloop-report-2", 0, 0),
   row("devloop-report-3", 0, 0, "计入样本 8 次"),
+  row("rejudge-pool", 0, 0),
   row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
   row("author-recheck", 0, 0, "5 份重验"),
   row("stated-suite-size", 0, null, "套件实际 767 个测试;文档里声明当前规模的地方 2 处,全部一致"),

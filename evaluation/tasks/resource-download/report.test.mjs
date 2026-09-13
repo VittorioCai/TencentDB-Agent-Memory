@@ -276,8 +276,9 @@ test("采用判定按批汇总:有没有 used,没有就说卡在哪一步", () =
   assert.equal(at.runs_with_needs_review, 2);
   assert.equal(at.closed, false);
   const md = render(buildReport(m, ld), m);
-  assert.match(md, /0 次.*used/);
-  assert.match(md, /未闭合/);
+  assert.match(md, /0 次 `used`/);
+  assert.match(md, /REJUDGE-POOL\.md/, "没有 used 时必须指向重判页,不能只说结论");
+  assert.match(md, /不在判决规则,在喂给它的资产池/);
 });
 
 test("有 used 就如实说闭合,不写死成失败", () => {

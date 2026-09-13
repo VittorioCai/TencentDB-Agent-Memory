@@ -101,6 +101,11 @@ node evaluation/tasks/resource-download/report.mjs --out="$OUT/REPORT-resource-d
 d="$(mddiff evaluation/tasks/resource-download/REPORT.md "$OUT/REPORT-resource-download-reproduced.md" "$OUT/REPORT-resource-download.diff")"
 row "devloop-report-3" "node evaluation/tasks/resource-download/report.mjs" "$e" "exit 0, diff 0 vs resource-download/REPORT.md" "$(grep -oE '计入样本 [0-9]+ 次' "$OUT/report-resource-download.txt" | head -1)" "$d"
 
+echo "[6c2] third task's re-judge page reproduced (the pool-snapshot correction, before/after)"
+node evaluation/tasks/resource-download/rejudge-report.mjs --out="$OUT/REJUDGE-POOL-reproduced.md" > "$OUT/rejudge-pool.txt" 2>&1; e=$?
+d="$(mddiff evaluation/tasks/resource-download/REJUDGE-POOL.md "$OUT/REJUDGE-POOL-reproduced.md" "$OUT/REJUDGE-POOL.diff")"
+row "rejudge-pool" "node evaluation/tasks/resource-download/rejudge-report.mjs" "$e" "exit 0, diff 0 vs resource-download/REJUDGE-POOL.md;两组保真对照都全对才算数" "" "$d"
+
 echo "[6d] third task's samples re-scanned for contamination (any run not explicitly clean blocks)"
 node evaluation/runner/contamination.mjs --batch=evaluation/tasks/resource-download/devloop-runs.json --task=evaluation/tasks/resource-download > "$OUT/contamination-resource-download.txt" 2>&1; e=$?
 row "contamination-3" "contamination.mjs --batch=resource-download/devloop-runs.json" "$e" "exit 0;每一次计入样本的运行都明确判为干净(污染或未知同样阻断);已判污染的不进扫描集,但会被逐条点名" "$(tail -1 "$OUT/contamination-resource-download.txt")"

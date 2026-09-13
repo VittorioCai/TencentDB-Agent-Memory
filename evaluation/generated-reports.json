@@ -32,6 +32,12 @@
       "artifact": "REPORT-resource-download.diff"
     },
     {
+      "path": "evaluation/tasks/resource-download/REJUDGE-POOL.md",
+      "class": "regenerated",
+      "step": "rejudge-pool",
+      "artifact": "REJUDGE-POOL.diff"
+    },
+    {
       "path": "evaluation/attribution/CALIBRATION-batch4-reparsed-2026-09-11.md",
       "class": "regenerated",
       "step": "calibration",
