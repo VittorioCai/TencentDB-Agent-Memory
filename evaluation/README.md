@@ -49,12 +49,24 @@ structure, not a stricter pattern.
 | `attribution/` | Discriminative token extraction, artifact collection, and the hard-evidence judge. |
 | `tasks/` | The mainline scenario: two assets differing only in the bridge address, and its acceptance check. |
 | `runner/` | One command per run, leaving a directory that can be reopened; and the aggregate, where ERROR stays in the denominator. |
-| `gate/` | The admission gate: outcomes tied to calls, the three rules, the author prior, and the write into the product's `visibility` field with read-back. |
+| `gate/` | The admission gate: outcomes tied to calls, the three rules, the author signal, and the write into the product's asset `status` in Core (`candidate` / `approved` / `failed`) with read-back. An earlier version of this line said `visibility`; the gate stopped touching that field when it moved into Core. |
 | `receipt/` | The receipt task four asks for: what a run used, from whom, in what state, with what evidence and what risk; JSON plus terminal rendering. |
 | `calibration/` | Leave-one-out: hide an asset, see whether the run changes, and score the judge's `used` against that — precision and recall with n. |
 
 Nothing under `evaluation/` pulls npm packages; everything runs on Node's standard
 library and shell.
+
+## Terms, as used here
+
+Four distinctions this delivery keeps, because collapsing any of them would overstate
+the result:
+
+| | |
+|---|---|
+| **delivered** vs **used** vs **validated** vs **contributed** | delivered = the content reached the model's context; used = a service-side record ties it to a call; validated = a run whose written copy also passed independent acceptance; contributed = a new asset entered the registry. Delivery is not use, and use is not benefit. |
+| **asset-outcome profile** vs **a person's ability** | the field is still named `competence` for compatibility with the signed summary in Core, but it is read as a profile of outcomes already recorded **on the asset under assessment**. It is not a verified measure of the author, and the gate uses it for review priority only — never for admit/reject. |
+| **this version** vs **earlier batches** | every number names the asset version and the run set it came from. Batch 3 and batch 4 are not pooled, and a report generated before a calibration change is kept with a note saying so rather than edited. |
+| **the product's own capability** vs **what this branch adds** | retrieval, injection and the skill bridge are the product's; this branch adds the outcome records, the admission decision in Core, the receipt, and the calibration. Nothing here re-implements retrieval. |
 
 ## Two-tier evidence
 
@@ -110,7 +122,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 166 tests across the six directories.
+Full suite: 643 tests (`node --test evaluation/**/*.test.mjs` from the repository root).
 
 Each directory has its own README with the details.
 
@@ -133,7 +145,11 @@ and diffs them against the committed copies):
 - **The dev loop** (`tasks/exit-code-fix/REPORT.md`, `tasks/exit-line-collect/REPORT.md`):
   one real defect, one experience note, fresh consumers, an independent
   verifier, write-back through `/v3/skill/extract`, and the gate's rule
-  admitting the note on cross-user validated outcomes.
+  admitting the note on cross-user validated outcomes. What the evidence
+  supports, stated exactly: **the note's testing convention was adopted and the
+  resulting code passed independent acceptance**. It does not separately show
+  that the root-cause diagnosis came from the note, and it does not show the
+  defect would have gone unfixed without it.
 - **The author dimension** (`author/README.md`): a context-based assessment
   read from the author's own records, cited and machine-checked, used by the
   gate for review priority only.
@@ -150,6 +166,19 @@ Limitations, stated rather than buried:
   `distinct_consumers` count identities. Independence is not established and no
   report claims it.
 - Samples are small (5+5, 2+2), one scenario per batch, one model.
+
+Since 2026-09-12 the delivery also carries, each with its own record:
+
+- **six rounds of outside review**, every finding fixed in the implementation or the
+  generator and the report regenerated rather than hand-edited (`STATE.md`, and one card
+  per class in `REVIEW-GUIDE.md`);
+- **four upstream pull requests** opened from defects hit while running the product, on
+  branches independent of this one and all still pending review with no automated checks
+  (`upstream/README.md` — it also records one reproduced defect deliberately **not**
+  submitted, because that project's CONTRIBUTING routes such reports to private email);
+- **a port of the gate onto today's upstream** (`gate/PORT-TO-UPSTREAM.md`): 21 files,
+  four conflicts, all of them import lists, and a tree that builds and passes 132 tests
+  with no `evaluation/` in it — evidence that the gate is product code, not a harness.
 
 A configuration note worth recording: the knowledge service ships its own
 ClickHouse telemetry writing the *same* `tool_call_logs` table, tagged
