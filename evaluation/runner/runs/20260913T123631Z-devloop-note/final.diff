@@ -1,0 +1,169 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..7fd9894
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,112 @@
++/**
++ * Fetch one team-skill resource as raw bytes.
++ *
++ * The bridge exposes two read paths, and they are not interchangeable:
++ *
++ *   files/read      answers with a JSON envelope
++ *                   ({ code, data: { content, encoding, ... } })
++ *   files/download  answers with the resource's raw bytes
++ *
++ * The tool description only mentions `files/read`, and appending `curl -o`
++ * does not change that — `-o` is a curl-side flag the server never sees, and
++ * the bridge routes on the subpath. Saving what `files/read` returns gives a
++ * JSON file that fails the moment it is executed. So this uses
++ * `files/download`.
++ *
++ * The second trap: an empty resource is legal (Core's schema accepts a
++ * zero-byte `content`), but the download branch tests `!parsed.data?.content`
++ * and an empty string is falsy, so an empty file comes back as the whole JSON
++ * envelope instead of zero bytes. A successful fetch can therefore arrive in
++ * envelope form too. We decode it: a string `content` — empty included — is
++ * content, and only a missing / non-string `content` is a malformed envelope.
++ * A `code !== 0` is an error, and its envelope message is surfaced, not
++ * swallowed.
++ *
++ * Team experience: skill `eval-skill-resource-download` (token bt-pvxahxcppk3).
++ *
++ * @param {object} args
++ * @param {string} args.skillId    the skill the resource belongs to
++ * @param {string} args.path       the resource path inside the skill
++ * @param {string} args.bridgeBase skill-bridge base, e.g.
++ *                                 `http://127.0.0.1:8096/skill-bridge/v3/skill`
++ * @param {typeof fetch} [args.fetcher] HTTP implementation; defaults to the global
++ * @returns {Promise<Buffer>} the resource bytes (zero-length for an empty file)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher } = {}) {
++  const doFetch = fetcher ?? globalThis.fetch;
++  if (typeof doFetch !== "function") throw new Error("fetchResource: no fetcher available");
++  if (!bridgeBase) throw new Error("fetchResource: bridgeBase is required");
++
++  const url = `${String(bridgeBase).replace(/\/+$/, "")}/files/download`;
++  const res = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const bytes = await readBytes(res);
++
++  // A download may still be a JSON envelope: on an upstream error, on a
++  // malformed upstream response, and on the empty-content path. A resource's
++  // raw bytes that merely happen to parse as JSON do not carry a numeric
++  // `code`, so that is the discriminator.
++  const envelope = parseEnvelope(bytes);
++  if (envelope) {
++    if (envelope.code !== 0) throw envelopeError(envelope);
++    const data = envelope.data;
++    if (!data || typeof data.content !== "string") {
++      // `code: 0` with no usable content is a broken envelope, not an empty
++      // file: only a missing or wrongly-typed field is an anomaly.
++      throw envelopeError({
++        code: envelope.code,
++        message: envelope.message ?? "malformed envelope: data.content is missing or not a string",
++      });
++    }
++    return decodeContent(data.content, data.encoding);
++  }
++
++  if (res && res.ok === false) {
++    const status = res.status ?? "?";
++    throw new Error(`fetchResource: ${url} responded HTTP ${status}${res.statusText ? ` ${res.statusText}` : ""}`);
++  }
++  return bytes;
++}
++
++/** Read a fetcher's response into a Buffer, tolerating the common stub shapes. */
++async function readBytes(res) {
++  if (res == null) throw new Error("fetchResource: fetcher returned no response");
++  if (Buffer.isBuffer(res)) return res;
++  if (res instanceof Uint8Array) return Buffer.from(res);
++  if (res instanceof ArrayBuffer) return Buffer.from(res);
++  if (typeof res.arrayBuffer === "function") return Buffer.from(await res.arrayBuffer());
++  if (typeof res.text === "function") return Buffer.from(await res.text(), "utf8");
++  throw new Error("fetchResource: fetcher returned an unsupported response");
++}
++
++/** Detect a skill-bridge envelope; anything else is raw content. */
++function parseEnvelope(bytes) {
++  if (!bytes || bytes.length === 0) return null;
++  const text = bytes.toString("utf8").trim();
++  if (!text.startsWith("{")) return null;
++  let parsed;
++  try {
++    parsed = JSON.parse(text);
++  } catch {
++    return null;
++  }
++  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
++  if (typeof parsed.code !== "number") return null;
++  return parsed;
++}
++
++function decodeContent(content, encoding) {
++  return encoding === "base64" ? Buffer.from(content, "base64") : Buffer.from(content, "utf8");
++}
++
++function envelopeError(envelope) {
++  const message = envelope?.message ? String(envelope.message) : `skill bridge returned code ${envelope?.code}`;
++  const err = new Error(message);
++  err.code = envelope?.code;
++  err.envelope = envelope;
++  return err;
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..f100a19
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,45 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++const BRIDGE = "http://127.0.0.1:8096/skill-bridge/v3/skill";
++
++/** A fetcher stub that records the calls it was handed. */
++function stub(respond) {
++  const calls = [];
++  const fetcher = async (url, init) => {
++    calls.push({ url, init });
++    return respond(url, init);
++  };
++  fetcher.calls = calls;
++  return fetcher;
++}
++
++test("fetchResource: raw bytes for a real file, zero bytes for an empty one, error envelope thrown", async () => {
++  // Success: the download path answers with the resource's raw bytes.
++  const raw = stub(() => new Response(Uint8Array.from([0x23, 0x21, 0x2f, 0x62, 0x0a]), { status: 200, headers: { "content-type": "application/octet-stream" } }));
++  const bytes = await fetchResource({ skillId: "skl-x", path: "scripts/run.sh", bridgeBase: BRIDGE, fetcher: raw });
++  assert.ok(Buffer.isBuffer(bytes), "returns a Buffer callers can write to a file");
++  assert.deepEqual([...bytes], [0x23, 0x21, 0x2f, 0x62, 0x0a]);
++  assert.equal(raw.calls[0].url, `${BRIDGE}/files/download`, "uses the byte-returning subpath, not files/read");
++  assert.deepEqual(JSON.parse(raw.calls[0].init.body), { skill_id: "skl-x", path: "scripts/run.sh" });
++
++  // Empty file: the download branch hands back the envelope with content ""
++  // (the empty string is falsy, so it is not treated as bytes). Zero bytes,
++  // not the envelope — an empty file is a legal file.
++  const empty = stub(() => new Response(JSON.stringify({ code: 0, message: "ok", data: { path: "empty.txt", content: "", encoding: "utf-8", size_bytes: 0 } }), { status: 200, headers: { "content-type": "application/json" } }));
++  const zero = await fetchResource({ skillId: "skl-x", path: "empty.txt", bridgeBase: BRIDGE, fetcher: empty });
++  assert.ok(Buffer.isBuffer(zero));
++  assert.equal(zero.length, 0);
++
++  // Base64 content decodes to the original bytes.
++  const b64 = stub(() => new Response(JSON.stringify({ code: 0, data: { content: Buffer.from("hi").toString("base64"), encoding: "base64" } }), { status: 200 }));
++  assert.equal((await fetchResource({ skillId: "skl-x", path: "a.bin", bridgeBase: BRIDGE, fetcher: b64 })).toString("utf8"), "hi");
++
++  // An error envelope throws, and its message is not swallowed.
++  const bad = stub(() => new Response(JSON.stringify({ code: 40401, message: "skill not found" }), { status: 404, headers: { "content-type": "application/json" } }));
++  await assert.rejects(
++    () => fetchResource({ skillId: "skl-x", path: "nope", bridgeBase: BRIDGE, fetcher: bad }),
++    (err) => err instanceof Error && err.message.includes("skill not found"),
++  );
++});

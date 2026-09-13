@@ -1,0 +1,156 @@
+diff --git a/evaluation/gate/fetch-resource.bt-dl7q3mx8vke.test.mjs b/evaluation/gate/fetch-resource.bt-dl7q3mx8vke.test.mjs
+new file mode 100644
+index 0000000..bbe5ba4
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.bt-dl7q3mx8vke.test.mjs
+@@ -0,0 +1,92 @@
++/**
++ * Regression for `fetchResource` (marker bt-dl7q3mx8vke).
++ *
++ * The two things this helper exists to get right, and the one design choice it
++ * makes, are all cheap to get wrong:
++ *
++ *   - it must route through `files/download`; `files/read` only ever answers
++ *     with a JSON envelope, so a caller asking for bytes would get a file whose
++ *     contents are that envelope;
++ *   - an empty resource is a zero-byte file, not an error (the bridge's own
++ *     download path conflates the two);
++ *   - an error envelope (`code !== 0`) is thrown, keeping its `message`.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { fetchResource } from "./fetch-resource.mjs";
++
++const BASE = "http://127.0.0.1:8096/skill-bridge/v3/skill";
++const json = (data, code = 0, message = "ok") =>
++  new Response(JSON.stringify({ code, message, data }), {
++    status: 200,
++    headers: { "content-type": "application/json" },
++  });
++
++/** A fetcher stub that records every URL and answers with the given responses. */
++function stub(respond) {
++  const seen = [];
++  const fetcher = async (url, init) => {
++    seen.push(String(url));
++    return respond(String(url), init);
++  };
++  fetcher.seen = seen;
++  return fetcher;
++}
++
++test("bt-dl7q3mx8vke: a non-empty resource comes back as its raw bytes", async () => {
++  const body = "#!/bin/sh\necho hi\n";
++  const fetcher = stub(() => json({ content: body, encoding: "utf-8", mime_type: "text/x-sh" }));
++  const bytes = await fetchResource({ skillId: "skl-a", path: "scripts/run.sh", bridgeBase: BASE, fetcher });
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.toString("utf-8"), body);
++});
++
++test("bt-dl7q3mx8vke: a base64 resource comes back as its decoded bytes", async () => {
++  const raw = Buffer.from([0x00, 0xff, 0x10, 0x80]);
++  const fetcher = stub(() => json({ content: raw.toString("base64"), encoding: "base64" }));
++  const bytes = await fetchResource({ skillId: "skl-a", path: "assets/blob.bin", bridgeBase: BASE, fetcher });
++  assert.deepEqual(bytes, raw);
++});
++
++test("bt-dl7q3mx8vke: an empty resource is a zero-byte Buffer, not an error", async () => {
++  for (const encoding of ["utf-8", "base64"]) {
++    const fetcher = stub(() => json({ content: "", size_bytes: 0, encoding }));
++    const bytes = await fetchResource({ skillId: "skl-a", path: "empty.txt", bridgeBase: BASE, fetcher });
++    assert.ok(Buffer.isBuffer(bytes));
++    assert.equal(bytes.length, 0, `${encoding}: empty content must decode to zero bytes`);
++  }
++});
++
++test("bt-dl7q3mx8vke: the request goes to files/download, never files/read", async () => {
++  const fetcher = stub(() => json({ content: "x", encoding: "utf-8" }));
++  await fetchResource({ skillId: "skl-a", path: "scripts/run.sh", bridgeBase: BASE, fetcher });
++  assert.ok(fetcher.seen.some((u) => /files\/download/.test(u)), `expected files/download, got ${fetcher.seen.join(", ")}`);
++  assert.ok(!fetcher.seen.some((u) => /files\/read/.test(u)), `must not hit files/read, got ${fetcher.seen.join(", ")}`);
++});
++
++test("bt-dl7q3mx8vke: an error envelope throws, keeping the upstream message", async () => {
++  const fetcher = stub(() => json(null, 40401, "skill not found"));
++  await assert.rejects(
++    () => fetchResource({ skillId: "skl-x", path: "p", bridgeBase: BASE, fetcher }),
++    (err) => err instanceof Error && /skill not found/.test(err.message),
++  );
++});
++
++test("bt-dl7q3mx8vke: falls back to globalThis.fetch when no fetcher is injected", async () => {
++  const original = globalThis.fetch;
++  const seen = [];
++  globalThis.fetch = async (url) => {
++    seen.push(String(url));
++    return json({ content: "z", encoding: "utf-8" });
++  };
++  try {
++    const bytes = await fetchResource({ skillId: "skl-a", path: "a.txt", bridgeBase: BASE });
++    assert.equal(bytes.toString("utf-8"), "z");
++    assert.equal(seen[0], `${BASE}/files/download`);
++  } finally {
++    if (original === undefined) delete globalThis.fetch;
++    else globalThis.fetch = original;
++  }
++});
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..89ab45a
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,52 @@
++/**
++ * Fetch one resource file of a team skill from the skill bridge, as raw bytes.
++ *
++ * Route this through `files/download`, not `files/read`. `files/read` answers
++ * with a JSON envelope no matter how it is called (`-o` included), so a caller
++ * that wants the file's bytes has to peel `data.content` off by hand. The
++ * bridge's `files/download` is the byte-oriented path — it is the one the
++ * `curl -o <local_path>` recipe in the tool catalogue is written for — and it
++ * returns the resource's raw bytes.
++ *
++ * A failure still arrives as the JSON envelope (`code !== 0`), so that case is
++ * read and thrown with the upstream `message` kept intact rather than being
++ * written out as if it were the file's contents.
++ *
++ * An empty resource is a legal resource. `data.content === ""` must decode to a
++ * zero-byte Buffer, never be mistaken for "nothing came back" and thrown on —
++ * the bridge's own download path folds `!content` into its error branch, and a
++ * zero-byte file must not inherit that bug.
++ *
++ * `fetcher` is injectable so a test can drive the call with a stub; in
++ * production it is the ambient `globalThis.fetch`.
++ *
++ * @param {string}   skillId     the skill the resource belongs to
++ * @param {string}   path        the resource path within the skill
++ * @param {string}   bridgeBase  bridge skill root, e.g.
++ *                               http://127.0.0.1:8096/skill-bridge/v3/skill
++ * @param {Function} [fetcher]   fetch-compatible HTTP implementation
++ * @returns {Promise<Buffer>}    the resource's raw bytes
++ *
++ * Usage:
++ *   const bytes = await fetchResource({ skillId, path, bridgeBase });
++ *   await writeFile(dest, bytes);
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher = globalThis.fetch } = {}) {
++  const base = String(bridgeBase ?? "").replace(/\/+$/, "");
++  const response = await fetcher(`${base}/files/download`, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const envelope = await response.json();
++  if (envelope === null || typeof envelope !== "object" || envelope.code !== 0) {
++    throw new Error(`fetch-resource: ${envelope?.message ?? "upstream returned no usable envelope"}`);
++  }
++
++  const { content, encoding } = envelope.data ?? {};
++  if (typeof content !== "string") {
++    throw new Error("fetch-resource: upstream returned no usable envelope");
++  }
++  return Buffer.from(content, encoding === "base64" ? "base64" : "utf-8");
++}

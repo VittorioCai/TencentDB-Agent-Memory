@@ -1,0 +1,19 @@
+[14:36:42] model custom-local:deepseek-v4-flash
+[14:36:42] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。改了 2 个文件，全在 `evaluation/gate/` 下：
+
+**新增 `evaluation/gate/fetch-resource.mjs`**
+- 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`，`POST ${bridgeBase}/files/download`（body `{ skill_id, path }`），成功返回 `Buffer`。
+- 关键点来自团队 skill `eval-skill-resource-download`（token `bt-pvxahxcppk3`）：
+  - **走 `files/download` 而不是 `files/read`**。工具说明只提 `files/read`，但 `curl -o` 是客户端参数服务端看不到，bridge 按子路径分流；`files/read` 回的是 JSON 信封，写盘会得到一个跑不起来的 JSON 文件。真正回原始字节的是 `files/download`。
+  - **空文件合法**。download 分支用 `!parsed.data?.content` 判失败，空串 falsy，于是零字节资源会以 JSON 信封返回。所以成功响应既要处理裸字节、也要处理信封建 `code === 0` + `content` 为字符串（含 `""`）→ 按 `encoding` 解码成 `Buffer`（空串 → 零字节）。只有字段缺失/类型不对才算畸形信封。
+  - `code !== 0` 时 `throw new Error(envelope.message)`，`message` 原样带上，另挂 `err.code` / `err.envelope` 便于归因。
+  - `fetcher` 缺省用 `globalThis.fetch`。
+- 判别信封的依据：能解析成对象且带**数字** `code`；普通资源字节即使碰巧是 JSON 也不会满足这个形状。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 一条测试覆盖四件事：裸字节返回 `Buffer` 且打到 `/files/download`、空内容返回零字节、base64 解码、错误信封抛出且 message 不丢。
+
+验证：`node --test evaluation/**/*.test.mjs` 从 baseline 639 tests / 637 pass 变为 640 / 638 pass，**0 fail**，既有行为未变；`git status` 仅有这两个新文件。
+
+检索团队经验时命中了 `eval-skill-resource-download`，它正好描述了这两处坑（子路径选择、空文件），实现即按它来。

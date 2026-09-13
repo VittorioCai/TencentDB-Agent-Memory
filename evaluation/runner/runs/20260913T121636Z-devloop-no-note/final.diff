@@ -1,0 +1,144 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..da7bc20
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,49 @@
++/**
++ * Fetch one skill resource's bytes from the bridge.
++ *
++ * The bridge returns a JSON envelope, not raw bytes:
++ *
++ *   { code: 0, message: "ok", request_id, data: { path, content, encoding, size_bytes, mime_type, version } }
++ *
++ * `content` is the resource re-encoded for transport — `base64` when asked,
++ * `utf-8` by default — and `encoding` says which. This helper turns that back
++ * into the original bytes so a caller can write the file without knowing the
++ * wire format. An empty resource is a legitimate file: its `content` is the
++ * empty string and the result is a zero-length Buffer, never a null.
++ *
++ * A `code !== 0` reply is the upstream's own error (missing path, not admitted,
++ * not found); it is surfaced as an Error carrying the envelope's `message`, so
++ * the reason survives instead of being flattened to "request failed".
++ *
++ * The HTTP implementation is injected so this is testable without a live
++ * bridge; when omitted it uses `globalThis.fetch`.
++ */
++
++const READ_PATH = "/skill-bridge/v3/skill/files/read";
++
++/**
++ * @param skillId   the skill whose resource to read
++ * @param path      resource path within the skill's manifest
++ * @param bridgeBase origin of the bridge, e.g. http://127.0.0.1:8096
++ * @param fetcher   fetch-compatible function; defaults to globalThis.fetch
++ * @returns {Promise<Buffer>} the resource's raw bytes
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher }) {
++  const doFetch = fetcher ?? globalThis.fetch;
++  const url = `${String(bridgeBase).replace(/\/+$/, "")}${READ_PATH}`;
++
++  const res = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path, encoding: "base64" }),
++  });
++
++  const envelope = await res.json();
++  if (!envelope || envelope.code !== 0) {
++    throw new Error(envelope?.message ?? `resource fetch failed (code ${envelope?.code})`);
++  }
++
++  const { content, encoding } = envelope.data ?? {};
++  if (content == null) return Buffer.alloc(0);
++  return Buffer.from(content, encoding === "base64" ? "base64" : "utf8");
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..930adb3
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,83 @@
++/**
++ * fetch-resource: turn a bridge files/read envelope back into raw bytes.
++ *
++ * Three properties matter and each has a way of going wrong silently:
++ *   - the bytes are the resource's own (so a binary resource must not be run
++ *     through a utf-8 round trip);
++ *   - an empty resource is a file, not a missing one — zero bytes, and the
++ *     caller can still write it;
++ *   - an upstream error envelope is not a success with empty data; its message
++ *     must reach the caller.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import { fetchResource } from "./fetch-resource.mjs";
++
++/** A stub fetcher: records the call, replies with the given envelope. */
++function stub(envelope) {
++  const calls = [];
++  const fetcher = async (url, init) => {
++    calls.push({ url, init });
++    return { json: async () => envelope };
++  };
++  return { calls, fetcher };
++}
++
++test("returns the resource's raw bytes, decoding base64", () => {
++  const bytes = Buffer.from([0x00, 0xff, 0x10, 0x80, 0x7f]);
++  const { calls, fetcher } = stub({
++    code: 0,
++    message: "ok",
++    data: { path: "scripts/run.sh", content: bytes.toString("base64"), encoding: "base64", size_bytes: bytes.length },
++  });
++
++  return fetchResource({ skillId: "skl-abc", path: "scripts/run.sh", bridgeBase: "http://127.0.0.1:8096", fetcher })
++    .then((buf) => {
++      assert.ok(Buffer.isBuffer(buf), "must be a Buffer");
++      assert.deepEqual(buf, bytes, "binary bytes survive the round trip");
++      assert.equal(calls.length, 1);
++      assert.match(calls[0].url, /\/skill-bridge\/v3\/skill\/files\/read$/);
++      assert.deepEqual(JSON.parse(calls[0].init.body), { skill_id: "skl-abc", path: "scripts/run.sh", encoding: "base64" });
++    });
++});
++
++test("an empty resource is a zero-byte Buffer, not null and not an error", async () => {
++  const { fetcher } = stub({
++    code: 0,
++    message: "ok",
++    data: { path: "empty.txt", content: "", encoding: "utf-8", size_bytes: 0 },
++  });
++
++  const buf = await fetchResource({ skillId: "skl-abc", path: "empty.txt", bridgeBase: "http://127.0.0.1:8096", fetcher });
++  assert.ok(Buffer.isBuffer(buf));
++  assert.equal(buf.length, 0);
++});
++
++test("a utf-8 envelope is decoded as written", async () => {
++  const { fetcher } = stub({
++    code: 0,
++    message: "ok",
++    data: { path: "note.md", content: "你好\n", encoding: "utf-8", size_bytes: 7 },
++  });
++
++  const buf = await fetchResource({ skillId: "skl-abc", path: "note.md", bridgeBase: "http://127.0.0.1:8096", fetcher });
++  assert.deepEqual(buf, Buffer.from("你好\n", "utf8"));
++});
++
++test("an error envelope becomes an Error carrying the upstream message", async () => {
++  const { fetcher } = stub({ code: 40401, message: "SKILL_NOT_FOUND: path x not in manifest of v2" });
++
++  await assert.rejects(
++    fetchResource({ skillId: "skl-abc", path: "x", bridgeBase: "http://127.0.0.1:8096", fetcher }),
++    /SKILL_NOT_FOUND: path x not in manifest of v2/,
++  );
++});
++
++test("bridgeBase trailing slash does not double up the path", async () => {
++  const { calls, fetcher } = stub({ code: 0, message: "ok", data: { path: "a", content: "aGk=", encoding: "base64" } });
++
++  await fetchResource({ skillId: "skl-abc", path: "a", bridgeBase: "http://127.0.0.1:8096/", fetcher });
++  assert.equal(calls[0].url, "http://127.0.0.1:8096/skill-bridge/v3/skill/files/read");
++});

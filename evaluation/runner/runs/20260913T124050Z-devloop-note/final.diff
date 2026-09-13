@@ -1,0 +1,206 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..7b9941f
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,110 @@
++/**
++ * Fetch one team skill resource as raw bytes.
++ *
++ * The gate sometimes needs a skill's resource file on disk (a script, a
++ * template) and then executes or hashes it. What it needs back is the bytes,
++ * not a description of them, so this returns a `Buffer` the caller can hand
++ * straight to `writeFileSync`.
++ *
++ * Two things about the bridge this is written against, both from experience
++ * recorded in team memory (skill `eval-skill-resource-download`, tracking value
++ * bt-pvxahxcppk3):
++ *
++ *   1. It talks to `files/download`, not `files/read`. Only `files/download`
++ *      returns the resource's raw bytes; `files/read` always returns a JSON
++ *      envelope and adding `curl -o` to the client does not change what the
++ *      server sends.
++ *
++ *   2. An empty resource is a real resource. The bridge's own success check for
++ *      download is `!parsed.data?.content`, which is true for `""`, so a
++ *      legitimately empty file comes back as the whole `{code: 0, data:
++ *      {content: ""}}` envelope instead of zero bytes. Core accepts a zero-byte
++ *      resource on purpose (no `.min(1)` on the schema), so this function must
++ *      treat `content: ""` as success and return a zero-byte Buffer — not the
++ *      envelope, and not an error.
++ *
++ * Response handling is deliberately shape-based rather than status-based:
++ *
++ *   - a JSON object carrying a numeric `code` is an envelope. `code !== 0`
++ *     becomes a thrown Error whose message is the envelope's own message
++ *     (never swallowed); `code === 0` means decode `data.content` using
++ *     `data.encoding` (`base64`, else UTF-8).
++ *   - anything else is the raw resource body and is returned as-is.
++ *
++ * The request is `POST {bridgeBase}/files/download` with a JSON body of
++ * `{ skill_id, path }`. `bridgeBase` is the same base the injected tool
++ * description uses (`…/skill-bridge/v3/skill`), so no host or port is baked in
++ * here.
++ *
++ * Usage:
++ *   const bytes = await fetchResource({ skillId, path, bridgeBase });
++ *   writeFileSync(dest, bytes);
++ */
++
++const DOWNLOAD_PATH = "files/download";
++
++/** Read a fetch Response (or a test double) into a Buffer without assuming one method. */
++async function bodyBytes(res) {
++  if (res && typeof res.arrayBuffer === "function") return Buffer.from(await res.arrayBuffer());
++  if (res && typeof res.text === "function") return Buffer.from(await res.text(), "utf8");
++  if (res && typeof res.json === "function") return Buffer.from(JSON.stringify(await res.json()), "utf8");
++  throw new Error("fetchResource: response carries no readable body");
++}
++
++/** The envelope inside a response body, or null when the body is just bytes. */
++function envelopeOf(bytes) {
++  if (bytes.length === 0) return null;
++  const text = bytes.toString("utf8").trim();
++  if (!text.startsWith("{")) return null;
++  let parsed;
++  try {
++    parsed = JSON.parse(text);
++  } catch {
++    return null;
++  }
++  return parsed && typeof parsed === "object" && typeof parsed.code === "number" ? parsed : null;
++}
++
++/**
++ * @param {object} args
++ * @param {string} args.skillId    the skill the resource belongs to
++ * @param {string} args.path       the resource path inside that skill
++ * @param {string} args.bridgeBase base URL, e.g. `http://host:port/skill-bridge/v3/skill`
++ * @param {Function} [args.fetcher] HTTP implementation; defaults to `globalThis.fetch`
++ * @returns {Promise<Buffer>} the resource's raw bytes (empty Buffer when the file is empty)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher } = {}) {
++  const doFetch = fetcher ?? globalThis.fetch;
++  if (typeof doFetch !== "function") {
++    throw new Error("fetchResource: no fetcher given and globalThis.fetch is unavailable");
++  }
++
++  const url = `${String(bridgeBase ?? "").replace(/\/+$/, "")}/${DOWNLOAD_PATH}`;
++  const res = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const bytes = await bodyBytes(res);
++  const envelope = envelopeOf(bytes);
++
++  if (envelope) {
++    if (envelope.code !== 0) {
++      throw new Error(
++        typeof envelope.message === "string" && envelope.message
++          ? envelope.message
++          : `fetchResource: skill bridge returned code ${envelope.code}`,
++      );
++    }
++    const data = envelope.data;
++    if (!data || typeof data.content !== "string") {
++      // Field missing or the wrong type is the only real error here. `""` is a
++      // valid, empty resource and falls through to a zero-byte Buffer below.
++      throw new Error("fetchResource: envelope has no string data.content");
++    }
++    return Buffer.from(data.content, data.encoding === "base64" ? "base64" : "utf8");
++  }
++
++  return bytes;
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..61ed6db
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,84 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++// Tracking value for the team memory this module follows
++// (`eval-skill-resource-download`).
++const BRIDGE = "http://bridge.test/skill-bridge/v3/skill";
++
++const json = (body, status = 200) =>
++  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
++
++test("a base64 envelope decodes to the resource's raw bytes", async () => {
++  const text = "#!/bin/sh\necho hi\n";
++  const seen = [];
++  const fetcher = async (url, opts) => {
++    seen.push({ url, opts });
++    return json({ code: 0, data: { content: Buffer.from(text, "utf8").toString("base64"), encoding: "base64" } });
++  };
++
++  const bytes = await fetchResource({ skillId: "skl-x", path: "scripts/run.sh", bridgeBase: BRIDGE, fetcher });
++
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.toString("utf8"), text);
++  // one POST to files/download carrying skill_id + path
++  assert.equal(seen.length, 1);
++  assert.equal(seen[0].url, `${BRIDGE}/files/download`);
++  assert.equal(seen[0].opts.method, "POST");
++  assert.deepEqual(JSON.parse(seen[0].opts.body), { skill_id: "skl-x", path: "scripts/run.sh" });
++});
++
++test("a UTF-8 envelope (no encoding field) decodes as text", async () => {
++  const fetcher = async () => json({ code: 0, data: { content: "hello" } });
++  const bytes = await fetchResource({ skillId: "s", path: "p", bridgeBase: BRIDGE, fetcher });
++  assert.equal(bytes.toString("utf8"), "hello");
++});
++
++test("an empty resource is success and comes back as a zero-byte Buffer", async () => {
++  // The bridge returns the whole envelope for empty content (its own guard is a
++  // truthiness check), so this is the shape to handle — not an error.
++  const fetcher = async () => json({ code: 0, data: { content: "", encoding: "utf-8" } });
++  const bytes = await fetchResource({ skillId: "s", path: "empty.txt", bridgeBase: BRIDGE, fetcher });
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.length, 0);
++});
++
++test("an error envelope throws with the envelope's message, not swallowed", async () => {
++  const fetcher = async () => json({ code: 40401, message: "SKILL_NOT_FOUND: no such skill" });
++  await assert.rejects(
++    () => fetchResource({ skillId: "skl-nope", path: "p", bridgeBase: BRIDGE, fetcher }),
++    (err) => err instanceof Error && /SKILL_NOT_FOUND: no such skill/.test(err.message),
++  );
++});
++
++test("a raw (non-envelope) body is returned as-is", async () => {
++  const raw = Buffer.from([0x00, 0xff, 0x10, 0x42]);
++  const fetcher = async () => new Response(raw, { status: 200 });
++  const bytes = await fetchResource({ skillId: "s", path: "blob.bin", bridgeBase: BRIDGE, fetcher });
++  assert.deepEqual(bytes, raw);
++});
++
++test("an envelope with no string content is an error", async () => {
++  const fetcher = async () => json({ code: 0, data: {} });
++  await assert.rejects(
++    () => fetchResource({ skillId: "s", path: "p", bridgeBase: BRIDGE, fetcher }),
++    /data\.content/,
++  );
++});
++
++test("fetcher defaults to globalThis.fetch", async () => {
++  const original = globalThis.fetch;
++  const text = "from default fetcher";
++  let called = null;
++  globalThis.fetch = async (url, opts) => {
++    called = url;
++    return json({ code: 0, data: { content: text } });
++  };
++  try {
++    const bytes = await fetchResource({ skillId: "s", path: "p", bridgeBase: BRIDGE });
++    assert.equal(bytes.toString("utf8"), text);
++    assert.equal(called, `${BRIDGE}/files/download`);
++  } finally {
++    globalThis.fetch = original;
++  }
++});

@@ -1,0 +1,175 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..5d5094e
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,80 @@
++/**
++ * Fetch a team skill's resource file as raw bytes.
++ *
++ * The proxy's injected tool surface points at `files/read` and tells the model
++ * to save with `curl -o`. Both halves are wrong for this job: `-o` is a curl
++ * client flag the bridge never sees (the bridge routes by subpath), and
++ * `files/read` always answers with a JSON envelope, so what lands on disk is
++ * JSON, not the file. The subpath that returns the resource's bytes is
++ * `files/download` — it reads Core's `files/read` and, for a non-empty
++ * resource, replies with the decoded bytes.
++ *
++ * Two shapes come back from `files/download`, and both must be handled:
++ *   - the resource's raw bytes (a normal, non-empty file);
++ *   - a JSON envelope, when Core answered with an error or with an empty
++ *     resource. The proxy tests the content with `!parsed.data?.content`, and
++ *     the empty string is falsy, so a real empty file falls into this branch
++ *     and arrives as `{code: 0, data: {content: ""}}` rather than zero bytes.
++ *
++ * An empty resource is a legal file, so an empty `content` is decoded like any
++ * other and yields a zero-byte Buffer. Only a missing / wrongly typed content
++ * (or a non-zero `code`) is an error, and in that case the envelope's own
++ * `message` is carried out in the thrown Error rather than swallowed.
++ *
++ * Team note `eval-skill-resource-download` (bt-pvxahxcppk3) records both the
++ * subpath and the empty-file trap.
++ */
++
++/**
++ * @param {object}   args
++ * @param {string}   args.skillId   skill id, e.g. `skl-...`
++ * @param {string}   args.path      resource path inside the skill
++ * @param {string}   args.bridgeBase bridge base up to `/skill` (trailing `/` ok)
++ * @param {Function} [args.fetcher] HTTP implementation; defaults to globalThis.fetch
++ * @returns {Promise<Buffer>} the resource's bytes (zero-length for an empty file)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher = globalThis.fetch }) {
++  const base = String(bridgeBase ?? "").replace(/\/+$/, "");
++  const url = `${base}/files/download`;
++
++  const response = await fetcher(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const bytes = Buffer.from(await response.arrayBuffer());
++
++  // `files/download` answers with raw bytes for a non-empty resource and with
++  // a JSON envelope otherwise. Only an object carrying a numeric `code` is an
++  // envelope; anything else is the file itself (a JSON resource file must not
++  // be mistaken for an envelope).
++  let envelope = null;
++  try {
++    const parsed = JSON.parse(bytes.toString("utf8"));
++    if (parsed && typeof parsed === "object" && typeof parsed.code === "number") envelope = parsed;
++  } catch {
++    // Not JSON: the raw bytes of the resource.
++  }
++
++  if (!envelope) {
++    if (response.ok === false) {
++      throw new Error(`fetchResource: HTTP ${response.status ?? "?"} with a non-envelope body`);
++    }
++    return bytes;
++  }
++
++  if (envelope.code !== 0) {
++    throw new Error(envelope.message ?? `fetchResource: bridge error code ${envelope.code}`);
++  }
++
++  const { content, encoding } = envelope.data ?? {};
++  if (typeof content !== "string") {
++    // A malformed success envelope (a field that is missing or the wrong type)
++    // is the one case that is neither a valid file nor a reported error.
++    throw new Error("fetchResource: bridge returned code 0 with no string content");
++  }
++  // An empty string is a valid resource, not a failure: it decodes to a
++  // zero-byte Buffer.
++  return encoding === "base64" ? Buffer.from(content, "base64") : Buffer.from(content, "utf8");
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..16a397c
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,83 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++// Team note: eval-skill-resource-download (bt-pvxahxcppk3).
++const BASE = "http://127.0.0.1:8096/skill-bridge/v3/skill";
++
++/** A fetcher stub that records the request and answers with one Response. */
++function stub(response) {
++  const calls = [];
++  return {
++    calls,
++    fetcher: async (url, init) => {
++      calls.push({ url, init });
++      return response;
++    },
++  };
++}
++
++const envelope = (body) => new Response(JSON.stringify(body), {
++  status: 200,
++  headers: { "content-type": "application/json" },
++});
++
++test("a non-empty resource comes back as its raw bytes from files/download (bt-pvxahxcppk3)", async () => {
++  const raw = Buffer.from("#!/bin/sh\necho hi\n", "utf8");
++  const { fetcher, calls } = stub(new Response(raw, { status: 200 }));
++
++  const got = await fetchResource({ skillId: "skl-x", path: "scripts/run.sh", bridgeBase: BASE, fetcher });
++
++  assert.ok(Buffer.isBuffer(got));
++  assert.deepEqual(got, raw);
++  // The note's first point: the bytes come from files/download, not files/read.
++  assert.equal(calls[0].url, `${BASE}/files/download`);
++  assert.equal(calls[0].init.method, "POST");
++  assert.deepEqual(JSON.parse(calls[0].init.body), { skill_id: "skl-x", path: "scripts/run.sh" });
++});
++
++test("an empty resource is legal and decodes to zero bytes (bt-pvxahxcppk3)", async () => {
++  // files/download hands an empty file back as the code-0 envelope, not as a
++  // zero-byte body — a naive truthiness check would call this a failure.
++  const { fetcher } = stub(envelope({ code: 0, message: "ok", data: { content: "", encoding: "utf-8" } }));
++
++  const got = await fetchResource({ skillId: "skl-x", path: "empty.txt", bridgeBase: BASE, fetcher });
++
++  assert.ok(Buffer.isBuffer(got));
++  assert.equal(got.length, 0);
++});
++
++test("raw empty bytes are also a legal empty resource", async () => {
++  const { fetcher } = stub(new Response(Buffer.alloc(0), { status: 200 }));
++
++  const got = await fetchResource({ skillId: "skl-x", path: "empty.txt", bridgeBase: BASE, fetcher });
++
++  assert.equal(got.length, 0);
++});
++
++test("a base64 envelope decodes to the original bytes", async () => {
++  const raw = Buffer.from([0x00, 0xff, 0x10, 0x80]);
++  const { fetcher } = stub(envelope({ code: 0, message: "ok", data: { content: raw.toString("base64"), encoding: "base64" } }));
++
++  const got = await fetchResource({ skillId: "skl-x", path: "blob.bin", bridgeBase: BASE, fetcher });
++
++  assert.deepEqual(got, raw);
++});
++
++test("an error envelope is not swallowed: its message is thrown (bt-pvxahxcppk3)", async () => {
++  const { fetcher } = stub(envelope({ code: 50301, message: "skill-bridge files/download: upstream unavailable: boom" }));
++
++  await assert.rejects(
++    () => fetchResource({ skillId: "skl-x", path: "scripts/run.sh", bridgeBase: BASE, fetcher }),
++    (err) => err instanceof Error && err.message === "skill-bridge files/download: upstream unavailable: boom",
++  );
++});
++
++test("a code-0 envelope with no string content is an error, not an empty file", async () => {
++  const { fetcher } = stub(envelope({ code: 0, message: "ok", data: {} }));
++
++  await assert.rejects(
++    () => fetchResource({ skillId: "skl-x", path: "scripts/run.sh", bridgeBase: BASE, fetcher }),
++    /no string content/,
++  );
++});

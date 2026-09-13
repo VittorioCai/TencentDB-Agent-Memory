@@ -1,0 +1,19 @@
+{
+  "consumer": "agt-k8iz4j94cr",
+  "started_at": "2026-09-13T12:19:37Z",
+  "own_session": "2d0a8348-ca54-401e-b030-17a508e14fa0",
+  "reads": 0,
+  "endpoints": [],
+  "items": 0,
+  "residue": 0,
+  "from_this_batch": null,
+  "from_before_batch": null,
+  "undated": 0,
+  "borrowed_from_other_agents": 0,
+  "problems": [],
+  "ok": true,
+  "why": null,
+  "residue_items": [],
+  "borrowed_items": [],
+  "undated_items": []
+}

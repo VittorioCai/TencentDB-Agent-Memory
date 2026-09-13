@@ -17,22 +17,22 @@
 
 | 运行 | 组 | 计入 | 判决 | 五项行为断言 | 笔记提及 | 使用判定 | 读到副本里那份说明 | 不计入的原因 |
 |---|---|---|---|---|---|---|---|---|
-| 20260913T105239Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T105451Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
-| 20260913T105648Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T105810Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
-| 20260913T110459Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
-| 20260913T110646Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T110815Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T105239Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T105451Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T105648Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T105810Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T110459Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T110646Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T110815Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
 | 20260913T111005Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T112310Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
-| 20260913T112523Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T112733Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T112310Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T112523Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T112733Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
 | 20260913T112941Z-devloop-no-note | no-note | 否 | PASS | ✓✓✓✓✓ | 0 | 无 | 是(1 条) | 作废(no-note-2026-09-13a) |
-| 20260913T113300Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(2 条) | 作废(no-note-2026-09-13a) |
-| 20260913T113435Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T113621Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
-| 20260913T113923Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 | 作废(no-note-2026-09-13a) |
+| 20260913T113300Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T113435Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T113621Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
+| 20260913T113923Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 未知 | 未知 | 未知 | 作废(no-note-2026-09-13a) |
 | 20260913T121409Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 是(1 条) |  |
 | 20260913T121636Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |
 | 20260913T121823Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 | 无 | 否 |  |

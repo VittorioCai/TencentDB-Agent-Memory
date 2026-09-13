@@ -1,0 +1,61 @@
+# Receipt — run 20260913T123631Z-devloop-note · session 4802724d · task task-h1k7xruuhb · 2026-09-13T12:38:28Z
+
+applied 1 team asset(s)
+- not declared by the asset：skl-XAzqAgejM7O4 — its value bt-pvxahxcppk3 was used in tool call call_00_K1fIoja8mhuxr7pB1HwU9543 (message 42), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+
+effect status
+- 4 background only (fetched or provided), effect unverified
+
+○ skl-XAzqAgejM7O4  v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    impact     its value bt-pvxahxcppk3 was used in tool call call_00_K1fIoja8mhuxr7pB1HwU9543 (message 42), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    target     tool_call
+    evidence
+      tool_arg        request(3d03f87b-9833-49a5-acf5-a55b987c209c):msg[42]:call_00_K1fIoja8mhuxr7pB1HwU9543:arguments  — token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.mjs:1-112  — token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    gate pending · no cross-person validation yet
+    risk       needs_review: token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    risk       gate_pending: needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 2 of 5 (score 0.97) for the query "fetch resource skill bridge 资源文件 下载 原始字节"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 5 candidate(s), this one at rank 2; present in 21 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 5 (score 0.97) for the query "fetch resource skill bridge 资源文件 下载 原始字节"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 5 candidate(s), this one at rank 3; present in 21 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (unknown)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 4 of 5 (score 0.62) for the query "fetch resource skill bridge 资源文件 下载 原始字节"
+    evidence
+      session_message capture:tool_result:skl-oBaDO5CceKnr  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-oBaDO5CceKnr  — skill:search returned 5 candidate(s), this one at rank 4; present in 21 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T123631Z-devloop-note.2X7E/20260913T123631Z-devloop-note/receipt.json

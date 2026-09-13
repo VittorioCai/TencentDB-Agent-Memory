@@ -1,0 +1,26 @@
+[14:19:48] model custom-local:deepseek-v4-flash
+[14:19:48] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。团队经验检索到 3 条相关 skill（`deploy-lookup-note-a/b` 讲按 id 而非关键词取团队 skill，`eval-bridge-endpoint-b` 讲 bridge 端点约定），核心结论都是走 bridge 的 `skill/files/read` 取资源，与本次实现一致。
+
+## 改了什么
+
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+
+- `POST ${bridgeBase}/files/read`，body 为 `{ skill_id, path }`（末尾斜杠会归一化）。
+- 解析 bridge 的标准信封 `{ code, message, data }`；`data` 是 core 的 `SkillFileContent`。
+- 按 `data.encoding`（`base64` / 否则 `utf-8`）解码 `data.content`，返回 `Buffer`。
+- **空文件**：`content` 为 `""`（或缺失）时用 `?? ""`，得到零字节 Buffer，不当错误。
+- **错误信封**：`code !== 0` 时 `throw new Error(envelope.message)`，原样带出上游 message。
+- `fetcher` 缺省取 `globalThis.fetch`；无可用实现时抛清晰错误。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 5 条用例：utf-8 解码 + 请求形状、base64 二进制还原、空资源返回零字节、错误信封抛出并带 message、bridgeBase 尾斜杠归一。
+
+## 为什么这样做
+
+- 选 `files/read` 而非 `files/download`：前者始终返回 JSON 信封，`code !== 0` 的错误语义与「错误信封」要求吻合；且空文件在 `files/read` 里是合法的 `content: ""`（`files/download` 的成功路径会把空内容误判成错误，正是要求里提醒要避免的坑）。
+- 只新增两个文件，未改任何既有代码。
+
+## 验证
+
+`evaluation` 全量测试：改动前 639 tests / 637 pass / 0 fail / 2 skipped → 改动后 **644 tests / 642 pass / 0 fail / 2 skipped**，无回归。

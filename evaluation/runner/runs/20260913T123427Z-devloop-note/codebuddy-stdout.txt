@@ -1,0 +1,24 @@
+[14:34:38] model custom-local:deepseek-v4-flash
+[14:34:38] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。
+
+## 检索到的团队经验
+命中最相关的一条 `eval-skill-resource-download`(skl-XAzqAgejM7O4,判别值 `bt-pvxahxcppk3`),两条关键结论直接决定了实现:
+1. 拿**原始字节**的子路径是 `files/download`,不是工具说明里提的 `files/read`(后者永远回 JSON 信封,`-o` 也改不了这一点);
+2. 合法空文件会被 proxy 的 `!parsed.data?.content`(空串 falsy)误判,以 `{code:0,data:{content:""}}` 信封形式返回——空内容要当合法值走解码,只有字段缺失/类型错才算异常。
+
+## 改动
+- 新增 `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({skillId, path, bridgeBase, fetcher})`。POST 到 `${bridgeBase}/files/download`(body `{skill_id, path}`);把响应字节先按 JSON 试解析:是信封(带数值 `code`)就走信封逻辑,否则原样返回字节。
+  - code 0 且有字符串 `content` → 按 `encoding`(`base64`/`utf-8`)解码;`content:""` 得到**零字节 Buffer**(fetch-resource.mjs:71)。
+  - `code !== 0` → 抛 `Error(envelope.message)`,不吞消息(fetch-resource.mjs:65)。
+  - 字段缺失/类型不对 → 抛错,不当空文件。
+  - `fetcher` 缺省 `globalThis.fetch`。
+- 新增 `evaluation/gate/fetch-resource.test.mjs` — 6 条:原始字节透传(并断言 URL 确为 `files/download`、body 字段)、空信封→零字节、空原始体→零字节、base64 解码、错误信封抛出其 message、缺 content 抛错。按团队惯例把判别值 `bt-pvxahxcppk3` 写进了测试标题(文件沿用规范名 `fetch-resource.test.mjs`,保证被 `node --test` 收进)。
+
+## 为什么这样判
+直接用 `files/download` 是笔记的核心非显性结论(工具说明里没有);同时保留"信封也解析"的回退,是为了兼容笔记指出的空文件陷阱与实际错误透传,两种情况都能正确处理。`.message` 原样抛出而非包装,满足"不要吞掉"。
+
+## 验证
+- `node --test evaluation/gate/fetch-resource.test.mjs` → 6/6 pass。
+- 全量 `node --test $(find evaluation -name '*.test.mjs')` → **tests 645, pass 643, fail 0, skipped 2**(skipped 为既有),无原有行为变化。

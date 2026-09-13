@@ -1,0 +1,207 @@
+{
+  "frozen_at": "2026-09-13T12:14:20Z",
+  "start_commit": "3406b852ff20bdb721444552b253ba7b785a9f0b",
+  "start_tree": "7ec75a6dee054757ea30ae07e07c79cb906ecf4e",
+  "source_commit": "9e3752feb767c97b40bb71749e97461b748a5399",
+  "test_files": [
+    {
+      "file": "deploy/global-images/start-memory-core.test.mjs",
+      "blob": "c437a8e93eddd316f1ab69877732242966c79db9"
+    },
+    {
+      "file": "evaluation/attribution/build-burned-registry.test.mjs",
+      "blob": "bcb9a86868446d494ec5481b42b1fc0394af84f7"
+    },
+    {
+      "file": "evaluation/attribution/calibrate-runs.test.mjs",
+      "blob": "dcc88cfd784cbbec57bf4dc88fb822c116e53a64"
+    },
+    {
+      "file": "evaluation/attribution/calibration-ground-truth.test.mjs",
+      "blob": "40dcdc93ebbec75dbacb90fd79ec565b49bed144"
+    },
+    {
+      "file": "evaluation/attribution/calibration-reachability.test.mjs",
+      "blob": "a66f555fc9661e0db3632e437c013af5062fd019"
+    },
+    {
+      "file": "evaluation/attribution/calibration-report.test.mjs",
+      "blob": "2128b3eead18f87726d9aa5366e9cc1a7e1fd93f"
+    },
+    {
+      "file": "evaluation/attribution/calibration.test.mjs",
+      "blob": "dd62882c3c62a745ba57d6cefe7454250db48277"
+    },
+    {
+      "file": "evaluation/attribution/chain.test.mjs",
+      "blob": "98117601b1fc7c4acc48a28fcac3d0f04849d83a"
+    },
+    {
+      "file": "evaluation/attribution/collect-artifacts.test.mjs",
+      "blob": "e759d7644a0ccc6fb291d6fd5536f2d126f26527"
+    },
+    {
+      "file": "evaluation/attribution/delivery-audit.test.mjs",
+      "blob": "bf5b79a9fd784e10b2d60929f776ec7062617b09"
+    },
+    {
+      "file": "evaluation/attribution/extract-tokens.test.mjs",
+      "blob": "f75bfc89b4fd546ee3e878147ac0d67e02ee0c41"
+    },
+    {
+      "file": "evaluation/attribution/judge-hard.test.mjs",
+      "blob": "8f1ff728ef76c6c20731c4d9e0014fac9d317a25"
+    },
+    {
+      "file": "evaluation/attribution/judge-outcome.test.mjs",
+      "blob": "40ed3ae375f9c09b6a115b9c3083a7c95d6c4072"
+    },
+    {
+      "file": "evaluation/attribution/rejudge-diff-title.test.mjs",
+      "blob": "ed54c8f6b4d001d391eddf0aeefd4eb943145bfc"
+    },
+    {
+      "file": "evaluation/attribution/resolve-tokens.test.mjs",
+      "blob": "decf9deabeafb615d2dc3256af006b1afc22814e"
+    },
+    {
+      "file": "evaluation/attribution/selection.test.mjs",
+      "blob": "77784db575cb6a662ff62fe7b9116b8ce075574d"
+    },
+    {
+      "file": "evaluation/author/build-evidence-pack.test.mjs",
+      "blob": "1061395ddedb1dccc35bea07dcda7df3e81373e8"
+    },
+    {
+      "file": "evaluation/author/check-citations.test.mjs",
+      "blob": "5362677b081bea59b68989ea6a6a3ec6cca164a3"
+    },
+    {
+      "file": "evaluation/calibration/contributed.test.mjs",
+      "blob": "d0321a1259e296582706fbc82becfb68298026bd"
+    },
+    {
+      "file": "evaluation/calibration/loo.test.mjs",
+      "blob": "9465e4ec76cd7a01b6eff65fde7aef758da4e21b"
+    },
+    {
+      "file": "evaluation/contracts/validate.test.mjs",
+      "blob": "41a49d015f6c1d53743614f1f486c96a07ef9bdc"
+    },
+    {
+      "file": "evaluation/deliver-verdict.test.mjs",
+      "blob": "ee4d7a5932bf6311403e764b44612c0fc36909aa"
+    },
+    {
+      "file": "evaluation/gate/author-confidence.test.mjs",
+      "blob": "6834fcc57d6fb8866ed0b45969288aa2cd37ad01"
+    },
+    {
+      "file": "evaluation/gate/build-baseline.test.mjs",
+      "blob": "e4aedb6f43624402f499300c38b5548dfd2ab76d"
+    },
+    {
+      "file": "evaluation/gate/decide.test.mjs",
+      "blob": "e3802818ac07a60c783ef1d95ccff6d81796f5a7"
+    },
+    {
+      "file": "evaluation/gate/plan-visibility.test.mjs",
+      "blob": "a1902e793bc3edee3c58ba4479d7af540a68ddde"
+    },
+    {
+      "file": "evaluation/gate0/proxy-observability-probe.test.mjs",
+      "blob": "c76ddf7235b35a3d1131b14ff28e5c273f6a95e8"
+    },
+    {
+      "file": "evaluation/gate0/verify-capture.test.mjs",
+      "blob": "397279468c8623d2dd71548651b6a8bc314a70b2"
+    },
+    {
+      "file": "evaluation/provenance/build-early-events.test.mjs",
+      "blob": "a055c4ae4aeafe7ceb41f8d0a6134a33a6d228b1"
+    },
+    {
+      "file": "evaluation/provenance/build-events.test.mjs",
+      "blob": "19fe7bac06a1f319858c384d4c7ae495b446c45a"
+    },
+    {
+      "file": "evaluation/provenance/shell-requests.test.mjs",
+      "blob": "4ff321c5b9630a2669fcc2ff83cf1a5d44ceadd1"
+    },
+    {
+      "file": "evaluation/provenance/stamp-events.test.mjs",
+      "blob": "9c1fd23055ce6595b975bf74bc6822e982c261a5"
+    },
+    {
+      "file": "evaluation/receipt/build-receipt.test.mjs",
+      "blob": "a760401984c90f5ded30dcaeb3ede43d64c1f065"
+    },
+    {
+      "file": "evaluation/receipt/chain.test.mjs",
+      "blob": "4ca28c3254af6abc4d6a121c2a84188ab7bfcc34"
+    },
+    {
+      "file": "evaluation/runner/agent-memory.test.mjs",
+      "blob": "4274672efe3b28dce93175e9bacb58fb71b4a4f9"
+    },
+    {
+      "file": "evaluation/runner/batch-conditions.test.mjs",
+      "blob": "b82141e404078bcb8b736f51c80eb15f64d362b2"
+    },
+    {
+      "file": "evaluation/runner/conditions-classify.test.mjs",
+      "blob": "10f57b125ddbc1ec1fdfd488d74b559d96647908"
+    },
+    {
+      "file": "evaluation/runner/context-confounders.test.mjs",
+      "blob": "e206aa5d24b671631968677f9c5d6e06eed607d1"
+    },
+    {
+      "file": "evaluation/runner/cost.test.mjs",
+      "blob": "eeb34e3e5e1a7bd90e36362933de2b11cf5ef60c"
+    },
+    {
+      "file": "evaluation/runner/isolation-check.test.mjs",
+      "blob": "1b551c776855a23459e3fd99e7ab2e770dbafced"
+    },
+    {
+      "file": "evaluation/runner/memory-channel.test.mjs",
+      "blob": "1a6cf99777b58741ea05ed0dc2aef9aed111f6eb"
+    },
+    {
+      "file": "evaluation/runner/summarize-runs.test.mjs",
+      "blob": "ca08b5a3639f0b6f701e6c00bca792374d46a2e0"
+    },
+    {
+      "file": "evaluation/runner/token-provenance.test.mjs",
+      "blob": "2e12739e0c3b92699d87c21e5ae3834739cd49b6"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/probe-reachability.test.mjs",
+      "blob": "f2c24807d4bf9af76b8287ee56675b2e1a13164e"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/verify.multi-target.test.mjs",
+      "blob": "7b4eb6f0c488a150aba7c2eec0851d4ca4d38b90"
+    },
+    {
+      "file": "evaluation/tasks/bridge-addr/verify.test.mjs",
+      "blob": "e3db94d12af6c3f4a8d98a38f8b239de1f5d1b86"
+    },
+    {
+      "file": "evaluation/tasks/bridge-name/verify.test.mjs",
+      "blob": "cede6855c7837764a9cee1be6a3c1e038340eca6"
+    }
+  ],
+  "tests_tar": "/private/tmp/topic4-runs/20260913T121409Z-devloop-no-note.PyaX/20260913T121409Z-devloop-no-note/start-tests.tar",
+  "suite_at_start": {
+    "exit": 0,
+    "tests": 641,
+    "pass": 639,
+    "fail": 0,
+    "cancelled": 0,
+    "failures": [],
+    "explained": true,
+    "problems": []
+  }
+}

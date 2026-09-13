@@ -41,7 +41,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T105239Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -81,7 +91,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T105451Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -121,7 +141,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T105648Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -167,7 +197,17 @@
             "foreign_run_access"
           ]
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T105810Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -207,7 +247,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T110459Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -247,7 +297,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T110646Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -287,7 +347,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T110815Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -336,7 +406,12 @@
             "reference_leak"
           ]
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T111005Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -376,7 +451,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T112310Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -416,7 +501,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T112523Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -456,7 +551,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T112733Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -502,7 +607,12 @@
             "foreign_run_access"
           ]
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T112941Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -542,7 +652,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T113300Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -582,7 +702,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T113435Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -624,7 +754,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T113621Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -664,7 +804,17 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "minimal",
+        "to": "evaluation/runner/runs/20260913T113923Z-devloop-no-note",
+        "files": [
+          "verdict.json",
+          "contamination.json",
+          "ARCHIVE-MINIMAL.md"
+        ],
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -700,7 +850,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T121409Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -736,7 +891,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T121636Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -772,7 +932,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T121823Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "no-note",
@@ -808,7 +973,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T121937Z-devloop-no-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "note",
@@ -846,7 +1016,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T123427Z-devloop-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "note",
@@ -882,7 +1057,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T123631Z-devloop-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "note",
@@ -918,7 +1098,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T123828Z-devloop-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     },
     {
       "arm": "note",
@@ -956,7 +1141,12 @@
           "contaminated": false,
           "rules": []
         }
-      ]
+      ],
+      "archived": {
+        "mode": "full",
+        "to": "evaluation/runner/runs/20260913T124050Z-devloop-note",
+        "at": "2026-09-13T13:32:56Z"
+      }
     }
   ],
   "status_observations": [

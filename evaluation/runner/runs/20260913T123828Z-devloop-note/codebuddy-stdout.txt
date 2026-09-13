@@ -1,0 +1,23 @@
+[14:38:40] model custom-local:deepseek-v4-flash
+[14:38:40] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Searched team skills first and found a directly relevant note, `eval-skill-resource-download` (skl-XAzqAgejM7O4), which drove the key decisions.
+
+## What changed
+
+**New: `evaluation/gate/fetch-resource.mjs`** — exports `fetchResource({ skillId, path, bridgeBase, fetcher })`.
+- POSTs `{ skill_id, path }` to `${bridgeBase}/files/download`. The team note is explicit that `files/download` is the raw-bytes subpath; `files/read` always returns a JSON envelope, so a file saved from it is a JSON blob, not the resource.
+- Returns the response body as a `Buffer`. A body that parses as a bridge envelope is decoded: `code !== 0` throws `Error` carrying the envelope's `message`; `code === 0` decodes `data.content` (`base64` when so labelled). **Empty `content` decodes to a zero-byte Buffer** — the note documents that the bridge's download branch wrongly returns the whole envelope for empty content (`!parsed.data?.content`), and an empty file is legal. Only a missing / non-string `content` is an anomaly.
+- `fetcher` defaults to `globalThis.fetch`.
+- References the note's tracking value `bt-pvxahxcppk3` in the header comment (per §16 / the note's attribution request).
+
+**New: `evaluation/gate/fetch-resource.test.mjs`** — 6 tests: raw bytes + request shape (POST to `files/download`), zero-byte Buffer for empty content (both the envelope shape and a truly empty raw body), base64 decoding, `code !== 0` throwing with the envelope message, `code 0` without content treated as an anomaly (not silently empty), and the `globalThis.fetch` default.
+
+## Why these choices
+- Request shape follows the tool-bridge convention where `<bridge>` already ends at `…/skill-bridge/v3/skill`, so only the subpath is appended.
+- Envelope detection keys on a numeric `code` plus a `message`/`data` field so ordinary JSON resource files pass through untouched, while the bridge's error/empty envelopes are still recognised.
+- Response reading accepts a real `Response`, a `Buffer`/`Uint8Array`, or a parsed-body stub, since the tests inject the HTTP implementation.
+
+## Verification
+- `node --test evaluation/gate/fetch-resource.test.mjs` → 6 pass, 0 fail.
+- `node --test evaluation/**/*.test.mjs` → **643 pass, 0 fail, 2 skipped** (pre-existing skips). No existing files modified; `git status` shows only the two new files.

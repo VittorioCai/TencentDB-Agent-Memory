@@ -1,0 +1,61 @@
+# Receipt — run 20260913T124050Z-devloop-note · session e435d1ec · task task-h1k7xruuhb · 2026-09-13T12:42:22Z
+
+applied 2 team asset(s)
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+- not declared by the asset：skl-XAzqAgejM7O4 — its value bt-pvxahxcppk3 was used in tool call call_00_T4UpgyYk96vQUuvGdv1S2996 (message 37), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+
+effect status
+- 4 background only (fetched or provided), effect unverified
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (unknown)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 4 (score 1.02) for the query "fetch resource bytes Buffer error envelope HTTP fetcher"
+    evidence
+      capture_line    e435d1ec-f897-49e0-a003-5574b45353e9:call_01_1TfUZVolmn3PU409R3Om0401  — skill:get answered at message 7; carrying content; version 4; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ skl-XAzqAgejM7O4  v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    impact     its value bt-pvxahxcppk3 was used in tool call call_00_T4UpgyYk96vQUuvGdv1S2996 (message 37), but the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    target     tool_call
+    evidence
+      tool_arg        request(4f2a2e06-d1a7-4d98-9c66-2a633b159c02):msg[37]:call_00_T4UpgyYk96vQUuvGdv1S2996:arguments  — token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.mjs:1-110  — token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    gate pending · no cross-person validation yet
+    risk       needs_review: token bt-pvxahxcppk3; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    risk       gate_pending: needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 4 (score 0.97) for the query "fetch resource bytes Buffer error envelope HTTP fetcher"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 19 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 3; present in 19 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (unknown)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 4 of 4 (score 0.97) for the query "fetch resource bytes Buffer error envelope HTTP fetcher"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 19 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 4; present in 19 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T124050Z-devloop-note.3OKT/20260913T124050Z-devloop-note/receipt.json

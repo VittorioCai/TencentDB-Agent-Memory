@@ -1,0 +1,229 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..1a1bdfa
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,124 @@
++/**
++ * Fetch one skill resource's raw bytes from the bridge, for saving to a file.
++ *
++ * The subpath matters. The bridge has two file reads:
++ *
++ *   files/read      always answers with a JSON envelope — a body meant to be
++ *                   parsed, not written to disk. `curl -o` does not change
++ *                   this (that flag is the client's; the bridge routes on the
++ *                   subpath), so saving its response leaves a JSON file where
++ *                   a script should be.
++ *   files/download  answers with the resource's raw bytes, which is what a
++ *                   caller that writes a file wants. This is the one used here.
++ *
++ * Two shapes come back on `files/download`, and both are decoded for the
++ * caller:
++ *
++ *   - raw bytes, on the ordinary success path;
++ *   - a JSON envelope, on failure (code !== 0, thrown), and — as the bridge
++ *     stands today — on **empty** content, because that branch treats "" as
++ *     absent (`!parsed.data?.content`) and returns the whole envelope. An
++ *     empty resource is a legal resource, so the envelope's empty `content`
++ *     is decoded to a zero-byte Buffer rather than reported as an error. Only
++ *     a missing or non-string `content` field is treated as an anomaly.
++ *
++ * A malformed upload answer must not be silently swallowed: when the bridge
++ * spells out a `message`, the thrown Error carries it.
++ *
++ * Tracking value for the team note this follows: bt-pvxahxcppk3.
++ *
++ * Usage:
++ *   const bytes = await fetchResource({
++ *     skillId: "skl-…", path: "scripts/run.sh",
++ *     bridgeBase: "http://127.0.0.1:8096/skill-bridge/v3/skill",
++ *   });
++ *   writeFileSync("run.sh", bytes);
++ */
++
++/** The subpath that serves raw bytes (not the JSON-envelope `files/read`). */
++const DOWNLOAD_SUBPATH = "files/download";
++
++/**
++ * Decode the response body to bytes, accepting the shapes an HTTP stub may
++ * return: a real Response (or anything with arrayBuffer/text/json), a Buffer,
++ * or the already-parsed body.
++ *
++ * @param {unknown} res
++ * @returns {Promise<Buffer>}
++ */
++async function readBytes(res) {
++  if (Buffer.isBuffer(res)) return res;
++  if (res instanceof Uint8Array) return Buffer.from(res);
++  if (typeof res === "string") return Buffer.from(res, "utf8");
++  if (res && typeof res === "object") {
++    if (typeof res.arrayBuffer === "function") return Buffer.from(await res.arrayBuffer());
++    if (typeof res.text === "function") return Buffer.from(await res.text(), "utf8");
++    if (typeof res.json === "function") return Buffer.from(JSON.stringify(await res.json()), "utf8");
++    // A stub may hand back the parsed envelope directly.
++    return Buffer.from(JSON.stringify(res), "utf8");
++  }
++  throw new Error("fetchResource: response has no readable body");
++}
++
++/**
++ * The bridge's envelope, if this body is one. The discriminant is a numeric
++ * `code` together with a `message` or a `data` field — the shape both the
++ * bridge and Core write. A raw resource that happens to be JSON without any
++ * of that is left as bytes.
++ */
++function parseEnvelope(bytes) {
++  if (bytes.length === 0) return null;
++  let parsed;
++  try {
++    parsed = JSON.parse(bytes.toString("utf8"));
++  } catch {
++    return null;
++  }
++  if (!parsed || typeof parsed !== "object" || typeof parsed.code !== "number") return null;
++  return typeof parsed.message === "string" || (parsed.data && typeof parsed.data === "object") ? parsed : null;
++}
++
++/**
++ * @param {object} args
++ * @param {string} args.skillId
++ * @param {string} args.path        resource path inside the skill
++ * @param {string} args.bridgeBase  skill-bridge base, e.g. `…/skill-bridge/v3/skill`
++ * @param {typeof fetch} [args.fetcher]  HTTP implementation; defaults to globalThis.fetch
++ * @returns {Promise<Buffer>} the resource's raw bytes (empty Buffer for an empty resource)
++ */
++export async function fetchResource({ skillId, path, bridgeBase, fetcher } = {}) {
++  if (!skillId) throw new Error("fetchResource: skillId is required");
++  if (!path) throw new Error("fetchResource: path is required");
++  if (!bridgeBase) throw new Error("fetchResource: bridgeBase is required");
++  const doFetch = fetcher ?? globalThis.fetch;
++
++  const url = `${String(bridgeBase).replace(/\/+$/, "")}/${DOWNLOAD_SUBPATH}`;
++  const res = await doFetch(url, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const bytes = await readBytes(res);
++  const envelope = parseEnvelope(bytes);
++
++  if (envelope) {
++    if (envelope.code !== 0) {
++      throw new Error(envelope.message ?? `fetchResource: bridge answered code ${envelope.code}`);
++    }
++    const data = envelope.data ?? {};
++    const content = data.content;
++    if (typeof content !== "string") {
++      // code 0 but no usable content: the field is missing or the wrong type.
++      throw new Error(envelope.message ?? "fetchResource: bridge answered code 0 without a string content");
++    }
++    return Buffer.from(content, data.encoding === "base64" ? "base64" : "utf8");
++  }
++
++  // No envelope and no 2xx: a transport-level failure whose body is not the
++  // bridge's own error shape (e.g. an opaque upstream error passed through).
++  if (res && typeof res === "object" && res.ok === false) {
++    throw new Error(`fetchResource: HTTP ${res.status ?? "?"} from ${url}`);
++  }
++  return bytes;
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..cb440fc
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,93 @@
++/**
++ * Tests for fetch-resource.mjs.
++ *
++ * The behaviour under test is the one the team note warns about (tracking
++ * value bt-pvxahxcppk3): the bridge's `files/download` is the raw-bytes path,
++ * and an empty resource must come back as a zero-byte Buffer rather than an
++ * error or a JSON envelope written to disk.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++const BASE = "http://bridge.test/skill-bridge/v3/skill";
++
++const envelope = (body, status = 200) =>
++  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
++
++test("returns the resource's raw bytes and posts them to files/download", async () => {
++  let seen = null;
++  const fetcher = async (url, init) => {
++    seen = { url, init };
++    return new Response(Buffer.from("#!/bin/sh\necho hi\n"));
++  };
++  const bytes = await fetchResource({ skillId: "skl-abc", path: "scripts/run.sh", bridgeBase: BASE, fetcher });
++
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.toString("utf8"), "#!/bin/sh\necho hi\n");
++  assert.equal(seen.url, `${BASE}/files/download`);
++  assert.equal(seen.init.method, "POST");
++  assert.deepEqual(JSON.parse(seen.init.body), { skill_id: "skl-abc", path: "scripts/run.sh" });
++});
++
++test("an empty resource returns a zero-byte Buffer, not an error or an envelope", async () => {
++  // The bridge today answers an empty resource with the whole envelope, since
++  // its download branch treats "" as absent. That envelope is still a success.
++  const viaEnvelope = await fetchResource({
++    skillId: "skl-empty", path: "notes/blank.md", bridgeBase: BASE,
++    fetcher: async () => envelope({ code: 0, message: "ok", data: { content: "", encoding: "utf-8", size_bytes: 0 } }),
++  });
++  assert.ok(Buffer.isBuffer(viaEnvelope));
++  assert.equal(viaEnvelope.length, 0);
++
++  // A bridge that already returns the empty body as raw bytes is fine too.
++  const viaRaw = await fetchResource({
++    skillId: "skl-empty", path: "notes/blank.md", bridgeBase: BASE,
++    fetcher: async () => new Response(Buffer.alloc(0)),
++  });
++  assert.equal(viaRaw.length, 0);
++});
++
++test("a base64 envelope decodes to the resource's bytes", async () => {
++  const bytes = await fetchResource({
++    skillId: "skl-b64", path: "assets/logo.bin", bridgeBase: BASE,
++    fetcher: async () => envelope({ code: 0, message: "ok", data: { content: Buffer.from([0, 1, 2, 255]).toString("base64"), encoding: "base64" } }),
++  });
++  assert.deepEqual([...bytes], [0, 1, 2, 255]);
++});
++
++test("an error envelope throws with the envelope's message", async () => {
++  await assert.rejects(
++    () => fetchResource({
++      skillId: "skl-nope", path: "missing.sh", bridgeBase: BASE,
++      fetcher: async () => envelope({ code: 40401, message: "SKILL_RESOURCE_NOT_FOUND: missing.sh" }, 404),
++    }),
++    (err) => err instanceof Error && /SKILL_RESOURCE_NOT_FOUND: missing\.sh/.test(err.message),
++  );
++});
++
++test("code 0 without a string content is an anomaly, not an empty file", async () => {
++  // Empty (content: "") is legal and must not throw; a missing/wrong-typed
++  // field is a problem and must not be silently read as zero bytes.
++  await assert.rejects(
++    () => fetchResource({
++      skillId: "skl-bad", path: "a.txt", bridgeBase: BASE,
++      fetcher: async () => envelope({ code: 0, message: "ok", data: { size_bytes: 0 } }),
++    }),
++    (err) => err instanceof Error && /ok/.test(err.message),
++  );
++});
++
++test("fetcher defaults to globalThis.fetch", async () => {
++  const original = globalThis.fetch;
++  let seenUrl = null;
++  globalThis.fetch = async (url) => { seenUrl = url; return new Response(Buffer.from("ok")); };
++  try {
++    const bytes = await fetchResource({ skillId: "skl-x", path: "a.txt", bridgeBase: BASE });
++    assert.equal(bytes.toString("utf8"), "ok");
++    assert.equal(seenUrl, `${BASE}/files/download`);
++  } finally {
++    globalThis.fetch = original;
++  }
++});

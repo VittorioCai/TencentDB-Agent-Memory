@@ -1,0 +1,24 @@
+[14:16:47] model custom-local:deepseek-v4-flash
+[14:16:47] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。只新增了两个文件,现有 644 个测试全部通过(0 fail,2 skip)。
+
+## 改了什么
+
+**`evaluation/gate/fetch-resource.mjs`** — 新增工具,导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POST `${bridgeBase}/skill-bridge/v3/skill/files/read`(去尾部斜杠),body `{ skill_id, path, encoding: "base64" }` — base64 是为了二进制资源不被 utf-8 往返损坏。
+- 解析 JSON 信封 `{ code, message, data: { content, encoding } }`,按 `data.encoding` 还原(`base64`→base64,否则 utf8),返回 `Buffer`。
+- `content` 为空/缺失 → `Buffer.alloc(0)`(零字节,不是 null/报错)。
+- `envelope.code !== 0` → `throw new Error(envelope.message)`,上游原因保留。
+- `fetcher` 缺省 `globalThis.fetch`。
+
+**`evaluation/gate/fetch-resource.test.mjs`** — 5 条测试:二进制字节往返、空资源零字节、utf-8 解码、错误信封带 message、bridgeBase 尾斜杠不重复拼接。
+
+## 为什么
+
+先按任务要求检索了团队 skill,命中三条:
+- `deploy-lookup-note-b`(按 id 取,别用关键词搜)—— 采纳,请求体用 `skill_id` 直取。
+- `eval-bridge-endpoint-b`(bridge 地址约定,固定端口 `47318` + `x-team-trace` 头)—— **有意不采纳**。该 trace 头是绑定"search 可达性检查"那条约定的,且端口被写死;本工具是通用资源读取、`bridgeBase` 由调用方传入,硬编码端口/头会破坏其通用性且给非 reachability 请求贴上错误的追踪值。
+- `eval-tool-result-exit-line`(关于 `collect-artifacts.mjs` 的 `Exit Code:`)—— 与本次工具无关,未改动。
+
+设计取舍:成功响应是信封而非裸字节,故按 `data.encoding` 解码;请求显式要 base64 以保证 `Buffer` 是真正的"原始字节"。

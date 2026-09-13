@@ -1,0 +1,15 @@
+{
+  "run_id": "20260913T123427Z-devloop-note",
+  "contaminated": true,
+  "findings": [
+    {
+      "rule": "foreign_run",
+      "detail": "上下文里出现了 3 个别的运行 id",
+      "sample": [
+        "20260911T185119Z-devloop-note",
+        "20260911T185811Z-devloop-note",
+        "20260911T185927Z-devloop-note"
+      ]
+    }
+  ]
+}
