@@ -1,0 +1,47 @@
+# Receipt — run 20260913T184926Z-devloop-no-note · session 982c0e33 · task task-h1k7xruuhb · 2026-09-13T18:51:27Z
+
+applied 2 team asset(s)
+- skill：deploy-lookup-note-b — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 1 of 4 (score 0.97) for the query "团队 skill 资源文件 fetch resource bridge"
+    evidence
+      capture_line    982c0e33-55af-4800-8d46-cd76b4e55971:call_01_uEuGOPSYFp0sDVUEnPun0708  — skill:get answered at message 10; carrying content; version 1; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 4 (score 0.62) for the query "团队 skill 资源文件 fetch resource bridge"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:49:48.542:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    982c0e33-55af-4800-8d46-cd76b4e55971:call_00_5bdfmrcrKjal27PViWNs6407  — skill:get answered at message 9; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 2 of 4 (score 0.97) for the query "团队 skill 资源文件 fetch resource bridge"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 25 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 2; present in 25 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T184926Z-devloop-no-note.XYm9/20260913T184926Z-devloop-no-note/receipt.json

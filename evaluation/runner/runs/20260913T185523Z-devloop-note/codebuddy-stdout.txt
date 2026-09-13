@@ -1,0 +1,26 @@
+[20:55:34] model custom-local:deepseek-v4-flash
+[20:55:34] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+已完成。先检索了团队经验,命中了 `eval-skill-resource-download`(skl-XAzqAgejM7O4),按它做了实现。
+
+## 改了什么
+
+新增两个文件(仅此两个,未改任何既有文件):
+
+- `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`
+- `evaluation/gate/fetch-resource.test.mjs` — 6 条测试
+
+## 为什么这么写
+
+团队笔记里两条会咬人的经验,正好对应这个工具的坑:
+
+1. **取原始字节要用 `files/download`,不是 `files/read`。** 工具说明里"`files/read` 加 `curl -o` 就返回原始字节"不成立 —— `-o` 是客户端参数,服务端看不见;bridge 是按子路径分流的。所以实现 POST 到 `${bridgeBase}/files/download`,请求体 `{ skill_id, path }`;测试断言 URL 落在 `files/download` 上。
+2. **空文件是合法的,不能当错误。** 存量但内容为空的资源会以 `{code: 0, data: {content: ""}}` 的信封回来,而 `""` 是 falsy —— 天真实现会把它当失败。实现把空字符串当内容解码(→ 零字节 `Buffer`),只有「`data` 缺失 / `content` 不是字符串」才算异常。
+3. **错误信封不吞。** `code !== 0` 时抛 `Error`,message 用信封自己的 `message`(测试断言含 `SKILL_NOT_FOUND`)。
+
+判别逻辑上,用信封形状(`code` 是数字且带 `message`/`data`)而非仅 content-type 来区分「信封」和「原始字节」,这样本身是 JSON 的资源文件仍会原样返回(已加测试)。`fetcher` 缺省用 `globalThis.fetch`,并兼容真实 `Response`、`json()` 桩和裸 body。笔记的追踪值 `bt-pu6nyfhmu2v` 按笔记要求在实现注释和测试标题里引用了。
+
+## 验证
+
+- 新测试:6/6 通过。
+- 全量 `node --test`(evaluation 下所有 `*.test.mjs`):**645 tests, 643 pass, 0 fail, 2 skipped**(基线 639/637/0/2,只多了新增的 6 条),无回归。

@@ -1,0 +1,138 @@
+diff --git a/evaluation/gate/fetch-resource.mjs b/evaluation/gate/fetch-resource.mjs
+new file mode 100644
+index 0000000..b28195c
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.mjs
+@@ -0,0 +1,63 @@
++/**
++ * Fetch one resource file of a team skill through the skill bridge.
++ *
++ * The bridge answers `/skill-bridge/v3/skill/files/read` with the standard
++ * envelope `{ code, message, request_id, data }`, where `data` is
++ * `{ path, content, encoding, size_bytes, mime_type, version }`. This tool
++ * turns that into the resource's raw bytes so the caller can write them to
++ * disk without going through a string:
++ *
++ *   const bytes = await fetchResource({ skillId, path, bridgeBase });
++ *   writeFileSync(dest, bytes);
++ *
++ * Two details are load-bearing:
++ *
++ *   - An empty resource is a legal resource. `''` decodes to a zero-byte
++ *     Buffer and that is the result — a falsy `content` must NOT be read as a
++ *     failure. An upstream that returns 200 for a genuinely empty file is
++ *     saying "the file is empty", not "I have nothing".
++ *   - A non-zero `code` is an error, and its `message` is the only useful
++ *     thing the caller can act on, so it is carried into the thrown Error.
++ *
++ * `fetcher` exists so tests can inject an HTTP implementation; production
++ * callers leave it out and get `globalThis.fetch`.
++ */
++
++/** Read the envelope out of a Response (real fetch) or a Response-like stub. */
++async function readEnvelope(res) {
++  if (typeof res?.text === "function") {
++    const text = await res.text();
++    try {
++      return JSON.parse(text);
++    } catch {
++      throw new Error(`fetchResource: bridge response was not JSON: ${text.slice(0, 200)}`);
++    }
++  }
++  if (typeof res?.json === "function") return await res.json();
++  throw new Error("fetchResource: bridge response carried no readable body");
++}
++
++export async function fetchResource({ skillId, path, bridgeBase, fetcher = globalThis.fetch }) {
++  // `bridgeBase` may be the bridge root or the proxy root; accept both so a
++  // caller that already carries the `/skill-bridge/v3/skill` prefix is not
++  // made to strip it.
++  const base = String(bridgeBase ?? "").replace(/\/+$/, "");
++  const root = /\/skill-bridge\/v3\/skill$/.test(base) ? base : `${base}/skill-bridge/v3/skill`;
++
++  const res = await fetcher(`${root}/files/read`, {
++    method: "POST",
++    headers: { "content-type": "application/json" },
++    body: JSON.stringify({ skill_id: skillId, path }),
++  });
++
++  const envelope = await readEnvelope(res);
++  if (envelope?.code !== 0) {
++    throw new Error(String(envelope?.message ?? `bridge returned code ${envelope?.code}`));
++  }
++
++  const data = envelope.data ?? {};
++  const content = data.content ?? "";
++  // Decode the way the bridge says the bytes are encoded. `''` under either
++  // encoding is a zero-byte Buffer — an empty file, returned as-is.
++  return data.encoding === "base64" ? Buffer.from(content, "base64") : Buffer.from(content, "utf-8");
++}
+diff --git a/evaluation/gate/fetch-resource.test.mjs b/evaluation/gate/fetch-resource.test.mjs
+new file mode 100644
+index 0000000..6574bb9
+--- /dev/null
++++ b/evaluation/gate/fetch-resource.test.mjs
+@@ -0,0 +1,63 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { fetchResource } from "./fetch-resource.mjs";
++
++const BASE = "http://127.0.0.1:47318";
++
++const envelope = (body) =>
++  new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
++
++test("returns the resource's raw bytes and posts skill_id + path to files/read", async () => {
++  const seen = [];
++  const fetcher = async (url, init) => {
++    seen.push({ url, init });
++    return envelope({ code: 0, message: "ok", data: { path: "notes/a.md", content: "hello", encoding: "utf-8" } });
++  };
++  const bytes = await fetchResource({ skillId: "skl-abc", path: "notes/a.md", bridgeBase: BASE, fetcher });
++
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.toString("utf8"), "hello");
++  assert.equal(seen[0].url, `${BASE}/skill-bridge/v3/skill/files/read`);
++  assert.deepEqual(JSON.parse(seen[0].init.body), { skill_id: "skl-abc", path: "notes/a.md" });
++});
++
++test("decodes a base64 resource back to its original bytes", async () => {
++  const raw = Buffer.from([0x00, 0xff, 0x10, 0x80]);
++  const fetcher = async () =>
++    envelope({ code: 0, message: "ok", data: { path: "bin/x", content: raw.toString("base64"), encoding: "base64" } });
++  const bytes = await fetchResource({ skillId: "skl-abc", path: "bin/x", bridgeBase: BASE, fetcher });
++  assert.deepEqual(bytes, raw);
++});
++
++test("an empty resource is a zero-byte Buffer, not an error", async () => {
++  const fetcher = async () =>
++    envelope({ code: 0, message: "ok", data: { path: "empty.txt", content: "", encoding: "utf-8" } });
++  const bytes = await fetchResource({ skillId: "skl-abc", path: "empty.txt", bridgeBase: BASE, fetcher });
++  assert.ok(Buffer.isBuffer(bytes));
++  assert.equal(bytes.length, 0);
++});
++
++test("an error envelope throws an Error carrying the envelope's message", async () => {
++  const fetcher = async () =>
++    envelope({ code: 40401, message: "SKILL_NOT_FOUND: path not in manifest", data: null });
++  await assert.rejects(
++    fetchResource({ skillId: "skl-abc", path: "nope", bridgeBase: BASE, fetcher }),
++    (err) => err instanceof Error && /SKILL_NOT_FOUND/.test(err.message),
++  );
++});
++
++test("falls back to globalThis.fetch when no fetcher is injected", async () => {
++  const original = globalThis.fetch;
++  let called = null;
++  globalThis.fetch = async (url, init) => {
++    called = url;
++    return envelope({ code: 0, message: "ok", data: { path: "a", content: "x", encoding: "utf-8" } });
++  };
++  try {
++    const bytes = await fetchResource({ skillId: "skl-abc", path: "a", bridgeBase: BASE });
++    assert.equal(bytes.toString("utf8"), "x");
++    assert.equal(called, `${BASE}/skill-bridge/v3/skill/files/read`);
++  } finally {
++    globalThis.fetch = original;
++  }
++});

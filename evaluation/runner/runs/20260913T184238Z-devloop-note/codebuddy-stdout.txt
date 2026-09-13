@@ -1,0 +1,29 @@
+[20:42:50] model custom-local:deepseek-v4-flash
+[20:42:50] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。
+
+## 改动
+
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+
+- 打到 `bridgeBase` + `/files/download`（去掉末尾斜杠后拼接），POST body `{skill_id, path}`，`content-type: application/json`。
+- 读响应原始字节，尝试按 JSON 解析。若是带数字 `code` 的信封：`code !== 0` 抛 `Error(envelope.message)`；`code === 0` 且 `data.content` 是字符串则按 `encoding`（`base64`/`utf-8`）解码成 `Buffer`，所以**空字符串解码成零字节 Buffer**；`content` 缺失或非字符串才抛错（同样带信封 message）。不是信封就走原样字节。
+- 非信封且 HTTP `status >= 400` 时抛错，避免把错误页当资源返回。
+- `fetcher` 缺省 `globalThis.fetch.bind(globalThis)`。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 6 条：原始字节原样返回且 URL/body 正确、零字节 body、空资源以 code-0 信封返回时解成零字节、base64 信封解码、`code !== 0` 抛出并带 message、未传 `fetcher` 时走 `globalThis.fetch`。
+
+## 为什么这样选
+
+动手前检索到团队 skill `eval-skill-resource-download`（bt-pu6nyfhmu2v），它记录了两个坑，也正是本工具的判据来源：
+
+1. **子路径必须是 `files/download`，不是 `files/read`。** `files/read` 无论加不加 `curl -o` 都返回 JSON 信封，直接落盘存的是 JSON；只有 `files/download` 返回原始字节（`skill-bridge.ts:757-839` 实证）。
+2. **`files/download` 用 `!parsed.data?.content` 判失败，空字符串是 falsy**，所以真实存在的空资源会以 code-0 信封（`content: ""`）返回。空内容是 Core schema 的合法形态，因此信封里 `content` 为字符串一律走解码——空串即零字节，只有字段缺失/类型不对才算异常，且异常时保留信封自带的 `message`。
+
+## 验证
+
+- 新测试：`node --test evaluation/gate/fetch-resource.test.mjs` → 6 pass。
+- 全量回归：`node --test evaluation/**/*.test.mjs` → 645 tests，643 pass，0 fail，2 skipped（与本改动无关的既有 skip）。`git status` 仅两个新增文件。
+
+未提交；推送按约定由你手动完成。

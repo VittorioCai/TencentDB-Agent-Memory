@@ -1,0 +1,175 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "4f60882a-171b-4e75-b2e6-85ddfbb98efa",
+  "run_id": "20260913T183839Z-devloop-no-note",
+  "task_id": "task-h1k7xruuhb",
+  "generated_at": "2026-09-13T18:40:23Z",
+  "summary": {
+    "applied_count": 2,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 2,
+      "provided": 1,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 0.97) for the query \"fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:38:59.097:skill-bridge:get",
+          "detail": "request names skl-KPVMV2uB5rXM"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "4f60882a-171b-4e75-b2e6-85ddfbb98efa:call_02_yuGbwEB03n8YToX7KWD37878",
+          "detail": "skill:get answered at message 8; carrying content; version 1"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:40:23.183Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 0.62) for the query \"fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:38:59.098:skill-bridge:get",
+          "detail": "request names skl-oBaDO5CceKnr"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "4f60882a-171b-4e75-b2e6-85ddfbb98efa:call_01_g7yEcMsavvUqsk95nBwQ5135",
+          "detail": "skill:get answered at message 7; carrying content; version 4"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:40:23.183Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 3 (score 0.97) for the query \"fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-eM1xP28pXiYA",
+          "detail": "carried in a tool result inside the request the model received; present in 36 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-eM1xP28pXiYA",
+          "detail": "skill:search returned 3 candidate(s), this one at rank 1; present in 36 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:40:23.183Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

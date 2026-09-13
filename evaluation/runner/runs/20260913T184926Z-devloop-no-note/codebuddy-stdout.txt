@@ -1,0 +1,31 @@
+[20:49:37] model custom-local:deepseek-v4-flash
+[20:49:37] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+已完成。
+
+## 改了什么
+
+新增两个文件（无其它改动）：
+
+- `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`
+- `evaluation/gate/fetch-resource.test.mjs` — 对应测试
+
+实现要点：
+- `POST <bridgeBase>/skill-bridge/v3/skill/files/read`，body 只发业务字段 `{ skill_id, path }`（身份由 bridge 从 session 推导，不是参数）。
+- 成功时按信封 `data.content` 的 `encoding`（`utf-8` 缺省 / `base64`）解码并返回 `Buffer`，调用方可直接写文件。空内容 → 零字节 Buffer（`Buffer.from("", ...)`，不当错误）。
+- 信封 `code !== 0` → `throw new Error(envelope.message)`，取信封里的 message，不吞掉。
+- `fetcher` 缺省用 `globalThis.fetch`；兼容 fetch-like（`.json()`）与直接返回信封的桩。
+
+## 为什么这样写
+
+- 接口形状来自仓库自身的实现：`MemoryCore/src/core/skill/skill-core.ts:535`（返回 `content/encoding/size_bytes/...`）与 `MemoryCore/src/gateway/skill-handlers.ts:758`（`/v3/skill/files/read` 信封），proxy 路由为 `/skill-bridge/v3/skill/<sub>`（`MemoryProxy/src/skill/skill-bridge.ts`）。所以 `bridgeBase` 取 origin，路径补齐到 `.../skill/files/read`。
+- 按 `encoding` 解码而不是写死 utf-8，是为了能拿到 `base64` 资源的原始字节。
+
+## 团队经验检索
+
+动手前检索了一次团队 skill 库，返回的候选（`eval-bridge-endpoint-b`、`deploy-lookup-note-*`、`eval-tool-result-exit-line`）要么描述的是另一条约定/另一个任务，且其中 `eval-bridge-endpoint-b` 记的端口 `47318` 与本次实际使用的 bridge（`127.0.0.1:8096`）冲突，故未照搬，改按仓库现有实现与本任务要求来做。
+
+## 测试
+
+- 新增用例覆盖：原始字节（含非 UTF-8 字节）、空文件零字节、utf-8 文本、错误信封抛出含 message。
+- 全量：`node --test` 跑 `evaluation` 下测试 —— 643 tests / 641 pass / 2 skipped / 0 fail（基线 639/637/2，新增 4 条全过，无回归）。

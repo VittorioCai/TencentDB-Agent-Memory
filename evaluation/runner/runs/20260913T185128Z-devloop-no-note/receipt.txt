@@ -1,0 +1,58 @@
+# Receipt — run 20260913T185128Z-devloop-no-note · session bd8e76e4 · task task-h1k7xruuhb · 2026-09-13T18:53:33Z
+
+applied 4 team asset(s)
+- skill：deploy-lookup-note-b — fetched — body retrieved; use not established
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-a — fetched — body retrieved; use not established
+
+effect status
+- 4 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 3 (score 0.97) for the query "fetch resource bytes buffer error envelope skill"
+    evidence
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402  — skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 3 (score 0.97) for the query "fetch resource bytes buffer error envelope skill"
+    evidence
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402  — skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 1 of 3 (score 1.02) for the query "fetch resource bytes buffer error envelope skill"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:51:47.477:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_00_ppPsOPTh6iw1pOH8FthR7728  — skill:get answered at message 6; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-a  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:52:04.064:skill-bridge:files/read  — request names skl-sZFb3KatWY6m; the capture never saw the response
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T185128Z-devloop-no-note.vORo/20260913T185128Z-devloop-no-note/receipt.json

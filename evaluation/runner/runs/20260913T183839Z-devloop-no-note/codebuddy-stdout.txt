@@ -1,0 +1,22 @@
+[20:38:50] model custom-local:deepseek-v4-flash
+[20:38:50] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。
+
+**团队经验检索**：先搜了一次团队知识库，命中的是 `deploy-lookup-note-a/b`（部署清单取数）和 `eval-bridge-endpoint-b`（桥接端点约定）。都与这个「本地、注入式 fetcher 的小工具」无关，且端点记录里的 host/port 与仓库实际使用的 `8096` 不一致，因此未采纳，按自己的判断实现。
+
+**改了什么**
+
+- 新增 `evaluation/gate/fetch-resource.mjs`，导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+  - POST 到 `${bridgeBase}/skill-bridge/v3/skill/files/read`，body 为 `{ skill_id, path }`；沿用仓库既有信封约定（`{code, message, data}`）。
+  - 成功时按 `data.encoding` 把 `data.content` 还原成 `Buffer` 返回（`base64` 走 base64，否则 utf-8），保证是资源原始字节。
+  - `content` 为空串时走 `Buffer.from("", …)`，返回零字节 Buffer，不做 falsy 短路。
+  - `code !== 0` 时 `throw new Error(envelope.message)`，把上游 message 带出去，不吞。
+  - `fetcher` 缺省为 `globalThis.fetch`。
+- 新增 `evaluation/gate/fetch-resource.test.mjs`，5 条测试覆盖：请求形状与字节返回、空文件零字节、base64 还原、错误信封抛出、缺省 fetcher。
+
+未改动任何现有文件（`git status` 仅两个新增文件）。
+
+**验证**：`node --test` 跑 `evaluation` 下全部 47 个 `*.test.mjs` → 644 tests，642 pass / 2 skipped / 0 fail；新测试 5/5 通过，已有行为不变。
+
+实现与测试的编码语义依据仓库源码：`skill-resource-store.ts` 的 `readResource` 按请求 encoding 决定 `content` 是 utf-8 还是 base64，默认 utf-8（`skill-core.ts:568`），所以按响应里的 `encoding` 解码即可覆盖文本与二进制两种资源。

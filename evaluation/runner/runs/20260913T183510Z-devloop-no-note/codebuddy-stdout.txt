@@ -1,0 +1,18 @@
+[20:35:22] model custom-local:deepseek-v4-flash
+[20:35:22] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Two new files, no existing file touched. Full suite: 642 pass / 0 fail / 2 pre-existing skips.
+
+**Team experience check:** searched the team skill library first. The closest note (`eval-tool-result-exit-line`, about the `Exit Code:` spelling) belongs to the sibling exit-line-collect task, not this one; the genuinely relevant one was `eval-bridge-endpoint-b`, which pins the bridge host/port. Nothing dictated the files/read shape, so I read the authoritative sources instead: `MemoryCore/src/gateway/skill-handlers.ts:758` (`handleFilesRead`) and `sdk/.../skill-types.ts:219-233` (`SkillFilesReadRequest` / `SkillFileContent`), plus the proxy's `files/download` decoder at `MemoryProxy/src/skill/skill-bridge.ts:813-838`.
+
+**What I added**
+
+`evaluation/gate/fetch-resource.mjs` — `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POSTs `{bridgeBase}/skill-bridge/v3/skill/files/read` with `{skill_id, path, encoding:"base64"}`. Base64 is requested so binary resources survive verbatim.
+- Parses the standard envelope; on `code !== 0` throws `new Error(envelope.message)`, preserving the upstream reason.
+- Returns `Buffer.from(content, encoding)` — an empty `content: ""` yields a zero-byte Buffer, so an empty file is returned as a legal empty file rather than treated as missing.
+- `fetcher` defaults to `globalThis.fetch`; trailing slashes on `bridgeBase` are normalized.
+
+`evaluation/gate/fetch-resource.test.mjs` — 5 cases: non-UTF-8 bytes round-trip, utf-8 decoding, empty → zero-byte Buffer, request shape (URL/method/body), and error-envelope message propagation.
+
+**Why:** the tool is written against the real `files/read` contract (envelope, `data.content` + `encoding`) rather than the raw-byte `files/download` path, because the requirement to surface `code !== 0` as a thrown `Error` with the envelope's message only applies to the JSON-envelope endpoint.

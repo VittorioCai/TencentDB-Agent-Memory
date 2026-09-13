@@ -1,0 +1,47 @@
+# Receipt — run 20260913T183510Z-devloop-no-note · session 20005408 · task task-h1k7xruuhb · 2026-09-13T18:36:41Z
+
+applied 1 team asset(s)
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 4 (score 1.02) for the query "fetch resource skill file bytes HTTP error envelope mjs"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:35:53.773:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    20005408-523c-444a-9d50-a21dc0ee9371:call_00_K7Cc4clJG7d3NyCLUGcl1626  — skill:get answered at message 32; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 4 (score 0.97) for the query "fetch resource skill file bytes HTTP error envelope mjs"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 3; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 4 of 4 (score 0.97) for the query "fetch resource skill file bytes HTTP error envelope mjs"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 4; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T183510Z-devloop-no-note.B9m8/20260913T183510Z-devloop-no-note/receipt.json

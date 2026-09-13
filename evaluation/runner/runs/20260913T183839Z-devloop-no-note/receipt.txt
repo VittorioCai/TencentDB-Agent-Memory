@@ -1,0 +1,48 @@
+# Receipt — run 20260913T183839Z-devloop-no-note · session 4f60882a · task task-h1k7xruuhb · 2026-09-13T18:40:23Z
+
+applied 2 team asset(s)
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 3 (score 0.97) for the query "fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:38:59.097:skill-bridge:get  — request names skl-KPVMV2uB5rXM
+      capture_line    4f60882a-171b-4e75-b2e6-85ddfbb98efa:call_02_yuGbwEB03n8YToX7KWD37878  — skill:get answered at message 8; carrying content; version 1
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 3 (score 0.62) for the query "fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:38:59.098:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    4f60882a-171b-4e75-b2e6-85ddfbb98efa:call_01_g7yEcMsavvUqsk95nBwQ5135  — skill:get answered at message 7; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 1 of 3 (score 0.97) for the query "fetch resource HTTP 字节 Buffer 工具 测试桩 fetcher"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 36 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 3 candidate(s), this one at rank 1; present in 36 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T183839Z-devloop-no-note.gFoU/20260913T183839Z-devloop-no-note/receipt.json

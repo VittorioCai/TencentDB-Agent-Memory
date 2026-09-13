@@ -1,0 +1,306 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "869963bb-f8d1-445c-bc34-144591b1443d",
+  "run_id": "20260913T185523Z-devloop-note",
+  "task_id": "task-h1k7xruuhb",
+  "generated_at": "2026-09-13T18:57:35Z",
+  "summary": {
+    "applied_count": 2,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 2,
+      "provided": 3,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "",
+      "name": "",
+      "asset_type": "skill",
+      "version": null,
+      "updated_at": null,
+      "category": "not_declared",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "",
+        "relation": "unknown"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:55:39.136:skill-bridge:search",
+          "detail": "the capture never saw this call"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:55:41.107:skill-bridge:get",
+          "detail": "the capture never saw this call"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:56:23.955:skill-bridge:get",
+          "detail": "the capture never saw this call"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 3 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author  has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:57:35.198Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-XAzqAgejM7O4",
+      "name": "skl-XAzqAgejM7O4",
+      "asset_type": "skill",
+      "version": null,
+      "updated_at": null,
+      "category": "not_declared",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "",
+        "relation": "unknown"
+      },
+      "impact": "its value bt-pu6nyfhmu2v was used in tool call call_01_4y1RfF8z9BITGiAMSnPZ1268 (message 28), but the token appears in a search command — the model was looking for it, not using it",
+      "target_type": "tool_call",
+      "evidence": [
+        {
+          "kind": "tool_arg",
+          "ref": "request(7903c399-bf46-49b6-9aac-cb968fe685ba):msg[28]:call_01_4y1RfF8z9BITGiAMSnPZ1268:arguments",
+          "detail": "token bt-pu6nyfhmu2v; the token appears in a search command — the model was looking for it, not using it"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(5e3d3d85-a448-46c1-8e59-edf2676ae27b):msg[31]:call_00_UOvAl1AvIzkVQt5y72mp8408:arguments",
+          "detail": "token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(babbd011-4fb3-468b-a2c1-8a28a96e8e69):msg[46]:call_00_570j19ugId46EezE1WqK0895:arguments",
+          "detail": "token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "tool_arg",
+          "ref": "request(cb30aa55-c7be-4a15-81e8-0565a10a75a7):msg[48]:call_00_9POHeHoeGZ7chaIgfb2k0316:arguments",
+          "detail": "token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "diff_hunk",
+          "ref": "diff:evaluation/gate/fetch-resource.mjs:1-104",
+          "detail": "token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch"
+        },
+        {
+          "kind": "diff_hunk",
+          "ref": "diff:evaluation/gate/fetch-resource.test.mjs:1-82",
+          "detail": "token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "needs_review",
+          "detail": "token bt-pu6nyfhmu2v; the token appears in a search command — the model was looking for it, not using it"
+        },
+        {
+          "kind": "gate_pending",
+          "detail": "needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author  has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:57:35.198Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 5 (score 0.97) for the query \"evaluation gate fetch resource skill bridge HTTP\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-eM1xP28pXiYA",
+          "detail": "carried in a tool result inside the request the model received; present in 22 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-eM1xP28pXiYA",
+          "detail": "skill:search returned 5 candidate(s), this one at rank 2; present in 22 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:57:35.198Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 5 (score 0.97) for the query \"evaluation gate fetch resource skill bridge HTTP\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-KPVMV2uB5rXM",
+          "detail": "carried in a tool result inside the request the model received; present in 22 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-KPVMV2uB5rXM",
+          "detail": "skill:search returned 5 candidate(s), this one at rank 3; present in 22 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:57:35.197Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 4 of 5 (score 0.62) for the query \"evaluation gate fetch resource skill bridge HTTP\"",
+      "status": "provided",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "session_message",
+          "ref": "capture:tool_result:skl-oBaDO5CceKnr",
+          "detail": "carried in a tool result inside the request the model received; present in 22 captured turn(s)"
+        },
+        {
+          "kind": "bridge_row",
+          "ref": "capture:skill:search:skl-oBaDO5CceKnr",
+          "detail": "skill:search returned 5 candidate(s), this one at rank 4; present in 22 captured turn(s)"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:57:35.198Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

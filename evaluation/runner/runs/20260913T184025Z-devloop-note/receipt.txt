@@ -1,0 +1,64 @@
+# Receipt — run 20260913T184025Z-devloop-note · session 5c64e696 · task task-h1k7xruuhb · 2026-09-13T18:42:38Z
+
+applied 2 team asset(s)
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+- not declared by the asset：skl-XAzqAgejM7O4 — its value bt-pu6nyfhmu2v was used in tool call call_00_n6g1X2znQ4QGBXD0lNBe4399 (message 47), but the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+
+effect status
+- 4 background only (fetched or provided), effect unverified
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 4 of 4 (score 0.62) for the query "团队 skill 资源文件 获取 本地 fetch resource node 工具"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:40:46.137:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    5c64e696-e713-47b1-b07a-c919a351ba31:call_00_obafQ00k6lmO0hyUv57U6797  — skill:get answered at message 8; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ skl-XAzqAgejM7O4  v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    impact     its value bt-pu6nyfhmu2v was used in tool call call_00_n6g1X2znQ4QGBXD0lNBe4399 (message 47), but the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+    target     tool_call
+    evidence
+      tool_arg        request(a8b72e4d-854a-4f9e-b642-7738d1ea26dd):msg[47]:call_00_n6g1X2znQ4QGBXD0lNBe4399:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+      tool_arg        request(b63918a1-32b1-4bff-b431-331530eed19f):msg[49]:call_00_TsYCLHFD57G7arJ9tuue9713:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.mjs:1-97  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.test.mjs:1-105  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+    gate pending · no cross-person validation yet
+    risk       needs_review: token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: cd /private/tmp/topic4-sessions/20260913T184025Z-devloop-note.iXcK/session && curl -sSk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'con, before the credited fetch — its use cannot be attributed to that fetch
+    risk       gate_pending: needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 2 of 4 (score 0.97) for the query "团队 skill 资源文件 获取 本地 fetch resource node 工具"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 4 candidate(s), this one at rank 2; present in 21 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 4 (score 0.97) for the query "团队 skill 资源文件 获取 本地 fetch resource node 工具"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 21 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 4 candidate(s), this one at rank 3; present in 21 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T184025Z-devloop-note.jqbC/20260913T184025Z-devloop-note/receipt.json

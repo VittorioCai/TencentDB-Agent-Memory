@@ -1,0 +1,29 @@
+[20:36:53] model custom-local:deepseek-v4-flash
+[20:36:53] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done.
+
+## 改了什么
+
+新增两个文件(未改动任何既有文件):
+
+- `evaluation/gate/fetch-resource.mjs` — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`。向 `${bridgeBase}/skill-bridge/v3/skill/files/read` POST `{skill_id, path}`,解析桥接的标准信封 `{code, message, data:{content, encoding,...}}`:
+  - `code === 0` 时按 `data.encoding` 解码(`base64` 或默认 `utf-8`),返回 `Buffer`;
+  - `code !== 0` 时 `throw new Error(envelope.message)`,不吞掉;
+  - `fetcher` 缺省为 `globalThis.fetch`(测试可注入桩)。
+- `evaluation/gate/fetch-resource.test.mjs` — 5 条用例:正常字节 + 请求体/URL、base64 二进制还原、空资源→零字节 Buffer、错误信封抛错带 message、缺省走 `globalThis.fetch`。
+
+## 关键判断
+
+- **空文件是合法的**:实现里用 `data.content ?? ""`,空串照样 `Buffer.from` 成零字节,绝不把 falsy 当失败——这正是任务点名的陷阱。
+- **上游可能是 `bridgeBase` 根地址,也可能已带 `/skill-bridge/v3/skill` 前缀**,两种都接受,避免调用方踩格式。
+- `bridgeBase` 构造按仓库既有约定(`MemoryProxy/src/skill/skill-bridge.ts:371` 的 `/skill-bridge/v3/skill/<sub>` 路由)。
+
+## 团队经验检索
+
+动手前检索了一次,命中最相关的是 `deploy-lookup-note-a/b`(按 id 而非关键词取团队资产)和 `eval-bridge-endpoint-b`(桥接地址约定)。前者印证了"经 bridge 按 id 取资源"的方向;`files/read` 的信封结构以仓库自身契约(`MemoryCore/src/core/skill/skill-core.ts:535`、`sdk/.../skill-types.ts:219`)为准。
+
+## 测试
+
+- 新增用例:5/5 通过。
+- 全量 `node --test evaluation/**/*.test.mjs`:644 用例,642 通过,2 skipped,0 失败(基线为 639/637/2/0,数字完全对齐,无既有行为变化)。

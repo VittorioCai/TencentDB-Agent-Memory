@@ -1,0 +1,43 @@
+{
+  "schema": "context-confounders-v1",
+  "checked_at": "2026-09-13T18:44:41.850Z",
+  "system_prompt": {
+    "chars": 22884,
+    "sha1": "4f55a51232d2084d43fd154c4275bd6c01bab35b"
+  },
+  "profile_memory": {
+    "present": false
+  },
+  "available_skills": {
+    "names": [],
+    "not_in_pool": []
+  },
+  "non_pool_skill_reads": [
+    {
+      "timestamp": "2026-09-14 02:42:58.030",
+      "endpoint": "get",
+      "skill_id": "skl-XAzqAgejM7O4",
+      "skill_name": null,
+      "upstream_status": 200
+    }
+  ],
+  "pool": {
+    "asset_ids": [
+      "skl-KPVMV2uB5rXM",
+      "skl-eM1xP28pXiYA",
+      "skl-MyrdnecjeYSb",
+      "skl-ImeA29HL3Djj",
+      "skl-oBaDO5CceKnr",
+      "skl-sZFb3KatWY6m"
+    ],
+    "names": [
+      "deploy-lookup-note-a",
+      "deploy-lookup-note-b",
+      "tdc-312fad",
+      "eval-bridge-endpoint-c",
+      "eval-bridge-endpoint-b",
+      "eval-bridge-endpoint-a"
+    ]
+  },
+  "watch": []
+}

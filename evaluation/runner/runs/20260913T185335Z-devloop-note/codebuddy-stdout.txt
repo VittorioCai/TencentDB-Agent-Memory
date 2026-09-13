@@ -1,0 +1,24 @@
+[20:53:47] model custom-local:deepseek-v4-flash
+[20:53:47] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。检索到团队经验 `eval-skill-resource-download`(追踪值 `bt-pu6nyfhmu2v`),按其中两条要点实现:取原始字节要走 `files/download` 子路径,且**空内容合法**、必须按零字节解码,不能当错误。
+
+## 改动
+
+**新增 `evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- 向 `${bridgeBase}/files/download` POST `{ skill_id, path }`(`bridgeBase` 支持 `.../v3/skill` 或 `.../v3` 两种写法)。
+- 成功时返回 `Buffer`;`fetcher` 缺省用 `globalThis.fetch`。
+- 响应先按字节取回,再用**形状**(是否有数字 `code` 且含 `message`/`data`)判断是不是信封,而不是看 Content-Type —— 资源本身可能就是 JSON。
+- 信封 `code === 0`:按 `data.encoding`(base64/utf-8)解码;`content` 为空串时 `Buffer` 长度为 0,是合法文件。
+- 信封 `code !== 0`,或成功信封里 `content` 缺失/类型不对:抛 `Error`,message 原样带上信封的 `message`,不吞掉。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`** — 4 个用例:原始字节不被信封包裹、空资源返回零字节 Buffer、非零 code 抛出且带 message、`/v3` 结尾的 base 也能拼出正确路径。
+
+## 验证
+
+```
+node --test "evaluation/**/*.test.mjs"
+```
+643 个测试,641 通过,0 失败,2 跳过(既有跳过项)。仅新增上述两个文件,未改动其他文件。
+
+(注:`node --test evaluation` 在本机 Node 24 下会把目录当模块入口报错,需用 glob 形式跑。)

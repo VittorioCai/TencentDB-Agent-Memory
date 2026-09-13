@@ -1,0 +1,7 @@
+[20:46:38] ClickHouse http://127.0.0.1:8123  db=context_proxy  window=last 30 MINUTE
+[ok] 218 row(s) -> /private/tmp/topic4-runs/20260913T184442Z-devloop-note.fFpv/20260913T184442Z-devloop-note/tool-call-logs-all.jsonl
+[20:46:39] distribution:
+   ┌─kind─────────┬─bridge_source─┬───n─┬─ok_2xx─┐
+1. │ bridge_call  │ skill-bridge  │  20 │     20 │
+2. │ model_intent │               │ 198 │      0 │
+   └──────────────┴───────────────┴─────┴────────┘

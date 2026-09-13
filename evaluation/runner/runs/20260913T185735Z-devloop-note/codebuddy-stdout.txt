@@ -1,0 +1,26 @@
+[20:57:47] model custom-local:deepseek-v4-flash
+[20:57:47] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Only the two new files were added. Done.
+
+## 改了什么
+
+新增两个文件：
+
+1. **`evaluation/gate/fetch-resource.mjs`** — 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`：
+   - 走 `files/download` 子路径，POST `{ skill_id, path }`。
+   - 正常响应返回原始字节（`Buffer`）。
+   - 响应体是信封（有数字 `code`）时：`code !== 0` → 抛 `Error`，`message` 取自信封；`code === 0` 但返回的是信封（即资源为空的上游回退）→ 解码 `data.content`，空字符串得到**零字节** `Buffer`；`content` 字段缺失/非字符串才抛错。
+   - `fetcher` 缺省 `globalThis.fetch`。
+
+2. **`evaluation/gate/fetch-resource.bt-pu6nyfhmu2v.test.mjs`** — 5 条测试：raw bytes 与请求形状、空资源零字节、错误信封抛错带 message、base64 解码、默认 fetcher。
+
+## 为什么这么做
+
+动手前检索了团队经验，命中 `eval-skill-resource-download`（追踪值 `bt-pu6nyfhmu2v`），并对照桥接实现 `MemoryProxy/src/skill/skill-bridge.ts:755-839` 核实：
+
+- 该经验的适用条件正是"把资源文件按原始字节保存到本地"，它点明**能返回原始字节的是 `files/download`**，而 `files/read` 永远回 JSON 信封——照工具说明存盘会写出一个 JSON 文件。所以选用 `files/download`。
+- 经验第二条 + 源码 `:820` 证实：`files/download` 在内容为空时因 `!parsed.data?.content` 把整个信封回退返回。因此实现里不能把"拿到信封"一律当错误，空内容要按合法内容解码成 0 字节。
+- 按团队既有归因约定（`CLAUDE.md §16`、姊妹技能 `eval-tool-result-exit-line` 给出的落法）：测试文件名与用例标题带上追踪值，便于团队日后归因。
+
+验证：新增测试单跑通过；全量 `node --test 'evaluation/**/*.test.mjs'` 由基线 639 条增至 644 条，642 通过、2 跳过、0 失败，既有行为未变。

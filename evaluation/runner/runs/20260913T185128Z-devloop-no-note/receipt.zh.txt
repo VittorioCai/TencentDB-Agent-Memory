@@ -1,0 +1,56 @@
+# 资产使用回执 — 运行 20260913T185128Z-devloop-no-note · 会话 bd8e76e4 · 任务 task-h1k7xruuhb · 2026-09-13T18:53:33Z
+
+本次应用 4 项团队资产
+- Skill：deploy-lookup-note-b — 已取回——正文已读取，采用未成立
+- Skill：deploy-lookup-note-a — 已取回——正文已读取，采用未成立
+- Skill：eval-bridge-endpoint-b — 已取回——正文已读取，采用未成立
+- Skill：eval-bridge-endpoint-a — 已取回——正文已读取，采用未成立
+
+效果状态
+- 4 项仅作为背景参考（取回或提供），效果待验证
+
+○ deploy-lookup-note-b  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 2 of 3 (score 0.97) for the query "fetch resource bytes buffer error envelope skill"
+    证据
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402  — skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    来源         usr-8ypylzex49  (self)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 3 of 3 (score 0.97) for the query "fetch resource bytes buffer error envelope skill"
+    证据
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402  — skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    为何提供       offered at rank 1 of 3 (score 1.02) for the query "fetch resource bytes buffer error envelope skill"
+    证据
+      bridge_row      tool_call_logs:2026-09-14 02:51:47.477:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_00_ppPsOPTh6iw1pOH8FthR7728  — skill:get answered at message 6; carrying content; version 4
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-a  v4  skill
+    来源         usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    类型         Skill
+    状态         已取回——正文已读取，采用未成立
+    证据
+      bridge_row      tool_call_logs:2026-09-14 02:52:04.064:skill-bridge:files/read  — request names skl-sZFb3KatWY6m; the capture never saw the response
+    闸门 待定 · 作者尚无跨人验证
+    风险         闸门待定: fetched 1 time(s) without any evidence of use
+    风险         低置信: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+标记：◆ 已产生贡献  ✓ 已验证  ✗ 已纠错  ● 已采用  ◐ 仅软证据  ○ 已取回  · 已提供

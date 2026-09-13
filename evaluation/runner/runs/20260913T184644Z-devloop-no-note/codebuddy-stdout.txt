@@ -1,0 +1,18 @@
+[20:46:56] model custom-local:deepseek-v4-flash
+[20:46:56] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+完成。改动如下:
+
+**新增 `evaluation/gate/fetch-resource.mjs`**
+- 导出 `fetchResource({ skillId, path, bridgeBase, fetcher })`,向桥接的 `files/read` 发 POST(`{skill_id, path}`),把返回的信封还原成资源**原始字节** `Buffer`。
+- 按 `data.encoding` 解码(`base64` → 逐字节保留二进制;否则 utf-8)。
+- **空内容**(`""`/缺失)返回零字节 `Buffer.alloc(0)`——空文件是合法文件,不当作错误。
+- **`code !== 0`** 时 `throw new Error(envelope.message)`,不吞掉上游拒绝。
+- `fetcher` 缺省用 `globalThis.fetch`;并容忍桩直接返回已解析信封或无信封的裸 body。
+
+**新增 `evaluation/gate/fetch-resource.test.mjs`**(7 例)
+- utf-8 精确字节、base64 二进制逐字节、空内容零字节、空 body 零字节、非零 code 抛错且带上 `message`、`bridgeBase` 尾斜杠、默认 `globalThis.fetch`。
+
+**为什么这样做**:动手前检索了团队 skill,没有直接讲这个取资源工具的条目;而注入的 `skill_files_read` 契约与 `evaluation/attribution/resolve-tokens.mjs`(信封 `{code,message,data}`,读 `data.content`、`code !== 0` 报错)一致,故按 `files/read` 信封协议实现。空文件这条要求正对应桥接自身 `files/download` 的 `!parsed.data?.content` 缺陷,故显式区分“空”与“失败”。
+
+**验证**:`node --test evaluation/gate/fetch-resource.test.mjs` → 7/7;全量 `node --test 'evaluation/**/*.test.mjs'` → 646 tests、644 pass、0 fail、2 skipped(基线 639 → 新增 7),已有行为不变。仅新增这两个文件。

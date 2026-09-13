@@ -1,0 +1,212 @@
+{
+  "schema_version": "receipt-v1",
+  "session_key": "bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59",
+  "run_id": "20260913T185128Z-devloop-no-note",
+  "task_id": "task-h1k7xruuhb",
+  "generated_at": "2026-09-13T18:53:33Z",
+  "summary": {
+    "applied_count": 4,
+    "by_status": {
+      "validated": 0,
+      "used": 0,
+      "fetched": 4,
+      "provided": 0,
+      "corrected": 0,
+      "contributed": 0
+    },
+    "soft_only_count": 0
+  },
+  "items": [
+    {
+      "asset_id": "skl-eM1xP28pXiYA",
+      "name": "deploy-lookup-note-b",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:42Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 2 of 3 (score 0.97) for the query \"fetch resource bytes buffer error envelope skill\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "capture_line",
+          "ref": "bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402",
+          "detail": "skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:53:33.121Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-KPVMV2uB5rXM",
+      "name": "deploy-lookup-note-a",
+      "asset_type": "skill",
+      "version": 1,
+      "updated_at": "2026-09-07T15:29:43Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 3 of 3 (score 0.97) for the query \"fetch resource bytes buffer error envelope skill\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-8ypylzex49",
+        "relation": "self"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "capture_line",
+          "ref": "bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_01_eOTRRFA4gkJKfjEpzQBQ9402",
+          "detail": "skill:get answered at message 27; content undetermined; version not stated; no service-side row recorded it — telemetry gap"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-8ypylzex49 has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:53:33.121Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-oBaDO5CceKnr",
+      "name": "eval-bridge-endpoint-b",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:30Z",
+      "category": "skill",
+      "why_applicable": "offered at rank 1 of 3 (score 1.02) for the query \"fetch resource bytes buffer error envelope skill\"",
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:51:47.477:skill-bridge:get",
+          "detail": "request names skl-oBaDO5CceKnr"
+        },
+        {
+          "kind": "capture_line",
+          "ref": "bd8e76e4-aa68-4df9-b59d-80d0ffb2ef59:call_00_ppPsOPTh6iw1pOH8FthR7728",
+          "detail": "skill:get answered at message 6; carrying content; version 4"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:53:33.121Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    },
+    {
+      "asset_id": "skl-sZFb3KatWY6m",
+      "name": "eval-bridge-endpoint-a",
+      "asset_type": "skill",
+      "version": 4,
+      "updated_at": "2026-09-10T23:13:29Z",
+      "category": "skill",
+      "why_applicable": null,
+      "status": "fetched",
+      "source": {
+        "producer_user_id": "usr-n68ea5ythq",
+        "producer_agent_id": "agt-5e4hna56j9",
+        "relation": "cross_user"
+      },
+      "impact": null,
+      "target_type": null,
+      "evidence": [
+        {
+          "kind": "bridge_row",
+          "ref": "tool_call_logs:2026-09-14 02:52:04.064:skill-bridge:files/read",
+          "detail": "request names skl-sZFb3KatWY6m; the capture never saw the response"
+        }
+      ],
+      "related_tests": [],
+      "risks": [
+        {
+          "kind": "gate_pending",
+          "detail": "fetched 1 time(s) without any evidence of use"
+        },
+        {
+          "kind": "low_confidence",
+          "detail": "author usr-n68ea5ythq has no cross-person validation yet; confidence not computable"
+        }
+      ],
+      "gate_decision": "pending",
+      "author_confidence": null,
+      "gate": {
+        "mechanism": "evaluation-script",
+        "decision": "pending",
+        "rules_version": null,
+        "decided_at": "2026-09-13T18:53:33.121Z",
+        "review_priority": null,
+        "applied": null,
+        "evidence_confidence": null,
+        "author_assessment": null
+      }
+    }
+  ]
+}

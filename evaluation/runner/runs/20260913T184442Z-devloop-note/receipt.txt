@@ -1,0 +1,65 @@
+# Receipt — run 20260913T184442Z-devloop-note · session b715036e · task task-h1k7xruuhb · 2026-09-13T18:46:42Z
+
+applied 2 team asset(s)
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+- not declared by the asset：skl-XAzqAgejM7O4 — its value bt-pu6nyfhmu2v was used in tool call call_00_mBrwkVoZyPc8ZPsi2EUY7771 (message 34), but the token appears in a search command — the model was looking for it, not using it
+
+effect status
+- 4 background only (fetched or provided), effect unverified
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 4 of 5 (score 0.62) for the query "fetch resource bytes bridge skill 资源文件 原始字节"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:45:00.984:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    b715036e-8887-4787-8964-39e0bddf7ba7:call_01_nHmmlGM44oCRcqepIqMd5277  — skill:get answered at message 7; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+○ skl-XAzqAgejM7O4  v?  skill
+    from       unknown  (unknown)
+    type       not declared by the asset
+    status     fetched — body retrieved; use not established
+    impact     its value bt-pu6nyfhmu2v was used in tool call call_00_mBrwkVoZyPc8ZPsi2EUY7771 (message 34), but the token appears in a search command — the model was looking for it, not using it
+    target     tool_call
+    evidence
+      tool_arg        request(447c7c85-98c4-4874-8f60-1fb05d5bb3a9):msg[34]:call_00_mBrwkVoZyPc8ZPsi2EUY7771:arguments  — token bt-pu6nyfhmu2v; the token appears in a search command — the model was looking for it, not using it
+      tool_arg        request(9ebae1c5-6c93-4d79-bad9-1f5afac6863f):msg[45]:call_00_mYNMip7KpTZHVsuSVIF73333:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      tool_arg        request(db170bd9-cad3-4551-9b2f-ffd65b0575f3):msg[47]:call_00_w0cH1uHbQ1yF75H2txiR1109:arguments  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.mjs:1-74  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+      diff_hunk       diff:evaluation/gate/fetch-resource.test.mjs:1-104  — token bt-pu6nyfhmu2v; the token first reached the model at message 6 via Command: curl -sfk -X POST http://127.0.0.1:8096/skill-bridge/v3/skill/get -H 'content-type: application/json' -H 'x-tdai-service-id: default' -H 'x-conversatio, before the credited fetch — its use cannot be attributed to that fetch
+    gate pending · no cross-person validation yet
+    risk       needs_review: token bt-pu6nyfhmu2v; the token appears in a search command — the model was looking for it, not using it
+    risk       gate_pending: needs_review only: a token matched or a call was made, but nothing could be tied to this asset's own content
+    risk       low_confidence: author  has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 2 of 5 (score 0.97) for the query "fetch resource bytes bridge skill 资源文件 原始字节"
+    evidence
+      session_message capture:tool_result:skl-eM1xP28pXiYA  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-eM1xP28pXiYA  — skill:search returned 5 candidate(s), this one at rank 2; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+· deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     provided — listed or placed in context; never fetched
+    why offered offered at rank 3 of 5 (score 0.97) for the query "fetch resource bytes bridge skill 资源文件 原始字节"
+    evidence
+      session_message capture:tool_result:skl-KPVMV2uB5rXM  — carried in a tool result inside the request the model received; present in 22 captured turn(s)
+      bridge_row      capture:skill:search:skl-KPVMV2uB5rXM  — skill:search returned 5 candidate(s), this one at rank 3; present in 22 captured turn(s)
+    gate pending · no cross-person validation yet
+    risk       gate_pending: cold start: no usage evidence for this asset yet (nothing at fetched or beyond); pending by default
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T184442Z-devloop-note.fFpv/20260913T184442Z-devloop-note/receipt.json

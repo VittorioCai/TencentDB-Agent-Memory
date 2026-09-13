@@ -1,0 +1,47 @@
+# Receipt — run 20260913T184644Z-devloop-no-note · session 8daf629b · task task-h1k7xruuhb · 2026-09-13T18:49:26Z
+
+applied 3 team asset(s)
+- skill：deploy-lookup-note-b — fetched — body retrieved; use not established
+- skill：deploy-lookup-note-a — fetched — body retrieved; use not established
+- skill：eval-bridge-endpoint-b — fetched — body retrieved; use not established
+
+effect status
+- 3 background only (fetched or provided), effect unverified
+
+○ deploy-lookup-note-b  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 1 of 4 (score 0.97) for the query "fetch resource skill bridge 资源文件 字节 Buffer 错误信封"
+    evidence
+      capture_line    8daf629b-26d7-446c-b247-8c677093ffc4:call_00_1jNgfvqdFK4Q4EC8Ldez1211  — skill:get answered at message 33; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ deploy-lookup-note-a  v1  skill
+    from       usr-8ypylzex49  (self)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 2 of 4 (score 0.97) for the query "fetch resource skill bridge 资源文件 字节 Buffer 错误信封"
+    evidence
+      capture_line    8daf629b-26d7-446c-b247-8c677093ffc4:call_00_1jNgfvqdFK4Q4EC8Ldez1211  — skill:get answered at message 33; content undetermined; version not stated; no service-side row recorded it — telemetry gap
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-8ypylzex49 has no cross-person validation yet; confidence not computable
+
+○ eval-bridge-endpoint-b  v4  skill
+    from       usr-n68ea5ythq / agt-5e4hna56j9  (cross_user)
+    type       skill
+    status     fetched — body retrieved; use not established
+    why offered offered at rank 3 of 4 (score 0.62) for the query "fetch resource skill bridge 资源文件 字节 Buffer 错误信封"
+    evidence
+      bridge_row      tool_call_logs:2026-09-14 02:47:03.026:skill-bridge:get  — request names skl-oBaDO5CceKnr
+      capture_line    8daf629b-26d7-446c-b247-8c677093ffc4:call_00_5u63nqPEuPvqlZHHLahV4427  — skill:get answered at message 6; carrying content; version 4
+    gate pending · no cross-person validation yet
+    risk       gate_pending: fetched 1 time(s) without any evidence of use
+    risk       low_confidence: author usr-n68ea5ythq has no cross-person validation yet; confidence not computable
+
+marks: ◆ contributed  ✓ validated  ✗ corrected  ● used  ◐ soft only  ○ fetched  · provided
+
+→ /private/tmp/topic4-runs/20260913T184644Z-devloop-no-note.kvtz/20260913T184644Z-devloop-no-note/receipt.json

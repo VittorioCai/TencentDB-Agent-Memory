@@ -1,0 +1,27 @@
+[20:44:53] model custom-local:deepseek-v4-flash
+[20:44:53] binding team=team-n3lgrbjx7d agent=agt-n3lgrhe73q task=task-n3lg0czx0t
+[ok] single-prompt mode (permissions bypassed: no one is present to approve)
+Done. Full suite green: **647 tests, 645 pass, 0 fail, 2 skipped** (baseline was 639/637/0/2 — the 8 new tests all pass, nothing else changed).
+
+## What I changed
+
+**Added `evaluation/gate/fetch-resource.mjs`** — exports `fetchResource({ skillId, path, bridgeBase, fetcher })`:
+- POSTs `{skill_id, path}` to `${bridgeBase}/files/download`, reads the body as raw bytes, and returns a `Buffer`.
+- Defaults `fetcher` to `globalThis.fetch`.
+- On an envelope with `code !== 0`, throws an `Error` whose message is the envelope's `message` (no swallowing).
+- Decodes `data.content` (respecting `encoding: "base64"`), so `content: ""` yields a genuine zero-length `Buffer`.
+
+**Added `evaluation/gate/fetch-resource.test.mjs`** — 8 tests: raw bytes + request shape, trailing-slash handling, empty-resource envelope → zero bytes, empty raw body → zero bytes, base64 decoding, error envelope throws with its message, a `200` carrying a non-zero `code` still throws, and the `globalThis.fetch` default.
+
+## Why the download subpath, and why empty is special-cased
+
+I searched team experience first and found `eval-skill-resource-download` (`skl-XAzqAgejM7O4`), which matched exactly and changed the implementation:
+
+- **Subpath matters.** The injected tool docs suggest `files/read` with `curl -o` returns raw bytes, but `files/read` *always* returns a JSON envelope (the `-o` is client-side and invisible to the bridge). `files/download` is the subpath that returns the resource bytes. I used `files/download`.
+- **Empty is not an error.** The bridge's download branch tests `!parsed.data?.content` to detect failure, and `""` is falsy — so a legitimately empty resource comes back as `{code:0, data:{content:""}}` instead of zero bytes. The tool decodes that envelope rather than treating it as an error, satisfying "empty file is a legal file".
+
+Both facts are recorded in the module/test doc-comments along with the note's trace value `bt-pu6nyfhmu2v` for attribution.
+
+I confirmed the behavior against this repo's own bridge source (`MemoryProxy/src/skill/skill-bridge.ts:757-838`), not just the note.
+
+One note: `node --test evaluation` (bare directory) fails with `MODULE_NOT_FOUND` in this environment — that's pre-existing and unrelated to these files; I ran the suite via `node --test "evaluation/**/*.test.mjs"`, which discovers and passes. Only the two new files were added; no existing files were modified.
