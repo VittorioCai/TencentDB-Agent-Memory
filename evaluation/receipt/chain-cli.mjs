@@ -49,6 +49,16 @@ const src = {
   outcomes: readJson("core-outcomes.json"),
   note: c.note && existsSync(c.note.path) ? { ...c.note, origin: c.origin } : null,
   gate: null, candidates: null,
+  // 第 4 环要说清改了什么:从这次运行的 final.diff 里读文件名与增删行数,不手写。
+  change: (() => {
+    const f = join(dir, "final.diff");
+    if (!existsSync(f)) return null;
+    const t = readFileSync(f, "utf8");
+    const files = [...t.matchAll(/^\+\+\+ b\/(.+)$/gm)].map((m) => m[1]);
+    const added = t.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).length;
+    const removed = t.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---")).length;
+    return files.length ? { files, added, removed } : null;
+  })(),
 };
 // 反例二的两个事实取自第二任务的报告口径(参考采纳成立 / 判定器未产出 used)
 if (kind === "adopted_but_flagged") { src.reference_adopted = true; src.judged_used = false; }

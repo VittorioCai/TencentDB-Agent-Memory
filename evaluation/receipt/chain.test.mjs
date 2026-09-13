@@ -89,3 +89,27 @@ test("判据版本缺失写「未记录」,不是问号", () => {
   assert.ok(!/判据版本 \?/.test(md), "问号读起来像坏了");
   assert.match(md, /判据版本未记录/);
 });
+
+// ── 第十二轮复核:第 4 环只说「1 次尝试」,评委看完不知道解决了什么 ──
+test("第 4 环要说清改了哪些文件,并写明采用证据支持到哪一步", () => {
+  const src = { verdict: { verdict: "PASS", attempts: [{ value: "bt-x", ok: true }] },
+    change: { files: ["a/verify.mjs", "a/verify.exit-status.bt-x.test.mjs"], added: 44, removed: 3 } };
+  const c = buildChain("R", src);
+  const l4 = c.links.find((x) => x.n === 4);
+  assert.match(l4.said, /2 个文件/);
+  assert.match(l4.said, /\+44\/−3/);
+  const md = renderChain(c, { expand: true });
+  assert.match(md, /final\.diff/, "要给出能打开看的证据文件");
+  assert.match(md, /不单独证明.*来自笔记/, "采用证据的边界要写在同一环里");
+});
+
+test("没有 change 时照旧,不编造改动内容", () => {
+  const c = buildChain("R", { verdict: { verdict: "PASS", attempts: [{ value: "bt-x", ok: true }] } });
+  const l4 = c.links.find((x) => x.n === 4);
+  assert.ok(!/个文件/.test(l4.said), "没有 diff 就不说文件数");
+  assert.equal(l4.proven, true);
+});
+
+test("第 6 环的标题说的是结果回写,不是准入判定", () => {
+  assert.equal(LINKS[5].title, "结果回写 Core");
+});

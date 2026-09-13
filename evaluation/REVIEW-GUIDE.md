@@ -1,9 +1,10 @@
 # 评审导读:先看成果,再看证据,最后才是过程
 
-这一页按**第一次读**的顺序排:这套东西解决什么问题、有没有一条真链走通、三项最重要的发现各自的边界、
-官方六项任务落在哪、怎么用一条命令自己复算。协作约定与逐轮复核历史在最后一节 —— 它们重要,但不该占前几屏。
+问题 → 一条真实的链 → 三项发现与边界 → 官方六项任务 → 一条复算命令 → 证据入口。
+协作约定与逐轮复核历史在第十二节。
 
-**数字一律不在这里抄**,都在各报告里,且各报告都能重新生成。
+数字都在各报告里,**能重算的范围以 [`generated-reports.json`](./generated-reports.json) 的登记为准**
+(其中一份登记为不能在验收里重算,原因与代价同页写明)。
 
 ## 一、解决什么问题,这个分支新增了什么
 
@@ -46,7 +47,7 @@ node evaluation/receipt/chain-cli.mjs --case=main --expand
 ## 三、三项最重要的发现,连边界一起说
 
 **① 归因能闭合,但闭不闭合取决于证据有没有收全。**
-第三个闭环任务三批 18 次有笔记运行,按运行当时的记录 **0 次 `used`**。根因不是模型没用笔记,
+第三个闭环任务三批共 16 次有笔记运行(计入样本 15 次),按运行当时的记录 **0 次 `used`**。根因不是模型没用笔记,
 而是本任务的笔记从来不在冻结的资产池快照里,事件构建器对不在快照里的资产不写任何事件。
 补上快照重判:计入样本的有笔记运行 **9/11 出现 `used`**,无笔记运行 **11 次仍 0 条笔记事件**。
 **边界**:那份快照是事后补录的资产索引,不是当时冻结的历史池;它支持「笔记内容进入了后续操作并被记账」,
@@ -63,7 +64,7 @@ node evaluation/receipt/chain-cli.mjs --case=main --expand
 送达按捕获与服务端受信行;使用要求证据把**这份资产的内容**关联到后续具体操作,
 且被记账的那次取回必须是内容最早到达模型的途径;收益只由留一法对照产出。
 **边界**:样本小、单模型,不做显著性检验;「最小上下文」这一项目前只有**两层过滤的分开计数**,
-**没有做优化效果的对照** —— 这条在报告里一直如实限定,不要读成已证明省了上下文。
+**没有做优化效果的对照**,不能读成已证明省了上下文。
 
 ## 四、官方六项任务 → 本分支
 
@@ -73,7 +74,7 @@ node evaluation/receipt/chain-cli.mjs --case=main --expand
 | 二 检索与最小上下文 | 未另建检索;送达只经产品自己的 `skill_search`,注入块对新 agent 为空。**两层过滤分开展示**:准入由产品闸门做(与任务无关),任务相关性由模型检索时做 | `node evaluation/attribution/selection-cli.mjs` —— 一次真实运行:池中 7 项 → 闸门挡下 2 项(candidate / failed)→ 已准入 5 项 → 模型取回 1 项 → 进入上下文 2729 **字符**(未测量 token,没有分词器就不报)→ 够不够只引独立验收(PASS 6/6),不另下结论 |
 | 三 使用链路与可信归因 | recalled / **selected** / injected / fetched / used / validated / corrected 七态(`selected` 由 `build-early-events.mjs` 在候选清单里观察到:池 → 清单 → 注入这条路径可见;模型自己 `curl` 取回那条路径只到 `fetched`,没有筛选步骤可观察);结果按调用不按运行;关系 cross_user 由服务端推导;只读受信行 | [`evaluation/README.md`](./README.md)、[`gate/README.md`](./gate/README.md) "The rules"、[`attribution/`](./attribution) | `node evaluation/attribution/calibrate-runs.mjs …`(命令在报告开头) |
 | 四 用户可感知回执 | 一资产一行一标记;来源与消费者同行;"相关测试 X 通过"措辞;低置信风险来自闸门 confidence | [`receipt/README.md`](./receipt/README.md)、各运行 `receipt.txt` | `node evaluation/receipt/render-cli.mjs <run>/receipt.json` |
-| 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环:前两个任务无 / 有笔记各 2 次,第三个任务(新增功能、行为判定)跑了三批、条件不同不合并,逐批数字见该页(每批都是无笔记组不过、有笔记组过);采用归因见 [`tasks/resource-download/REJUDGE-POOL.md`](./tasks/resource-download/REJUDGE-POOL.md) —— 按运行当时的记录 0 次 `used`,根因是本任务的笔记不在冻结池快照里,补上后重判多数给出 `used`、无笔记组仍 0 条笔记事件;首批 16 次因环境污染整批作废(演示,非性能对照) | [`runner/COMPARISON-2026-09-11-reparsed.md`](./runner/COMPARISON-2026-09-11-reparsed.md)、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
+| 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环:前两个任务无 / 有笔记各 2 次,第三个任务(新增功能、行为判定)跑了三批、条件不同不合并,逐批数字见该页(**每批无笔记组都是 0 通过**;有笔记组一、三批全过,**第二批 4/5**,把因污染排除的那次计回去是 4/6);采用归因见 [`tasks/resource-download/REJUDGE-POOL.md`](./tasks/resource-download/REJUDGE-POOL.md) —— 按运行当时的记录 0 次 `used`,根因是本任务的笔记不在冻结池快照里,补上后重判多数给出 `used`、无笔记组仍 0 条笔记事件;首批 16 次因环境污染整批作废(演示,非性能对照) | [`runner/COMPARISON-2026-09-11-reparsed.md`](./runner/COMPARISON-2026-09-11-reparsed.md)、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
 | 六 经验回流与候选 | 提取候选默认 candidate、私有;闸门规则 admit 需跨人 validated ≥ 1 且无 corrected;作者上下文评估只定复核优先级 | [`tasks/exit-code-fix/REPORT.md`](./tasks/exit-code-fix/REPORT.md) "闸门有没有动"、`gate-evaluations.jsonl`、[`author/README.md`](./author/README.md) | `node evaluation/tasks/exit-code-fix/gate-evaluate.mjs --dry-run` |
 
 ## 五、一条命令复算,以及怎么读它的输出
@@ -86,8 +87,9 @@ bash evaluation/deliver-check.sh          # 存档到 evaluation/delivery/<时�
 
 **先说清楚会看到什么,免得把「按设计」读成「复现失败」:**
 
-- **这条命令的退出码正常就是非零**,因为它连线上检查一起跑。**历史实验的复算不需要任何密钥**;
-  **线上环境检查另行报告**,缺服务或缺凭据时不会通过。
+- **两类检查都通过时退出码是 0**(线上栈在位的机器上实测如此)。缺线上依赖时整条命令可能非零 ——
+  **历史实验的复算不需要任何密钥**,线上环境检查是另一类。**非零不等于复算失败,也不是「正常现象」**:
+  真正的离线失败同样会让它非零,所以每次都要看下面那句分开判的结论。
 - 结论句在 `evaluation/delivery/<时间>/SUMMARY.md` 末尾,**把两类分开判**:
   「离线复算 通过 / 失败」与「线上检查 通过 / 失败」。**只看离线那半句**就知道能不能复算。
 - 另有几步是**按设计应当失败**的(判别值已烧毁的自检、需要 Core 与作者密钥的条件核对),
@@ -193,10 +195,14 @@ node --test $(find evaluation -name '*.test.mjs' -not -path '*/node_modules/*' |
 
 | 条 | 对应 | 文件 |
 |---|---|---|
-| ① 置信度是入池 / 回池门禁,系统辅助人判断;离线 + 在线两类指标 | 闸门在 Core 写 status;confidence = 跨人结果中 validated 占比,带分母,无证据为 null;人可推翻、可撤回结果行;pending 资产带复核优先级排队 | `gate/README.md`、`MemoryCore/src/metadata/service/asset-gate.ts` |
+| ① 置信度是入池 / 回池门禁,系统辅助人判断;离线 + 在线两类指标 | 闸门在 Core 写 status;`confidence` = **该资产跨人结果中 validated 的占比**,带分母 `confidence_n`,无证据为 null(不是 0);人可推翻、可撤回结果行。**复核优先级是另一件事**,由作者上下文评估等信号排序,`confidence` 不参与 admit/reject | `gate/README.md`、`MemoryCore/src/metadata/service/asset-gate.ts` |
 | ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移;第三任务换一类工作(新增功能)、换一份笔记、采用靠行为判定(`tasks/resource-download/REPORT.md`:三批分列不合并,作废批次与污染检查同页写明;采用归因的更正与两组保真对照在 `REJUDGE-POOL.md`)。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
 
 ## 十二、协作约定、原始记录清单与复核历史
+
+<details>
+<summary>展开:AI 标记裁定、原始运行记录清单、闸门重拆、逐轮复核处置</summary>
+
 
 **PR 正文一律按 `PR-DESCRIPTION.md` 原样提交,不加 AI 生成标记**(用户裁定 2026-09-12:这份工作是用户主导 + 多方复核,那行标记会让人低估实际投入;提到腾讯官方仓库的 PR 尤其不能带)。本文件与 `PR-DESCRIPTION.md` 里都没有这类行——曾出现在 fork PR #1 的线上正文里(建 PR 时被自动追加),已用 `gh pr edit --body-file` 覆盖;该 PR 随后按用户决定关闭,交付载体改回分支本身。四条上游 PR(#1358 / #1359 / #1360 / #1361)的正文均已核过,无该标记。
 
@@ -250,3 +256,5 @@ unknown,闸门据此把复核优先级提到 high,admit/reject 不变——作�
 已改成默认全查、历史必须显式标注,当前声明从 1 处变成 2 处。同轮还纠正了第三任务报告里一句没有依据的因果结论
 (见上文第 5 条的 ②)。修的过程中自己又暴露两处:执行核对排在了它要读的那一步之前;`live-state` 逐条累计退出码后报 141,
 查出是 `| head -6` 提前关管道造成的 SIGPIPE,不是真失败。逐条处置见 `evaluation/STATE.md`。
+
+</details>

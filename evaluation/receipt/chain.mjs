@@ -15,7 +15,8 @@ export const LINKS = [
   { n: 3, key: "retrieval",  title: "检索与取回" },
   { n: 4, key: "adoption",   title: "实际新增的测试 / 代码" },
   { n: 5, key: "acceptance", title: "独立验收" },
-  { n: 6, key: "decision",   title: "Core 的判定" },
+  { n: 6, key: "decision",   title: "结果回写 Core" },   // 这一环展示的是结果状态(validated),不是准入判定(admit/reject/pending)——两者混淆过一次(第十二轮复核)
+
   { n: 7, key: "candidate",  title: "新产生的候选" },
 ];
 
@@ -51,12 +52,21 @@ export function buildChain(runId, src = {}, opts = {}) {
 
   // ④ 采用
   const att = src.verdict?.attempts ?? [];
-  if (att.length) push(4, `操作实际改了东西:${att.length} 次尝试,其中带判别值的 ${att.filter((a) => a.value).length} 次。`,
+  // 「1 次尝试」说不出解决了什么。有 final.diff 就把改了哪些文件、多少行摆出来,
+  // 并在同一环里写明采用证据支持到哪一步 —— 不写的话读者会把它读成「修复思路来自笔记」(第十二轮复核)。
+  const ch = src.change;
+  const what = ch?.files?.length
+    ? `操作实际改了东西:${ch.files.length} 个文件(+${ch.added ?? "?"}/−${ch.removed ?? "?"}),`
+      + `${att.length} 次尝试中带判别值的 ${att.filter((a) => a.value).length} 次。`
+      + `采用证据支持的是**笔记约定进入了这次改动**,不单独证明修复思路来自笔记。`
+    : `操作实际改了东西:${att.length} 次尝试,其中带判别值的 ${att.filter((a) => a.value).length} 次。`;
+  if (att.length) push(4, what,
+    [...(ch?.files?.length ? [ev(`${runDir(runId)}/final.diff`, "改动文件", ch.files.join(", "))] : []),
     // 批次四那时的 attempt 没有 `kind`(字段是 call_id / host / port),直接拼会印出
     // `attempts[].undefined` —— 不影响计算,但看着像半成品(第十一轮复核指出)。按下标定位,
     // 有 kind 才加上它;`ok` 未记时写「未记录」,不折成 false。
-    att.map((a, i) => ev(`${runDir(runId)}/verdict.json`, `attempts[${i}]${a.kind ? `.${a.kind}` : ""}`,
-      `${a.value ?? "(无判别值)"} ok=${a.ok ?? "未记录"}`)));
+    ...att.map((a, i) => ev(`${runDir(runId)}/verdict.json`, `attempts[${i}]${a.kind ? `.${a.kind}` : ""}`,
+      `${a.value ?? "(无判别值)"} ok=${a.ok ?? "未记录"}`))]);
   else push(4, "", [], "verdict.json 里没有 attempts,说明没有可归因的改动");
 
   // ⑤ 独立验收
