@@ -466,6 +466,13 @@ done
 SNAPSHOT="$EVAL/provenance/artifacts/asset-pool-snapshot.json"
 [[ -f "$TASK_DIR/asset-pool-snapshot.json" ]] && SNAPSHOT="$TASK_DIR/asset-pool-snapshot.json"
 cp "$SNAPSHOT" "$RUN_DIR/asset-pool-snapshot.json" 2>/dev/null || warn "no pool snapshot to copy"
+# 登记了判别值的资产必须在冻结快照里,否则 build-events 对它 continue,一个事件都不写,
+# 采用判定只能停在 needs_review —— 2026-09-13 第三任务三批 18 次就是这么丢的。硬失败,不是提醒。
+if [[ -f "$TASK_DIR/tokens.json" ]]; then
+  (cd "$REPO_ROOT" && node "$EVAL/runner/check-pool-snapshot.mjs" \
+     --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$TASK_DIR/tokens.json") \
+    || die "冻结的资产池快照缺登记资产,归因会静默失效;先修快照再跑"
+fi
 
 # ── 3b. has the pool moved since it was frozen? ──────────────────
 # The system extracts skills from finished sessions on its own. The first real
