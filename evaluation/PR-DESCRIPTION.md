@@ -27,7 +27,21 @@
    无笔记 2 次 / 有笔记 4 次(2 次绑第一任务实体、2 次绑自己的实体)+ 第一任务在 v2 上 1 次(用户 b)。闸门对 v2
    按规则 admit:cross_user validated 4、distinct_consumers 2、distinct_tasks 2(`gate-evaluations.jsonl` 末条)。
    报告 `REPORT.md`;清单 `devloop-runs.json`(含作废运行与原因、配置修正)。
-5. **作者上下文评估进闭环(`evaluation/author/`)**:对作者 A 在笔记 v2 上、对消费者 B 在它自己回流出的候选上各做一次
+5. **开发闭环,第三任务(`evaluation/tasks/resource-download/`)—— 换一类工作,换一种采用判定**:
+   前两个任务都是「修一个已有缺陷」、靠判别值出现在新增测试里证明采用;这一个是**新增一个功能**,
+   采用**靠行为判定**——参考测试断言空资源返回零字节、错误信封原样带出,以及**请求打到 `files/download`**
+   (注入的工具清单从没提过这个子路径,它是一个设计决定,抄不来)。自带笔记资产、自带 `tokens.json`。
+   跑前先验证了验收能区分:无笔记式实现 2/5,笔记式实现 5/5。正式样本**无笔记 4 次 0/4**
+   (四次全部只挂在「打到 `files/download`」这一条,其余四条行为断言全过)、**有笔记 4 次 4/4**。
+   三件必须连着讲的事:**①** 使用判定五次全是 `needs_review` —— 消费者自己 curl 了 skill bridge 取回笔记,
+   早于被记账的那次 fetch,归因不把说不清的算成用了;**②** 工作副本里除产品源码外还有本仓库自己的上游 PR 归档,
+   它用大白话写着 `files/download` 返回原始字节,**有笔记组 4/4、无笔记组 2/4 读到了它** ——
+   这是一个共同的替代信息源,**尚不能确定它对组间差异的影响**,要判断只能另做一批排除它之后的对照;
+   **③** 无笔记组**第一批 16 次整批作废**:实施者把验证用的参考实现留在了 `/private/tmp`,两次运行真的读到了,
+   其余 14 次虽未读到但「这条知识只能来自笔记」的前提对整批不成立。闸门没有失职(那两次 `memory-channel` 读取为 0)。
+   由此长出运行环境污染检查 `evaluation/runner/contamination.mjs`(跑前扫散落答案、跑完按**访问**判、工作副本跑完即删),
+   前两个任务的 23 次归档运行已全部重扫,无一命中。报告 `REPORT.md`;清单 `devloop-runs.json`(含作废批次与逐条污染判定)。
+6. **作者上下文评估进闭环(`evaluation/author/`)**:对作者 A 在笔记 v2 上、对消费者 B 在它自己回流出的候选上各做一次
    评估(证据包 → 模型逐条引用 → 程序核**引用真实性与结构化事实** → 管理员签名写入 → 闸门读),闸门理由里出现该评估并标明
    "reported, not used"(只定复核优先级)。证据包新增"作者作为消费者产生的结果"一本账(此前漏查,B 读成 unknown)。
    记录 `author/artifacts/assessment-{a,b}-exit-line.*`、`assessment-write-*.json`、`submit-b-*.json`。
@@ -39,11 +53,11 @@
    但 Core 的闸门理由串改为 `asset-outcome profile … on this asset … a profile of results, not a verified measure of the author`
    (因此重建镜像并切换);⑤ 程序核不了自由文本的语义与适用范围,所以每条保留的声明带程序造的 `fact_sentence`,模型原话另列
    `model_statement`,输出带 `scope_note` 说明边界。
-6. **主分支应用闭环接受的修复**:第一任务 → `evaluation/tasks/bridge-addr/verify.mjs`(批次四复判 14 次 0 变化,
+7. **主分支应用闭环接受的修复**:第一任务 → `evaluation/tasks/bridge-addr/verify.mjs`(批次四复判 14 次 0 变化,
    `REPARSE-DIFF-2026-09-11-exitline.md`);第二任务 → `collect-artifacts.mjs`(批次四 14 次记录的 95 条退出行由全 null
    变为全部可读,used 事件按代码事实不受影响,`REPARSE-DIFF-2026-09-11-exitline-collect.md`)。
-7. **demo** `bash evaluation/demo.sh --plain`:7 段(第 7 段:第二任务与作者维度),`evaluation/demo-output.txt`。
-8. **成本并排**(审阅 2026-09-12 ②):批次四汇总表与两份闭环 REPORT 各加一表,只用 `cost.json` 已有字段按组列均模型调用次数、墙钟、
+8. **demo** `bash evaluation/demo.sh --plain`:7 段(第 7 段:第二任务与作者维度),`evaluation/demo-output.txt`。
+9. **成本并排**(审阅 2026-09-12 ②):批次四汇总表与两份闭环 REPORT 各加一表,只用 `cost.json` 已有字段按组列均模型调用次数、墙钟、
    prompt / total / cached token;口径:这是两组运行的实际开销对比,不是闸门机制的成本模型。
 
 ## 原始记录在分支里(2026-09-12 起)
@@ -184,6 +198,16 @@
 - 作者评估影响复核优先级,不影响 admit/reject;能力等级永不推出 high;两份评估的断言核验结果都是 silent(记录不支持
   也不反驳笔记的断言)。
 
+**第七、八轮**(2026-09-13,只读核实 + 不落盘反例)查的是同一件事:**"这次跑通了"不等于"出错时一定会被挡住"**。
+复核方构造反例,发现验收本身有两处**会放过失败**:① 闭环展示的三次调用全部失败,退出码却被循环末尾的 `echo` 盖成 0,
+总验收照样通过;② 报告登记填一个不存在的执行步骤、或多登记一份而循环根本没跑它,登记核对都通过。
+两处都已复现并修:退出码逐次保留、判决器支持对退出码为 0 的步骤要求 note 形态(`chain` 必须写出 `3/3 条 case 成功`);
+新增 `reports-executed`,把**每份报告 → 本轮执行记录 → 自己的产物与 diff**对应起来(五份作者评估共用一个步骤,
+只有逐份产物能分辨)。第八轮又指出套件规模检查**靠"带日期就算历史"去猜**,而当前声明恰恰也带日期 ——
+已改成默认全查、历史必须显式标注,当前声明从 1 处变成 2 处。同轮还纠正了第三任务报告里一句没有依据的因果结论
+(见上文第 5 条的 ②)。修的过程中自己又暴露两处:执行核对排在了它要读的那一步之前;`live-state` 逐条累计退出码后报 141,
+查出是 `| head -6` 提前关管道造成的 SIGPIPE,不是真失败。逐条处置见 `evaluation/STATE.md`。
+
 ## 剩余缺点
 
 - 跨运行隔离(批次四层面)尚未成立;闭环改为每次运行新建消费者,只对这些运行有效。
@@ -196,8 +220,8 @@
   (2026-09-12T10:44:33Z,管理员密钥由用户执行,CLAUDE.md §14):`competence` 由 medium 改为 unknown,读回核对见
   `evaluation/author/artifacts/assessment-write-b-readback-2026-09-12.json` —— 闸门据此把复核优先级提到 high,
   admit/reject 未变,这正是"作者信号只排队、不定生死"的线上证据。
-- **`conditions-check` 的 20 项 FAIL 不都是"按设计如此"。** 逐项登记在
-  `runner/conditions-expected.json`,分三类:**批次后的正常变化/已记录的有意改动 14 项**
+- **`conditions-check` 的 21 项 FAIL 不都是"按设计如此"。** 逐项登记在
+  `runner/conditions-expected.json`,分三类:**批次后的正常变化/已记录的有意改动 15 项**
   (资产状态、判别值已烧毁、两次镜像切换、proxy 身份恢复、七个文件因复核而变)、
   **已载明的实验限制 5 项**(同一个根因:跨运行记忆隔离缺口,profile 快照不覆盖 atomic/conversation)、
   **证据缺口 1 项**(`来源扫描无缺口` —— `20260911T175839Z-devloop-smoke` 缺 `capture.jsonl`,
