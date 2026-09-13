@@ -100,7 +100,7 @@ node evaluation/receipt/chain-cli.mjs --case=main --expand
 |---|---|---|---|
 | 一 历史经验学习 | 经验笔记从批次四记录与代码整理而来,入池只存 sha256;任务结束由产品 `/v3/skill/extract` 从会话提取候选 | [`tasks/exit-code-fix/assets/note.md`](./tasks/exit-code-fix/assets/note.md)(占位符)、`write-back.json` 各运行目录、`REPORT.md` "新经验回流候选池" | `node evaluation/tasks/exit-code-fix/report.mjs` |
 | 二 检索与最小上下文 | 未另建检索;送达只经产品自己的 `skill_search`,注入块对新 agent 为空。**两层过滤分开展示**:准入由产品闸门做(与任务无关),任务相关性由模型检索时做 | `node evaluation/attribution/selection-cli.mjs` —— 一次真实运行:池中 7 项 → 闸门挡下 2 项(candidate / failed)→ 已准入 5 项 → 模型取回 1 项 → 进入上下文 2729 **字符**(未测量 token,没有分词器就不报)→ 够不够只引独立验收(PASS 6/6),不另下结论 |
-| 三 使用链路与可信归因 | recalled / **selected** / injected / fetched / used / validated / corrected 七态(`selected` 由 `build-early-events.mjs` 在候选清单里观察到:池 → 清单 → 注入这条路径可见;模型自己 `curl` 取回那条路径只到 `fetched`,没有筛选步骤可观察);结果按调用不按运行;关系 cross_user 由服务端推导;只读受信行 | [`evaluation/README.md`](./README.md)、[`gate/README.md`](./gate/README.md) "The rules"、[`attribution/`](./attribution) | `node evaluation/attribution/calibrate-runs.mjs …`(命令在报告开头) |
+| 三 使用链路与可信归因 | recalled / **selected** / injected / fetched / used / validated / corrected 七态(`selected` 由 `build-early-events.mjs` 在候选清单里观察到:池 → 清单 → 注入这条路径可见;模型自己 `curl` 取回那条路径只到 `fetched`,没有筛选步骤可观察);结果按调用不按运行;关系 cross_user 由服务端推导;只读服务端调用记录 | [`evaluation/README.md`](./README.md)、[`gate/README.md`](./gate/README.md) "The rules"、[`attribution/`](./attribution) | `node evaluation/attribution/calibrate-runs.mjs …`(命令在报告开头) |
 | 四 用户可感知回执 | 一资产一行一标记;来源与消费者同行;"相关测试 X 通过"措辞;低置信风险来自闸门 confidence | [`receipt/README.md`](./receipt/README.md)、各运行 `receipt.txt` | `node evaluation/receipt/render-cli.mjs <run>/receipt.json` |
 | 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环:前两个任务无 / 有笔记各 2 次,第三个任务(新增功能、行为判定)跑了三批、条件不同不合并,逐批数字见该页(**每批无笔记组都是 0 通过**;有笔记组一、三批全过,**第二批 4/5**,把因污染排除的那次计回去是 4/6);采用归因见 [`tasks/resource-download/REJUDGE-POOL.md`](./tasks/resource-download/REJUDGE-POOL.md) —— 按运行当时的记录 0 次 `used`,根因是本任务的笔记不在冻结池快照里,补上后重判多数给出 `used`、无笔记组仍 0 条笔记事件;首批 16 次因环境污染整批作废(演示,非性能对照) | [`runner/COMPARISON-2026-09-11-reparsed.md`](./runner/COMPARISON-2026-09-11-reparsed.md)、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
 | 六 经验回流与候选 | 提取候选默认 candidate、私有;闸门规则 admit 需跨人 validated ≥ 1 且无 corrected;作者上下文评估只定复核优先级 | [`tasks/exit-code-fix/REPORT.md`](./tasks/exit-code-fix/REPORT.md) "闸门有没有动"、`gate-evaluations.jsonl`、[`author/README.md`](./author/README.md) | `node evaluation/tasks/exit-code-fix/gate-evaluate.mjs --dry-run` |
@@ -135,12 +135,12 @@ node --test $(find evaluation -name '*.test.mjs' -not -path '*/node_modules/*' |
 
 | 这页里的说法 | 它指的动作 |
 |---|---|
-| **来源标记**(判别值) | 笔记里埋的一个随机串,只在这条笔记里出现;模型写出它,就说明内容到过模型手上 |
+| **来源标记**(判别值) | 实验中用于区分内容来源的特殊字符串。判断笔记是否被采用时,还要核对标记**从哪里进入上下文**,以及它**是否出现在后续具体操作中** |
 | **标记已公开**(已烧毁) | 这个随机串已经随记录进了公开仓库 —— **不是数据被删了**,是它不能再用于新实验的来源区分,用之前必须换一个 |
 | **保真对照** | 用原来的输入把旧记录重新判一遍,看能不能得到**逐事件一致**的结论;先过这一关,后面的差值才可信 |
-| **冻结的资产清单** | 实验开始时把当时的资产池记下来;之后新冒出来的资产不算数,免得答案从别处漏进来 |
+| **冻结的资产清单** | 记录本次实验准备评估的资产及版本,供事后对照。运行中出现清单外的资产时,需要检查**实验条件是否已经改变** |
 | **回流候选** | 任务跑完从会话里提取出的新经验,先存成**待审核**的笔记,不自动放行 |
-| **受信调用记录** | 产品服务端自己写的调用日志,模型改不了它,所以拿它当证据 |
+| **服务端调用记录** | 由服务端记录实际收到的调用,可与模型会话记录交叉核对。它能证明**服务端观察到了什么**,不能单独证明笔记被采用或任务成功 |
 
 ## 七、一句话主张,和三个否定
 
@@ -209,7 +209,7 @@ node --test $(find evaluation -name '*.test.mjs' -not -path '*/node_modules/*' |
 
 | 导师用词 | 本分支的名字 | 在哪 |
 |---|---|---|
-| 在线指标 | `signals.online`:按调用收拢的 validated / corrected / used、cross_user_validated、distinct_tasks、distinct_consumers,只读受信行 | `asset-gate.ts`,每条 gate 决定的 `signals` |
+| 在线指标 | `signals.online`:按调用收拢的 validated / corrected / used、cross_user_validated、distinct_tasks、distinct_consumers,只读服务端调用记录 | `asset-gate.ts`,每条 gate 决定的 `signals` |
 | 离线指标 | 判定器校准(送达一致性、使用检测 precision / recall,含隐藏组真阴性)、留一法 contributed、冻结基线 `as_of` | `attribution/CALIBRATION-*.md`、`calibration/`、`gate/artifacts/gate_baseline_batch4.json` |
 
 ## 十、出过的错,以及它们说明了什么
