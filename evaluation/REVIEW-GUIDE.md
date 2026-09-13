@@ -10,7 +10,7 @@
 
 **闸门装得进今天的产品**:分支 `gate-core-minimal`(`c372d80`)以上游 `feat/server_team@0468a2a` 为基线重拆,21 文件 `+4043/−34`,四处**文本合并**冲突全是 import 列表;`build:plugin` 通过、`npm test` 132 个全过;`build` 与 `typecheck:metadata` 红,但纯净上游同样红(`src/metadata` 子树 11 → 6、新增 0;全树 123 → 118、新增 2,那 2 条是同两个未定义名字换了错误码)。**部署后的行为兼容性尚未验证;它支持「具备移植可行性」,不支持「已达上游合入或生产条件」。** 比较基线钉在 `0468a2a...c372d80`。见 `evaluation/gate/PORT-TO-UPSTREAM.md`,原始输出在 `gate/artifacts/port-*`。
 
-## 干净克隆上什么能复算,什么需要线上(2026-09-13 彩排 H 复测)
+## 干净克隆上什么能复算,什么需要线上(2026-09-13 彩排 I 复测,受测提交 `7429693`)
 
 `bash evaluation/deliver-check.sh` 在一个没有作者密钥、没有 Core、没有 docker 的克隆上跑过;下面按**依赖**分三组,
 最上面一组不需要本仓库以外的任何东西。
@@ -23,6 +23,8 @@
 | 三个闭环 REPORT `node evaluation/tasks/*/report.mjs` | 与提交副本 diff 0 |
 | 五份作者评估 `assess.mjs --recheck`(不调模型) | 渲染页与提交副本 diff 0 |
 | 生成报告登记核对 / 对照报告逐格 / 套件规模声明 | 73 份全部有归属;26 格一致;文档声明与实跑一致 |
+| 登记报告的执行核对 `--run-out` | 13 份逐份对上本轮的执行记录与自己的产物 |
+| 闭环展示 `chain-cli` | 3/3 条 case 成功,逐次记退出码 |
 | 第三任务样本污染批检 `contamination.mjs --batch` | 8 次样本全部明确判为干净 |
 | 退出行 reparse `reparse-exit-status.mjs` | 与 `REPARSE-DIFF-2026-09-11-exitline-collect.md` diff 0 |
 | 两个 selfcheck 的【0】–【3】段 | 冻结起点、参考测试先失败后通过、套件不回归 |

@@ -1,0 +1,9 @@
+干净  20260913T121409Z-devloop-no-note  no-note  FAIL
+干净  20260913T121636Z-devloop-no-note  no-note  FAIL
+干净  20260913T121823Z-devloop-no-note  no-note  FAIL
+干净  20260913T121937Z-devloop-no-note  no-note  FAIL
+干净  20260913T123427Z-devloop-note  note  PASS
+干净  20260913T123631Z-devloop-note  note  PASS
+干净  20260913T123828Z-devloop-note  note  PASS
+干净  20260913T124050Z-devloop-note  note  PASS
+样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净
