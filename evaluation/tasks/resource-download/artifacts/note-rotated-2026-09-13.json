@@ -1,0 +1,30 @@
+{
+  "schema": "live-state-record-v1",
+  "at": "2026-09-13T13:35:28Z",
+  "what": "第三个开发闭环任务的笔记资产轮换判别值:v1 → v2(内容只换判别值)",
+  "asset": {
+    "asset_id": "skl-XAzqAgejM7O4",
+    "name": "eval-skill-resource-download",
+    "before": {
+      "version": 1,
+      "token_sha256": "7b3c7b9d1f5dd3e1f1b7401587cf51c19a1d9a5f2c9537dba5cd2205f6f3d889",
+      "content_hash": "1f78b89dddd3b9ae246ee3708cba0ea7"
+    },
+    "after": {
+      "version": 2,
+      "token_sha256": "19ef16203d91ec9f4fb3e5381236f44b3f0bdc12105db17edba8a317aa1713a2",
+      "content_hash": "e0a7a391b5f840fb611fc528a0e26277"
+    },
+    "status": "candidate(未变)",
+    "visibility": "team(未变)"
+  },
+  "why": "v1 的判别值随 8 次样本与 2 次事故运行的 capture/diff 进入提交树(0f08a78),按 CLAUDE.md §16 即为烧毁;已登记进 evaluation/attribution/burned-tokens.json(生成器以 git grep 证明,≥44 个已提交文件),规则要求下次运行前轮换。",
+  "by": {
+    "key_file": "deploy/global-images/.topic4-user-key",
+    "role": "owner(作者密钥;/v3/skill/update 由所有者执行,不涉管理员)"
+  },
+  "how": "node evaluation/tasks/resource-download/fill-note.mjs",
+  "verified": "写入后 manage 读回:v2 内容里唯一的 bt- 值与新 sha256 一致;visibility team;fill-note.mjs 自动把 v1 规格写进 tokens.json._history(retire-token.mjs)。",
+  "restore": "版本不可撤销:v1 仍在 Core 里(证据绑定在 v1 上,闸门按版本计),v2 自带新值。若需回到 v1 的内容,只能再建 v3,不能删 v2。",
+  "consequence": "有笔记组若再跑,任务 tokens.json 已指向 v2;v1 的哈希在 _history 里,污染检查与烧毁登记都认它。来源扫描此时报 15 处「没查到」:1 处是已登记的记录缺口(20260911T175839Z),14 处是本任务作废批次的最小归档(capture 未入库,见各目录 ARCHIVE-MINIMAL.md)。"
+}

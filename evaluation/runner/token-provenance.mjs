@@ -121,7 +121,12 @@ export function sourcesFromRun(dir) {
   }
   const cap = join(dir, "capture.jsonl");
   if (!existsSync(cap)) {
-    problems.push({ where: cap, why: "capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过" });
+    // 最小归档(2026-09-13 起):作废批次的运行只留 verdict 与污染判定,capture 按记录没入库。
+    // 这仍然是「没扫到」—— 结论照样是未知 —— 但要和「本该有却没有」的记录缺口分开报,
+    // 读者才能分清哪些是决定过的、哪些是丢的。
+    const minimal = existsSync(join(dir, "ARCHIVE-MINIMAL.md"));
+    problems.push({ where: cap, kind: minimal ? "minimal_archive" : "record_gap",
+      why: minimal ? "最小归档:capture 按记录未入库(作废批次,见 ARCHIVE-MINIMAL.md),没有被扫过" : "capture.jsonl 缺失,注入的系统提示与记忆块没有被扫过" });
   } else {
     const candidates = readFileSync(cap, "utf8").split("\n").filter((l) => l.includes('"http.request"'));
     let parsed = null, lastErr = null;
@@ -206,9 +211,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   }
   if (gaps.length) {
+    const minimal = gaps.filter((g) => g.kind === "minimal_archive"), rest = gaps.filter((g) => g.kind !== "minimal_archive");
     console.log(`\n没扫到的地方 ${gaps.length} 处 —— 这些位置**没有被查过**,不能读作没有命中:`);
-    for (const g of gaps.slice(0, 12)) console.log(`     ${g.where}:${g.why}`);
-    if (gaps.length > 12) console.log(`     …另有 ${gaps.length - 12} 处`);
+    console.log(`     其中记录缺口 ${rest.length} 处(本该有却没有),最小归档 ${minimal.length} 处(作废批次,按记录未入库 capture)`);
+    for (const g of rest.slice(0, 12)) console.log(`     ${g.where}:${g.why}`);
+    if (rest.length > 12) console.log(`     …另有 ${rest.length - 12} 处记录缺口`);
+    if (minimal.length) console.log(`     最小归档的 ${minimal.length} 处不逐条列(目录名见各自的 ARCHIVE-MINIMAL.md):${minimal.slice(0, 2).map((g) => g.where.split("/").slice(-2, -1)[0]).join("、")}${minimal.length > 2 ? " …" : ""}`);
   }
   // 有没扫到的地方就不能说"全部干净"——那正是本项目反复出错的那一步。
   const clean = bad === 0 && gaps.length === 0;

@@ -31,6 +31,8 @@ const green = () => [
   row("reparse-exitline", 0, 0),
   row("devloop-report", 0, 0),
   row("devloop-report-2", 0, 0),
+  row("devloop-report-3", 0, 0, "计入样本 8 次"),
+  row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
   row("demo", 0, null, "Segments: 2 live, 5 record, 0 fixture"),
   row("chain", 0, null, "21 个环节,其中未证明 3 个"),
   row("selection", 0, null, "池中 7 项;放行 5 项;挡下 2 项"),
@@ -114,4 +116,18 @@ test("判决句把两侧分开写,且列出缺依赖", () => {
   assert.match(line, /离线复算/);
   assert.match(line, /线上检查/);
   assert.match(line, /缺依赖/);
+});
+
+test("第三任务:样本里有一次污染或未知,验收整体失败", () => {
+  for (const note of ["样本 8 次:污染 1,未知 0;不通过:x", "样本 8 次:污染 0,未知 1;不通过:y"]) {
+    const rows = green().map((r) => (r.step === "contamination-3" ? { ...r, exit: 1, note } : r));
+    const v = verdict(rows);
+    assert.equal(v.ok, false, note);
+    assert.ok(v.failures.some((f) => f.step === "contamination-3"));
+  }
+});
+
+test("第三任务报告有差异就失败,和前两份一样按差异判", () => {
+  const rows = green().map((r) => (r.step === "devloop-report-3" ? { ...r, diff_lines: 2 } : r));
+  assert.equal(verdict(rows).ok, false);
 });

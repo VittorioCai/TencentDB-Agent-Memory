@@ -19,7 +19,8 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // a: 首版(按文本找别的运行 id)。b: 改为按**访问**判 —— 只看 tool_calls 的参数,
 // 工具回显的内容不算(仓库自己的交付报告里引用着历次运行的命令行,首版因此误报 4 次)。
@@ -169,6 +170,29 @@ export function taskNeedles(taskDir) {
   return { fingerprints, tokenPattern, tokenSha256 };
 }
 
+/** 清单里算样本的运行:没作废、没标成非样本。作废批次不在此列 —— 它们的判定另有记录。 */
+export function sampleRunsOf(manifest) {
+  return (manifest.runs ?? []).filter((r) => !r.voided && r.sample !== false);
+}
+
+/** 一批样本的总判:任何一次不是明确的「干净」(false)就不过 —— 未知与污染同样阻断。 */
+export function batchVerdict(results) {
+  const bad = results.filter((r) => r.contaminated !== false);
+  return { ok: bad.length === 0, total: results.length, contaminated: results.filter((r) => r.contaminated === true).length,
+    unknown: results.filter((r) => r.contaminated !== true && r.contaminated !== false).length, bad: bad.map((r) => r.run_id) };
+}
+
+function scanRunDir(runDir, taskDir, arm) {
+  const cap = join(runDir, "capture.jsonl");
+  if (!existsSync(cap) || !existsSync(join(runDir, "run.json"))) return { run_id: null, contaminated: null, findings: [], why: `没有 capture.jsonl 或 run.json:${runDir}` };
+  const { fingerprints, tokenPattern, tokenSha256 } = taskNeedles(taskDir);
+  const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
+  const ownPaths = [runJson.session?.cwd, runJson.session?.cwd ? dirname(runJson.session.cwd) : null, runDir, dirname(runDir)].filter(Boolean);
+  const text = readFileSync(cap, "utf8");
+  const rows = text.split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  return scanCapture({ text, runId: runJson.run_id, fingerprints, tokenPattern, tokenSha256, noteExpected: arm !== "no-note", ownPaths, commands: commandsFromCapture(rows) });
+}
+
 export async function main(argv) {
   const arg = (n, d = null) => (argv.find((a) => a.startsWith(`--${n}=`)) ?? `--${n}=${d}`).slice(n.length + 3);
   // 判别值那条规则只对明确的无笔记组开火:有笔记组见到判别值是正常的,
@@ -192,13 +216,23 @@ export async function main(argv) {
     console.log(`   历次运行记录仍在原处(${prior}),它们必然含答案,清不掉;这部分由每次跑完的污染检查负责发现并作废。`);
     return 0;
   }
-  const cap = join(runDir, "capture.jsonl");
-  if (!existsSync(cap)) { console.error(`没有 capture.jsonl:${cap}`); return 2; }
-  const runJson = JSON.parse(readFileSync(join(runDir, "run.json"), "utf8"));
-  const ownPaths = [runJson.session?.cwd, runJson.session?.cwd ? dirname(runJson.session.cwd) : null, runDir, dirname(runDir)].filter(Boolean);
-  const text = readFileSync(cap, "utf8");
-  const rows = text.split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-  const res = scanCapture({ text, runId: runJson.run_id, fingerprints, tokenPattern, tokenSha256, noteExpected: arm !== "no-note", ownPaths, commands: commandsFromCapture(rows) });
+  // --batch=<manifest>:对清单里所有样本重扫(记录在暂存区或已归档到 runner/runs 都行),任一不干净即失败
+  const batch = arg("batch");
+  if (batch) {
+    const manifest = JSON.parse(readFileSync(batch, "utf8"));
+    const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+    const results = sampleRunsOf(manifest).map((r) => {
+      const d = r.dir && existsSync(r.dir) ? r.dir : join(repo, "evaluation/runner/runs", r.run_id);
+      const res = scanRunDir(d, taskDir, r.arm);
+      return { ...res, run_id: r.run_id, arm: r.arm, verdict: r.verdict };
+    });
+    const v = batchVerdict(results);
+    for (const r of results) console.log(`${r.contaminated === false ? "干净" : r.contaminated === true ? "污染" : "未知"}  ${r.run_id}  ${r.arm}  ${r.verdict ?? "-"}${r.findings?.length ? "  " + r.findings.map((f) => f.rule).join(",") : ""}${r.why ? "  " + r.why : ""}`);
+    console.log(`样本 ${v.total} 次:污染 ${v.contaminated},未知 ${v.unknown},规则 ${RULES_VERSION}${v.ok ? ";全部干净" : ";不通过:" + v.bad.join(", ")}`);
+    return v.ok ? 0 : 1;
+  }
+  if (!existsSync(join(runDir, "capture.jsonl"))) { console.error(`没有 capture.jsonl:${join(runDir, "capture.jsonl")}`); return 2; }
+  const res = scanRunDir(runDir, taskDir, arm);
   console.log(JSON.stringify(res, null, 2));
   return res.contaminated ? 1 : 0;
 }

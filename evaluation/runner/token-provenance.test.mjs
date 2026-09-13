@@ -87,7 +87,7 @@ test("scanSources 逐个来源返回命中次数", () => {
 // ---------------------------------------------------------------------------
 // 扫不到 ≠ 没有 —— 2026-09-09 独立审阅 D3 / D4
 // ---------------------------------------------------------------------------
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourcesFromRun, readTextFilesUnder } from "./token-provenance.mjs";
@@ -216,4 +216,17 @@ test("记录根下多一层暂存父目录,整棵树都要扫到", () => {
   const r = sourcesFromRecordsRoot(root);
   assert.equal(provenanceOf("bt-nestedval99", r.sources).clean, false);
   assert.equal(r.problems.length, 0);
+});
+
+test("最小归档的运行:仍是「没扫到」,但要和记录缺口分开标(2026-09-13 作废批次 14 次只留 verdict 与污染判定)", () => {
+  const d = mkdtempSync(join(tmpdir(), "prov-min-"));
+  writeFileSync(join(d, "ARCHIVE-MINIMAL.md"), "# 最小归档\n");
+  writeFileSync(join(d, "verdict.json"), "{}");
+  const r = sourcesFromRun(d);
+  assert.equal(r.problems.length, 1, "没有 capture 就是没扫到,不能静默");
+  assert.equal(r.problems[0].kind, "minimal_archive");
+  assert.match(r.problems[0].why, /最小归档/);
+  const gap = sourcesFromRun(mkdtempSync(join(tmpdir(), "prov-gap-")));
+  assert.equal(gap.problems[0].kind, "record_gap", "本该有却没有的仍是记录缺口");
+  rmSync(d, { recursive: true, force: true });
 });

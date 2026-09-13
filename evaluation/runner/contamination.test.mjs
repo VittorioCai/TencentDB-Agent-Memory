@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { RULES_VERSION, commandsFromCapture, referenceFingerprints, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
+import { RULES_VERSION, batchVerdict, commandsFromCapture, referenceFingerprints, sampleRunsOf, scanCapture, scanDisk, taskNeedles, tokensIn } from "./contamination.mjs";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 const REF = `
@@ -132,4 +132,16 @@ test("命令从每一条请求里取并按 id 去重,不只看最长的那份对
     { body: { json: { messages: [{ role: "assistant", tool_calls: [tc("c1", "ls /a")] }] } } },   // 同一调用再次出现
   ];
   assert.deepEqual(commandsFromCapture(rows).sort(), ["ls /a", "ls /b", "ls /z"]);
+});
+
+// ── --batch:验收用 ──
+test("样本的选取:作废的与标成非样本的不算", () => {
+  const m = { runs: [{ run_id: "a" }, { run_id: "b", voided: { batch: "x" } }, { run_id: "c", sample: false }, { run_id: "d", sample: true }] };
+  assert.deepEqual(sampleRunsOf(m).map((r) => r.run_id), ["a", "d"]);
+});
+
+test("一批的总判:未知与污染同样不过,干净必须是明确的 false", () => {
+  assert.equal(batchVerdict([{ run_id: "a", contaminated: false }, { run_id: "b", contaminated: false }]).ok, true);
+  const v = batchVerdict([{ run_id: "a", contaminated: false }, { run_id: "b", contaminated: null }, { run_id: "c", contaminated: true }]);
+  assert.equal(v.ok, false); assert.deepEqual(v.bad, ["b", "c"]); assert.equal(v.unknown, 1); assert.equal(v.contaminated, 1);
 });

@@ -13,6 +13,7 @@
  */
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync, statSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
+import { retireIntoHistory } from "./retire-token.mjs";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -58,7 +59,7 @@ async function ensureTeamVisibility(id) {
 
 const pair = JSON.parse(readFileSync(join(DIR, "pair.json"), "utf8"));
 const tokensPath = join(DIR, "tokens.json");
-const tokens = JSON.parse(readFileSync(tokensPath, "utf8"));
+let tokens = JSON.parse(readFileSync(tokensPath, "utf8"));
 const placeholder = readFileSync(join(DIR, "assets/note.md"), "utf8");
 const NAME = /^name:\s*(.+)$/m.exec(placeholder)[1].trim();
 if (!placeholder.includes("{{TRACE}}")) { console.error("assets/note.md has no {{TRACE}} placeholder"); process.exit(1); }
@@ -166,6 +167,9 @@ if (!id) {
 const vis = await ensureTeamVisibility(id);
 console.log(`${vis.ok ? "OK  " : "BAD "} ${id} visibility ${vis.before ?? "?"} → ${vis.after ?? "?"}${vis.changed ? " (set team by the owner)" : ""}`);
 if (!vis.ok) process.exit(1);
+// 上一版的规格进 _history 再覆盖:退休的旧值哈希要留给污染检查与烧毁登记认(2026-09-13 起由代码做,不靠人记)
+tokens = retireIntoHistory(tokens, id, { retiredAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+  why: "rotated by fill-note.mjs: the previous value is in the committed records (burned, CLAUDE.md §16); the evidence recorded on that version stays in Core, the new version starts with none" });
 tokens[id] = { role: "note", version, token_sha256: [sha256(value)], token_pattern: "(bt-[a-z0-9]+)", adoption_fields: ["value"], content_hash: createHash("md5").update(content, "utf-8").digest("hex"), name: NAME };
 writeFileSync(tokensPath, JSON.stringify(tokens, null, 2) + "\n");
 const back = await manageGet({ team_id, user_id: authorUser, agent_id: authorAgent, skill_id: id, version, include_content: true });

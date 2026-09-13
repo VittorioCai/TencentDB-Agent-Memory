@@ -96,6 +96,15 @@ node evaluation/tasks/exit-line-collect/report.mjs --out="$OUT/REPORT-exit-line-
 d="$(mddiff evaluation/tasks/exit-line-collect/REPORT.md "$OUT/REPORT-exit-line-collect-reproduced.md" "$OUT/REPORT-exit-line-collect.diff")"
 row "devloop-report-2" "node evaluation/tasks/exit-line-collect/report.mjs" "$e" "exit 0, diff 0 vs exit-line-collect/REPORT.md" "" "$d"
 
+echo "[6c] third task's report reproduced (a different kind of work, judged by behaviour)"
+node evaluation/tasks/resource-download/report.mjs --out="$OUT/REPORT-resource-download-reproduced.md" > "$OUT/report-resource-download.txt" 2>&1; e=$?
+d="$(mddiff evaluation/tasks/resource-download/REPORT.md "$OUT/REPORT-resource-download-reproduced.md" "$OUT/REPORT-resource-download.diff")"
+row "devloop-report-3" "node evaluation/tasks/resource-download/report.mjs" "$e" "exit 0, diff 0 vs resource-download/REPORT.md" "$(grep -oE '计入样本 [0-9]+ 次' "$OUT/report-resource-download.txt" | head -1)" "$d"
+
+echo "[6d] third task's samples re-scanned for contamination (any run not explicitly clean blocks)"
+node evaluation/runner/contamination.mjs --batch=evaluation/tasks/resource-download/devloop-runs.json --task=evaluation/tasks/resource-download > "$OUT/contamination-resource-download.txt" 2>&1; e=$?
+row "contamination-3" "contamination.mjs --batch=resource-download/devloop-runs.json" "$e" "exit 0;每一次计入样本的运行都明确判为干净(污染或未知同样阻断)" "$(tail -1 "$OUT/contamination-resource-download.txt")"
+
 echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
 row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/fixture counted" "$(grep -E '^Segments:' "$OUT/demo.txt")"
