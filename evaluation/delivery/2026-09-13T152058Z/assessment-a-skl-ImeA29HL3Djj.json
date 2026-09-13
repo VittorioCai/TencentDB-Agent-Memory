@@ -1,0 +1,446 @@
+{
+  "schema": "author-assessment-v2",
+  "assessed_at": "2026-09-07T20:07:44.770Z",
+  "evidence_cutoff": "2026-09-07T20:03:34.813Z",
+  "author": {
+    "letter": "a",
+    "user_id": "usr-n68ea5ythq",
+    "agent_id": "agt-5e4hna56j9",
+    "team_id": "team-5ezfoladb5"
+  },
+  "asset_id": "skl-ImeA29HL3Djj",
+  "asset": {
+    "asset_id": "skl-ImeA29HL3Djj",
+    "name": "eval-bridge-endpoint-c",
+    "version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "owner_user_id": "usr-n68ea5ythq",
+    "status": "candidate",
+    "tokens": [
+      "10.244.7.19:8096"
+    ],
+    "tokens_from": "asset body"
+  },
+  "chain": {
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "what_this_is": "相关证据汇集(related evidence collected around this version),不是生产链",
+    "producer": {
+      "asset_owner_user_id": "usr-n68ea5ythq",
+      "owner_agent_id": "agt-5e4hna56j9",
+      "wrote_this_version": "usr-n68ea5ythq",
+      "wrote_this_version_from": "skill store version row (skills.user_id, returned as owner_user_id by /v3/skill/versions) for v1"
+    },
+    "writer_known": true,
+    "production_link": "unproven",
+    "production_note": "各集合只按「提到资产名或判别值」「同一 asset id」筛出,相邻记录之间的关系未验证:这些证据能说明相关的使用历史,不能证明该版本由这些会话产生",
+    "source_sessions": [
+      "6ae29c1e-a7c8-468d-a988-35ec676b848a"
+    ],
+    "naming_messages": [
+      "l0:msg-76898e301d59",
+      "l0:msg-3955d1697761",
+      "l0:msg-6d240b79941c"
+    ],
+    "operations": [
+      {
+        "record_id": "call:b5903fc59d61214c",
+        "at": "2026-09-06T04:02:28.595Z"
+      }
+    ],
+    "results": [],
+    "collected": {
+      "source_sessions": 1,
+      "naming_messages": 3,
+      "operations": 1,
+      "results": 0
+    },
+    "gaps": [
+      "结果:截止时刻前该资产上没有受信结果"
+    ],
+    "migrated_2026_09_12": "chain 字段按第二人复核改写(去掉 complete,生产来源标 unproven);集合内容原样保留,未重新读 Core"
+  },
+  "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+  "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
+  "pack": {
+    "file": "evaluation/author/artifacts/evidence-pack-a-skl-ImeA29HL3Djj.json",
+    "sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
+    "record_count": 50,
+    "by_class": {
+      "authored_text": 3,
+      "user_instruction": 4,
+      "assistant_report": 4,
+      "derived_memory": 4,
+      "team_principles": 22,
+      "harness_verified": 4,
+      "proxy_observed": 9
+    },
+    "excluded": {
+      "after_cutoff": 0,
+      "modified_after_cutoff": 0,
+      "no_timestamp": 0,
+      "untrusted_outcomes": 19,
+      "persona_after_cutoff": false,
+      "other_users_calls": 0,
+      "skills_created_after_cutoff": 0
+    },
+    "shown": 50,
+    "left_out": [],
+    "chars": 23590,
+    "terms": [
+      "skill bridge address",
+      "10.244.7.19",
+      "127.0.0.1:47318",
+      "timed out",
+      "reachability",
+      "container",
+      "host",
+      "reaching",
+      "team",
+      "skill",
+      "bridge",
+      "over",
+      "http",
+      "from",
+      "agent",
+      "session",
+      "which",
+      "address",
+      "answers"
+    ],
+    "records": 50
+  },
+  "model": {
+    "url": "https://api.deepseek.com",
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "prompt_tokens": 9488,
+      "completion_tokens": 31904,
+      "total_tokens": 41392,
+      "prompt_tokens_details": {
+        "cached_tokens": 640
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 30501
+      },
+      "prompt_cache_hit_tokens": 640,
+      "prompt_cache_miss_tokens": 8848
+    },
+    "temperature": 0
+  },
+  "raw_model_output": "{\"competence\":\"medium\",\"domain\":\"reaching the team skill bridge over HTTP from an agent session: which address answers\",\"claims\":[{\"statement\":\"The worker successfully fetched the eval-bridge-endpoint-a skill through the bridge on 127.0.0.1:8096, with an HTTP 200 bridge_call in response.\",\"type\":\"execution_result\",\"outcome\":\"success\",\"record_ids\":[\"call:8bfc28964692642e\",\"call:a2c86ceddac82bc1\"],\"quote\":\"bridge_call get-by-name status=200 {\\\"skill_name\\\":\\\"eval-bridge-endpoint-a\\\"\",\"relation_to_asset\":\"silent\"},{\"statement\":\"The worker successfully fetched eval-bridge-endpoint-b through the bridge on 127.0.0.1:8096, with HTTP 200.\",\"type\":\"execution_result\",\"outcome\":\"success\",\"record_ids\":[\"call:b6d4f0d34651bfda\",\"call:5a37718ff0350f02\"],\"quote\":\"bridge_call get-by-name status=200 {\\\"skill_name\\\":\\\"eval-bridge-endpoint-b\\\"\",\"relation_to_asset\":\"silent\"},{\"statement\":\"The worker's team skill search over HTTP on 127.0.0.1:8096 was answered with HTTP 200.\",\"type\":\"execution_result\",\"outcome\":\"success\",\"record_ids\":[\"call:cd4a73260f5a931d\",\"call:5e96941cad71facd\"],\"quote\":\"bridge_call search status=200 {\\\"query\\\":\\\"skill bridge endpoint host port reachability convention\\\"\",\"relation_to_asset\":\"silent\"},{\"statement\":\"The worker issued a reachability probe whose command targets the asset's URL http://10.244.7.19:8096/skill-bridge/v3/skill/search.\",\"type\":\"observed_operation\",\"outcome\":null,\"record_ids\":[\"call:b5903fc59d61214c\"],\"quote\":\"curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search\",\"relation_to_asset\":\"silent\"},{\"statement\":\"The worker also issued the reachability probe to skill B's documented endpoint 127.0.0.1:47318.\",\"type\":\"observed_operation\",\"outcome\":null,\"record_ids\":[\"call:d332718e481fcbe0\"],\"quote\":\"curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search\",\"relation_to_asset\":\"silent\"},{\"statement\":\"A harness-verified outcome recorded that a skill carrying endpoint 10.244.7.19:8096 was corrected(wrong), contradicting that the team bridge is reachable from an agent session at that address.\",\"type\":\"execution_result\",\"outcome\":\"failure\",\"record_ids\":[\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\"],\"quote\":\"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)\",\"relation_to_asset\":\"contradicts\"},{\"statement\":\"Another harness-verified outcome also records corrected(wrong) for a skill text carrying endpoint 10.244.7.19:8096.\",\"type\":\"execution_result\",\"outcome\":\"failure\",\"record_ids\":[\"outcome:c91cdca6-40f5-4e84-b03b-f65713584044\"],\"quote\":\"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)\",\"relation_to_asset\":\"contradicts\"},{\"statement\":\"A harness-verified outcome validated the rival skill endpoint 127.0.0.1:47318 as correct; this concerns the other documented candidate, not the assessed asset's URL.\",\"type\":\"execution_result\",\"outcome\":\"success\",\"record_ids\":[\"outcome:6880f384-846b-419c-b97f-26615da03912\"],\"quote\":\"validated on asset skl-oBaDO5CceKnr v2 (tokens of v2: 127.0.0.1:47318)\",\"relation_to_asset\":\"silent\"},{\"statement\":\"The assessed asset skl-ImeA29HL3Djj v1 itself documents http://10.244.7.19:8096/skill-bridge/v3/skill/search as the skill-bridge search endpoint.\",\"type\":\"environment_applicability\",\"outcome\":null,\"record_ids\":[\"skill:skl-ImeA29HL3Djj@1\"],\"quote\":\"http://10.244.7.19:8096/skill-bridge/v3/skill/search\",\"relation_to_asset\":\"silent\"},{\"statement\":\"No proxy_observed or harness_verified result is recorded directly against asset skl-ImeA29HL3Djj v1 in the cutoff window; the verified corrected/validated outcomes concern the older skills carrying the candidate endpoints.\",\"type\":\"coverage_unknown\",\"outcome\":null,\"record_ids\":[],\"quote\":\"\",\"relation_to_asset\":\"silent\"}],\"counter_evidence\":[],\"asset_claim_check\":{\"verdict\":\"contradicts\",\"type\":\"execution_result\",\"outcome\":\"failure\",\"record_ids\":[\"outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47\"],\"quote\":\"corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)\"},\"summary\":\"The worker's proxy log shows successful HTTP bridge calls for fetching team skills and searching the skill bridge over 127.0.0.1:8096, and reachability probes were sent to both documented candidates including the asset's URL. Harness-verified outcomes recorded the token 10.244.7.19:8096 as corrected(wrong) on a skill carrying that address and validated the rival 127.0.0.1:47318 endpoint, so the assessed asset's claim is contradicted even though no direct result exists on skl-ImeA29HL3Djj v1 itself. Overall this supports medium operational competence in issuing bridge HTTP requests, but no high-confidence personal result for the contested address is available.\"}",
+  "verified": {
+    "competence": "unknown",
+    "competence_basis": "被评估资产 skl-ImeA29HL3Djj 上没有业务结果;该作者在其他资产上另有 7 条业务结果(5 成功 / 2 纠错),属历史记录,与本次评估的领域不同,不参与定级",
+    "competence_as_said": "medium",
+    "competence_downgraded": true,
+    "execution_claims": {
+      "success": 0,
+      "failure": 0,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 0,
+          "failure": 0
+        },
+        "own_transport": {
+          "success": 0,
+          "failure": 0
+        }
+      },
+      "domain_counts": {
+        "success": 0,
+        "failure": 0
+      },
+      "cross_asset_history": {
+        "success": 5,
+        "failure": 2
+      },
+      "scoped_to": "skl-ImeA29HL3Djj",
+      "harness_records": 4,
+      "superseded_by_a_later_row": 0,
+      "cited_transport_calls": 3
+    },
+    "scope_note": "程序核对的是:引用的记录存在、引文在记录里、结构化结果与声明的类型一致、与被评估资产的绑定关系。声明里自由文本的语义与适用范围(例如「作者不具备某能力」「在任何环境都不成立」)不在核对范围内——每条保留的声明都附了程序从记录造的 fact_sentence,模型原话在 model_statement 里,按推断读。",
+    "asset_claim_check": {
+      "verdict": "contradicts",
+      "record_ids": [
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+      ],
+      "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
+      "strength": "strong",
+      "by_identity": false,
+      "note": null,
+      "basis": [
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+      ]
+    },
+    "asset_claim_as_said": "contradicts",
+    "claims_kept": [
+      {
+        "group": "claim",
+        "statement": "The worker successfully fetched the eval-bridge-endpoint-a skill through the bridge on 127.0.0.1:8096, with an HTTP 200 bridge_call in response.",
+        "record_ids": [
+          "call:8bfc28964692642e",
+          "call:a2c86ceddac82bc1"
+        ],
+        "quote": "bridge_call get-by-name status=200 {\"skill_name\":\"eval-bridge-endpoint-a\"",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "proxy 观察 call:a2c86ceddac82bc1,kind=bridge_call,upstream_status=200",
+        "model_statement": "The worker successfully fetched the eval-bridge-endpoint-a skill through the bridge on 127.0.0.1:8096, with an HTTP 200 bridge_call in response.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:a2c86ceddac82bc1",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The worker successfully fetched eval-bridge-endpoint-b through the bridge on 127.0.0.1:8096, with HTTP 200.",
+        "record_ids": [
+          "call:b6d4f0d34651bfda",
+          "call:5a37718ff0350f02"
+        ],
+        "quote": "bridge_call get-by-name status=200 {\"skill_name\":\"eval-bridge-endpoint-b\"",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "proxy 观察 call:5a37718ff0350f02,kind=bridge_call,upstream_status=200",
+        "model_statement": "The worker successfully fetched eval-bridge-endpoint-b through the bridge on 127.0.0.1:8096, with HTTP 200.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:5a37718ff0350f02",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The worker's team skill search over HTTP on 127.0.0.1:8096 was answered with HTTP 200.",
+        "record_ids": [
+          "call:cd4a73260f5a931d",
+          "call:5e96941cad71facd"
+        ],
+        "quote": "bridge_call search status=200 {\"query\":\"skill bridge endpoint host port reachability convention\"",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "proxy 观察 call:5e96941cad71facd,kind=bridge_call,upstream_status=200",
+        "model_statement": "The worker's team skill search over HTTP on 127.0.0.1:8096 was answered with HTTP 200.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:5e96941cad71facd",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The worker issued a reachability probe whose command targets the asset's URL http://10.244.7.19:8096/skill-bridge/v3/skill/search.",
+        "record_ids": [
+          "call:b5903fc59d61214c"
+        ],
+        "quote": "curl -sSk -X POST http://10.244.7.19:8096/skill-bridge/v3/skill/search",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "proxy 观察 call:b5903fc59d61214c,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The worker issued a reachability probe whose command targets the asset's URL http://10.244.7.19:8096/skill-bridge/v3/skill/search.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:b5903fc59d61214c",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "The worker also issued the reachability probe to skill B's documented endpoint 127.0.0.1:47318.",
+        "record_ids": [
+          "call:d332718e481fcbe0"
+        ],
+        "quote": "curl -sSk -X POST http://127.0.0.1:47318/skill-bridge/v3/skill/search",
+        "type": "observed_operation",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "proxy 观察 call:d332718e481fcbe0,kind=model_intent,没有观察到上游响应(model_intent)",
+        "model_statement": "The worker also issued the reachability probe to skill B's documented endpoint 127.0.0.1:47318.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "call:d332718e481fcbe0",
+        "evidence_class": "proxy_observed"
+      },
+      {
+        "group": "claim",
+        "statement": "A harness-verified outcome recorded that a skill carrying endpoint 10.244.7.19:8096 was corrected(wrong), contradicting that the team bridge is reachable from an agent session at that address.",
+        "record_ids": [
+          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+        ],
+        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
+        "type": "execution_result",
+        "outcome": "failure",
+        "relation": "contradicts",
+        "strength": "strong",
+        "fact_sentence": "Core 结果记录 outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47,资产 skl-sZFb3KatWY6m v2,state=corrected(wrong),消费者 usr-4u07qc2kuj,call call_00_G9aDxkOvysoOoLobMkc56726,2026-09-07T14:30:39.479Z",
+        "model_statement": "A harness-verified outcome recorded that a skill carrying endpoint 10.244.7.19:8096 was corrected(wrong), contradicting that the team bridge is reachable from an agent session at that address.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "claim",
+        "statement": "Another harness-verified outcome also records corrected(wrong) for a skill text carrying endpoint 10.244.7.19:8096.",
+        "record_ids": [
+          "outcome:c91cdca6-40f5-4e84-b03b-f65713584044"
+        ],
+        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
+        "type": "execution_result",
+        "outcome": "failure",
+        "relation": "contradicts",
+        "strength": "strong",
+        "fact_sentence": "Core 结果记录 outcome:c91cdca6-40f5-4e84-b03b-f65713584044,资产 skl-sZFb3KatWY6m v2,state=corrected(wrong),消费者 usr-4u07qc2kuj,call call_00_po2EaBdfFVj3or2ywENy5238,2026-09-07T14:30:39.700Z",
+        "model_statement": "Another harness-verified outcome also records corrected(wrong) for a skill text carrying endpoint 10.244.7.19:8096.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "outcome:c91cdca6-40f5-4e84-b03b-f65713584044",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "claim",
+        "statement": "A harness-verified outcome validated the rival skill endpoint 127.0.0.1:47318 as correct; this concerns the other documented candidate, not the assessed asset's URL.",
+        "record_ids": [
+          "outcome:6880f384-846b-419c-b97f-26615da03912"
+        ],
+        "quote": "validated on asset skl-oBaDO5CceKnr v2 (tokens of v2: 127.0.0.1:47318)",
+        "type": "execution_result",
+        "outcome": "success",
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": "Core 结果记录 outcome:6880f384-846b-419c-b97f-26615da03912,资产 skl-oBaDO5CceKnr v2,state=validated,消费者 usr-4u07qc2kuj,call call_01_zEo9sgfRF9BvaP8sOaqG1636,2026-09-07T14:30:39.573Z",
+        "model_statement": "A harness-verified outcome validated the rival skill endpoint 127.0.0.1:47318 as correct; this concerns the other documented candidate, not the assessed asset's URL.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "outcome:6880f384-846b-419c-b97f-26615da03912",
+        "evidence_class": "harness_verified"
+      },
+      {
+        "group": "claim",
+        "statement": "The assessed asset skl-ImeA29HL3Djj v1 itself documents http://10.244.7.19:8096/skill-bridge/v3/skill/search as the skill-bridge search endpoint.",
+        "record_ids": [
+          "skill:skl-ImeA29HL3Djj@1"
+        ],
+        "quote": "http://10.244.7.19:8096/skill-bridge/v3/skill/search",
+        "type": "environment_applicability",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "fact_sentence": null,
+        "model_statement": "The assessed asset skl-ImeA29HL3Djj v1 itself documents http://10.244.7.19:8096/skill-bridge/v3/skill/search as the skill-bridge search endpoint.",
+        "by_identity": false,
+        "note": null,
+        "found_in": "skill:skl-ImeA29HL3Djj@1",
+        "evidence_class": "authored_text"
+      },
+      {
+        "group": "claim",
+        "statement": "No proxy_observed or harness_verified result is recorded directly against asset skl-ImeA29HL3Djj v1 in the cutoff window; the verified corrected/validated outcomes concern the older skills carrying the candidate endpoints.",
+        "record_ids": [],
+        "quote": "",
+        "type": "coverage_unknown",
+        "outcome": null,
+        "relation": "silent",
+        "strength": null,
+        "found_in": null,
+        "note": "statement of absence; not evidence"
+      },
+      {
+        "group": "asset_claim_check",
+        "statement": "asset claim check: contradicts",
+        "record_ids": [
+          "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+        ],
+        "quote": "corrected(wrong) on asset skl-sZFb3KatWY6m v2 (tokens of v2: 10.244.7.19:8096)",
+        "type": "execution_result",
+        "outcome": "failure",
+        "relation": "contradicts",
+        "strength": "strong",
+        "fact_sentence": "Core 结果记录 outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47,资产 skl-sZFb3KatWY6m v2,state=corrected(wrong),消费者 usr-4u07qc2kuj,call call_00_G9aDxkOvysoOoLobMkc56726,2026-09-07T14:30:39.479Z",
+        "model_statement": "asset claim check: contradicts",
+        "by_identity": false,
+        "note": null,
+        "found_in": "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47",
+        "evidence_class": "harness_verified"
+      }
+    ],
+    "claims_dropped": [],
+    "counts": {
+      "claims": 10,
+      "counter_evidence": 0,
+      "kept": 11,
+      "dropped": 0,
+      "citations": 9,
+      "execution": 7
+    },
+    "summary": "competence unknown: 被评估资产 skl-ImeA29HL3Djj 上没有业务结果;该作者在其他资产上另有 7 条业务结果(5 成功 / 2 纠错),属历史记录,与本次评估的领域不同,不参与定级. asset claim contradicts on outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47, outcome:c91cdca6-40f5-4e84-b03b-f65713584044 (strong). 10 claim(s) kept, 0 dropped.",
+    "summary_as_said": "The worker's proxy log shows successful HTTP bridge calls for fetching team skills and searching the skill bridge over 127.0.0.1:8096, and reachability probes were sent to both documented candidates including the asset's URL. Harness-verified outcomes recorded the token 10.244.7.19:8096 as corrected(wrong) on a skill carrying that address and validated the rival 127.0.0.1:47318 endpoint, so the assessed asset's claim is contradicted even though no direct result exists on skl-ImeA29HL3Djj v1 itself. Overall this supports medium operational competence in issuing bridge HTTP requests, but no high-confidence personal result for the contested address is available."
+  },
+  "summary_for_gate": {
+    "schema": "author-assessment-summary-v2",
+    "competence": "unknown",
+    "competence_as_said": "medium",
+    "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
+    "assessed_at": "2026-09-07T20:07:44.770Z",
+    "evidence_cutoff": "2026-09-07T20:03:34.813Z",
+    "citations": 9,
+    "execution_claims": {
+      "success": 0,
+      "failure": 0,
+      "calls": 7,
+      "ledgers": {
+        "own_business": {
+          "success": 0,
+          "failure": 0
+        },
+        "others_on_assets": {
+          "success": 0,
+          "failure": 0
+        },
+        "own_transport": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    "asset_claim_check": {
+      "verdict": "contradicts",
+      "record_ids": [
+        "outcome:ba8e0c6e-7515-4757-8160-368f5b7ecc47"
+      ],
+      "strength": "strong"
+    },
+    "asset_claim_as_said": "contradicts",
+    "author_user_id": "usr-n68ea5ythq",
+    "asset_version": 1,
+    "content_hash": "00fc5c9a4a0641361c0b31da023b2753",
+    "chain_production_link": "unproven",
+    "chain_writer_known": true,
+    "chain_collected": {
+      "source_sessions": 1,
+      "naming_messages": 3,
+      "operations": 1,
+      "results": 0
+    },
+    "chain_gaps": 1,
+    "pack_sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
+    "assessment_file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/delivery/2026-09-13T152058Z/assessment-a-skl-ImeA29HL3Djj.json"
+  },
+  "pack_sha_at_generation": "c44081c36704b95308e3bc9986d14a3a9dfd13776b53fb5c53af7f665566b08e",
+  "pack_rebuilt": true,
+  "rechecked_at": "2026-09-13T15:21:31.951Z"
+}
