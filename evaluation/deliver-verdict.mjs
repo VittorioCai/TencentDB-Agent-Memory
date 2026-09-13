@@ -33,7 +33,7 @@ export const POLICY = {
   "devloop-report-2":            { kind: "offline", exit: 0, diff: true, what: "第二任务闭环报告" },
   "devloop-report-3":            { kind: "offline", exit: 0, diff: true, what: "第三任务闭环报告(新增功能,行为判定)" },
   "rejudge-execute":             { kind: "live", exit: 0, diff: false, what: "第三任务重判**实跑**(从入库归档重算,不是重画表格)",
-    note: "判别值明文只在 Core(§16),所以必须线上;干净克隆上按设计跑不了", expect: /差异行 0/ },
+    note: "判别值明文只在 Core(§16),所以必须线上;干净克隆上按设计跑不了", expect: /三份 rows 全部产出,差异行 0/ },
   "rejudge-pool":                { kind: "offline", exit: 0, diff: true, what: "第三任务采用归因重判页(池快照更正)",
     note: "两组保真对照必须全对 —— 重放装置会造出或抹掉 used 的话,差值不成立" },
   "contamination-3":             { kind: "offline", exit: 0, diff: false, what: "第三任务样本污染批检",

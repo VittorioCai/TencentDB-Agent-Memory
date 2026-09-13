@@ -115,7 +115,12 @@ bash evaluation/tasks/resource-download/rejudge-pool.sh --from archive --task ev
   --snapshot recorded --out "$OUT/rejudge-control-rows.jsonl" >> "$OUT/rejudge-execute.txt" 2>&1 || re=1
 diff -u evaluation/tasks/resource-download/rejudge-control-task2-rows.jsonl "$OUT/rejudge-control-rows.jsonl" > "$OUT/rejudge-control.diff" 2>&1 || re=1
 rl=$(cat "$OUT"/rejudge-*.diff 2>/dev/null | grep -c '^[+-][^+-]' || true)
-row "rejudge-execute" "rejudge-pool.sh --from archive ×3(基线/修正/第二任务对照)" "$re" "exit 0;三份 rows 从入库归档重跑,逐行与入库一致(需 Core 解析判别值,干净克隆上按设计跑不了)" "差异行 $rl"
+# 产出了几份。**没产出时不能报「差异行 0」** —— 那个 0 来自对不存在的文件做 diff,
+# 在干净克隆上会变成「失败」旁边写着「差异行 0」,读起来像报告在糊弄(封版那次即如此)。
+rn=0; for f in rejudge-baseline-rows.jsonl rejudge-corrected-rows.jsonl rejudge-control-rows.jsonl; do [[ -s "$OUT/$f" ]] && rn=$((rn + 1)); done
+if (( rn < 3 )); then rnote="只产出 $rn/3 份 rows —— 重判要判别值明文,而它只在 Core(§16),这里解析不到,一次也没重判"
+else rnote="三份 rows 全部产出,差异行 $rl"; fi
+row "rejudge-execute" "rejudge-pool.sh --from archive ×3(基线/修正/第二任务对照)" "$re" "exit 0;三份 rows 从入库归档重跑,逐行与入库一致(需 Core 解析判别值,干净克隆上按设计跑不了)" "$rnote"
 
 echo "[6c2] third task's re-judge page reproduced (the pool-snapshot correction, before/after)"
 node evaluation/tasks/resource-download/rejudge-report.mjs --out="$OUT/REJUDGE-POOL-reproduced.md" > "$OUT/rejudge-pool.txt" 2>&1; e=$?

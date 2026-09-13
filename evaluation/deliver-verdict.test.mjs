@@ -33,7 +33,7 @@ const green = () => [
   row("devloop-report-2", 0, 0),
   row("devloop-report-3", 0, 0, "计入样本 8 次"),
   row("rejudge-pool", 0, 0),
-  row("rejudge-execute", 0, null, "差异行 0"),
+  row("rejudge-execute", 0, null, "三份 rows 全部产出,差异行 0"),
   row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
   row("author-recheck", 0, 0, "5 份重验"),
   row("stated-suite-size", 0, null, "套件实际 767 个测试;文档里声明当前规模的地方 2 处,全部一致"),
@@ -163,4 +163,15 @@ test("退出码为 0 的步骤也能要求 note 的形态 —— chain 少跑一
 
 test("chain 三条都成功时照常通过", () => {
   assert.equal(verdict(green()).ok, true);
+});
+
+// 封版那次:干净克隆上没有密钥,重判一份 rows 都没产出,而那一行却写着「差异行 0」——
+// 0 来自对不存在的文件做 diff。失败旁边写着 0,读起来像报告在糊弄。
+test("重判没产出 rows 时,不许报成「差异行 0」", () => {
+  const rows = green().map((r) => (r.step === "rejudge-execute"
+    ? { ...r, exit: 1, note: "只产出 0/3 份 rows —— 重判要判别值明文,而它只在 Core(§16),这里解析不到,一次也没重判" } : r));
+  const v = verdict(rows);
+  assert.equal(v.ok, false, "它仍然是失败");
+  assert.ok(!/差异行 0/.test(JSON.stringify(v.failures)), "失败说明里不该出现「差异行 0」");
+  assert.match(JSON.stringify(v.failures), /一次也没重判/);
 });
