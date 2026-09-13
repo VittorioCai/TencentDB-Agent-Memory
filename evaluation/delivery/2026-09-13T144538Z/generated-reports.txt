@@ -1,0 +1,2 @@
+入库 .md 73 份:叙述 44 份,登记的报告 29 份 —— regenerated 12,figures_checked 1,not_regenerable 1,historical 15;未登记 0 份
+  **不能重算(缺点,已登记)**:evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline.md
