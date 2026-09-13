@@ -21,7 +21,7 @@ const row = (step, exit = 0, diff = null, note = "") => ({ step, exit, diff_line
 
 /** 一组全绿的行(含两个期望非零的步骤),作为各用例的基准。 */
 const green = () => [
-  row("suite", 0, null, "ℹ tests 633 ℹ pass 633 ℹ fail 0"),
+  row("suite", 0, null, "ℹ tests 735 ℹ pass 735 ℹ fail 0"),
   row("selfcheck", 1, null, "结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1) 已出现于 [task] task:REPORT.md"),
   row("selfcheck-exit-line-collect", 1, null, "结论:验证器未全过(seg0=0 seg1=1 seg2=0 seg4=1) 已出现于 [record] devloop-runs.json"),
   row("rejudge-regenerate", 0, null, "14 copies"),
@@ -34,6 +34,7 @@ const green = () => [
   row("devloop-report-3", 0, 0, "计入样本 8 次"),
   row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
   row("author-recheck", 0, 0, "5 份重验"),
+  row("stated-suite-size", 0, null, "套件实际 735 个测试;文档里声明当前规模的地方 1 处,全部一致"),
   row("generated-reports", 0, null, "入库 .md 73 份:叙述 44 份,登记的报告 29 份 —— regenerated 12,figures_checked 1,not_regenerable 1,historical 15;未登记 0 份"),
   row("comparison-figures", 0, null, "对照报告的主表与生成的 summary 逐格比对:26 格,全部一致"),
   row("demo", 0, null, "Segments: 2 live, 5 record, 0 fixture"),
@@ -136,7 +137,7 @@ test("第三任务报告有差异就失败,和前两份一样按差异判", () =
 });
 
 test("新加的三道:任一失败都要拖垮离线结论", () => {
-  for (const step of ["author-recheck", "generated-reports", "comparison-figures"]) {
+  for (const step of ["author-recheck", "generated-reports", "comparison-figures", "stated-suite-size"]) {
     const rows = green().map((r) => (r.step === step ? { ...r, exit: 1 } : r));
     const v = verdict(rows);
     assert.equal(v.ok, false, step);

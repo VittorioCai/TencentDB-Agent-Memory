@@ -115,6 +115,10 @@ for pair in "assessment-a-exit-line:evidence-pack-a-exit-line" "assessment-a-skl
 done
 row "author-recheck" "assess.mjs --recheck=<5 份评估副本> --pack=<各自的证据包>" "$ae" "exit 0;五份评估从 raw_model_output 重验后,渲染页与入库副本 diff 0" "$(grep -c '^recheck:' "$OUT/author-recheck.txt") 份重验" "$ad"
 
+echo "[6e2] the suite size stated in the documents matches the run that just happened"
+node evaluation/check-stated-suite-size.mjs --suite-output="$OUT/suite.txt" --doc=evaluation/README.md,evaluation/STATE.md > "$OUT/stated-suite-size.txt" 2>&1; e=$?
+row "stated-suite-size" "check-stated-suite-size.mjs --suite-output=<本次套件输出>" "$e" "exit 0;文档里写的套件规模 == 本次实际跑出来的" "$(head -1 "$OUT/stated-suite-size.txt")"
+
 echo "[6f] every script-generated report in the tree is registered (regenerated / figures-checked / not regenerable)"
 node evaluation/check-generated-reports.mjs > "$OUT/generated-reports.txt" 2>&1; e=$?
 row "generated-reports" "check-generated-reports.mjs" "$e" "exit 0;未登记 0 份 —— 登记簿之外不允许存在生成报告" "$(head -1 "$OUT/generated-reports.txt")"

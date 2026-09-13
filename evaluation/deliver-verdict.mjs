@@ -35,6 +35,8 @@ export const POLICY = {
   "contamination-3":             { kind: "offline", exit: 0, diff: false, what: "第三任务样本污染批检",
     note: "污染与未知同样阻断:一次样本不是明确的干净就不能计入" },
   "author-recheck":              { kind: "offline", exit: 0, diff: true, what: "作者评估重验(五份,从 raw_model_output)" },
+  "stated-suite-size":           { kind: "offline", exit: 0, diff: false, what: "文档里写的套件规模与实跑一致",
+    note: "这个数漂过两次(彩排 E 修过一回,9/13 又漂成 643 对 729);叙述里抄一个会变的数,只能靠每次比" },
   "generated-reports":           { kind: "offline", exit: 0, diff: false, what: "生成报告登记核对",
     note: "未登记的生成报告一律阻断 —— 验收此前不知道仓库里一共有哪几份,少查一份不会有人发现" },
   "comparison-figures":          { kind: "offline", exit: 0, diff: false, what: "对照报告主表与生成 summary 逐格比对" },

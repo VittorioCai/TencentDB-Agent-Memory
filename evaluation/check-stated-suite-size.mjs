@@ -1,0 +1,58 @@
+/**
+ * 文档里写死的「套件有多少个测试」必须与实际跑出来的一致。
+ *
+ *   node evaluation/check-stated-suite-size.mjs --suite-output=<node --test 的输出> [--doc=evaluation/README.md] [--json]
+ *
+ * 这个数字漂过两次:彩排 E(2026-09-12)修过一回,2026-09-13 又漂成 643 对 729。
+ * 它是典型的「叙述里抄了一个会变的数」——和对照报告主表同一类毛病,所以同一种治法:
+ * 不靠人记得改,靠每次验收比一次。
+ *
+ * 只认**当前值**的写法(`Full suite: N tests` / `套件 N/N`)。带提交号或日期的历史记录
+ * 不在此列 —— 那些是当时的数,本来就不该跟着变(STATE.md 里的彩排表、逐轮复跑记录)。
+ */
+import { readFileSync } from "node:fs";
+
+/** `node --test` 的摘要行 → 实际测试数;读不到返回 null(未知,不折成 0)。 */
+export function actualFromSuiteOutput(text) {
+  const m = /^ℹ tests (\d+)$/m.exec(String(text ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/** 文档里声明的当前套件规模,连行号一起给出;没有声明返回 []。 */
+export function statedSizes(md) {
+  const out = [];
+  const lines = String(md ?? "").split("\n");
+  lines.forEach((line, i) => {
+    if (/[0-9a-f]{7,40}|20\d{2}-\d{2}-\d{2}|彩排/.test(line)) return;      // 带提交号 / 日期 / 彩排的是历史记录
+    const m = /Full suite:\s*(\d+)\s*tests|套件\s*(\d+)\s*\/\s*(\d+)/.exec(line);
+    if (!m) return;
+    const n = Number(m[1] ?? m[2]);
+    out.push({ line: i + 1, stated: n, text: line.trim().slice(0, 100) });
+  });
+  return out;
+}
+
+/** @returns {{ok, actual, stated, mismatches}} —— 实际数未知时不通过(§2:未知不能当通过) */
+export function checkStated(suiteOutput, docs) {
+  const actual = actualFromSuiteOutput(suiteOutput);
+  const stated = [];
+  for (const [path, md] of Object.entries(docs)) for (const s of statedSizes(md)) stated.push({ path, ...s });
+  if (actual === null) {
+    return { ok: false, actual: null, stated, mismatches: [], why: "从套件输出里读不到 `ℹ tests N`,无法判断文档里的数字对不对" };
+  }
+  const mismatches = stated.filter((s) => s.stated !== actual);
+  return { ok: mismatches.length === 0, actual, stated, mismatches, why: null };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const arg = (n, d) => (process.argv.find((a) => a.startsWith(`--${n}=`)) ?? `--${n}=${d}`).slice(n.length + 3);
+  const docs = {};
+  for (const p of arg("doc", "evaluation/README.md,evaluation/STATE.md").split(",")) docs[p] = readFileSync(p, "utf8");
+  const r = checkStated(readFileSync(arg("suite-output", ""), "utf8"), docs);
+  if (process.argv.includes("--json")) console.log(JSON.stringify(r, null, 2));
+  else {
+    console.log(r.why ?? `套件实际 ${r.actual} 个测试;文档里声明当前规模的地方 ${r.stated.length} 处${r.ok ? ",全部一致" : ""}`);
+    for (const m of r.mismatches) console.log(`  对不上 ${m.path}:${m.line} 写的是 ${m.stated},实际 ${r.actual} —— ${m.text}`);
+  }
+  process.exit(r.ok ? 0 : 1);
+}
