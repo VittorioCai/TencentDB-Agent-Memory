@@ -1,0 +1,23 @@
+{
+  "at": "2026-09-13T13:45:32Z",
+  "what": "proxy sessionInit.debugForceIdentity restored to the mainline consumer b (agent agt-5e0y4l8a7a, task task-5e6xp4mrrw) after the third dev-loop task left it at the last per-run consumer of user c (agt-k9ic54p94e) bound to task-h1k7xruuhb; CodeBuddy's API key switched back to identity b",
+  "command": "FRESH_CONSUMER_TASK=task-5e6xp4mrrw bash evaluation/runner/prepare.sh --identity b; bash evaluation/tasks/bridge-addr/use-identity.sh b",
+  "run_by": "user(线上状态改动,CLAUDE.md §10;实施者只写本记录)",
+  "before": {
+    "forced_agent": "agt-k9ic54p94e",
+    "forced_task": "task-h1k7xruuhb",
+    "config_sha256_prefix": "b4c0236faae0",
+    "source": "delivery/2026-09-13T133832Z/conditions-check.txt(验收当场读到的实际值)",
+    "file_backup": "无单独备份:prepare.sh 只在每次运行前备份(最近一份 config.yaml.bak-20260913T124050Z-devloop-note 是最后一次运行**之前**的状态);恢复前的内容 = 同一基线 + 上述身份,可由 run-once.sh 对同一消费者重放得到"
+  },
+  "after": {
+    "forced_agent": "agt-5e0y4l8a7a",
+    "forced_task": "task-5e6xp4mrrw",
+    "forced_team": "team-5ezfoladb5",
+    "config_sha256": "4453c5fd4e0e50feb27b109b7961cfedf641cfff98f3c81de3485bf7578175cc",
+    "same_as": "9/11 两次恢复后的哈希(proxy-identity-restore.json / -2.json 的 sha256_after)"
+  },
+  "verified": "prepare.sh 输出 [ok] proxy healthy, forced identity agt-5e0y4l8a7a — consumer (mainline);[ok] core auto-extraction already off;[ok] CodeBuddy key switched to identity b。事后读 config.yaml:agent/task/team 与预期一致,sha256 全长记录如上。",
+  "restore_previous": "再次跑第三任务任一组即会把身份切到新的消费者;要回到恢复前的具体身份没有意义(那是一个一次性的消费者)。",
+  "consequence": "验收里 `proxy 强制身份 task` 恢复为 PASS;`proxy 强制身份 agent == 消费者` 仍 FAIL(冻结值是批次四消费者,已登记 post_batch)。"
+}
