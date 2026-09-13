@@ -23,7 +23,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { checkAssessment } from "./check-citations.mjs";
 import { parseArgs } from "./build-evidence-pack.mjs";
 
@@ -259,7 +259,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     chain: pack.chain ?? null,
     domain: a.domain,
     asset_claim: a["asset-claim"],
-    pack: { file: a.pack, sha256: pack.sha256, record_count: pack.record_count, by_class: pack.by_class, excluded: pack.excluded, shown: sel.chosen.length, left_out: sel.left_out, chars: sel.chars, terms: sel.terms },
+    // 仓库根相对路径:解析基准写明,换一个 checkout 也指得到(2026-09-13 复核方)。
+    // 这个字段没有任何代码读回,改的是引用的可移植性,不是运行路径。
+    pack: { file: relative(REPO, resolve(a.pack)), sha256: pack.sha256, record_count: pack.record_count, by_class: pack.by_class, excluded: pack.excluded, shown: sel.chosen.length, left_out: sel.left_out, chars: sel.chars, terms: sel.terms },
     model: { url, model: res.model, usage: res.usage, temperature: 0 },
     raw_model_output: res.content,
     verified,

@@ -12,7 +12,7 @@
  * 按「旧批次原始记录不得覆盖」保留不改,not_regenerable 是**登记在案的缺点**。
  * 未登记的一律阻断;登记了却已不在磁盘上的也要报,免得登记簿变成一本旧账。
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -63,6 +63,41 @@ export function checkRegistry(found, registry) {
     bad_class: badClass.map((r) => r.path), missing_why: missingWhy.map((r) => r.path), by_class: byClass };
 }
 
+/**
+ * 登记完整不等于执行完整(2026-09-13 复核方的两个反例):
+ * 把 step 改成不存在的名字、或多登记一份而循环没跑它,原来都照样通过。
+ * 这里核的是**报告路径 → 本轮执行记录 → 产物与 diff**:
+ *   step 要出现在本轮 rows.jsonl 里且退出码为 0;
+ *   每份报告要有自己的 artifact(五份作者评估共用一个 step,只有逐份产物能分辨);
+ *   artifact 是 .diff 的必须为空。
+ * historical 与 not_regenerable 不要求执行记录 —— 它们本来就不重算。
+ *
+ * @param opts.rows   本轮 rows.jsonl 解析出的行
+ * @param opts.outDir 本轮归档目录($OUT)
+ */
+export function checkExecution(registry, { rows = [], outDir = "." } = {}) {
+  const byStep = new Map(rows.map((r) => [r.step, r]));
+  const problems = [];
+  let checked = 0;
+  for (const rep of registry?.reports ?? []) {
+    if (!["regenerated", "figures_checked"].includes(rep.class)) continue;
+    checked += 1;
+    const row = byStep.get(rep.step);
+    if (!row) { problems.push({ path: rep.path, step: rep.step, why: `登记的步骤 ${rep.step} 没有出现在本轮复跑里` }); continue; }
+    if (row.exit !== 0) { problems.push({ path: rep.path, step: rep.step, why: `步骤 ${rep.step} 退出码 ${row.exit},不算执行过` }); continue; }
+    if (!rep.artifact) { problems.push({ path: rep.path, step: rep.step, why: "没有登记 artifact,无法证明这一份自己跑过" }); continue; }
+    const f = join(outDir, rep.artifact);
+    if (!existsSync(f)) { problems.push({ path: rep.path, step: rep.step, why: `产物不在本轮归档里:${rep.artifact}` }); continue; }
+    if (rep.artifact.endsWith(".diff")) {
+      let size = null;
+      try { size = statSync(f).size; } catch { /* 读不到按未知处理 */ }
+      if (size === null) { problems.push({ path: rep.path, step: rep.step, why: `产物读不出来:${rep.artifact}` }); continue; }
+      if (size > 0) problems.push({ path: rep.path, step: rep.step, why: `差异产物不是空的(${size} 字节):${rep.artifact}` });
+    }
+  }
+  return { ok: problems.length === 0, checked, problems };
+}
+
 export function render(r) {
   const L = [`入库 .md ${r.found} 份:叙述 ${r.narrative} 份,登记的报告 ${r.registered} 份 —— ` +
     Object.entries(r.by_class).map(([k, v]) => `${k} ${v.length}`).join(",") +
@@ -79,6 +114,19 @@ export function render(r) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (n, d) => (process.argv.find((a) => a.startsWith(`--${n}=`)) ?? `--${n}=${d}`).slice(n.length + 3);
   const registry = JSON.parse(readFileSync(arg("registry", "evaluation/generated-reports.json"), "utf8"));
+  // --run-out=<本轮归档目录>:除了登记完整,再核执行完整(本轮的 rows.jsonl 与逐份产物)
+  const outDir = arg("run-out", "");
+  if (outDir) {
+    const rows = readFileSync(join(outDir, "rows.jsonl"), "utf8").split("\n").filter(Boolean)
+      .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    const x = checkExecution(registry, { rows, outDir });
+    if (process.argv.includes("--json")) console.log(JSON.stringify(x, null, 2));
+    else {
+      console.log(`登记为要重算的 ${x.checked} 份,逐份核对本轮的执行记录与产物${x.ok ? ",全部对上" : ""}`);
+      for (const p of x.problems) console.log(`  ${p.path}:${p.why}`);
+    }
+    process.exit(x.ok ? 0 : 1);
+  }
   const r = checkRegistry(findMarkdown(arg("root", "evaluation")), registry);
   console.log(process.argv.includes("--json") ? JSON.stringify(r, null, 2) : render(r));
   process.exit(r.ok ? 0 : 1);

@@ -127,15 +127,25 @@ echo "[6g] the comparison report's figures still agree with the generated summar
 node evaluation/runner/check-comparison-figures.mjs > "$OUT/comparison-figures.txt" 2>&1; e=$?
 row "comparison-figures" "check-comparison-figures.mjs" "$e" "exit 0;逐格一致" "$(head -1 "$OUT/comparison-figures.txt")"
 
+# 排在所有产出报告的步骤之后:它读的是本轮已经写好的 rows.jsonl
+echo "[6h] each registered report actually ran this time: its step, its own artifact, its own diff"
+node evaluation/check-generated-reports.mjs --run-out="$OUT" > "$OUT/reports-executed.txt" 2>&1; e=$?
+row "reports-executed" "check-generated-reports.mjs --run-out=<本轮归档>" "$e" "exit 0;每份登记为重算的报告都有本轮的执行记录与自己的空 diff" "$(head -1 "$OUT/reports-executed.txt")"
+
 echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
 row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/fixture counted" "$(grep -E '^Segments:' "$OUT/demo.txt")"
 
 echo "[7b] closed-loop walkthrough: the main chain and the two counterexamples"
+# 逐次保留退出码:原来整个 for 块的退出码是最后那个 `echo` 的,三条 case 全挂也记成 0
+# (2026-09-13 复核方的反例,已复现)。大括号不是子 shell,循环里的赋值能带出来。
+ce=0; cok=0
 { for c in main delivered_not_adopted adopted_but_flagged; do
-    echo "══════ $c ══════"; node evaluation/receipt/chain-cli.mjs --case="$c" --expand; echo;
-  done; } > "$OUT/chain.txt" 2>&1; e=$?
-row "chain" "receipt/chain-cli.mjs --case=main|delivered_not_adopted|adopted_but_flagged --expand" "$e" "exit 0;三条链都渲染出来,未证明的环节按原样保留" "$(grep -c '^[1-7]\. ' "$OUT/chain.txt") 个环节,其中未证明 $(grep -c '未证明' "$OUT/chain.txt") 个"
+    echo "══════ $c ══════"
+    if node evaluation/receipt/chain-cli.mjs --case="$c" --expand; then cok=$((cok + 1)); else ce=1; fi
+    echo
+  done; } > "$OUT/chain.txt" 2>&1
+row "chain" "receipt/chain-cli.mjs --case=main|delivered_not_adopted|adopted_but_flagged --expand" "$ce" "exit 0;三条 case 全部渲染成功,未证明的环节按原样保留" "$cok/3 条 case 成功;$(grep -c '^[1-7]\. ' "$OUT/chain.txt") 个环节,其中未证明 $(grep -c '未证明' "$OUT/chain.txt") 个"
 
 echo "[7c] relevance selection: pool → admission → task relevance → context"
 node evaluation/attribution/selection-cli.mjs > "$OUT/selection.txt" 2>&1; e=$?
@@ -148,7 +158,15 @@ echo "$cls" > "$OUT/conditions-classified.txt"
 row "conditions-check" "batch-conditions.mjs --check; conditions-classify.mjs" "$e" "exit 1 是常态;**每一项 FAIL 必须在 conditions-expected.json 里登记性质与原因**,未登记即阻断。三类:批次后的正常变化 / 已载明的实验限制 / 证据缺口(后者属于缺点,不属于按设计)" "$(grep -c -E 'PASS' "$OUT/conditions-check.txt") PASS / $(grep -c -E 'FAIL' "$OUT/conditions-check.txt") FAIL;$cls"
 
 echo "[9] live state"
-{ bash evaluation/runner/core-extraction.sh status; bash evaluation/runner/prepare.sh --status 2>&1 | head -6; node evaluation/tasks/exit-code-fix/gate-observe.mjs --label="delivery re-run $STAMP" --out="$OUT/gate-observation.jsonl"; } > "$OUT/live-state.txt" 2>&1; e=$?
+# 同上:三条命令的退出码逐条累计,别让最后一条盖掉前面的
+le=0
+# prepare.sh --status 的输出先整份落盘再截断:`| head -6` 会提前关掉管道,让它收到
+# SIGPIPE(141),看起来像失败其实不是(2026-09-13 逐条累计退出码后才暴露出来)。
+bash evaluation/runner/prepare.sh --status > "$OUT/prepare-status.txt" 2>&1 || le=1
+{ bash evaluation/runner/core-extraction.sh status || le=1
+  head -6 "$OUT/prepare-status.txt"
+  node evaluation/tasks/exit-code-fix/gate-observe.mjs --label="delivery re-run $STAMP" --out="$OUT/gate-observation.jsonl" || le=1
+} > "$OUT/live-state.txt" 2>&1; e=$le
 row "live-state" "core-extraction.sh status; prepare.sh --status; gate-observe.mjs" "$e" "recorded, not judged" "$(head -1 "$OUT/live-state.txt")"
 
 node evaluation/deliver-verdict.mjs "$ROWS" "$OUT/SUMMARY.md" "$STAMP" "$(git rev-parse HEAD)"; verdict=$?

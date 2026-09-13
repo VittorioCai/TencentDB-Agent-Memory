@@ -60,7 +60,7 @@
   "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
   "asset_claim": "CodeBuddy's Bash tool result ends with a line labelled 'Exit Code:' (capital C); an acceptance parser that only accepts 'Exit code:' never reads the exit status of a real result, so the parser must accept both spellings and a regression test for the capital spelling should be added",
   "pack": {
-    "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-a-exit-line.json",
+    "file": "evaluation/author/artifacts/evidence-pack-a-exit-line.json",
     "sha256": "a3c0b2d9262aa16a9a03531957eb1302c62beb1a599754163dd17df489e57643",
     "record_count": 88,
     "by_class": {

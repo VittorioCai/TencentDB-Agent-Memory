@@ -52,7 +52,7 @@
   "domain": "reading the exit status line of a CodeBuddy tool result: how the label is spelled and how an acceptance parser must read it",
   "asset_claim": "CodeBuddy spells the exit-status label 'Exit Code:' (capital C) in real tool results; a parser that only accepts 'Exit code:' reads null and records a timed-out call (curl -s without -S, exit 28) as unreadable instead of timed out, and curl 52/56 the same way; making the label case-insensitive fixes it, and a regression test should cover the capital spelling for 28, 52, 56 and the lower-case spelling",
   "pack": {
-    "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-b-exit-line.json",
+    "file": "evaluation/author/artifacts/evidence-pack-b-exit-line.json",
     "sha256": "238738d1d154cae802ca4ba04fcf313dc19cdb9a56ac900ed7fd6555c401a1ad",
     "record_count": 1596,
     "by_class": {

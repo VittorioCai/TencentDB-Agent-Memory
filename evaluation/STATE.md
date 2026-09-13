@@ -168,6 +168,21 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 (`gate/artifacts/port-*`);留档时纠出一处 —— 「新增 0 条」只对 `src/metadata` 成立(11 → 6),全树是 123 → 118、新增 2
 (同两个未定义名字换了错误码),比较由 `compare-typecheck.mjs` 可复算。
 
+**第七轮复核(2026-09-13 下午,只读核实 + 不落盘反例)四条已全部处置:**
+**① 闭环展示的失败被最后一个 `echo` 掩盖**(已复现:三次调用全返回 7,外层仍是 0)。改为逐次保留退出码并记 `3/3 条 case 成功`;
+判决器扩成**退出码为 0 的步骤也能要求 note 形态**,否则少跑一条 case 看不出来。同一种写法在 `live-state` 也有一处,一并改。
+**② 登记完整 ≠ 执行完整**(两个反例均复现:改成不存在的步骤名、多登记一份而循环没跑,原来都放过)。新增 `checkExecution`:
+每份登记为重算的报告要有**本轮**的执行记录(步骤在 rows.jsonl 且退出码 0)、**自己的 artifact**、且 `.diff` 为空 ——
+五份作者评估共用一个步骤,只有逐份产物能分辨。新步骤 `reports-executed`,排在所有报告步骤之后。三个反例复验全部阻断。
+**③ `exitline.md` 的替代说明改掉**:它比的是**验收器 verify.mjs 修复前后**,`exitline-collect.md` 比的是
+**collect-artifacts 退出码采集修复前后**,不是同一项验证,后者不能替前者背书。限制保留,不扩实验。
+**④ `pack.file` 统一为仓库根相对路径**(3 份入库评估已改,生成器同改)。性质说准:当前程序读的是必填参数 `--pack`,
+**没有读存档里的 `pack.file`**,所以是引用可移植性,不是已证实的运行阻断;不加"找不到就猜另一个文件"的兜底。
+写入记录(`assessment-write-*`)与演示快照里的绝对路径**不动** —— 那是当时用了哪把钥匙、Core 当时返回了什么,属原始记录。
+
+修的过程中自己又暴露两处:`reports-executed` 原本排在 `comparison-figures` 之前,读不到它的行(顺序错,已挪后);
+`live-state` 逐条累计退出码后报 141,查出是 `| head -6` 提前关管道造成的 SIGPIPE,不是 `prepare.sh` 真失败 —— 改成先整份落盘再截断。
+
 **验收漏检收口(HEAD e488459,`delivery/2026-09-13T142640Z` 全绿,套件 729/729):** 验收此前不知道仓库里一共有哪些生成报告。
 `check-generated-reports.mjs` 穷举 `evaluation/` 下 73 份入库 .md,逐份归类(叙述 44;regenerated 12、figures_checked 1、
 historical 15、not_regenerable 1),**未登记即阻断**。由此补上两处真漏检:五份作者评估此前无人复核,现由 `author-recheck`

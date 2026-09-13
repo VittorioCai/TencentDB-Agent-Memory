@@ -2,7 +2,7 @@
   "_meta": {
     "what": "仓库里每一份「由脚本生成」的报告,逐份登记它在交付验收里的处置",
     "why": "验收此前只知道自己重算了哪几份,不知道仓库里一共有哪几份 —— 少查一份不会有任何人发现。2026-09-13 自查时 REPARSE-DIFF-2026-09-11-exitline.md 就是这样漏掉的:它的两个同名兄弟都在查,唯独它不在。",
-    "rule": "只有登记在册的报告才允许存在;**未登记的生成报告一律阻断**。登记为 regenerated 的必须真的在 deliver-check.sh 里被重算并 diff;登记为 not_regenerable 的必须写明为什么不能重算 —— 那是缺点,不是豁免。",
+    "rule": "只有登记在册的报告才允许存在;**未登记的生成报告一律阻断**。登记为 regenerated 的必须真的在 deliver-check.sh 里被重算并 diff;登记为 not_regenerable 的必须写明为什么不能重算 —— 那是缺点,不是豁免。 登记为 regenerated / figures_checked 的还必须写出 `artifact` —— 本轮归档里能证明**这一份自己**跑过的产物;五份作者评估共用一个步骤,只有逐份产物能分辨(2026-09-13:只核步骤存在是不够的,复核方的两个反例都能穿过去)。",
     "excluded": "evaluation/delivery/** 不在此列:那是验收自己每次跑出来的归档,不是被验收的对象。",
     "classes": {
       "regenerated": "交付验收重新生成并与入库副本逐行 diff,差异即失败",
@@ -16,50 +16,58 @@
     {
       "path": "evaluation/tasks/exit-code-fix/REPORT.md",
       "class": "regenerated",
-      "step": "devloop-report"
+      "step": "devloop-report",
+      "artifact": "REPORT.diff"
     },
     {
       "path": "evaluation/tasks/exit-line-collect/REPORT.md",
       "class": "regenerated",
-      "step": "devloop-report-2"
+      "step": "devloop-report-2",
+      "artifact": "REPORT-exit-line-collect.diff"
     },
     {
       "path": "evaluation/tasks/resource-download/REPORT.md",
       "class": "regenerated",
-      "step": "devloop-report-3"
+      "step": "devloop-report-3",
+      "artifact": "REPORT-resource-download.diff"
     },
     {
       "path": "evaluation/attribution/CALIBRATION-batch4-reparsed-2026-09-11.md",
       "class": "regenerated",
-      "step": "calibration"
+      "step": "calibration",
+      "artifact": "CALIBRATION.diff"
     },
     {
       "path": "evaluation/runner/summary-2026-09-11-reparsed.md",
       "class": "regenerated",
-      "step": "summary"
+      "step": "summary",
+      "artifact": "summary.diff"
     },
     {
       "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11.md",
       "class": "regenerated",
-      "step": "rejudge-diff"
+      "step": "rejudge-diff",
+      "artifact": "REPARSE-DIFF.diff"
     },
     {
       "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline-collect.md",
       "class": "regenerated",
-      "step": "reparse-exitline"
+      "step": "reparse-exitline",
+      "artifact": "REPARSE-exitline-collect.diff"
     },
     {
       "path": "evaluation/runner/COMPARISON-2026-09-11-reparsed.md",
       "class": "figures_checked",
       "step": "comparison-figures",
-      "why": "叙述由人写,主表逐格抄自 summary-2026-09-11-reparsed.md(它本身是 regenerated)。check-comparison-figures.mjs 逐格比对,任一格对不上即阻断 —— 2026-09-13 首次运行即抓到「均墙钟 s」被抄成 47 / 15(生成的那份是 47.2 / 15.4),已改回。"
+      "why": "叙述由人写,主表逐格抄自 summary-2026-09-11-reparsed.md(它本身是 regenerated)。check-comparison-figures.mjs 逐格比对,任一格对不上即阻断 —— 2026-09-13 首次运行即抓到「均墙钟 s」被抄成 47 / 15(生成的那份是 47.2 / 15.4),已改回。",
+      "artifact": "comparison-figures.txt"
     },
     {
       "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline.md",
       "class": "not_regenerable",
       "why": "它比的是**两代重判副本**:before 是退出行修复进主分支之前那一版 verify.mjs 判出来的 /private/tmp/topic4-rejudge/2026-09-11,after 是修复之后的 2026-09-11b。验收只重算一套副本,要重算这一份得用 git 里修复前的 verify.mjs 把 14 次运行再判一遍,再与当前版判一遍,代价约是现在 rejudge 步骤的两倍。",
       "cost": "两套 14 份重判副本",
-      "mitigation": "它记的是一次一次性迁移的效果,结论不进任何当前口径;同一件事的可复算版本是 reparse-exitline 那一步(REPARSE-DIFF-2026-09-11-exitline-collect.md),它用 `git show 77959dc:` 取旧实现,在验收里每次重算。",
+      "mitigation": "没有可复算的替代。**它和 reparse-exitline 那一步不是同一项验证**:这一份比的是**验收器 verify.mjs 修复前后**对同一批运行的判定差异,`REPARSE-DIFF-2026-09-11-exitline-collect.md` 比的是 **collect-artifacts.mjs 退出码采集修复前后**的解析差异 —— 后者不能替前者背书(2026-09-13 复核方指出,已改)。它记的是一次一次性迁移的效果,结论不进任何当前口径。",
       "registered_at": "2026-09-13"
     },
     {
@@ -141,31 +149,36 @@
       "path": "evaluation/author/artifacts/assessment-a-exit-line.md",
       "class": "regenerated",
       "step": "author-recheck",
-      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
+      "artifact": "assessment-a-exit-line.diff"
     },
     {
       "path": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.md",
       "class": "regenerated",
       "step": "author-recheck",
-      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
+      "artifact": "assessment-a-skl-ImeA29HL3Djj.diff"
     },
     {
       "path": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.md",
       "class": "regenerated",
       "step": "author-recheck",
-      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
+      "artifact": "assessment-a-skl-sZFb3KatWY6m.diff"
     },
     {
       "path": "evaluation/author/artifacts/assessment-b-exit-line.md",
       "class": "regenerated",
       "step": "author-recheck",
-      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
+      "artifact": "assessment-b-exit-line.diff"
     },
     {
       "path": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.md",
       "class": "regenerated",
       "step": "author-recheck",
-      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型",
+      "artifact": "assessment-b-skl-lUWmwEYqsZDZ.diff"
     }
   ],
   "narrative_rules": [

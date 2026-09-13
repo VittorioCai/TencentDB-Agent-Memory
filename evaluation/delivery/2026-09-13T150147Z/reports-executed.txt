@@ -1,0 +1,2 @@
+登记为要重算的 13 份,逐份核对本轮的执行记录与产物
+  evaluation/runner/COMPARISON-2026-09-11-reparsed.md:登记的步骤 comparison-figures 没有出现在本轮复跑里

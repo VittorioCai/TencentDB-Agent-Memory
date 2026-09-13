@@ -63,7 +63,7 @@
   "domain": "reaching the team skill bridge over HTTP from an agent session: which address answers",
   "asset_claim": "the team skill bridge is reachable from an agent session at http://10.244.7.19:8096/skill-bridge/v3/skill/search",
   "pack": {
-    "file": "/Users/vittoriocai/Desktop/Tecent_agentmemory-project4/.claude/worktrees/topic4-gate0/evaluation/author/artifacts/evidence-pack-a-skl-ImeA29HL3Djj.json",
+    "file": "evaluation/author/artifacts/evidence-pack-a-skl-ImeA29HL3Djj.json",
     "sha256": "e01acccf50f2713e965b43e7c13cc06611a8e0681e8fb17a6c8acd2fff672092",
     "record_count": 50,
     "by_class": {

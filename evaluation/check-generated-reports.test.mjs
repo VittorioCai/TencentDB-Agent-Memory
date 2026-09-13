@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CLASSES, checkRegistry, findMarkdown, isNarrative, render } from "./check-generated-reports.mjs";
+import { CLASSES, checkExecution, checkRegistry, findMarkdown, isNarrative, render } from "./check-generated-reports.mjs";
 
 const REG = { narrative_rules: ["/README\\.md$", "/assets/"], narrative_paths: ["evaluation/STATE.md"], reports: [] };
 
@@ -78,4 +78,73 @@ test("真仓库:每一份入库 .md 都有归属,登记簿没有旧账", () => {
   assert.equal(r.ok, true, JSON.stringify({ unregistered: r.unregistered, stale: r.stale, both: r.both_ways }));
   assert.ok((r.by_class.regenerated ?? []).length >= 12, "重算的那批不能少");
   assert.equal((r.by_class.not_regenerable ?? []).length, 1, "不能重算的只有登记在案的那一份");
+});
+
+// ── 执行对应:登记完整 ≠ 执行完整(2026-09-13 复核方的两个反例,均已复现) ──
+
+const runDir = (t, files) => {
+  const d = mkdtempSync(join(tmpdir(), "out-"));
+  for (const [n, body] of Object.entries(files)) writeFileSync(join(d, n), body);
+  return d;
+};
+const ROWS = [{ step: "devloop-report", exit: 0 }, { step: "author-recheck", exit: 0 }];
+
+test("反例 A:登记的 step 在本轮根本没跑过 —— 必须挡住", (t) => {
+  const out = runDir(t, { "REPORT.diff": "" });
+  const r = checkExecution({ reports: [{ path: "a/REPORT.md", class: "regenerated", step: "根本没有这个步骤", artifact: "REPORT.diff" }] }, { rows: ROWS, outDir: out });
+  assert.equal(r.ok, false);
+  assert.match(r.problems[0].why, /没有出现在本轮/);
+});
+
+test("反例 B:多登记一份、实际循环没跑它 —— 产物不存在,必须挡住", (t) => {
+  const out = runDir(t, { "assessment-a.diff": "" });
+  const r = checkExecution({ reports: [
+    { path: "x/assessment-a.md", class: "regenerated", step: "author-recheck", artifact: "assessment-a.diff" },
+    { path: "x/assessment-f.md", class: "regenerated", step: "author-recheck", artifact: "assessment-f.diff" }] },
+    { rows: ROWS, outDir: out });
+  assert.equal(r.ok, false);
+  assert.equal(r.problems.length, 1);
+  assert.match(r.problems[0].why, /产物不在/);
+  assert.equal(r.problems[0].path, "x/assessment-f.md");
+});
+
+test("产物是 .diff 的必须为空 —— 五份共用一个步骤时,只有逐份的 diff 能分辨", (t) => {
+  const out = runDir(t, { "a.diff": "", "b.diff": "- 有差异\n" });
+  const r = checkExecution({ reports: [
+    { path: "x/a.md", class: "regenerated", step: "author-recheck", artifact: "a.diff" },
+    { path: "x/b.md", class: "regenerated", step: "author-recheck", artifact: "b.diff" }] },
+    { rows: ROWS, outDir: out });
+  assert.equal(r.ok, false);
+  assert.match(r.problems[0].why, /不是空的/);
+});
+
+test("登记为 regenerated 却没写 artifact —— 无法证明它跑过,挡住", (t) => {
+  const r = checkExecution({ reports: [{ path: "a/R.md", class: "regenerated", step: "devloop-report" }] }, { rows: ROWS, outDir: runDir(t, {}) });
+  assert.equal(r.ok, false);
+  assert.match(r.problems[0].why, /没有登记 artifact/);
+});
+
+test("步骤跑了但退出码非 0,同样不算执行过", (t) => {
+  const out = runDir(t, { "R.diff": "" });
+  const r = checkExecution({ reports: [{ path: "a/R.md", class: "regenerated", step: "devloop-report", artifact: "R.diff" }] },
+    { rows: [{ step: "devloop-report", exit: 1 }], outDir: out });
+  assert.equal(r.ok, false);
+  assert.match(r.problems[0].why, /退出码/);
+});
+
+test("historical 与 not_regenerable 不要求执行记录", (t) => {
+  const r = checkExecution({ reports: [
+    { path: "a/old.md", class: "historical", why: "x" },
+    { path: "a/no.md", class: "not_regenerable", why: "y" }] }, { rows: [], outDir: runDir(t, {}) });
+  assert.equal(r.ok, true);
+  assert.equal(r.checked, 0);
+});
+
+test("都对上时通过,并报出核了几份", (t) => {
+  const out = runDir(t, { "R.diff": "", "c.txt": "一致\n" });
+  const r = checkExecution({ reports: [
+    { path: "a/R.md", class: "regenerated", step: "devloop-report", artifact: "R.diff" },
+    { path: "a/C.md", class: "figures_checked", step: "author-recheck", artifact: "c.txt" }] }, { rows: ROWS, outDir: out });
+  assert.equal(r.ok, true);
+  assert.equal(r.checked, 2);
 });

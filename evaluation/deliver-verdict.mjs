@@ -39,9 +39,12 @@ export const POLICY = {
     note: "这个数漂过两次(彩排 E 修过一回,9/13 又漂成 643 对 729);叙述里抄一个会变的数,只能靠每次比" },
   "generated-reports":           { kind: "offline", exit: 0, diff: false, what: "生成报告登记核对",
     note: "未登记的生成报告一律阻断 —— 验收此前不知道仓库里一共有哪几份,少查一份不会有人发现" },
+  "reports-executed":            { kind: "offline", exit: 0, diff: false, what: "登记的报告本轮真的跑过",
+    note: "登记完整不等于执行完整:改个不存在的步骤名、或多登记一份而循环没跑它,只核登记都穿得过去" },
   "comparison-figures":          { kind: "offline", exit: 0, diff: false, what: "对照报告主表与生成 summary 逐格比对" },
   "demo":                        { kind: "offline", exit: 0, diff: false, what: "演示脚本" },
-  "chain":                       { kind: "offline", exit: 0, diff: false, what: "闭环展示:主链条 + 两个反例" },
+  "chain":                       { kind: "offline", exit: 0, diff: false, what: "闭环展示:主链条 + 两个反例",
+    expect: /3\/3 条 case 成功/, why: "三条 case 逐次记退出码;少跑一条时退出码仍为 0,只能靠这个形态挡住" },
   "selection":                   { kind: "offline", exit: 0, diff: false, what: "相关性筛选:准入与任务相关两层分开" },
   "conditions-check":            { kind: "live", exit: "expected", diff: false, what: "批次条件核对",
     expect: /未登记 0 项/, why: "exit 1 是常态;放行条件是每一项 FAIL 都在 conditions-expected.json 里登记了性质与原因(三类:批次后的正常变化 / 已载明的实验限制 / 证据缺口),未登记即阻断" },
@@ -69,6 +72,10 @@ export function verdict(rows) {
       const why = `退出码 ${r.exit}(期望 ${p.exit})${dep ? " —— 依赖缺失,不是跑了没过" : ""}${note ? `:${note.slice(0, 80)}` : ""}`;
       failures.push({ step, kind: p.kind, why });
       if (dep) dependencies_missing.push({ step, why: note.slice(0, 120) });
+    } else if (p.expect && !p.expect.test(note)) {
+      // 退出码对,不等于这一步真的把该做的都做了:chain 少跑一条 case 退出码仍是 0
+      // (2026-09-13 复核方的反例)。要求 note 写出该有的形态,由这里核。
+      failures.push({ step, kind: p.kind, why: `退出码正常,但 note 的形态不对(期望 ${p.expect}),实际:${note.slice(0, 80)}` });
     }
     if (p.diff && r.diff_lines !== 0) {
       failures.push({ step, kind: p.kind, why: r.diff_lines == null ? "该步应产出差异行数,却没有记录" : `与提交副本差异 ${r.diff_lines} 行` });

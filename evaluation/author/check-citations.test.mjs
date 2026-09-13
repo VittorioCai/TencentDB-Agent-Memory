@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { checkAssessment, quoteFound, resolveRecordId, verifyCitation, verifyFact, deriveCompetence, recordedOutcome } from "./check-citations.mjs";
 
 const rec = (kind, text, meta = {}, evidence_class) => ({ kind, text, meta, evidence_class });
@@ -531,4 +533,20 @@ test("每条保留的声明先给程序事实句,再给模型表述并标语义�
   assert.ok(i > 0 && j > i, "事实句必须在模型表述之前");
   assert.match(md, /语义未核验|semantics not verified/);
   assert.match(md, /程序核对的是引用真实性/);   // scope_note 也要出现在给人看的那份里
+});
+
+// ── 2026-09-13 复核方第 4 条:引用可移植性 ──
+test("入库的评估里,指向证据包的引用是仓库根相对路径,不是某台机器的绝对路径", () => {
+  const dir = "evaluation/author/artifacts";
+  const current = readdirSync(dir).filter((f) => /^assessment-[ab]-.*\.json$/.test(f));
+  assert.ok(current.length >= 5, "当前评估至少五份");
+  for (const f of current) {
+    const d = JSON.parse(readFileSync(join(dir, f), "utf8"));
+    const p = d.pack?.file;
+    assert.ok(typeof p === "string" && p.length, `${f} 没有记 pack.file`);
+    assert.ok(!p.startsWith("/"), `${f} 的 pack.file 是绝对路径:${p}`);
+    assert.ok(existsSync(p), `${f} 的 pack.file 从仓库根解析不到:${p}`);
+  }
+  // 写入记录(assessment-write-*)与演示快照不在此列:它们记的是当时用了哪把钥匙、
+  // Core 当时返回了什么,属于原始记录,按「旧批次原始记录不得覆盖」保留原样。
 });
