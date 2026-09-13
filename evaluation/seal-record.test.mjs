@@ -43,7 +43,9 @@ test("线上依赖那一节逐步给出本次实际记到的说明;缺这一步�
 
 test("提交号与链接来自参数,不写死在正文里", () => {
   const md = render([row("suite")], OPTS);
-  assert.match(md, /HEAD 会比它新一个提交/, "页里的提交号必然早于分支 HEAD,要说明差的是什么");
+  assert.match(md, /HEAD 比它新几个提交/, "页里的提交号必然早于分支 HEAD,要说明差的是什么");
+  assert.ok(!/新一个提交|新两个提交/.test(md), "不许写死个数 —— 再提交一次就烂了");
+  assert.match(md, /git log abc1234\.\.HEAD/, "要给出能自己列出差异的命令");
   assert.match(md, /abc1234/);
   assert.match(md, /example\.invalid\/repo\/tree\/topic4-attribution-gate/);
   assert.match(md, /compare\/0468a2a\.\.\.c372d80/);

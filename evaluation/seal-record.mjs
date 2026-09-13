@@ -40,7 +40,7 @@ export function render(rows, { commit, url, archive }) {
   L.push(`那次验收的逐步记录与做法在 \`${archive}\`(同目录 \`HOW.md\` 写明克隆命令与环境)。`, "");
   L.push("## 交付提交", "", "| | |", "|---|---|");
   L.push(`| 提交号 | \`${commit}\` |`);
-  L.push("| 与分支 HEAD 的关系 | HEAD 会比它新一个提交:**本页与它的记录文件本身要提交进去**,页里不可能写自己的提交号。差异仅此一项,`git log` 可核 |");
+  L.push(`| 与分支 HEAD 的关系 | HEAD 比它新几个提交:**本页与它的记录文件本身要提交进去**,页里不可能写自己的提交号;此后只做说明性改动。逐条是什么,\`git log ${commit.slice(0, 7)}..HEAD\` 直接列出来 |`);
   L.push("| 分支 | `topic4-attribution-gate` |");
   L.push(`| 浏览入口 | <${url}/tree/topic4-attribution-gate> |`);
   L.push(`| 辅助材料(闸门抽取) | 分支 \`gate-core-minimal\` \`c372d80\`,固定比较区间 <${url}/compare/0468a2a...c372d80> |`, "");
