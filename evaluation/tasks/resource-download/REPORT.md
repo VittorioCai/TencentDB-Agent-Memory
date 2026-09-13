@@ -4,13 +4,13 @@
 
 ## 结论
 
-未知:无笔记组与有笔记组没有可计样本,两组无法比较。
+未知:有笔记组没有可计样本,两组无法比较。
 
 ## 样本
 
 | 组 | 记录 | 计入样本 | 排除 | PASS | 通过率 |
 |---|---|---|---|---|---|
-| no-note | 16 | 0 | 16 | 0 | 未知(无样本) |
+| no-note | 20 | 4 | 16 | 0 | 0% |
 | note | 0 | 0 | 0 | 0 | 未知(无样本) |
 
 ## 每次运行
@@ -33,6 +33,10 @@
 | 20260913T113435Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
 | 20260913T113621Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
 | 20260913T113923Z-devloop-no-note | no-note | 否 | FAIL | ✓✓✓✗✓ | 0 | 作废(no-note-2026-09-13a) |
+| 20260913T121409Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
+| 20260913T121636Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
+| 20260913T121823Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
+| 20260913T121937Z-devloop-no-note | no-note | 是 | FAIL | ✓✓✓✗✓ | 0 |  |
 
 五项断言依次是:
 

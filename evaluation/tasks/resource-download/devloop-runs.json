@@ -443,6 +443,98 @@
         "at": "2026-09-13T11:57:11Z",
         "batch": "no-note-2026-09-13a"
       }
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 1,
+      "run_id": "20260913T121409Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T121409Z-devloop-no-note.PyaX/20260913T121409Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k79vx6c1qw",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:14:09Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:16:36Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 2,
+      "run_id": "20260913T121636Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T121636Z-devloop-no-note.n8aO/20260913T121636Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k8dyhnb12c",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:16:36Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:18:23Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 3,
+      "run_id": "20260913T121823Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T121823Z-devloop-no-note.qf83/20260913T121823Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k8gx6j44i9",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:18:23Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:19:37Z"
+    },
+    {
+      "arm": "no-note",
+      "sample": true,
+      "seq": 4,
+      "run_id": "20260913T121937Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T121937Z-devloop-no-note.r6fa/20260913T121937Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k8iz4j94cr",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T12:19:37Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "recorded_at": "2026-09-13T12:21:38Z"
     }
   ],
   "status_observations": [
@@ -493,6 +585,16 @@
       "note_version": 1,
       "arm": "no-note",
       "n": 0,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T12:14:09Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 4,
       "identity": "c",
       "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
     }
