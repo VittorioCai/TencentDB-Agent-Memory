@@ -108,24 +108,8 @@ echo "[9] live state"
 { bash evaluation/runner/core-extraction.sh status; bash evaluation/runner/prepare.sh --status 2>&1 | head -6; node evaluation/tasks/exit-code-fix/gate-observe.mjs --label="delivery re-run $STAMP" --out="$OUT/gate-observation.jsonl"; } > "$OUT/live-state.txt" 2>&1; e=$?
 row "live-state" "core-extraction.sh status; prepare.sh --status; gate-observe.mjs" "$e" "recorded, not judged" "$(head -1 "$OUT/live-state.txt")"
 
-python3 - "$ROWS" "$OUT/SUMMARY.md" "$STAMP" "$(git rev-parse HEAD)" <<'PY'
-import json, sys
-rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
-L = [f"# 交付复跑 {sys.argv[3]}(HEAD {sys.argv[4][:7]};脚本生成)", "", "| 步骤 | 命令 | 退出码 | 期望 | 实际 / 差异行数 |", "|---|---|---|---|---|"]
-for r in rows:
-    actual = r["note"] or ""
-    if r.get("diff_lines") is not None: actual = (actual + " " if actual else "") + f"diff {r['diff_lines']} 行"
-    actual = actual.replace("|", "\\|")
-    L.append(f"| {r['step']} | `{r['command']}` | {r['exit']} | {r['expected']} | {actual} |")
-def selfcheck_ok(r):
-    n = r["note"] or ""
-    return "seg0=0 seg1=1 seg2=0" in n and ("seg4=0" in n or "task:REPORT.md" in n or "devloop-runs.json" in n)
-bad = [r for r in rows if (r["step"] in ("suite", "devloop-report", "devloop-report-2", "demo", "reparse-exitline") and r["exit"] != 0) or (r["step"].startswith("selfcheck") and not selfcheck_ok(r))]
-repro = [r for r in rows if r.get("diff_lines") not in (None, 0) and r["step"] in ("calibration", "summary", "devloop-report", "devloop-report-2", "reparse-exitline")]
-bad_s = ", ".join(r["step"] for r in bad) or "无"
-repro_s = ", ".join(f"{r['step']} {r['diff_lines']} 行" for r in repro) or "无"
-L += ["", f"判决类步骤退出非 0:{len(bad)}({bad_s});生成报告与提交副本有差异的:{len(repro)}({repro_s})。", ""]
-open(sys.argv[2], "w", encoding="utf-8").write("\n".join(L) + "\n")
-print("\n".join(L))
-PY
+node evaluation/deliver-verdict.mjs "$ROWS" "$OUT/SUMMARY.md" "$STAMP" "$(git rev-parse HEAD)"; verdict=$?
+
 echo "archived → $OUT"
+[ "$verdict" -eq 0 ] || echo "交付复跑判为失败 —— 见上面的逐条说明与 $OUT/SUMMARY.md" >&2
+exit "$verdict"
