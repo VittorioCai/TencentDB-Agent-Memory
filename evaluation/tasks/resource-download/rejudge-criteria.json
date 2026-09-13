@@ -4,12 +4,19 @@
     "frozen_at": "2026-09-13T19:29:18Z",
     "why": "三批 18 次有笔记运行一次 used 都没有。根因不在规则,在采集:build-events.mjs:461 对不在冻结资产池快照里的资产 continue,一个事件都不写;而有笔记组的流程是「快照冻结时笔记还是 candidate → 之后才准入」,所以笔记从来不在快照里,fetched 不写,后面无从 credit。",
     "not_a_new_rule": "任务目录自带快照是 run-once.sh:467 既有的支持路径,第一任务当初就是这么做的(STATE:pool re-snapshotted … note v2 approved team, 7 assets)。这次是把第三任务漏掉的那一步补上,不是新造口子。",
-    "the_warning_we_ignored": "run-once.sh:499 每次运行都打过 ,12 次刷了 12 遍,没人当回事。这条作为教训记下。"
+    "the_warning_we_ignored": "run-once.sh:499 每次运行都打过 `the live pool differs from the frozen snapshot — see pool-drift.json; attribution below is against the FROZEN pool`,12 次刷了 12 遍,没人当回事。这条作为教训记下。"
   },
   "the_change": {
     "what": "给 evaluation/tasks/resource-download/ 放一份自己的 asset-pool-snapshot.json,内容是**实时读到的资产池**(含本任务笔记,状态照实记)。",
     "how_taken": "一次读取,记下读取时刻与来源;**读完不再调整**。",
-    "what_is_not_changed": ["判决器 judge-hard.mjs 的任何规则", "最早送达规则", "参考测试", "作废规则", "污染口径", "任务书 task.md"]
+    "what_is_not_changed": [
+      "判决器 judge-hard.mjs 的任何规则",
+      "最早送达规则",
+      "参考测试",
+      "作废规则",
+      "污染口径",
+      "任务书 task.md"
+    ]
   },
   "controls": {
     "reverse_control": {
