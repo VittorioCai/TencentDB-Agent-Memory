@@ -163,6 +163,7 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 备份 + `proxy-identity-restore-3.json`)。**用户已于 13:45:32Z 恢复**(配置 sha `4453c5fd…`,与 9/11 两次恢复后一致),记录已入库。
 **验收复跑(HEAD 16189f9,`delivery/2026-09-13T134641Z`):离线通过、线上通过、缺依赖无**;套件 702/702、
 `devloop-report-3` diff 0、`contamination-3` 8 次样本全干净、`conditions-check` 21 项 FAIL 全部登记(15 / 5 / 1),未登记 0。
+**再复跑(HEAD 8f8eceb,`delivery/2026-09-13T135245Z`)同样全绿**:README 补齐闸门抽取的尺度与类型检查数字、③ 措辞按用户决定改定、④ 报告加一句算出来的样本量限制(不写 p 值)。套件 703/703。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
