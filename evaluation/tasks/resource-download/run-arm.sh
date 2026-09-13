@@ -37,6 +37,13 @@ case "$ARM" in
         # a private skill is excluded from other users' searches (2026-09-11: two note-arm runs voided for this); the owner sets team via fill-note.mjs --fix-visibility
         [[ "$VISIBILITY" == "team" ]] || { echo "the note $NOTE_ID is visibility='$VISIBILITY' in Core; the note arm needs team visibility or the consumer's search never returns it. Nothing run." >&2; exit 2; } ;;
 esac
+# 开跑前扫盘:/private/tmp 下有没有本任务的答案(按参考测试的用例标题找,不按路径找)。
+# 2026-09-13:第一批 16 次因为 /private/tmp/scen-check/ 里一份「看了笔记的写法」全部作废。
+# 两个记录根目录不在这里扫 —— 它们本来就装着历次运行的产物,那部分由跑完的污染检查兜底。
+node "$REPO/evaluation/runner/contamination.mjs" --preflight --task="$HERE" \
+  --extra-roots="$(ls -d /private/tmp/* 2>/dev/null | grep -v -e '/topic4-runs$' -e '/topic4-sessions$' | tr '\n' ',' | sed 's/,$//')" \
+  || { echo "开跑前检查没过,一次也没跑。" >&2; exit 2; }
+
 TASK_SHA="$(shasum -a 256 "$HERE/task.md" | cut -c1-64)"
 echo "note $NOTE_ID status in Core: $STATUS, visibility $VISIBILITY, v$NOTE_VERSION (arm $ARM, consumer under identity $IDENTITY); task.md sha256 ${TASK_SHA:0:12}…"
 # every invocation records what it observed, so the report can show when the note was approved and when it was set back
@@ -51,7 +58,7 @@ PY
 (( N > 0 )) || { echo "--n $N: status recorded, nothing run"; exit 0; }
 for i in $(seq 1 "$N"); do
   log="$(mktemp)"
-  bash "$REPO/evaluation/runner/run-once.sh" --task "$HERE" --auto --fresh-consumer --identity "$IDENTITY" --label "devloop-$ARM" > "$log" 2>&1; rc=$?
+  DEVLOOP_ARM="$ARM" bash "$REPO/evaluation/runner/run-once.sh" --task "$HERE" --auto --fresh-consumer --identity "$IDENTITY" --label "devloop-$ARM" > "$log" 2>&1; rc=$?
   rid="$(grep -oE 'run [0-9TZ]+-devloop-[a-z-]+(-[0-9]+)? →' "$log" | head -1 | sed -E 's/^run //; s/ →$//')"
   dir="$(grep -oE '/private/tmp/topic4-runs/[^ ]+' "$log" | tail -1)"
   NOTE_VISIBILITY="$VISIBILITY" NOTE_VERSION="$NOTE_VERSION" IDENTITY="$IDENTITY" python3 - "$MANIFEST" "$ARM" "$i" "${rid:-unknown}" "$rc" "$dir" "$STATUS" "$TASK_SHA" <<'PY'
@@ -63,14 +70,19 @@ def load(n):
     try: return json.load(open(p)) if p and os.path.exists(p) else None
     except ValueError: return None
 run, verdict, consumer, mc = load("run.json"), load("verdict.json"), load("consumer.json"), load("memory-channel.json")
+contam = load("contamination.json")
 doc["runs"].append({"arm": arm, "sample": arm != "smoke", "seq": int(i), "run_id": rid, "exit": int(rc), "dir": d,
   "note_status_at_start": status, "note_visibility_at_start": os.environ.get("NOTE_VISIBILITY"), "note_version_at_start": (int(os.environ["NOTE_VERSION"]) if os.environ.get("NOTE_VERSION", "").isdigit() else os.environ.get("NOTE_VERSION")), "identity": os.environ.get("IDENTITY"), "task_md_sha256": task_sha,
   "consumer_agent_id": (consumer or {}).get("agent_id"),
   "verdict": (verdict or {}).get("verdict"), "attempts": [a.get("value") for a in (verdict or {}).get("attempts", [])],
   "memory_channel_ok": (mc or {}).get("ok"), "started_at": (run or {}).get("started_at"),
+  # 污染的运行不作样本:上下文里有本该看不到的东西,它的判决说明不了笔记的作用
+  "contaminated": (None if contam is None else contam.get("contaminated")),
+  "contamination_rules": ([f["rule"] for f in contam.get("findings", [])] if contam else None),
   "recorded_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
 json.dump(doc, open(m, "w"), indent=2, ensure_ascii=False); open(m, "a").write("\n")
-print(f"[{i}] {arm}  {rid}  exit={rc}  verdict={(verdict or {}).get('verdict')}  consumer={(consumer or {}).get('agent_id')}  memory_ok={(mc or {}).get('ok')}")
+mark = "" if (contam is None or not contam.get("contaminated")) else "  ** 污染,不作样本:" + ",".join(f["rule"] for f in contam.get("findings", [])) + " **"
+print(f"[{i}] {arm}  {rid}  exit={rc}  verdict={(verdict or {}).get('verdict')}  consumer={(consumer or {}).get('agent_id')}  memory_ok={(mc or {}).get('ok')}{mark}")
 PY
   cat "$log" >> "${MANIFEST%.json}.log"; rm -f "$log"
 done

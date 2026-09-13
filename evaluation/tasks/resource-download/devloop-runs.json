@@ -1,0 +1,524 @@
+{
+  "task": "resource-download",
+  "runs": [
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260913T105239Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T105239Z-devloop-no-note.cLKP/20260913T105239Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k4h1zavly2",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T10:52:39Z",
+      "recorded_at": "2026-09-13T10:54:51Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run"
+      ],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 2,
+      "run_id": "20260913T105451Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T105451Z-devloop-no-note.X5iU/20260913T105451Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k4lppojpb9",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T10:54:51Z",
+      "recorded_at": "2026-09-13T10:56:48Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 3,
+      "run_id": "20260913T105648Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T105648Z-devloop-no-note.xfTw/20260913T105648Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k4oytxls7m",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T10:56:48Z",
+      "recorded_at": "2026-09-13T10:58:10Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 4,
+      "run_id": "20260913T105810Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T105810Z-devloop-no-note.F6V5/20260913T105810Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k4q8l81zd0",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T10:58:10Z",
+      "recorded_at": "2026-09-13T11:00:09Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run"
+      ],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260913T110459Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T110459Z-devloop-no-note.ALs7/20260913T110459Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k42lb553c9",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:04:59Z",
+      "recorded_at": "2026-09-13T11:06:46Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 2,
+      "run_id": "20260913T110646Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T110646Z-devloop-no-note.k8dn/20260913T110646Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k45kaq2aoy",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:06:46Z",
+      "recorded_at": "2026-09-13T11:08:15Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 3,
+      "run_id": "20260913T110815Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T110815Z-devloop-no-note.ITRy/20260913T110815Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k471tg5q87",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:08:15Z",
+      "recorded_at": "2026-09-13T11:10:05Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 4,
+      "run_id": "20260913T111005Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T111005Z-devloop-no-note.XxXL/20260913T111005Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k5a3gutj1v",
+      "verdict": "PASS",
+      "attempts": [
+        "bt-dl7q3mx8vke"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:10:05Z",
+      "recorded_at": "2026-09-13T11:16:13Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run",
+        "reference_leak"
+      ],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260913T112310Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T112310Z-devloop-no-note.9SRa/20260913T112310Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k5wwxxz9ga",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:23:10Z",
+      "recorded_at": "2026-09-13T11:25:23Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 2,
+      "run_id": "20260913T112523Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T112523Z-devloop-no-note.uE75/20260913T112523Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k50lfmy636",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:25:23Z",
+      "recorded_at": "2026-09-13T11:27:33Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 3,
+      "run_id": "20260913T112733Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T112733Z-devloop-no-note.HdUP/20260913T112733Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k5370q23nw",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:27:33Z",
+      "recorded_at": "2026-09-13T11:29:41Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 4,
+      "run_id": "20260913T112941Z-devloop-no-note",
+      "exit": 0,
+      "dir": "/private/tmp/topic4-runs/20260913T112941Z-devloop-no-note.k26K/20260913T112941Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k57r9zzocu",
+      "verdict": "PASS",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:29:41Z",
+      "recorded_at": "2026-09-13T11:32:43Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run"
+      ],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 1,
+      "run_id": "20260913T113300Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T113300Z-devloop-no-note.bHkF/20260913T113300Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k6dbxhz71w",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:33:00Z",
+      "recorded_at": "2026-09-13T11:34:35Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 2,
+      "run_id": "20260913T113435Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T113435Z-devloop-no-note.fsNV/20260913T113435Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k6fxm7sas1",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:34:35Z",
+      "recorded_at": "2026-09-13T11:36:21Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 3,
+      "run_id": "20260913T113621Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T113621Z-devloop-no-note.iDSJ/20260913T113621Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k6iva964ht",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:36:21Z",
+      "recorded_at": "2026-09-13T11:39:23Z",
+      "contaminated": true,
+      "contamination_rules": [
+        "foreign_run"
+      ],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    },
+    {
+      "arm": "no-note",
+      "sample": false,
+      "seq": 4,
+      "run_id": "20260913T113923Z-devloop-no-note",
+      "exit": 1,
+      "dir": "/private/tmp/topic4-runs/20260913T113923Z-devloop-no-note.DlxR/20260913T113923Z-devloop-no-note",
+      "note_status_at_start": "candidate",
+      "note_visibility_at_start": "team",
+      "note_version_at_start": 1,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413",
+      "consumer_agent_id": "agt-k6nxa96llo",
+      "verdict": "FAIL",
+      "attempts": [
+        "none: fetch-resource.test.mjs carries no bt- marker"
+      ],
+      "memory_channel_ok": true,
+      "started_at": "2026-09-13T11:39:23Z",
+      "recorded_at": "2026-09-13T11:40:47Z",
+      "contaminated": false,
+      "contamination_rules": [],
+      "voided": {
+        "at": "2026-09-13T11:57:11Z",
+        "batch": "no-note-2026-09-13a"
+      }
+    }
+  ],
+  "status_observations": [
+    {
+      "at": "2026-09-13T10:52:39Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T11:04:59Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T11:23:09Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    },
+    {
+      "at": "2026-09-13T11:33:00Z",
+      "note_status": "candidate",
+      "note_visibility": "team",
+      "note_version": 1,
+      "arm": "no-note",
+      "n": 4,
+      "identity": "c",
+      "task_md_sha256": "be8e210cb27f9d8d2e6daba9dd91145fa403c091f51bc7762c893fdf4161d413"
+    }
+  ],
+  "voided_batches": [
+    {
+      "batch": "no-note-2026-09-13a",
+      "runs": 16,
+      "voided_at": "2026-09-13T11:57:11Z",
+      "why": "整批作废:实施者在 /private/tmp/scen-check/ 留下了验证用的「看了笔记的写法」参考实现(10:30:45Z 与 10:30:53Z 两个文件),第一次运行始于 10:52:39Z —— 这 16 次全部在「答案就在磁盘上」的环境里跑。其中 2 次实际读到了:20260913T111005Z 直接 cat 了那份草稿,20260913T112941Z 又 grep 到前者留下的工作副本。",
+      "gate_was_not_at_fault": "memory-channel.json 显示这两次 reads=0;笔记是 candidate,闸门没有放行。答案来自磁盘,不来自记忆通道。",
+      "detected_by": "evaluation/runner/contamination.mjs(事后补写);对这 16 次重跑,规则命中见每条 contamination_rules",
+      "why_all_16_not_just_2": "「这条知识只能来自笔记」这个前提对整批都不成立,只作废被抓到的 2 次等于挑对自己有利的那部分。",
+      "source_files_removed": [
+        {
+          "path": "/private/tmp/scen-check/fetch-resource.mjs",
+          "sha256": "27fbd665a36f49e31409b83baa297a1d9ed13baac3f3acd9a20c6088edd620af",
+          "bytes": 683,
+          "mtime": "2026-09-13T10:30:53Z"
+        },
+        {
+          "path": "/private/tmp/scen-check/fetch-resource.reference.test.mjs",
+          "sha256": "202f0d530c30cc00dc609c246455baf706204035cc672c88868eafbc1dabbc5a",
+          "bytes": 3299,
+          "mtime": "2026-09-13T10:30:45Z"
+        }
+      ],
+      "note_on_the_marker": "草稿里的 bt-dl7q3mx8vke 是实施者当时随手编的串,不是 Core 里的真值(笔记资产 10:33:55Z 才建,晚 3 分钟;其 sha256 为 7b3c7b9d…,对不上)。验收器当时把任何形如 bt- 的串都记成采用尝试,这次一并改掉(verify.mjs 的 registered 字段)。",
+      "fixes": [
+        "evaluation/runner/contamination.mjs 与 .test.mjs(跑前扫散落答案、跑完逐次检测)",
+        "run-once.sh:每次跑完写 contamination.json;工作副本跑完即删(KEEP_SESSION=1 可留)",
+        "run-arm.sh:开跑前扫盘,不过不跑;manifest 逐条记 contaminated",
+        "verify.mjs:判别值必须对得上 tokens.json 里登记的 sha256(含退休旧值),否则 registered=false 且 needs_review"
+      ],
+      "not_fixed": "同一用户的 shell 面前,磁盘上没有真正读不到的位置。历次运行记录必然含答案,清不掉;这一半靠检测发现并作废,不靠隔离。",
+      "earlier_tasks": "前两个任务的 23 次归档运行已全部重扫:无一引用别的运行目录,无一碰过 scen-check(当时它还不存在)。唯一没有 capture 的 20260911T175839Z-devloop-smoke 是已登记的记录缺口,且是冒烟不是样本。"
+    }
+  ]
+}

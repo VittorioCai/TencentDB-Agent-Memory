@@ -118,6 +118,30 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 主分支已应用第二任务的修复(`REPARSE-DIFF-2026-09-11-exitline-collect.md`:批次四 95 条退出行全部可读,used 事件不受影响)。
 报告 `evaluation/tasks/exit-line-collect/REPORT.md`;清单 `devloop-runs.json`;导读 `evaluation/REVIEW-GUIDE.md`。
 
+### 第 5 件续二:第三任务 `resource-download`(2026-09-13,**样本待重跑**)
+
+**换一类工作**:前两个是修已有缺陷,这个是**新增一个功能**;**采用判定靠行为不靠标记** ——
+参考测试断言零字节、错误信封透传,以及**请求打到哪个子路径**(`files/download`,一个设计决定,抄不来)。
+笔记 `skl-XAzqAgejM7O4`(`eval-skill-resource-download`,v1,team,**当前 candidate**),自带 `tokens.json`;
+产品任务实体沿用 `task-h1k7xruuhb`。跑前已验证验收能区分:无笔记式实现 2/5,笔记式实现 5/5。
+
+**无笔记组第一批 16 次全部作废(批次 `no-note-2026-09-13a`)。** 原因是实施者把验证用的
+「看了笔记的写法」参考实现留在 `/private/tmp/scen-check/`(10:30:45Z),首次运行 10:52:39Z;
+2 次实际读到(一次 `cat` 草稿,一次 `grep` 到前一次留下的工作副本),其余 14 次虽未读到,
+但「这条知识只能来自笔记」的前提对整批不成立。**闸门没有失职**:两次的 `memory-channel.json` 都是 `reads: 0`。
+详见 `LESSONS.md` 末条与 `tasks/resource-download/devloop-runs.json` 的 `voided_batches`。
+
+已改(都带先失败的测试):`runner/contamination.mjs`(+8 测试)按内容查污染 ——
+别的运行 id、参考测试用例标题、无笔记组里的判别值;`run-once.sh` 每次跑完写 `contamination.json`
+并**删除工作副本**(`KEEP_SESSION=1` 可留);`run-arm.sh` 开跑前扫散落的答案,不过不跑,manifest 逐条记 `contaminated`;
+`tasks/exit-code-fix/verify.mjs` 的标记必须对得上 `tokens.json` 登记的 sha256(含退休旧值),否则 `registered:false` 送复核(+4 测试)。
+**没解决的一半**:同一用户的 shell 面前磁盘上没有真正读不到的位置,历次运行记录必然含答案 —— 靠逐次检测发现并作废,不靠隔离。
+
+前两个任务的 23 次归档运行已全部重扫:**无一命中**,已有闭环结论不受影响。
+报告生成器 `tasks/resource-download/report.mjs`(+7 测试)已就位,当前输出「未知:两组无可计样本」。
+
+**待办**:① 用户重跑无笔记组;② 用户把笔记置 `approved` 后跑有笔记组;③ 重跑后 `report.mjs` 重新生成。
+
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 
 1. **记忆通道未隔离(设计缺口,需决策)。** profiles/ 快照不覆盖 atomic 记忆

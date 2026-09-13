@@ -16,8 +16,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, unlinkSync, existsSync }
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
-import { verifyRepo, freezeStart, runSuite, testTitles, PASS, FAIL, ERROR } from "./verify.mjs";
+import { verifyRepo, freezeStart, runSuite, testTitles, registeredTokenHashes, PASS, FAIL, ERROR } from "./verify.mjs";
 
 const BUGGY = `export function outcomeOfAttempt(resultText) {
   const s = String(resultText ?? "");
@@ -232,4 +233,52 @@ test("a test added to an existing file without a marker is recorded in the 'none
   assert.equal(r.verdict, PASS, r.reason);
   assert.equal(r.attempts.length, 1);
   assert.match(r.attempts[0].value, /^none: no test file was added; 1 test\(s\) added to existing file\(s\) carry no bt- marker$/);
+});
+
+test("形状像判别值但没登记的串不能算采用 —— 2026-09-13 无笔记组从磁盘上捡到一个我编的 bt- 串,验收器照单全收", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.exit-status.bt-madeup999.test.mjs"), `import { test } from "node:test"; test("bt-madeup999: capital C", () => {});\n`);
+  const registered = [createHash("sha256").update("bt-therealone").digest("hex")];
+  const r = verifyRepo(repo, { start, tokenSha256: registered });
+  const a = r.attempts.find((x) => x.value === "bt-madeup999");
+  assert.ok(a, JSON.stringify(r.attempts));
+  assert.equal(a.registered, false, "没登记的串必须标出来");
+  assert.equal(a.needs_review, true);
+  assert.match(a.review_why, /登记|registered/);
+});
+
+test("登记过的判别值照常算采用", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.exit-status.bt-therealone.test.mjs"), `import { test } from "node:test"; test("bt-therealone: capital C", () => {});\n`);
+  const r = verifyRepo(repo, { start, tokenSha256: [createHash("sha256").update("bt-therealone").digest("hex")] });
+  const a = r.attempts.find((x) => x.value === "bt-therealone");
+  assert.equal(a.registered, true);
+  assert.ok(!/登记/.test(a.review_why ?? ""), a.review_why);
+});
+
+test("没给登记清单时 registered 是 null,不是 false —— 不知道不等于不是", (t) => {
+  const { root, repo, start } = fixture();
+  cleanup(t, root);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs"), FIXED);
+  writeFileSync(join(repo, "evaluation/tasks/bridge-addr/verify.exit-status.bt-fixturemark.test.mjs"), `import { test } from "node:test"; test("bt-fixturemark: capital C", () => {});\n`);
+  const r = verifyRepo(repo, { start });
+  const a = r.attempts.find((x) => x.value === "bt-fixturemark");
+  assert.equal(a.registered, null, "没给清单就是不知道");
+  assert.ok(!/登记/.test(a.review_why ?? ""), a.review_why);
+});
+
+test("登记清单从任务目录的 tokens.json 读,当前值与退休旧值都算;文件不在就返回 null", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "tok-"));
+  cleanup(t, dir);
+  assert.equal(registeredTokenHashes(dir), null, "没有 tokens.json 就是不知道");
+  writeFileSync(join(dir, "tokens.json"), JSON.stringify({
+    _note: "x",
+    "skl-a": { token_sha256: ["aa"] },
+    _history: [{ asset_id: "skl-a", token_sha256: ["bb"] }],
+  }));
+  assert.deepEqual(registeredTokenHashes(dir).sort(), ["aa", "bb"]);
 });

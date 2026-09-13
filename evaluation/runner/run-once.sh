@@ -846,6 +846,21 @@ CONTRIB="$EVAL/calibration/contributed-events.jsonl"
 # The same receipt in Chinese, in the shape of the topic's own sample.
 [[ -f "$RUN_DIR/receipt.json" ]] && (cd "$REPO_ROOT" && node "$EVAL/receipt/render-cli.mjs" "$RUN_DIR/receipt.json" --lang=zh > "$RUN_DIR/receipt.zh.txt" 2>&1) || :
 
+# 运行环境污染检查(2026-09-13 起)。消费者有 shell,磁盘上任何一份答案都可能被它读到:
+# 那一天无笔记组第一批 16 次全部作废 —— 实施者把「看了笔记的写法」参考实现留在了
+# /private/tmp/scen-check/,一次 cat 读到,下一次又 grep 到上一次留下的工作副本。
+# 这里按内容判,不按路径判:别的运行 id、参考测试的用例标题、无笔记组里的判别值。
+if [[ -f "$RUN_DIR/capture.jsonl" ]]; then
+  node "$EVAL/runner/contamination.mjs" --run="$RUN_DIR" --task="$TASK_DIR" --arm="${DEVLOOP_ARM:-unknown}" > "$RUN_DIR/contamination.json" 2>"$RUN_DIR/contamination.log"
+  CONTAM_RC=$?
+  if (( CONTAM_RC == 1 )); then
+    warn "污染:本次运行的上下文里有本该看不到的东西,判决不能用作样本 —— 见 $RUN_DIR/contamination.json"
+    python3 -c "import json;print('      ' + '; '.join(f['rule'] + ': ' + f['detail'] for f in json.load(open('$RUN_DIR/contamination.json'))['findings']))" 2>/dev/null || :
+  elif (( CONTAM_RC != 0 )); then
+    warn "污染检查没能跑起来(见 contamination.log);本次运行的干净与否**未知**"
+  fi
+fi
+
 case "$VERDICT" in
   PASS)  echo "${C_G}PASS${C_0}  $RUN_ID" ;;
   FAIL)  echo "${C_R}FAIL${C_0}  $RUN_ID" ;;
@@ -859,6 +874,12 @@ rm -f "${TOKENS_PLAIN:-}" 2>/dev/null || :
 # 审阅:搬回仓库后,下一次运行的模型若找到仓库就能读到上一次的 trace)。Moving them
 # in is a separate, deliberate step once no session will run under this trace:
 #   bash evaluation/runner/collect-runs.sh
+# 工作副本跑完就删。9/8 的修法(每次一个独立父目录)只挡住了 `ls ..`,挡不住 `ls ../..`
+# —— 2026-09-13 一次运行正是 grep 遍 /private/tmp/topic4-sessions/ 读到了上一次的产物。
+# 证据早已导出到 RUN_DIR(final.diff / run-artifacts.json / start-tests.tar),副本没有留存价值。
+if [[ -n "${SESSION_PARENT:-}" && -d "$SESSION_PARENT" && "${KEEP_SESSION:-}" != "1" ]]; then
+  rm -rf "$SESSION_PARENT" && info "工作副本已删除($SESSION_PARENT);要保留就设 KEEP_SESSION=1"
+fi
 info "records kept outside the repo → $RUN_DIR (collect after the batch: collect-runs.sh)"
 echo "      $RUN_DIR"
 exit "$VERDICT_CODE"

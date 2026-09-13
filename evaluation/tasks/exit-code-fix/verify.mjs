@@ -56,6 +56,7 @@
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -279,7 +280,15 @@ export function writingCall(captureRows, file, marker = null) {
  * @param opts.capture  parsed capture rows — to name the call that wrote an added test
  * @param opts.diffOut  file to write the full diff against the start into
  */
-export function verifyRepo(repo, { start = null, capture = null, diffOut = null } = {}) {
+export function verifyRepo(repo, { start = null, capture = null, diffOut = null, tokenSha256 = null } = {}) {
+  // A marker is only evidence of adoption when it is the value this task actually
+  // burned into the note. 2026-09-13: a no-note run picked a `bt-…` string off the
+  // disk (the implementer had left one in a scratch file) and the acceptance recorded
+  // it as an attempt without ever checking it — the shape was all it looked at.
+  // null (no list given) stays null: not knowing is not the same as not registered.
+  const registeredOf = (marker) => (Array.isArray(tokenSha256) && tokenSha256.length
+    ? tokenSha256.includes(createHash("sha256").update(String(marker)).digest("hex"))
+    : null);
   const base = { acceptance_version: ACCEPTANCE_VERSION, attempts: [], checks: {} };
   if (!repo || !existsSync(join(repo, "evaluation/tasks/bridge-addr/verify.mjs")) || !existsSync(join(repo, ".git"))) {
     return { verdict: ERROR, reason: `working copy missing or not the repository under test: ${repo}`, ...base };
@@ -385,12 +394,15 @@ export function verifyRepo(repo, { start = null, capture = null, diffOut = null 
     for (const [marker, places] of where) {
       claimed.add(marker);
       const w = writingCall(capture, file, marker);
+      const reg = registeredOf(marker);
       base.attempts.push({
-        kind: "added_test", value: marker, file, where: places,
+        kind: "added_test", value: marker, file, where: places, registered: reg,
         call_id: w?.call_id ?? null, message_index: w?.message_index ?? null, written_via: w?.via ?? null,
         ok: refOk, why,
-        needs_review: !w,
-        review_why: w ? null : (capture ? `no tool call in the capture wrote ${file} with this marker` : "no capture given; the writing call cannot be identified"),
+        needs_review: !w || reg === false,
+        review_why: reg === false
+          ? `${marker} 不是本任务登记过的判别值(tokens.json 里的 sha256 对不上,退休的旧值也已计入);它可能来自笔记以外的地方,不能当作采用证据`
+          : (w ? null : (capture ? `no tool call in the capture wrote ${file} with this marker` : "no capture given; the writing call cannot be identified")),
         evidence: [`${marker} in the ${places.join(" and ")} of the added test file ${file}`, w ? `written by call ${w.call_id} (${w.via}, message ${w.message_index})` : "writing call not identified"],
       });
     }
@@ -409,12 +421,15 @@ export function verifyRepo(repo, { start = null, capture = null, diffOut = null 
     for (const marker of markers) {
       claimed.add(marker);
       const w = writingCall(capture, file, marker);
+      const reg = registeredOf(marker);
       base.attempts.push({
-        kind: "added_test", value: marker, file, where: ["test title added to an existing test file"],
+        kind: "added_test", value: marker, file, where: ["test title added to an existing test file"], registered: reg,
         call_id: w?.call_id ?? null, message_index: w?.message_index ?? null, written_via: w?.via ?? null,
         ok: refOk, why,
-        needs_review: !w,
-        review_why: w ? null : (capture ? `no tool call in the capture wrote ${file} with this marker` : "no capture given; the writing call cannot be identified"),
+        needs_review: !w || reg === false,
+        review_why: reg === false
+          ? `${marker} 不是本任务登记过的判别值(tokens.json 里的 sha256 对不上,退休的旧值也已计入);它可能来自笔记以外的地方,不能当作采用证据`
+          : (w ? null : (capture ? `no tool call in the capture wrote ${file} with this marker` : "no capture given; the writing call cannot be identified")),
         evidence: [`${marker} in the title of a test added to the existing file ${file}`, w ? `written by call ${w.call_id} (${w.via}, message ${w.message_index})` : "writing call not identified"],
       });
     }
@@ -467,6 +482,25 @@ export function render(r) {
   return L.join("\n");
 }
 
+/**
+ * The sha256 of every value this task has burned into its note — the current one
+ * and the retired ones. The repository never holds the plaintext (CLAUDE.md §16),
+ * so this is all the acceptance can check a marker against. Empty list → null:
+ * the check reports "not known", never "not registered".
+ */
+export function registeredTokenHashes(taskDir = TASK_DIR) {
+  const p = join(taskDir, "tokens.json");
+  if (!existsSync(p)) return null;
+  let doc; try { doc = JSON.parse(readFileSync(p, "utf8")); } catch { return null; }
+  let out = [];
+  for (const [k, v] of Object.entries(doc)) {
+    if (k.startsWith("_") || !v || typeof v !== "object") continue;
+    out = out.concat(v.token_sha256 ?? []);
+  }
+  for (const h of doc._history ?? []) out = out.concat(h.token_sha256 ?? []);
+  return out.length ? [...new Set(out)] : null;
+}
+
 export async function main(args) {
   const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) ?? "").slice(n.length + 3) || null;
   const repo = opt("repo");
@@ -483,7 +517,7 @@ export async function main(args) {
   const startPath = opt("start");
   const start = startPath ? JSON.parse(readFileSync(startPath, "utf8")) : null;
   const capture = opt("capture") ? readFileSync(opt("capture"), "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : null;
-  const result = verifyRepo(resolve(repo), { start, capture, diffOut: opt("diff-out") ? resolve(opt("diff-out")) : null });
+  const result = verifyRepo(resolve(repo), { start, capture, diffOut: opt("diff-out") ? resolve(opt("diff-out")) : null, tokenSha256: registeredTokenHashes() });
   console.log(args.includes("--json") ? JSON.stringify(result, null, 2) : render(result));
   process.exit(result.verdict === PASS ? 0 : result.verdict === FAIL ? 1 : 2);
 }
