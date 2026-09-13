@@ -1,0 +1,14 @@
+  probe:            running (pid 97176)
+  proxy upstream:   http://host.docker.internal:18097
+  forced identity:  agt-lqyapl6l4e  (neither evaluation agent)
+  core auto-extraction: OFF  (pool frozen for the comparison)
+  clickhouse:       reachable at http://127.0.0.1:8123/ping  (bridge_call rows will be written)
+  candidate log: OFF
+  read-visibility bridge: not mounted — a consumer reading another agent's skill by name gets 40401
+  scenario port 47318: not published — the right-address asset would fail
+  right.md documents :47318 — script and asset agree
+gate:   built into the image (/app/src/metadata/service/asset-gate.ts present, nothing mounted; /v3/meta/asset/gate/get → HTTP 401 without a key)
+plane:  admission filter built in (skill-handlers.ts carries admissionFilter)
+build:  commit 66bc9aecd719 — its MemoryCore tree equals HEAD's (81cfdb930780cece3be78dd463d0b483a691fe36)
+image:  agentmemory/memory-core:topic4-66bc9aecd719  port: 8420  network: tdai-memory-stack alias: memory-core
+digest: sha256:6d0d59064a49c49212079d7c231af48490542d95f3e2315373f2a30a643e6acc  (agentmemory/memory-core@sha256:6d0d59064a49c49212079d7c231af48490542d95f3e2315373f2a30a643e6acc)

@@ -53,6 +53,7 @@ test("剩余缺点一节必须在,且写明第三任务的归因补了什么、�
   assert.match(md, /剩余缺点/);
   assert.match(md, /并非每次都闭合/, "闭合了也不能写成每次都闭合");
   assert.match(md, /第一批补不上/);
+  assert.match(md, /不能单凭 `used` 宣称任务成功由这条笔记造成/, "展示边界必须在");
   assert.match(md, /REJUDGE-POOL\.md/, "要指向会重算的重判页,不在这里抄数");
   assert.match(md, /改的是评测自己的采集,产品一行没动/);
   assert.match(md, /前两次都不是根因/, "改过口径要如实留着,不能抹掉");

@@ -64,3 +64,43 @@ test("保真那一格取的是 baseline rows,不是改动后的 rows", () => {
   assert.ok(!/重放装置不可信/.test(md), "改动本身造成的差异不该被当成保真失败");
   assert.match(md, /两组都全对/);
 });
+
+// ── 第十轮复核:对照缺失当成通过、阶段失败当成「没有 used」,都是把未知折成好消息 ──
+test("对照为空不算通过 —— 缺对照必须阻断(§2)", () => {
+  const f = fidelityOf([]);
+  assert.equal(f.ok, false);
+  assert.match(f.why, /没有对照/);
+  assert.match(render(summarise([], MAN), { task2: [], baseline: [] }, MAN), /重放装置不可信|没有对照/);
+});
+
+test("阶段失败记 ERROR,单独列出,并阻断结论", () => {
+  const rows = [r({ run_id: "n1", rejudged: false, error: "judge-hard", why: "判决失败,不借用上一次的产物" })];
+  const s = summarise(rows, MAN);
+  assert.equal(s.errors.length, 1);
+  assert.equal(s.errors[0].error, "judge-hard");
+  assert.equal(s.skipped.length, 0, "ERROR 不该混进「按设计跳过」里");
+  const md = render(s, { task2: [r({ changed: false })], baseline: [r({ changed: false })] }, MAN);
+  assert.match(md, /有 1 次重判以 ERROR 收场/);
+  assert.match(md, /结论不成立/);
+});
+
+test("「一字不差」比的是逐事件指纹,不只是状态名", () => {
+  const same = { before_fp: ["used|tool_call|req:1|v2"], after_fp: ["used|tool_call|req:1|v2"] };
+  const moved = { before_fp: ["used|tool_call|req:1|v2"], after_fp: ["used|tool_call|req:9|v2"] };
+  assert.equal(fidelityOf([r({ ...same, changed: false })]).compares_fingerprints, true);
+  assert.equal(fidelityOf([r({ ...moved, changed: true })]).ok, false, "状态名相同但落点不同,必须算变了");
+});
+
+test("真文件:入库的 rows 带逐事件指纹", () => {
+  const h = "evaluation/tasks/resource-download";
+  const rows = parseRows(readFileSync(`${h}/rejudge-rows.jsonl`, "utf8")).filter((x) => x.rejudged);
+  assert.ok(rows.length > 0);
+  for (const x of rows) assert.ok(Array.isArray(x.before_fp) && Array.isArray(x.after_fp), `${x.run_id} 缺指纹字段`);
+});
+
+test("展示边界必须在:事后补录的索引,不能单凭 used 宣称任务成功由笔记造成", () => {
+  const md = render(summarise([], MAN), { task2: [r({ changed: false })], baseline: [r({ changed: false })] }, MAN);
+  assert.match(md, /事后补录的资产索引/);
+  assert.match(md, /不能.*单凭 `used` 宣称任务成功由这条笔记造成/);
+  assert.match(md, /逐事件指纹/);
+});

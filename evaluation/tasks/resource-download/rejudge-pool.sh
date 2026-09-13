@@ -16,10 +16,13 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
-TASK="$HERE"; SNAP="recorded"; OUT=""; BATCH=""
+TASK="$HERE"; SNAP="recorded"; OUT=""; BATCH=""; FROM="archive"
 while [[ $# -gt 0 ]]; do case "$1" in
   --task) TASK="$(cd "$2" && pwd)"; shift 2;; --snapshot) SNAP="$2"; shift 2;;
-  --out) OUT="$2"; shift 2;; --batch) BATCH="$2"; shift 2;; *) echo "unknown: $1" >&2; exit 2;; esac; done
+  --out) OUT="$2"; shift 2;; --batch) BATCH="$2"; shift 2;;
+  --from) FROM="$2"; shift 2;;   # archive(默认,入库副本)| tmp(清单里的 /private/tmp 路径)
+  *) echo "unknown: $1" >&2; exit 2;; esac; done
+case "$FROM" in archive|tmp) ;; *) echo "--from must be archive or tmp" >&2; exit 2;; esac
 [[ -n "$OUT" ]] || { echo "要 --out" >&2; exit 2; }
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
@@ -29,19 +32,23 @@ node "$REPO/evaluation/attribution/resolve-tokens.mjs" --task="$TASK" --out="$WO
   || { echo "判别值解析失败,一次也没重判:"; cat "$WORK/resolve.log"; exit 1; }
 
 : > "$OUT"
-python3 - "$TASK/devloop-runs.json" "$REPO" "${BATCH:-}" <<'PY' | while IFS=$'\t' read -r rid arm dir; do
+python3 - "$TASK/devloop-runs.json" "$REPO" "${BATCH:-}" "$FROM" <<'RUNS' | while IFS=$'\t' read -r rid arm dir; do
 import json, os, sys
-m, repo, batch = sys.argv[1], sys.argv[2], sys.argv[3]
+m, repo, batch, frm = sys.argv[1:5]
 for r in json.load(open(m))["runs"]:
     if r.get("arm") == "smoke" or not r.get("sample"):
         continue
     if batch and str(r.get("batch")) != batch:
         continue
-    d = r.get("dir") or ""
-    if not (d and os.path.exists(os.path.join(d, "capture.jsonl"))):
-        d = os.path.join(repo, "evaluation/runner/runs", r["run_id"])   # 仓库归档副本
+    # 默认走**入库归档副本**:干净克隆里没有 /private/tmp,入库的 rows 必须能在那里逐字复现。
+    arch = os.path.join(repo, "evaluation/runner/runs", r["run_id"])
+    tmp = r.get("dir") or ""
+    if frm == "archive":
+        d = arch if os.path.exists(os.path.join(arch, "capture.jsonl")) else tmp
+    else:
+        d = tmp if (tmp and os.path.exists(os.path.join(tmp, "capture.jsonl"))) else arch
     print(f"{r['run_id']}\t{r['arm']}\t{d}")
-PY
+RUNS
   row() { python3 -c "import json,sys;print(json.dumps(json.loads(sys.argv[1]),ensure_ascii=False))" "$1" >> "$OUT"; }
   if [[ ! -s "$dir/capture.jsonl" ]]; then
     row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"why\":\"记录不在了\"}"; continue
@@ -59,28 +66,53 @@ PY
   fi
   case "$SNAP" in recorded) S="$dir/asset-pool-snapshot.json";; *) S="$SNAP";; esac
   [[ -s "$S" ]] || { row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"why\":\"没有可用的池快照\"}"; continue; }
-  (cd "$REPO" && node evaluation/provenance/build-events.mjs "$S" "$dir/tool-call-logs-all.jsonl" "$dir/capture.jsonl" > "$WORK/prov.md" 2>&1) || true
-  cp "$REPO/evaluation/provenance/artifacts/provenance-events.jsonl" "$WORK/events.jsonl" 2>/dev/null || : > "$WORK/events.jsonl"
-  (cd "$REPO" && node evaluation/attribution/judge-hard.mjs "$WORK/events.jsonl" "$dir/run-artifacts.json" "$WORK/tok.json" > "$WORK/judgement.md" 2>&1) || true
-  cp "$REPO/evaluation/attribution/artifacts/used-events.jsonl" "$WORK/used.jsonl" 2>/dev/null || : > "$WORK/used.jsonl"
-  python3 - "$rid" "$arm" "$dir/used-events.jsonl" "$WORK/used.jsonl" "$NOTE" "$S" >> "$OUT" <<'PY'
+
+  # 逐运行独立目录。**先删固定路径的产物再跑**:两个阶段都往仓库里同一个路径写,
+  # 上一次的输出留在那里,某一步失败时 cp 会把它当成这次的结果抄走(第十轮复核指出)。
+  RD="$WORK/$rid"; mkdir -p "$RD"
+  PROV_ART="$REPO/evaluation/provenance/artifacts/provenance-events.jsonl"
+  USED_ART="$REPO/evaluation/attribution/artifacts/used-events.jsonl"
+  rm -f "$PROV_ART" "$USED_ART"
+
+  if ! (cd "$REPO" && node evaluation/provenance/build-events.mjs "$S" "$dir/tool-call-logs-all.jsonl" "$dir/capture.jsonl" > "$RD/prov.md" 2>&1); then
+    row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"error\":\"build-events\",\"why\":\"来源事件构建失败,不借用上一次的产物\"}"
+    echo "  ERROR build-events $rid" >&2; continue
+  fi
+  [[ -f "$PROV_ART" ]] || { row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"error\":\"build-events\",\"why\":\"这一步没有写出 provenance-events.jsonl\"}"; echo "  ERROR 无产物 $rid" >&2; continue; }
+  cp "$PROV_ART" "$RD/events.jsonl"
+
+  if ! (cd "$REPO" && node evaluation/attribution/judge-hard.mjs "$RD/events.jsonl" "$dir/run-artifacts.json" "$WORK/tok.json" > "$RD/judgement.md" 2>&1); then
+    row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"error\":\"judge-hard\",\"why\":\"判决失败,不借用上一次的产物\"}"
+    echo "  ERROR judge-hard $rid" >&2; continue
+  fi
+  [[ -f "$USED_ART" ]] || { row "{\"run_id\":\"$rid\",\"arm\":\"$arm\",\"rejudged\":false,\"error\":\"judge-hard\",\"why\":\"这一步没有写出 used-events.jsonl\"}"; echo "  ERROR 无产物 $rid" >&2; continue; }
+  cp "$USED_ART" "$RD/used.jsonl"
+
+  python3 - "$rid" "$arm" "$dir/used-events.jsonl" "$RD/used.jsonl" "$NOTE" "$S" >> "$OUT" <<'FP'
 import json, os, sys
 rid, arm, before_p, after_p, note, snap = sys.argv[1:7]
-def states(p):
+
+def events(p):
+    """逐事件取指纹。**只比状态名是不够的** —— 状态多重集相同、落在完全不同的调用上,
+    也会被判成「一字不差复现」(第十轮复核指出)。加上目标类型、证据位置与版本。"""
+    out = []
     try:
-        out = []
         for l in open(p, encoding="utf-8"):
             if not l.strip(): continue
             e = json.loads(l)
-            if e.get("asset_id") == note: out.append(e["state"])
-        return sorted(out)
+            if e.get("asset_id") != note: continue
+            out.append("|".join([str(e.get("state")), str(e.get("target_type")),
+                                 str(e.get("target_ref")), "v" + str(e.get("asset_version"))]))
     except FileNotFoundError:
         return []
-b, a = states(before_p), states(after_p)
+    return sorted(out)
+
+b, a = events(before_p), events(after_p)
 print(json.dumps({"run_id": rid, "arm": arm, "rejudged": True, "snapshot": os.path.basename(snap),
   "note_in_snapshot": any(x["asset_id"] == note for x in json.load(open(snap, encoding="utf-8"))["assets"]),
-  "before": b, "after": a, "changed": b != a}, ensure_ascii=False))
-PY
+  "before": [x.split("|")[0] for x in b], "after": [x.split("|")[0] for x in a],
+  "before_fp": b, "after_fp": a, "changed": b != a}, ensure_ascii=False))
+FP
   echo "  重判 $rid $arm" >&2
 done
 echo "rows → $OUT  ($(wc -l < "$OUT" | tr -d ' ') 行)"

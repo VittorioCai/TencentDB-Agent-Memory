@@ -101,6 +101,22 @@ node evaluation/tasks/resource-download/report.mjs --out="$OUT/REPORT-resource-d
 d="$(mddiff evaluation/tasks/resource-download/REPORT.md "$OUT/REPORT-resource-download-reproduced.md" "$OUT/REPORT-resource-download.diff")"
 row "devloop-report-3" "node evaluation/tasks/resource-download/report.mjs" "$e" "exit 0, diff 0 vs resource-download/REPORT.md" "$(grep -oE '计入样本 [0-9]+ 次' "$OUT/report-resource-download.txt" | head -1)" "$d"
 
+echo "[6c1] third task's re-judge actually re-executed from the archived evidence (not just re-rendered)"
+# 判别值明文只在 Core(§16),所以这一步**必须线上**:干净克隆上它按设计跑不了。
+re=0
+for spec in "baseline:recorded:rejudge-baseline-rows.jsonl" \
+            "corrected:evaluation/tasks/resource-download/asset-pool-snapshot.json:rejudge-rows.jsonl"; do
+  name="${spec%%:*}"; rest="${spec#*:}"; snap="${rest%%:*}"; file="${rest##*:}"
+  bash evaluation/tasks/resource-download/rejudge-pool.sh --from archive --snapshot "$snap" \
+    --out "$OUT/rejudge-$name-rows.jsonl" >> "$OUT/rejudge-execute.txt" 2>&1 || re=1
+  if diff -u "evaluation/tasks/resource-download/$file" "$OUT/rejudge-$name-rows.jsonl" > "$OUT/rejudge-$name.diff" 2>&1; then :; else re=1; fi
+done
+bash evaluation/tasks/resource-download/rejudge-pool.sh --from archive --task evaluation/tasks/exit-line-collect \
+  --snapshot recorded --out "$OUT/rejudge-control-rows.jsonl" >> "$OUT/rejudge-execute.txt" 2>&1 || re=1
+diff -u evaluation/tasks/resource-download/rejudge-control-task2-rows.jsonl "$OUT/rejudge-control-rows.jsonl" > "$OUT/rejudge-control.diff" 2>&1 || re=1
+rl=$(cat "$OUT"/rejudge-*.diff 2>/dev/null | grep -c '^[+-][^+-]' || true)
+row "rejudge-execute" "rejudge-pool.sh --from archive ×3(基线/修正/第二任务对照)" "$re" "exit 0;三份 rows 从入库归档重跑,逐行与入库一致(需 Core 解析判别值,干净克隆上按设计跑不了)" "差异行 $rl"
+
 echo "[6c2] third task's re-judge page reproduced (the pool-snapshot correction, before/after)"
 node evaluation/tasks/resource-download/rejudge-report.mjs --out="$OUT/REJUDGE-POOL-reproduced.md" > "$OUT/rejudge-pool.txt" 2>&1; e=$?
 d="$(mddiff evaluation/tasks/resource-download/REJUDGE-POOL.md "$OUT/REJUDGE-POOL-reproduced.md" "$OUT/REJUDGE-POOL.diff")"

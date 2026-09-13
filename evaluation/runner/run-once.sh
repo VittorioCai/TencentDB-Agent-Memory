@@ -137,6 +137,21 @@ START_EPOCH="$(date +%s)"
 
 info "run $RUN_ID → $RUN_DIR"
 
+# ── 0. the frozen pool snapshot, checked before ANY side effect ──
+# 本次归因要用的冻结资产池:任务自带就用任务的,否则用主线那份。
+SNAPSHOT="$EVAL/provenance/artifacts/asset-pool-snapshot.json"
+[[ -f "$TASK_DIR/asset-pool-snapshot.json" ]] && SNAPSHOT="$TASK_DIR/asset-pool-snapshot.json"
+# 登记了判别值的资产必须在这份快照里,否则 build-events 对它 continue、一个事件都不写,
+# 采用判定只能停在 needs_review —— 2026-09-13 第三任务三批 18 次就是这么丢的。
+# **位置就是这道闸门的全部意义**:它原先排在第 472 行,而 CodeBuddy 在第 311 行就启动了,
+# 于是只拦住了后面的归因,模型那一趟已经白烧(第十轮复核指出)。现在它在建消费者、
+# 切 proxy、开会话**之前**,失败时这三件一件都还没发生。
+if [[ -f "$TASK_DIR/tokens.json" ]]; then
+  (cd "$REPO_ROOT" && node "$EVAL/runner/check-pool-snapshot.mjs" \
+     --snapshot="$SNAPSHOT" --tokens="$TASK_DIR/tokens.json") \
+    || die "冻结的资产池快照缺登记资产,归因会静默失效;先修快照再跑(消费者没建、proxy 没动、会话没开)"
+fi
+
 # ── 0a. a fresh consumer for this run ────────────────────────────
 # One new agent per run under the consumer user, never used before; the
 # proxy's debugForceIdentity is switched to it by prepare.sh (which restarts
@@ -226,6 +241,9 @@ MEM_SNAP="$RUN_DIR/agent-memory-before.tar.gz"
 MEM_AGENT="${MEM_AGENT:-$(sed -n '/debugForceIdentity:/,/task_id/p' "$REPO_ROOT/deploy/global-images/.proxy-config/config.yaml" 2>/dev/null | sed -n 's/^ *agent_id: *"\{0,1\}\([^" ]*\)"\{0,1\}.*/\1/p' | head -1)}"
 source "$EVAL/runner/lib/agent-memory.sh"
 mem_prepare
+
+# 冻结池快照已在 0 段之前解析并核对(见文件开头的 `0. 池快照`)。这里把它存进本次运行的记录。
+cp "$SNAPSHOT" "$RUN_DIR/asset-pool-snapshot.json" 2>/dev/null || warn "no pool snapshot to copy"
 
 # ── 1. the session ───────────────────────────────────────────────
 # The capture is produced by the observability probe sitting between proxy and
@@ -461,18 +479,8 @@ for stale in "$EVAL/provenance/artifacts/provenance-events.jsonl" \
   rm -f "$stale"
 done
 
-# The frozen pool this scenario was entered with: beside the task when the
-# scenario keeps its own (bridge-name), else the fixed path (the mainline).
-SNAPSHOT="$EVAL/provenance/artifacts/asset-pool-snapshot.json"
-[[ -f "$TASK_DIR/asset-pool-snapshot.json" ]] && SNAPSHOT="$TASK_DIR/asset-pool-snapshot.json"
-cp "$SNAPSHOT" "$RUN_DIR/asset-pool-snapshot.json" 2>/dev/null || warn "no pool snapshot to copy"
-# 登记了判别值的资产必须在冻结快照里,否则 build-events 对它 continue,一个事件都不写,
-# 采用判定只能停在 needs_review —— 2026-09-13 第三任务三批 18 次就是这么丢的。硬失败,不是提醒。
-if [[ -f "$TASK_DIR/tokens.json" ]]; then
-  (cd "$REPO_ROOT" && node "$EVAL/runner/check-pool-snapshot.mjs" \
-     --snapshot="$RUN_DIR/asset-pool-snapshot.json" --tokens="$TASK_DIR/tokens.json") \
-    || die "冻结的资产池快照缺登记资产,归因会静默失效;先修快照再跑"
-fi
+# 冻结池快照已在第 1 段之前解析并核对过(见 `0c. 池快照`)—— 那道闸门必须在**开会话之前**,
+# 否则模型那一趟已经跑掉了才发现归因会失效。这里只沿用上面定下的 $SNAPSHOT。
 
 # ── 3b. has the pool moved since it was frozen? ──────────────────
 # The system extracts skills from finished sessions on its own. The first real

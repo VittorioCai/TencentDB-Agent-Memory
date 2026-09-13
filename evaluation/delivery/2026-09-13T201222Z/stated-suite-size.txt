@@ -1,0 +1,3 @@
+套件实际 797 个测试;文档里声明当前规模的地方 2 处
+  对不上 evaluation/README.md:125 写的是 790,实际 797 —— Full suite: 790 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
+  对不上 evaluation/STATE.md:13 写的是 790,实际 797 —— | 套件现状 | 套件 790/790(2026-09-13,从仓库根全跑 0 失败;比 `f8c1a7f` 那次多的 12 个是 `check-frozen-conditions.test.mjs`

@@ -20,9 +20,17 @@ export function parseRows(text) {
 
 /** 重放是否忠实:用当初那份快照重跑,判定必须一字不差。 */
 export function fidelityOf(rows) {
-  const judged = rows.filter((r) => r.rejudged);
+  const judged = (rows ?? []).filter((r) => r.rejudged);
   const changed = judged.filter((r) => r.changed).map((r) => r.run_id);
-  return { ok: changed.length === 0, total: judged.length, changed,
+  const errors = (rows ?? []).filter((r) => r.error).map((r) => r.run_id);
+  // 逐事件指纹(state|target_type|target_ref|version),不是只比状态名 —— 状态多重集相同
+  // 而落在完全不同的调用上,也会被判成「一字不差」(2026-09-13 第十轮复核指出)。
+  const fp = judged.every((r) => Array.isArray(r.before_fp) && Array.isArray(r.after_fp));
+  // **没有对照 = 未知,不是通过**(§2)。原来空数组返回 ok:true,对照文件丢了会静默放行。
+  const why = judged.length === 0 ? "没有对照可看 —— 未知不当通过"
+    : errors.length ? `有 ${errors.length} 次以 ERROR 收场` : changed.length ? "有运行对不上当初的判定" : null;
+  return { ok: judged.length > 0 && changed.length === 0 && errors.length === 0,
+    total: judged.length, changed, errors, compares_fingerprints: fp, why,
     with_used: judged.filter((r) => (r.before ?? []).includes("used")).length };
 }
 
@@ -31,9 +39,11 @@ export function summarise(rows, manifest) {
   const meta = Object.fromEntries((manifest?.runs ?? []).map((r) => [r.run_id, r]));
   const byBatch = {};
   const skipped = [];
+  const errors = [];
   const excluded = [];
   for (const row of rows) {
     const m = meta[row.run_id] ?? {};
+    if (row.error) { errors.push({ run_id: row.run_id, arm: row.arm, error: row.error, why: row.why ?? "未记原因" }); continue; }
     if (!row.rejudged) { skipped.push({ run_id: row.run_id, arm: row.arm, why: row.why ?? "未记原因" }); continue; }
     if (m.contaminated === true) { excluded.push({ run_id: row.run_id, arm: row.arm, rules: m.contamination_rules ?? [] }); continue; }
     const b = (byBatch[m.batch ?? "?"] ??= {});
@@ -44,7 +54,7 @@ export function summarise(rows, manifest) {
     if ((row.before ?? []).length) g.with_any_event_before++;
     if ((row.after ?? []).length) g.with_any_event_after++;
   }
-  return { byBatch, skipped, excluded_contaminated: excluded, rows };
+  return { byBatch, skipped, errors, excluded_contaminated: excluded, rows };
 }
 
 export function render(s, controls, manifest) {
@@ -61,12 +71,16 @@ export function render(s, controls, manifest) {
   L.push("对不在快照里的资产直接 `continue` —— 连 `fetched` 事件都不写,判决器手上没有可 credit 的取回,");
   L.push("使用判定只能停在 `needs_review`。**判决器的规则一条没动**,包括「最早送达」。", "");
   L.push("另两个闭环任务本来就各自带着快照;第三个漏了这一步。`run-once.sh` 现在在登记资产不在冻结快照里时**硬失败**。", "");
-  L.push("## 先看对照:重放装置可不可信", "", "| 对照 | 判了 | 一字不差复现 | 其中原本带 `used` |", "|---|---:|---:|---:|");
+  L.push("## 先看对照:重放装置可不可信", "");
+  L.push("比的是**逐事件指纹** `state|target_type|target_ref|version`,不是只比状态名 —— 状态多重集相同、");
+  L.push("落在完全不同的调用上,也会被判成「复现」。**没有对照 = 未知,不当通过**;任何一步以 ERROR 收场同样阻断。", "");
+  L.push("| 对照 | 判了 | 逐事件指纹一致 | 其中原本带 `used` |", "|---|---:|---:|---:|");
   L.push(`| 第二任务(笔记 v2 未烧毁,本来就有 \`used\`) | ${ctrl.total} | ${ctrl.ok ? ctrl.total : `${ctrl.total - ctrl.changed.length}(**${ctrl.changed.length} 次对不上**)`} | ${ctrl.with_used} |`);
   L.push(`| 第三任务自身基线(用每次运行当初那份快照) | ${fid.total} | ${fid.ok ? fid.total : `${fid.total - fid.changed.length}(**${fid.changed.length} 次对不上**)`} | ${fid.with_used} |`);
   L.push("");
   if (!ctrl.ok || !fid.ok) {
-    L.push(`**重放装置不可信**:${[...ctrl.changed, ...fid.changed].join("、")} 对不上当初的判定。下面的差值不成立。`, "");
+    const bad = [...ctrl.changed, ...fid.changed, ...ctrl.errors, ...fid.errors];
+    L.push(`**重放装置不可信**:${bad.length ? bad.join("、") + " 对不上当初的判定或以 ERROR 收场" : (ctrl.why ?? fid.why)}。下面的差值不成立。`, "");
   } else {
     L.push("两组都全对 —— 装置不会凭空造出或抹掉 `used`,所以下面的差值可以读。", "");
   }
@@ -88,6 +102,12 @@ export function render(s, controls, manifest) {
   if (noteUsed < noteTot) {
     L.push(`并非每次都归因得上:${noteTot - noteUsed} 次仍然没有 \`used\`。检索到不等于用得上,用得上也不总留得下证据。`, "");
   }
+  if (s.errors.length) {
+    L.push(`**有 ${s.errors.length} 次重判以 ERROR 收场,结论不成立** —— 阶段失败不借用上一次的产物,也不折成「没有 \`used\`」:`, "",
+      "| 运行 | 组 | 失败的阶段 | 说明 |", "|---|---|---|---|");
+    for (const e of s.errors) L.push(`| \`${e.run_id}\` | ${e.arm} | ${e.error} | ${e.why} |`);
+    L.push("");
+  }
   if (s.skipped.length) {
     L.push("## 不能重判的运行(连原因一起列,不折成「没有 used」)", "", "| 运行 | 组 | 为什么 |", "|---|---|---|");
     for (const k of s.skipped) L.push(`| \`${k.run_id}\` | ${k.arm} | ${k.why} |`);
@@ -97,6 +117,13 @@ export function render(s, controls, manifest) {
     L.push(`**污染的 ${s.excluded_contaminated.length} 次不计入**(与 REPORT.md 同口径):`
       + s.excluded_contaminated.map((e) => `\`${e.run_id}\`(${e.rules.join("、") || "未记规则"})`).join("、"), "");
   }
+  L.push("## 这份快照是什么,不是什么", "");
+  L.push("它是**事后补录的资产索引**,不是当时冻结的历史池 —— 成员经核对与这些运行当时读到的实时池一致,");
+  L.push("且其中没有任何资产创建于本批开跑之后,但这仍是**事后取的**。所以它能支持的是:");
+  L.push("笔记内容进入了后续操作并被判决器记账;**不能**单凭 `used` 宣称任务成功由这条笔记造成 ——");
+  L.push("行为差异与采用归因是两件事,报告分开陈述。", "");
+  L.push("原始运行记录已入库(`evaluation/runner/runs/`),上面的 rows 由 `rejudge-pool.sh --from archive` 从入库副本重算,");
+  L.push("验收里有一步**实跑**这三份而不只重画表格;判别值明文只在 Core(§16),所以那一步必须线上。", "");
   L.push("## 这说明什么,不说明什么", "");
   L.push("- **说明**:此前「归因未闭合」是我们自己少收了证据,不是模型没用笔记。补上快照之后,");
   L.push("  「这次改动确实用了这条被取回的笔记」在这些运行上有了闭合的证据链。");
