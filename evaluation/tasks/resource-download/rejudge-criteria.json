@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "what": "把第三任务的采用归因从 needs_review 推到能判的那次改动,**判据在动手之前写下并提交**(CLAUDE.md §12)。",
+    "frozen_at": "2026-09-13T19:29:18Z",
+    "why": "三批 18 次有笔记运行一次 used 都没有。根因不在规则,在采集:build-events.mjs:461 对不在冻结资产池快照里的资产 continue,一个事件都不写;而有笔记组的流程是「快照冻结时笔记还是 candidate → 之后才准入」,所以笔记从来不在快照里,fetched 不写,后面无从 credit。",
+    "not_a_new_rule": "任务目录自带快照是 run-once.sh:467 既有的支持路径,第一任务当初就是这么做的(STATE:pool re-snapshotted … note v2 approved team, 7 assets)。这次是把第三任务漏掉的那一步补上,不是新造口子。",
+    "the_warning_we_ignored": "run-once.sh:499 每次运行都打过 ,12 次刷了 12 遍,没人当回事。这条作为教训记下。"
+  },
+  "the_change": {
+    "what": "给 evaluation/tasks/resource-download/ 放一份自己的 asset-pool-snapshot.json,内容是**实时读到的资产池**(含本任务笔记,状态照实记)。",
+    "how_taken": "一次读取,记下读取时刻与来源;**读完不再调整**。",
+    "what_is_not_changed": ["判决器 judge-hard.mjs 的任何规则", "最早送达规则", "参考测试", "作废规则", "污染口径", "任务书 task.md"]
+  },
+  "controls": {
+    "reverse_control": {
+      "what": "用改动后的代码重判**第一任务**归档在 evaluation/runner/runs/ 的运行。",
+      "must_hold": "它们的 used 判定**一个都不许变**。变了就说明改动动了不该动的东西,回滚。",
+      "why": "第一任务已经能到 used,是唯一能反向证伪的样本 —— 它不会因为我们想要好看的结果而变好看。"
+    },
+    "leak_control": {
+      "what": "快照冻结**之后**才出现的资产(系统从已完成会话自动抽取的技能)仍必须被报为「不在冻结池内」。",
+      "must_hold": "加测试覆盖;这是快照存在的本来目的,不能为了这次改动被削掉。"
+    },
+    "no_note_arm_control": {
+      "what": "无笔记组不受影响 —— 笔记在 Core 里是 candidate,对消费者不可见;快照只用于归因记账,不改变消费者看得见什么。",
+      "must_hold": "重判后无笔记组仍然 0 条笔记事件、0 次 used。出现任何一条就是改动漏了东西。"
+    }
+  },
+  "coverage": {
+    "can_rejudge": "第三批 12 次(有笔记 6、无笔记 6)—— 运行目录俱在。",
+    "cannot_rejudge": "第一批 24 次与第二批 12 次:运行目录已不在 /private/tmp,也未归档进仓库,**记录没了就是没了**。它们维持原样上报,报告里写明不能重判的原因。",
+    "honest_statement": "所以这次最多只能说「第三批在修正采集之后是什么结果」,说不了前两批。"
+  },
+  "accepted_outcomes": {
+    "statement": "**used 出不来也是结果。** 那说明除了快照还有别的东西拦着,结论反而更硬 —— 连配对都救不了。",
+    "no_tuning": "不因为结果不合意而调快照、改规则、挑运行。改动一次成型,重判一次出数,before/after 差异全量公布。",
+    "publish": "重判前后的逐次差异出一份报告并入库(与 REPARSE-DIFF 同一做法),不只报改好的那一半。"
+  },
+  "cannot_establish": [
+    "即使第三批出现 used,也**补不上前两批** —— 它们的记录没了。",
+    "样本仍小、仍是单模型。",
+    "产品源码仍在工作副本里,所以仍不能证明「这条知识只能来自笔记」。",
+    "这次改的是评测自己的采集,**不是产品的能力证明** —— 它只说明我们此前没把证据收全,不说明产品更强了。"
+  ]
+}
