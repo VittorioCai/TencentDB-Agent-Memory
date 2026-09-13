@@ -1,0 +1,21 @@
+{
+  "schema": "live-state-record-v1",
+  "at": "2026-09-13T10:33:55Z",
+  "what": "第三个开发闭环任务的经验笔记入池(新建资产)",
+  "asset": {
+    "asset_id": "skl-XAzqAgejM7O4",
+    "name": "eval-skill-resource-download",
+    "version": 1,
+    "status": "candidate",
+    "visibility": "team"
+  },
+  "by": {
+    "key_file": "deploy/global-images/.topic4-user-key",
+    "role": "owner(作者密钥,非管理员)"
+  },
+  "how": "node evaluation/tasks/resource-download/fill-note.mjs",
+  "token": "判别值明文只写进了 Core 里这份笔记;仓库只存 sha256(tokens.json)。CLAUDE.md §16。",
+  "provenance_scan": "扫描 3393 处来源无命中;但有 1 处未扫到(20260911T175839Z-devloop-smoke 缺 capture.jsonl),所以结论是**未知**而不是干净 —— 与 conditions-expected.json 里登记的那条记录缺口是同一处。",
+  "next_admin_step": "note 组开跑前需要把该资产置为 approved —— **管理员密钥,属用户的步骤**(CLAUDE.md §14);no-note 组现在就能跑(candidate 即所需状态)。",
+  "restore": "不需要回滚:新建的是一份独立资产,未改动任何既有资产;如需撤回,由所有者 /v3/meta/asset/update 置 archived。"
+}

@@ -18,7 +18,8 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const DIR = dirname(fileURLToPath(import.meta.url));
+// 任务目录可由 DEVLOOP_TASK_DIR 覆盖(与 verify.mjs 同一约定),第三个任务因此不必复制这 200 行。
+const DIR = process.env.DEVLOOP_TASK_DIR ?? dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(DIR, "../../..");
 const CORE_URL = process.env.CORE_URL ?? "http://localhost:8420";
 const SERVICE_ID = process.env.SERVICE_ID ?? "default";
