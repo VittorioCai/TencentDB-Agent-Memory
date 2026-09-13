@@ -8,7 +8,7 @@
  * 哪些离线就能复算、哪些必须线上、还剩什么缺点。**结论句由数据决定**,没有样本就说未知,不写死。
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname } from "node:path";
+import { basename, dirname, relative } from "node:path";
 
 /** 需要线上栈、干净克隆上按设计不通过的步骤。 */
 export const LIVE_ONLY = {
@@ -102,5 +102,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     archive: dirname(rowsPath) + "/" + basename(rowsPath),
   });
   if (process.argv.includes("--md")) process.stdout.write(md);
-  else { const out = arg("out", "evaluation/SEAL-CHECK.md"); writeFileSync(out, md); console.log(`${out} ← ${rows.length} 步`); }
+  else {
+    const out = arg("out", "evaluation/SEAL-CHECK.md"); writeFileSync(out, md);
+    // 打相对路径:验收把这一行抄进封版页,绝对路径会把本机临时目录带到评委面前(封版 8a640af 那次即如此)
+    console.log(`${relative(process.cwd(), out)} ← ${rows.length} 步`);
+  }
 }

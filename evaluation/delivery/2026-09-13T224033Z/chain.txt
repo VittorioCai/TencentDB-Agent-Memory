@@ -1,0 +1,68 @@
+══════ main ══════
+主链条:第一个开发任务里,笔记被采用、代码通过独立验收、结果回写产品并被闸门判定的那一次。
+
+运行 20260911T155035Z-devloop-note:七环中已证 6 环,断在第 7 环。
+
+1. 原始经验 — 笔记由批次四的运行记录与代码整理而来,不是凭空写的。
+      证据 evaluation/tasks/exit-code-fix/assets/note.md · 资产正文 · 笔记由批次四的运行记录与代码整理而来,不是凭空写的。
+2. 笔记与适用条件 — 适用条件写在笔记里:工具结果只给退出码、看不到失败详情时。
+      证据 evaluation/tasks/exit-code-fix/assets/note.md · applies_when · 工具结果只给退出码、看不到失败详情时
+3. 检索与取回 — 送达 1 次(状态 fetched)。注意:注入清单对这个新 agent 是空的,所以送达不是注入来的,是**模型自己检索**拿到的。
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/events.jsonl · state=fetched · evt-8d9e8b519417
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/candidate-log.jsonl · listing · (none)
+4. 实际新增的测试 / 代码 — 操作实际改了东西:2 个文件(+42/−1),1 次尝试中带判别值的 1 次。采用证据支持的是**笔记约定进入了这次改动**,不单独证明修复思路来自笔记。
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/final.diff · 改动文件 · evaluation/tasks/bridge-addr/verify.exit-status.bt-imczk9p69e3.test.mjs, evaluation/tasks/bridge-addr/verify.mjs
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/verdict.json · attempts[0].added_test · bt-imczk9p69e3 ok=true
+5. 独立验收 — 独立验收:PASS(判据版本 repo-2026-09-11c)。
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/verdict.json · verdict / reason · PASS — reference test passed (7/7); no new identified failure in the controlled suite (
+6. 结果回写 Core — 结果已回写产品:1 条,状态 validated。
+      证据 evaluation/runner/runs/20260911T155035Z-devloop-note/core-outcomes.json · posted[].state · 712f23b4-e08d-4d7d-ab61-625452381f89:validated
+7. 新产生的候选 — **未证明**:本次没有观察到新候选
+
+断开的环节按原样保留 —— 链条允许断,不允许糊。
+
+══════ delivered_not_adopted ══════
+反例一:批次四的一次 gate-off 运行,多次送达、只有一次采用 —— 用来证明系统不把送达当使用。
+
+反例一 —— 送达 5 次,采用 1 次:**送达不等于使用**。系统按"操作是否实际用了它"判定,不按"内容是否到过模型"判定,所以多送达的那几次不会被算成使用。
+
+1. 原始经验 — 这一对资产是该场景自带的(两份只差 bridge 地址),不是从别处整理来的。
+      证据 evaluation/tasks/bridge-addr/assets/right.md · 资产正文 · 这一对资产是该场景自带的(两份只差 bridge 地址),不是从别处整理来的。
+2. 笔记与适用条件 — 适用条件写在笔记里:需要经 skill-bridge 访问团队资产时(该场景的一对资产只差 bridge 地址)。
+      证据 evaluation/tasks/bridge-addr/assets/right.md · applies_when · 需要经 skill-bridge 访问团队资产时(该场景的一对资产只差 bridge 地址)
+3. 检索与取回 — 送达 5 次(状态 fetched)。注意:注入清单对这个新 agent 是空的,所以送达不是注入来的,是**模型自己检索**拿到的。
+      证据 evaluation/runner/runs/20260910T232835Z-gate-off/events.jsonl · state=fetched · evt-350ffb3f4630, evt-3bcd3898074c, evt-f62c8dc74d80, evt-a68132f7d615, evt-bda497044c46
+      证据 evaluation/runner/runs/20260910T232835Z-gate-off/candidate-log.jsonl · listing · (none)
+4. 实际新增的测试 / 代码 — 操作实际改了东西:1 次尝试,其中带判别值的 1 次。
+      证据 evaluation/runner/runs/20260910T232835Z-gate-off/verdict.json · attempts[0] · bt-itaa73enpfq ok=true
+5. 独立验收 — 独立验收:PASS(判据版本未记录 —— 该批次的 verdict.json 尚无此字段)。
+      证据 evaluation/runner/runs/20260910T232835Z-gate-off/verdict.json · verdict / reason · PASS — the final attempt at 127.0.0.1:47318 succeeded (code 0)
+6. 结果回写 Core — 结果已回写产品:1 条,状态 validated。
+      证据 evaluation/runner/runs/20260910T232835Z-gate-off/core-outcomes.json · posted[].state · 8996ac6e-2475-4534-baa5-ea73b1dc608d:validated
+7. 新产生的候选 — **未证明**:本次没有观察到新候选
+
+断开的环节按原样保留 —— 链条允许断,不允许糊。
+
+══════ adopted_but_flagged ══════
+反例二:第二个任务里参考采纳成立、判定器却没产出 used 的那一次 —— 用来证明系统如实展示自己的边界。
+
+反例二 —— 参考采纳成立(reference_adopted=true),而判定器未产出 used(judged_used=false):按现行校准记一次**假阴性,且计入分母**,不是弃权。needs_review 说明的是它为什么保守拒判,不是把它移出分母的理由。
+
+1. 原始经验 — 与主链条同一份笔记资产的 v2。
+      证据 evaluation/tasks/exit-code-fix/assets/note.md · 资产正文 · 与主链条同一份笔记资产的 v2。
+2. 笔记与适用条件 — 适用条件写在笔记里:需要从工具结果里收集退出状态行时(该资产的 v2)。
+      证据 evaluation/tasks/exit-code-fix/assets/note.md · applies_when · 需要从工具结果里收集退出状态行时(该资产的 v2)
+3. 检索与取回 — 送达 1 次(状态 fetched)。注意:注入清单对这个新 agent 是空的,所以送达不是注入来的,是**模型自己检索**拿到的。
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/events.jsonl · state=fetched · evt-56b11413f45b
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/candidate-log.jsonl · listing · (none)
+4. 实际新增的测试 / 代码 — 操作实际改了东西:2 个文件(+69/−1),1 次尝试中带判别值的 1 次。采用证据支持的是**笔记约定进入了这次改动**,不单独证明修复思路来自笔记。
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/final.diff · 改动文件 · evaluation/attribution/collect-artifacts.exit-status.bt-78yk9r3bfrm.test.mjs, evaluation/attribution/collect-artifacts.mjs
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/verdict.json · attempts[0].added_test · bt-78yk9r3bfrm ok=true
+5. 独立验收 — 独立验收:PASS(判据版本 repo-2026-09-11d)。
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/verdict.json · verdict / reason · PASS — reference test passed (6/6); no new identified failure in the controlled suite (
+6. 结果回写 Core — 结果已回写产品:1 条,状态 validated。
+      证据 evaluation/runner/runs/20260911T185119Z-devloop-note/core-outcomes.json · posted[].state · 24d83f6c-c8ce-4b7b-b336-48541d5305f6:validated
+7. 新产生的候选 — **未证明**:本次没有观察到新候选
+
+断开的环节按原样保留 —— 链条允许断,不允许糊。
+

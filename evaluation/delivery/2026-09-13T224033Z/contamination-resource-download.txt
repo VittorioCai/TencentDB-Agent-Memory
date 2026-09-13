@@ -1,0 +1,33 @@
+干净  20260913T121409Z-devloop-no-note  no-note  FAIL
+干净  20260913T121636Z-devloop-no-note  no-note  FAIL
+干净  20260913T121823Z-devloop-no-note  no-note  FAIL
+干净  20260913T121937Z-devloop-no-note  no-note  FAIL
+干净  20260913T123427Z-devloop-note  note  PASS
+干净  20260913T123631Z-devloop-note  note  PASS
+干净  20260913T123828Z-devloop-note  note  PASS
+干净  20260913T124050Z-devloop-note  note  PASS
+干净  20260913T164731Z-devloop-no-note  no-note  FAIL
+干净  20260913T164920Z-devloop-no-note  no-note  FAIL
+干净  20260913T165133Z-devloop-no-note  no-note  FAIL
+干净  20260913T165325Z-devloop-note  note  PASS
+干净  20260913T165535Z-devloop-note  note  PASS
+干净  20260913T165813Z-devloop-note  note  FAIL
+干净  20260913T170043Z-devloop-no-note  no-note  FAIL
+干净  20260913T170327Z-devloop-no-note  no-note  FAIL
+干净  20260913T170534Z-devloop-no-note  no-note  FAIL
+干净  20260913T170755Z-devloop-note  note  PASS
+干净  20260913T171204Z-devloop-note  note  PASS
+干净  20260913T183510Z-devloop-no-note  no-note  FAIL
+干净  20260913T183641Z-devloop-no-note  no-note  FAIL
+干净  20260913T183839Z-devloop-no-note  no-note  FAIL
+干净  20260913T184025Z-devloop-note  note  PASS
+干净  20260913T184238Z-devloop-note  note  PASS
+干净  20260913T184442Z-devloop-note  note  PASS
+干净  20260913T184644Z-devloop-no-note  no-note  FAIL
+干净  20260913T185128Z-devloop-no-note  no-note  FAIL
+干净  20260913T185335Z-devloop-note  note  PASS
+干净  20260913T185523Z-devloop-note  note  PASS
+干净  20260913T185735Z-devloop-note  note  PASS
+已排除  20260913T170959Z-devloop-note  note  FAIL  开跑时已判污染(foreign_run_access),报告里同样不计入
+已排除  20260913T184926Z-devloop-no-note  no-note  FAIL  开跑时已判污染(foreign_run_access),报告里同样不计入
+样本 30 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净;另有 2 次已判污染、不计入(20260913T170959Z-devloop-note, 20260913T184926Z-devloop-no-note)
