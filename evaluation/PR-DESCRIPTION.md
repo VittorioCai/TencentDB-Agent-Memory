@@ -76,7 +76,10 @@
 新增 0 并消掉 5 条)。
 
 **这不是一条上游 PR,也没打算提**:三个已知阻碍(准入默认启用语义、MongoDB 原子性、文档八项)
-本轮没有收口,且分支只在本地、未推送。细节与复现见 `evaluation/gate/PORT-TO-UPSTREAM.md`。
+本轮没有收口,**部署后的行为兼容性也未验证** —— 它支持「具备移植可行性」,不支持「已达上游合入
+或生产使用条件」。分支**已于 2026-09-13 推到 fork 作为辅助验证材料**(主交付仍是
+`topic4-attribution-gate`):<https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/gate-core-minimal>,固定比较区间 <https://github.com/VittorioCai/TencentDB-Agent-Memory/compare/0468a2a...c372d80>。
+细节与复现见 `evaluation/gate/PORT-TO-UPSTREAM.md`,原始输出在 `evaluation/gate/artifacts/port-*`。
 
 ## 五轮外部复核,提出的问题全部改在代码或生成器里
 

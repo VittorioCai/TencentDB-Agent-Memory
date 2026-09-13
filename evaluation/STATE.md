@@ -238,7 +238,9 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 `build:plugin` 通过、`npm test` 132/132;`npm run build` 与 `typecheck:metadata` 红,
 但**纯净上游同样红**(另建纯净 worktree 做基线才敢这么说:123 → 118,新增 0、消掉 5)。
 错误数按「文件+错误码+消息」归一化后比,直接比字符串会被行号位移骗到。
-**不提 PR**:三个阻碍(默认启用语义、MongoDB 原子性、文档八项)未收口,分支未推送。
+**不提 PR**:三个阻碍(默认启用语义、MongoDB 原子性、文档八项)未收口,部署行为兼容性未验证。
+**分支已推到 fork**(2026-09-13,远端 SHA 读回 `c372d80` 与本地一致,树内 `evaluation/` 0 文件、
+相对 `0468a2a` 为 21 文件 `+4043/−34`):<https://github.com/VittorioCai/TencentDB-Agent-Memory/tree/gate-core-minimal>;固定比较区间 <https://github.com/VittorioCai/TencentDB-Agent-Memory/compare/0468a2a...c372d80>。作为辅助验证材料,主交付仍是 `topic4-attribution-gate`。
 事先设的"超过一天就停"没触发——实际约十分钟。详见 `evaluation/gate/PORT-TO-UPSTREAM.md`。
 
 ## 第六轮复核(2026-09-12 夜,上游候选二批)已处置其一
