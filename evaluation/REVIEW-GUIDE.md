@@ -8,6 +8,8 @@
 原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)与 `20260911T1*-devloop-*`(闭环,23),每目录只少一个无脚本读取的
 `capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
+**闸门装得进今天的产品**:分支 `gate-core-minimal`(`c372d80`)以上游 `feat/server_team@0468a2a` 为基线重拆,21 文件 `+4043/−34`,四处冲突全是 import 列表;`build:plugin` 通过、`npm test` 132 个全过;`build` 与 `typecheck:metadata` 红,但纯净上游同样红(新增 0 条)。**不是上游 PR,三个阻碍未收口,分支未推送。**见 `evaluation/gate/PORT-TO-UPSTREAM.md`。
+
 ## 干净克隆上什么能复算,什么需要线上(2026-09-12 彩排实测)
 
 `bash evaluation/deliver-check.sh` 在一个没有作者密钥、没有 Core、没有 docker 的克隆上跑过;下面按**依赖**分三组,

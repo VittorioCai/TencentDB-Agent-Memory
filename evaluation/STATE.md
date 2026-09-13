@@ -182,6 +182,18 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
    `verdict.pass1.json` 与 `verdict.json`。
 5. 准备运行 → build-baseline → 试跑一对逐条 17 条 → 正式交错。
 
+## 闸门在最新上游上重拆一遍(2026-09-13,不是为了提 PR)
+
+回答"闸门放到今天的上游代码里还装不装得进去"。分支 `gate-core-minimal`、提交 `c372d80`,
+基线 `origin/feat/server_team@0468a2a`,worktree `.claude/worktrees/gate-core-minimal`,
+树里无 `evaluation/`。21 文件 `+4043/−34`;13 个双改文件用 `git merge-file` 逐文件三方合并
+(`git apply -3` 对不上索引),**四处冲突全是 import 列表、每处 1 行,无语义冲突**。
+`build:plugin` 通过、`npm test` 132/132;`npm run build` 与 `typecheck:metadata` 红,
+但**纯净上游同样红**(另建纯净 worktree 做基线才敢这么说:123 → 118,新增 0、消掉 5)。
+错误数按「文件+错误码+消息」归一化后比,直接比字符串会被行号位移骗到。
+**不提 PR**:三个阻碍(默认启用语义、MongoDB 原子性、文档八项)未收口,分支未推送。
+事先设的"超过一天就停"没触发——实际约十分钟。详见 `evaluation/gate/PORT-TO-UPSTREAM.md`。
+
 ## 第六轮复核(2026-09-12 夜,上游候选二批)已处置其一
 
 复核方在上游 `0468a2a` 上给了四条 proxy 缺陷,我逐条在代码里复现,**四条全部成立**,
