@@ -33,6 +33,9 @@ const green = () => [
   row("devloop-report-2", 0, 0),
   row("devloop-report-3", 0, 0, "计入样本 8 次"),
   row("contamination-3", 0, null, "样本 8 次:污染 0,未知 0,规则 contamination-2026-09-13c;全部干净"),
+  row("author-recheck", 0, 0, "5 份重验"),
+  row("generated-reports", 0, null, "入库 .md 73 份:叙述 44 份,登记的报告 29 份 —— regenerated 12,figures_checked 1,not_regenerable 1,historical 15;未登记 0 份"),
+  row("comparison-figures", 0, null, "对照报告的主表与生成的 summary 逐格比对:26 格,全部一致"),
   row("demo", 0, null, "Segments: 2 live, 5 record, 0 fixture"),
   row("chain", 0, null, "21 个环节,其中未证明 3 个"),
   row("selection", 0, null, "池中 7 项;放行 5 项;挡下 2 项"),
@@ -129,5 +132,19 @@ test("第三任务:样本里有一次污染或未知,验收整体失败", () => 
 
 test("第三任务报告有差异就失败,和前两份一样按差异判", () => {
   const rows = green().map((r) => (r.step === "devloop-report-3" ? { ...r, diff_lines: 2 } : r));
+  assert.equal(verdict(rows).ok, false);
+});
+
+test("新加的三道:任一失败都要拖垮离线结论", () => {
+  for (const step of ["author-recheck", "generated-reports", "comparison-figures"]) {
+    const rows = green().map((r) => (r.step === step ? { ...r, exit: 1 } : r));
+    const v = verdict(rows);
+    assert.equal(v.ok, false, step);
+    assert.equal(v.offline.ok, false, step);
+  }
+});
+
+test("作者评估重验有差异就失败 —— 渲染页必须与入库副本一致", () => {
+  const rows = green().map((r) => (r.step === "author-recheck" ? { ...r, diff_lines: 3 } : r));
   assert.equal(verdict(rows).ok, false);
 });

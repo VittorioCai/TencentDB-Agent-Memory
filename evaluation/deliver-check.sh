@@ -105,6 +105,24 @@ echo "[6d] third task's samples re-scanned for contamination (any run not explic
 node evaluation/runner/contamination.mjs --batch=evaluation/tasks/resource-download/devloop-runs.json --task=evaluation/tasks/resource-download > "$OUT/contamination-resource-download.txt" 2>&1; e=$?
 row "contamination-3" "contamination.mjs --batch=resource-download/devloop-runs.json" "$e" "exit 0;每一次计入样本的运行都明确判为干净(污染或未知同样阻断)" "$(tail -1 "$OUT/contamination-resource-download.txt")"
 
+echo "[6e] author assessments re-verified from their saved model output (citations and facts re-checked, the rendered page reproduced)"
+: > "$OUT/author-recheck.txt"; ae=0; ad=0
+for pair in "assessment-a-exit-line:evidence-pack-a-exit-line" "assessment-a-skl-ImeA29HL3Djj:evidence-pack-a-skl-ImeA29HL3Djj" "assessment-a-skl-sZFb3KatWY6m:evidence-pack-a" "assessment-b-exit-line:evidence-pack-b-exit-line" "assessment-b-skl-lUWmwEYqsZDZ:evidence-pack-b"; do
+  A="${pair%%:*}"; P="${pair##*:}"
+  cp "evaluation/author/artifacts/$A.json" "$OUT/$A.json"            # 副本上重验,入库的那份不动
+  node evaluation/author/assess.mjs --recheck="$OUT/$A.json" --pack="evaluation/author/artifacts/$P.json" --domain=recheck --asset-claim=recheck >> "$OUT/author-recheck.txt" 2>&1 || ae=1
+  ad=$(( ad + $(mddiff "evaluation/author/artifacts/$A.md" "$OUT/$A.md" "$OUT/$A.diff") ))
+done
+row "author-recheck" "assess.mjs --recheck=<5 份评估副本> --pack=<各自的证据包>" "$ae" "exit 0;五份评估从 raw_model_output 重验后,渲染页与入库副本 diff 0" "$(grep -c '^recheck:' "$OUT/author-recheck.txt") 份重验" "$ad"
+
+echo "[6f] every script-generated report in the tree is registered (regenerated / figures-checked / not regenerable)"
+node evaluation/check-generated-reports.mjs > "$OUT/generated-reports.txt" 2>&1; e=$?
+row "generated-reports" "check-generated-reports.mjs" "$e" "exit 0;未登记 0 份 —— 登记簿之外不允许存在生成报告" "$(head -1 "$OUT/generated-reports.txt")"
+
+echo "[6g] the comparison report's figures still agree with the generated summary it copied them from"
+node evaluation/runner/check-comparison-figures.mjs > "$OUT/comparison-figures.txt" 2>&1; e=$?
+row "comparison-figures" "check-comparison-figures.mjs" "$e" "exit 0;逐格一致" "$(head -1 "$OUT/comparison-figures.txt")"
+
 echo "[7] demo"
 bash evaluation/demo.sh --plain > "$OUT/demo.txt" 2>&1; e=$?
 row "demo" "bash evaluation/demo.sh --plain" "$e" "exit 0; segments live/record/fixture counted" "$(grep -E '^Segments:' "$OUT/demo.txt")"

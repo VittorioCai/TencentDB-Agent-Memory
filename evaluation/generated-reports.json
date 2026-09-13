@@ -1,0 +1,186 @@
+{
+  "_meta": {
+    "what": "仓库里每一份「由脚本生成」的报告,逐份登记它在交付验收里的处置",
+    "why": "验收此前只知道自己重算了哪几份,不知道仓库里一共有哪几份 —— 少查一份不会有任何人发现。2026-09-13 自查时 REPARSE-DIFF-2026-09-11-exitline.md 就是这样漏掉的:它的两个同名兄弟都在查,唯独它不在。",
+    "rule": "只有登记在册的报告才允许存在;**未登记的生成报告一律阻断**。登记为 regenerated 的必须真的在 deliver-check.sh 里被重算并 diff;登记为 not_regenerable 的必须写明为什么不能重算 —— 那是缺点,不是豁免。",
+    "excluded": "evaluation/delivery/** 不在此列:那是验收自己每次跑出来的归档,不是被验收的对象。",
+    "classes": {
+      "regenerated": "交付验收重新生成并与入库副本逐行 diff,差异即失败",
+      "figures_checked": "叙述性报告,数字抄自某份 regenerated 的报告;抄写由机检逐格钉住",
+      "not_regenerable": "当前无法在验收里重算,写明原因与代价 —— 属于缺点",
+      "historical": "更早批次或更早口径下生成的报告,已被后来那份取代;按「旧批次原始记录不得覆盖」保留不改,不参与当前口径,也不重算"
+    },
+    "scope": "evaluation/ 下所有入库 .md,除 delivery/(验收自己的归档)与 runner/runs/(运行记录)。每一份必须落进某一类;规则化的叙述文档(README.md / task.md / assets/ / PR-BODY.md 及五份顶层文档)由 narrative_rules 覆盖,其余逐份登记。"
+  },
+  "reports": [
+    {
+      "path": "evaluation/tasks/exit-code-fix/REPORT.md",
+      "class": "regenerated",
+      "step": "devloop-report"
+    },
+    {
+      "path": "evaluation/tasks/exit-line-collect/REPORT.md",
+      "class": "regenerated",
+      "step": "devloop-report-2"
+    },
+    {
+      "path": "evaluation/tasks/resource-download/REPORT.md",
+      "class": "regenerated",
+      "step": "devloop-report-3"
+    },
+    {
+      "path": "evaluation/attribution/CALIBRATION-batch4-reparsed-2026-09-11.md",
+      "class": "regenerated",
+      "step": "calibration"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-11-reparsed.md",
+      "class": "regenerated",
+      "step": "summary"
+    },
+    {
+      "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11.md",
+      "class": "regenerated",
+      "step": "rejudge-diff"
+    },
+    {
+      "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline-collect.md",
+      "class": "regenerated",
+      "step": "reparse-exitline"
+    },
+    {
+      "path": "evaluation/runner/COMPARISON-2026-09-11-reparsed.md",
+      "class": "figures_checked",
+      "step": "comparison-figures",
+      "why": "叙述由人写,主表逐格抄自 summary-2026-09-11-reparsed.md(它本身是 regenerated)。check-comparison-figures.mjs 逐格比对,任一格对不上即阻断 —— 2026-09-13 首次运行即抓到「均墙钟 s」被抄成 47 / 15(生成的那份是 47.2 / 15.4),已改回。"
+    },
+    {
+      "path": "evaluation/attribution/REPARSE-DIFF-2026-09-11-exitline.md",
+      "class": "not_regenerable",
+      "why": "它比的是**两代重判副本**:before 是退出行修复进主分支之前那一版 verify.mjs 判出来的 /private/tmp/topic4-rejudge/2026-09-11,after 是修复之后的 2026-09-11b。验收只重算一套副本,要重算这一份得用 git 里修复前的 verify.mjs 把 14 次运行再判一遍,再与当前版判一遍,代价约是现在 rejudge 步骤的两倍。",
+      "cost": "两套 14 份重判副本",
+      "mitigation": "它记的是一次一次性迁移的效果,结论不进任何当前口径;同一件事的可复算版本是 reparse-exitline 那一步(REPARSE-DIFF-2026-09-11-exitline-collect.md),它用 `git show 77959dc:` 取旧实现,在验收里每次重算。",
+      "registered_at": "2026-09-13"
+    },
+    {
+      "path": "evaluation/runner/COMPARISON-2026-09-06.md",
+      "class": "historical",
+      "why": "批次一/二的闸门对照,口径与样本均已被 2026-09-11 那份取代"
+    },
+    {
+      "path": "evaluation/runner/COMPARISON-2026-09-07.md",
+      "class": "historical",
+      "why": "同上,更早一版"
+    },
+    {
+      "path": "evaluation/runner/COMPARISON-2026-09-08.md",
+      "class": "historical",
+      "why": "批次三的对照,判据 gate-rules-2026-09-08f 之前的口径"
+    },
+    {
+      "path": "evaluation/runner/COMPARISON-2026-09-11.md",
+      "class": "historical",
+      "why": "文件开头自述「被取代」—— 正式名单与新解析那版是 COMPARISON-2026-09-11-reparsed.md"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-06.md",
+      "class": "historical",
+      "why": "对应批次的 summarize-runs 输出"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-07.md",
+      "class": "historical",
+      "why": "对应批次的 summarize-runs 输出"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-08.md",
+      "class": "historical",
+      "why": "对应批次的 summarize-runs 输出"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-11.md",
+      "class": "historical",
+      "why": "旧解析(attempts-v1)下的输出;当前口径是 summary-2026-09-11-reparsed.md"
+    },
+    {
+      "path": "evaluation/runner/summary-2026-09-11-reparsed-noread.md",
+      "class": "historical",
+      "why": "「未观察到记忆读取」子组的输出,对照报告引它做分组表;主表口径以 summary-2026-09-11-reparsed.md 为准"
+    },
+    {
+      "path": "evaluation/runner/REAL-RUN-2026-09-05.md",
+      "class": "historical",
+      "why": "最早一次真实运行的记录,文件自述「不再」代表当前做法"
+    },
+    {
+      "path": "evaluation/attribution/CALIBRATION.md",
+      "class": "historical",
+      "why": "批次三口径的校准,文件自述为历史;当前是 CALIBRATION-batch4-reparsed-2026-09-11.md"
+    },
+    {
+      "path": "evaluation/attribution/CALIBRATION-2026-09-11-as-committed-ef22463.md",
+      "class": "historical",
+      "why": "同一份校准在提交 ef22463 时的快照,留作对比,不随代码更新"
+    },
+    {
+      "path": "evaluation/calibration/loo-2026-09-06.md",
+      "class": "historical",
+      "why": "留一法校准,规则修订前后各一份,均为当时口径"
+    },
+    {
+      "path": "evaluation/calibration/loo-2026-09-06-before-rule-revision.md",
+      "class": "historical",
+      "why": "同上,规则修订之前的那份"
+    },
+    {
+      "path": "evaluation/calibration/loo-2026-09-07.md",
+      "class": "historical",
+      "why": "留一法校准的后续一版,批次四未再跑"
+    },
+    {
+      "path": "evaluation/author/artifacts/assessment-a-exit-line.md",
+      "class": "regenerated",
+      "step": "author-recheck",
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+    },
+    {
+      "path": "evaluation/author/artifacts/assessment-a-skl-ImeA29HL3Djj.md",
+      "class": "regenerated",
+      "step": "author-recheck",
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+    },
+    {
+      "path": "evaluation/author/artifacts/assessment-a-skl-sZFb3KatWY6m.md",
+      "class": "regenerated",
+      "step": "author-recheck",
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+    },
+    {
+      "path": "evaluation/author/artifacts/assessment-b-exit-line.md",
+      "class": "regenerated",
+      "step": "author-recheck",
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+    },
+    {
+      "path": "evaluation/author/artifacts/assessment-b-skl-lUWmwEYqsZDZ.md",
+      "class": "regenerated",
+      "step": "author-recheck",
+      "why": "从入库 .json 的 raw_model_output 重跑 checkAssessment 并重新渲染,与入库副本 diff 0;不调模型"
+    }
+  ],
+  "narrative_rules": [
+    "/README\\.md$",
+    "/task\\.md$",
+    "/assets/",
+    "/PR-BODY\\.md$"
+  ],
+  "narrative_paths": [
+    "evaluation/LESSONS.md",
+    "evaluation/STATE.md",
+    "evaluation/README.md",
+    "evaluation/REVIEW-GUIDE.md",
+    "evaluation/PR-DESCRIPTION.md",
+    "evaluation/attribution/REMAINING.md",
+    "evaluation/gate/PORT-TO-UPSTREAM.md"
+  ]
+}
