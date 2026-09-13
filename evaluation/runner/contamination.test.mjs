@@ -110,3 +110,26 @@ test("每份判定都带规则版本 —— 规则改过,旧判定不能被静�
   assert.equal(r.rules_version, RULES_VERSION);
   assert.match(RULES_VERSION, /^contamination-\d{4}-\d{2}-\d{2}[a-z]$/);
 });
+
+// ── 2026-09-13 自查补的三条 ──
+test("不带斜杠地点到共享根目录同样是枚举 —— 首版只有带斜杠才抓得住", () => {
+  const r = scanCapture({ text: "", runId: "r1", ownPaths: [OWN, OWN.replace(/\/session$/, "")], commands: ["ls -la /private/tmp/topic4-sessions"] });
+  assert.equal(r.contaminated, true, JSON.stringify(r.findings));
+});
+
+test("/tmp/… 与 /private/tmp/… 是同一个目录(macOS 的符号链接):别人的算污染,自己的不算", () => {
+  const foreign = scanCapture({ text: "", runId: "r1", ownPaths: [OWN], commands: ["cat /tmp/topic4-sessions/20260913T111005Z-devloop-no-note.0r6T/session/a.mjs"] });
+  assert.equal(foreign.contaminated, true);
+  const own = scanCapture({ text: "", runId: "r1", ownPaths: [OWN], commands: [`cd ${OWN.replace("/private/tmp/", "/tmp/")} && ls`] });
+  assert.equal(own.contaminated, false, JSON.stringify(own.findings));
+});
+
+test("命令从每一条请求里取并按 id 去重,不只看最长的那份对话", () => {
+  const tc = (id, command) => ({ id, function: { arguments: JSON.stringify({ command }) } });
+  const rows = [
+    { body: { json: { messages: [{ role: "assistant", tool_calls: [tc("c1", "ls /a")] }, { role: "tool" }, { role: "assistant", tool_calls: [tc("c2", "ls /b")] }] } } },
+    { body: { json: { messages: [{ role: "assistant", tool_calls: [tc("c9", "ls /z")] }] } } },   // 另一段更短的对话(子代理)
+    { body: { json: { messages: [{ role: "assistant", tool_calls: [tc("c1", "ls /a")] }] } } },   // 同一调用再次出现
+  ];
+  assert.deepEqual(commandsFromCapture(rows).sort(), ["ls /a", "ls /b", "ls /z"]);
+});

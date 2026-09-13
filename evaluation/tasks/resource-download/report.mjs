@@ -120,8 +120,9 @@ export function render(rep, manifest) {
       ...Object.entries(e).map(([arm, v]) => `| ${arm} | ${v.counted} | ${v.read_it} | ${v.unknown} |`), "",
       `没有清掉的原因:${rep.exposure.not_excluded_because}`);
   }
-  if (rep.rejudged) {
-    L.push("", `## 污染判定重判(${rep.rejudged.rules_version})`, "", rep.rejudged.why, "", rep.rejudged.effect, "", rep.rejudged.note);
+  // 规则改过几版就列几版,最新的在前;每一版的理由与影响都保留,不只显示最后一版
+  for (let rj = rep.rejudged; rj; rj = rj.previous ?? null) {
+    L.push("", `## 污染判定重判(${rj.rules_version})`, "", rj.why, "", rj.effect, ...(rj.note ? ["", rj.note] : []));
   }
   L.push("", `## 这份数字测的是什么,不是什么`, "",
     `- 测的是:在这一个新增功能任务上,一份写着两条实测行为的笔记,能不能让一个全新消费者把请求打到 \`files/download\`、把空内容当合法内容、把错误信封原样带出。`,

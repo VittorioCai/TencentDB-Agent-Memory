@@ -34,7 +34,14 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -67,7 +74,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -100,7 +114,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -137,7 +158,16 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": true,
+          "rules": [
+            "foreign_run_access"
+          ]
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -170,7 +200,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -203,7 +240,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -236,7 +280,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -275,7 +326,17 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": true,
+          "rules": [
+            "foreign_run_access",
+            "reference_leak"
+          ]
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -308,7 +369,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -341,7 +409,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -374,7 +449,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -411,7 +493,16 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": true,
+          "rules": [
+            "foreign_run_access"
+          ]
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -444,7 +535,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -477,7 +575,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -512,7 +617,14 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -545,7 +657,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -574,7 +693,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -603,7 +729,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -632,7 +765,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "no-note",
@@ -661,7 +801,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "note",
@@ -692,7 +839,14 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "note",
@@ -721,7 +875,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "note",
@@ -750,7 +911,14 @@
         "rules": [],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     },
     {
       "arm": "note",
@@ -781,7 +949,14 @@
         ],
         "rules_version": "contamination-2026-09-13a"
       },
-      "contamination_rules_version": "contamination-2026-09-13b"
+      "contamination_rules_version": "contamination-2026-09-13c",
+      "contamination_history": [
+        {
+          "rules_version": "contamination-2026-09-13b",
+          "contaminated": false,
+          "rules": []
+        }
+      ]
     }
   ],
   "status_observations": [
@@ -891,10 +1066,16 @@
     }
   ],
   "contamination_rejudged": {
-    "at": "2026-09-13T12:51:36Z",
-    "rules_version": "contamination-2026-09-13b",
-    "why": "首版规则按文本找别的运行 id,把「读到的文字里引用过那条路径」当成了「访问过那个目录」。仓库自己的交付报告(evaluation/delivery/…)引用着历次运行的命令行,消费者在自己的副本里读到它们并不是污染。改为按**访问**判:只取 tool_calls 的参数,工具回显的内容一概不算;省略号写法(…/session)不算路径。",
-    "effect": "20 次重判,4 次改判为干净(20260913T105239Z、20260913T113621Z 两次作废批次内的,以及有笔记组 20260913T123427Z、20260913T124050Z)。两次真污染仍被抓住:20260913T111005Z(reference_leak + 访问)、20260913T112941Z(枚举共享根目录)。",
-    "note": "每条运行保留 contamination_at_run_time,即当时那版规则给出的判定,不静默改写。作废批次不因重判恢复 —— 作废的理由是运行环境里有答案,与规则版本无关。"
+    "at": "2026-09-13T12:58:11Z",
+    "rules_version": "contamination-2026-09-13c",
+    "why": "自查补三处:不带尾斜杠地点到共享根目录也算枚举(b 版只有带斜杠才抓得住);/tmp 与 /private/tmp 同一处;命令从每条请求里取并按 id 去重,不只看最长的一份对话。",
+    "effect": "24 次重判,判定与 b 版完全一致",
+    "previous": {
+      "at": "2026-09-13T12:51:36Z",
+      "rules_version": "contamination-2026-09-13b",
+      "why": "首版规则按文本找别的运行 id,把「读到的文字里引用过那条路径」当成了「访问过那个目录」。仓库自己的交付报告(evaluation/delivery/…)引用着历次运行的命令行,消费者在自己的副本里读到它们并不是污染。改为按**访问**判:只取 tool_calls 的参数,工具回显的内容一概不算;省略号写法(…/session)不算路径。",
+      "effect": "20 次重判,4 次改判为干净(20260913T105239Z、20260913T113621Z 两次作废批次内的,以及有笔记组 20260913T123427Z、20260913T124050Z)。两次真污染仍被抓住:20260913T111005Z(reference_leak + 访问)、20260913T112941Z(枚举共享根目录)。",
+      "note": "每条运行保留 contamination_at_run_time,即当时那版规则给出的判定,不静默改写。作废批次不因重判恢复 —— 作废的理由是运行环境里有答案,与规则版本无关。"
+    }
   }
 }

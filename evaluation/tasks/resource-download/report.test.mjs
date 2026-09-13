@@ -102,3 +102,12 @@ test("没有 copy_exposure 时不生造这一节", () => {
   const md = render(buildReport({ runs: [run({})] }, load), { runs: [] });
   assert.ok(!/工作副本里本不该有/.test(md));
 });
+
+test("污染规则改过几版,报告就列几版 —— 上一版的理由不能被最新版挤掉", () => {
+  const m = { runs: [run({})], contamination_rejudged: { rules_version: "c", why: "c 为什么", effect: "c 影响",
+    previous: { rules_version: "b", why: "b 为什么", effect: "b 影响", note: "b 备注" } } };
+  const md = render(buildReport(m, load), m);
+  assert.match(md, /重判\(c\)/); assert.match(md, /重判\(b\)/);
+  assert.match(md, /b 为什么/); assert.match(md, /b 备注/);
+  assert.ok(md.indexOf("重判(c)") < md.indexOf("重判(b)"), "最新的在前");
+});

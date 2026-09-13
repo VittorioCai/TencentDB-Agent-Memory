@@ -138,9 +138,20 @@ agent,笔记不在基线里,读不到内容哈希);已修(注册表/作者 key �
 **没解决的一半**:同一用户的 shell 面前磁盘上没有真正读不到的位置,历次运行记录必然含答案 —— 靠逐次检测发现并作废,不靠隔离。
 
 前两个任务的 23 次归档运行已全部重扫:**无一命中**,已有闭环结论不受影响。
-报告生成器 `tasks/resource-download/report.mjs`(+7 测试)已就位,当前输出「未知:两组无可计样本」。
+**重跑后的正式样本(2026-09-13,污染守卫下)**:无笔记 **0/4**(四次全部只挂在「请求打到 files/download」这一条,
+其余四条行为断言全过),有笔记 **4/4**;笔记提及 193–321 次对 0 次;8 次污染检查全部干净。报告
+`tasks/resource-download/REPORT.md` 由 `report.mjs`(+9 测试)生成,结论句「有笔记组高出 100 个百分点(4/4 对 0/4)」。
+准入用 `admit-note.sh --approve`(管理员密钥,用户执行,§10 记录在 `artifacts/note-admission-*.json`)。
 
-**待办**:① 用户重跑无笔记组;② 用户把笔记置 `approved` 后跑有笔记组;③ 重跑后 `report.mjs` 重新生成。
+三件必须连着讲的事:**① 使用判定全是 `needs_review`** —— 消费者自己 curl 了 skill bridge 取回笔记,早于被记账的那次 fetch,
+归因不把说不清的算成用了(判别值确实在它写的 diff 里)。**② 工作副本里有我们自己的上游 PR 归档**
+(`evaluation/upstream/download-telemetry/`、`evaluation/PR-DESCRIPTION.md`),用大白话写着 files/download 返回原始字节;
+8 次里 6 次真读到了,含 2 次无笔记组 —— 读了仍失败。两组副本相同,它只让基线更强、差值更保守;报告按 capture 逐次计数
+(`task.json` 的 `copy_exposure`)。**③ 污染规则改过两版**(b:按访问判不按文本判,首版误报 4 次;c:自查补三处),
+每条运行保留历次判定(`contamination_history`),两次真污染在三版下都被抓住。
+
+**待办**:① 用户 `admit-note.sh --revoke` 置回 candidate;② 决定要不要清掉 PR 归档后两组重跑(实施者倾向不清,如实报);
+③ 归档运行前先按 §16 登记已烧毁的判别值并轮换 —— capture 里有明文,入库即烧毁。
 
 ## 批次里发现的三处缺陷(都已定位,处置各不同)
 

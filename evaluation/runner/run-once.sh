@@ -271,6 +271,10 @@ else
     SESSION_ROOT="${SESSION_ROOT:-/private/tmp/topic4-sessions}"
     mkdir -p "$SESSION_ROOT"
     SESSION_PARENT="$(mktemp -d "$SESSION_ROOT/${RUN_ID}.XXXX")"
+    # 工作副本跑完就删,不管是正常结束还是中途 die:证据早已导出到 RUN_DIR,副本只会变成
+    # 下一次运行可以翻到的答案(2026-09-13 那次就是 grep 到了上一次留下的副本)。KEEP_SESSION=1 可留。
+    remove_session_copy() { [[ -d "${SESSION_PARENT:-}" && "${KEEP_SESSION:-}" != "1" ]] && rm -rf "$SESSION_PARENT" && echo "      工作副本已删除($SESSION_PARENT);要保留就设 KEEP_SESSION=1" >&2; :; }
+    trap remove_session_copy EXIT
     SESSION_CWD="${SESSION_CWD:-$SESSION_PARENT/session}"
     mkdir -p "$SESSION_CWD"
     if [[ "$TASK_KIND" == "repo" ]]; then
@@ -877,9 +881,8 @@ rm -f "${TOKENS_PLAIN:-}" 2>/dev/null || :
 # 工作副本跑完就删。9/8 的修法(每次一个独立父目录)只挡住了 `ls ..`,挡不住 `ls ../..`
 # —— 2026-09-13 一次运行正是 grep 遍 /private/tmp/topic4-sessions/ 读到了上一次的产物。
 # 证据早已导出到 RUN_DIR(final.diff / run-artifacts.json / start-tests.tar),副本没有留存价值。
-if [[ -n "${SESSION_PARENT:-}" && -d "$SESSION_PARENT" && "${KEEP_SESSION:-}" != "1" ]]; then
-  rm -rf "$SESSION_PARENT" && info "工作副本已删除($SESSION_PARENT);要保留就设 KEEP_SESSION=1"
-fi
+# (删除本身由 EXIT trap 做 —— 见 SESSION_PARENT 建好之后那一行;中途 die 掉的运行也要删,
+#  不然一份带着答案的副本会留给下一次运行去翻。)
 info "records kept outside the repo → $RUN_DIR (collect after the batch: collect-runs.sh)"
 echo "      $RUN_DIR"
 exit "$VERDICT_CODE"

@@ -23,13 +23,17 @@ import { dirname, join } from "node:path";
 
 // a: 首版(按文本找别的运行 id)。b: 改为按**访问**判 —— 只看 tool_calls 的参数,
 // 工具回显的内容不算(仓库自己的交付报告里引用着历次运行的命令行,首版因此误报 4 次)。
-export const RULES_VERSION = "contamination-2026-09-13b";
+// c: 自查补三处 —— 不带尾斜杠地点到共享根目录也算枚举;/tmp 与 /private/tmp 同一处;
+// 命令从每条请求里取并按 id 去重,不只看最长的一份对话。
+export const RULES_VERSION = "contamination-2026-09-13c";
 export const SHARED_ROOTS = ["/private/tmp/topic4-sessions", "/private/tmp/topic4-runs"];
 // 共享根目录下被**命令**点到的路径。判访问,不判文本:仓库自己的交付文档里就写着历次运行的
 // 路径(evaluation/delivery/… 引用过 20260911T185119Z),消费者在自己的副本里读到它们不是污染
 // —— 2026-09-13 有笔记组两次就是这样被误报的。真正的污染是它**去访问**了别人的目录,
 // 而那必须在命令里写出路径,或者把共享根目录整个列一遍。
-const SHARED_PATH = /\/private\/tmp\/topic4-(?:sessions|runs)(?:\/[^\s"'`,)\]]*)?/g;
+const SHARED_PATH = /(?:\/private)?\/tmp\/topic4-(?:sessions|runs)(?:\/[^\s"'`,)\]]*)?/g;
+// macOS 上 /tmp 是 /private/tmp 的符号链接,两种写法指同一处;比较前统一,并去掉尾部斜杠
+const canon = (p) => p.replace(/^\/tmp\//, "/private/tmp/").replace(/\/+$/, "");
 
 /** 参考测试的用例标题 —— 模型从没见过它们,出现即泄漏。 */
 export function referenceFingerprints(source) {
@@ -60,17 +64,22 @@ export function tokensIn(text, { tokenPattern, tokenSha256 = [] }) {
  * 消费者读到那段文字不等于它执行过 —— 2026-09-13 第一版规则正是这样误报了三次。
  */
 export function commandsFromCapture(rows) {
+  // 每条请求都带完整历史,所以同一次调用会出现很多遍 —— 按调用 id 去重;
+  // 但不能只看最长的那份对话:子代理的对话更短,里面的命令一样是执行过的。
   const out = [];
-  let longest = [];
+  const seen = new Set();
   for (const row of rows) {
     const msgs = row?.body?.json?.messages;
-    if (Array.isArray(msgs) && msgs.length > longest.length) longest = msgs;
-  }
-  for (const m of longest) {
-    for (const tc of Array.isArray(m?.tool_calls) ? m.tool_calls : []) {
-      let a = tc?.function?.arguments;
-      if (typeof a === "string") { try { a = JSON.parse(a); } catch { out.push(a); continue; } }
-      if (a && typeof a === "object") for (const k of ["command", "path", "file_path", "pattern"]) if (typeof a[k] === "string") out.push(a[k]);
+    if (!Array.isArray(msgs)) continue;
+    for (const m of msgs) {
+      for (const tc of Array.isArray(m?.tool_calls) ? m.tool_calls : []) {
+        const key = tc?.id ?? JSON.stringify(tc?.function ?? tc);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        let a = tc?.function?.arguments;
+        if (typeof a === "string") { try { a = JSON.parse(a); } catch { out.push(a); continue; } }
+        if (a && typeof a === "object") for (const k of ["command", "path", "file_path", "pattern"]) if (typeof a[k] === "string") out.push(a[k]);
+      }
     }
   }
   return out;
@@ -82,12 +91,16 @@ export function commandsFromCapture(rows) {
  */
 export function scanCapture({ text, runId, fingerprints = [], tokenPattern = null, tokenSha256 = [], noteExpected = false, ownPaths = [], commands = [] }) {
   const findings = [];
-  const mine = [...ownPaths, runId].filter(Boolean);
+  // 自己的目录:session cwd、它的父目录、run dir 及其父目录(run.json 里都记着)。
+  // 只认「命令路径落在自己目录之内」;反过来「自己目录落在命令路径之内」不算 ——
+  // 那正是共享根目录,点到它就是在枚举别人的运行(首版这么写过,不带尾斜杠就漏)。
+  const mine = ownPaths.filter(Boolean).map(canon);
   const foreign = new Set();
   for (const cmd of commands) {
-    for (const p of cmd.match(SHARED_PATH) ?? []) {
-      if (p.includes("...") || p.includes("…")) continue;   // 省略写法(文档里的 `…/session`),不是真路径
-      if (mine.some((own) => p.startsWith(own) || own.startsWith(p + "/"))) continue;
+    for (const raw of cmd.match(SHARED_PATH) ?? []) {
+      if (raw.includes("...") || raw.includes("…")) continue;   // 省略写法(文档里的 `…/session`),不是真路径
+      const p = canon(raw);
+      if (mine.some((own) => p === own || p.startsWith(own + "/"))) continue;
       // 根目录本身被点到就是在枚举别人的运行(2026-09-13 那次 `grep -rln … /private/tmp/topic4-sessions/`)
       foreign.add(p);
     }
