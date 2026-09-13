@@ -74,3 +74,18 @@ test("渲染:先给人话,再按需展开证据", () => {
   assert.doesNotMatch(plain, /证据 evaluation/, "不展开时不该印证据行");
   assert.match(full, /evaluation\/runner\/runs/);
 });
+
+// ── 2026-09-13 第十一轮复核:展示里出现 attempts[].undefined 与「判据版本 ?」──
+// 不影响计算,但看着像半成品。确实未知就写「未记录」,不适用就写明,不许把 undefined 印出来。
+test("attempts 没有 kind 字段时,证据引用不许出现 undefined", () => {
+  const src = { verdict: { verdict: "PASS", attempts: [{ value: "bt-x", ok: true, call_id: "call_1" }] } };
+  const md = renderChain(buildChain("R", src), { expand: true });
+  assert.ok(!/undefined/.test(md), `不许出现 undefined:\n${md}`);
+  assert.match(md, /attempts\[0\]/, "没有 kind 就按下标定位");
+});
+
+test("判据版本缺失写「未记录」,不是问号", () => {
+  const md = renderChain(buildChain("R", { verdict: { verdict: "PASS", attempts: [] } }), { expand: true });
+  assert.ok(!/判据版本 \?/.test(md), "问号读起来像坏了");
+  assert.match(md, /判据版本未记录/);
+});

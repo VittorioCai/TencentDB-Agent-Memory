@@ -1,6 +1,6 @@
 # Trustworthy attribution for team assets
 
-Tooling that answers one question with evidence the model cannot fabricate:
+Tooling that answers one question with evidence that is independent of the model's own account and can be cross-checked against service-side records:
 **was a team asset actually used, and by whom?**
 
 The system injects team assets (skills, memories, knowledge bases) into an agent's
@@ -63,7 +63,7 @@ the result:
 
 | | |
 |---|---|
-| **delivered** vs **used** vs **validated** vs **contributed** | delivered = the content reached the model's context; used = a service-side record ties it to a call; validated = a run whose written copy also passed independent acceptance; contributed = a new asset entered the registry. Delivery is not use, and use is not benefit. |
+| **delivered** vs **used** vs **validated** vs **contributed** | **delivered** — the content reached the model's context (`recalled` / `selected` / `injected` / `fetched` are its shapes). **used** — evidence ties *this asset's content* to a later concrete operation, and the credited fetch is the earliest way that content reached the model; a service-side row alone is not enough, and a fetch that left no trace stays at `fetched`. **validated** — the operation that used it passed an independent check. **contributed** — `contributed.mjs` requires all three: a `validated` event for that version in the batch, a present-vs-absent contrast of *that asset* (leave-one-out; gate on/off does not qualify), and a non-zero gain metric. Retrieval is not use, use is not benefit, and a new candidate entering the registry is **none of these** — that is experience flowing back, reported separately. |
 | **asset-outcome profile** vs **a person's ability** | the field is still named `competence` for compatibility with the signed summary in Core, but it is read as a profile of outcomes already recorded **on the asset under assessment**. It is not a verified measure of the author, and the gate uses it for review priority only — never for admit/reject. |
 | **this version** vs **earlier batches** | every number names the asset version and the run set it came from. Batch 3 and batch 4 are not pooled, and a report generated before a calibration change is kept with a note saying so rather than edited. |
 | **the product's own capability** vs **what this branch adds** | retrieval, injection and the skill bridge are the product's; this branch adds the outcome records, the admission decision in Core, the receipt, and the calibration. Nothing here re-implements retrieval. |
@@ -122,7 +122,7 @@ node evaluation/contracts/validate.mjs \
   evaluation/provenance/artifacts/provenance-events.jsonl
 ```
 
-Full suite: 800 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
+Full suite: 802 tests (`node --test evaluation/**/*.test.mjs` from the repository root). The
 acceptance compares this number with what the run actually reports, so it cannot go stale
 quietly again — it had, twice.
 
@@ -160,8 +160,9 @@ and why — one report, with its cost written down):
   subpath the injected tool list never names. Three batches were run under
   conditions that differ, so the report keeps them apart and gives no pooled
   figure; per-batch counts and pass rates are in that page rather than restated
-  here. In every batch the no-note arm fails the behaviour assertions and the
-  note arm passes.
+  here. The no-note arm passes nothing in any batch; the note arm passes every
+  run in the first and third and four of five in the second, so "with the note it
+  works" is not what these runs show.
   Said with it, not after it: as the runs were recorded, not one use event
   reached `used`. That was our own bookkeeping, not the model — this task's note
   was never in the frozen asset-pool snapshot, because the snapshot is frozen

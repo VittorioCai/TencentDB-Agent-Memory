@@ -1,16 +1,21 @@
-> ## 题目四交付 · Topic 4 delivery
+> ## 腾讯云智能体记忆大赛 · 题目四:可信归因与准入闸门
 >
-> **这个分支 `topic4-attribution-gate` 是腾讯云智能体记忆大赛「题目四:可信归因 + 准入闸门」的交付。**
-> 下面是产品自己的 README(上游原文,未改);题目四的全部内容在 [`evaluation/`](./evaluation/) 目录。
+> **这个分支 `topic4-attribution-gate` 是题目四的交付。** 下面是产品自己的 README(上游原文,未改)。
+>
+> **交付文档与评测入口在 [`evaluation/`](./evaluation/)**;产品侧的实现分布在 `MemoryCore/`(准入闸门与资产状态)、
+> `MemoryProxy/`(受信调用记录)与 Panel,净改动见下表最后一行。
 >
 > | 先看这个 | 是什么 |
 > |---|---|
-> | [`evaluation/REVIEW-GUIDE.md`](./evaluation/REVIEW-GUIDE.md) | **从这里开始读**,评审导读 |
-> | [`evaluation/PR-DESCRIPTION.md`](./evaluation/PR-DESCRIPTION.md) | 交付说明:做了什么、结论是什么 |
+> | [`evaluation/REVIEW-GUIDE.md`](./evaluation/REVIEW-GUIDE.md) | **从这里开始读**:问题 → 一条真实的链 → 三项发现与边界 → 官方任务对应 → 怎么复算 |
+> | [`evaluation/PR-DESCRIPTION.md`](./evaluation/PR-DESCRIPTION.md) | 交付说明:做了什么、结论是什么、限制在哪 |
 > | [`evaluation/SEAL-CHECK.md`](./evaluation/SEAL-CHECK.md) | 封版核对:哪些能自己复算、剩余缺点如实列出 |
 > | [产品侧净改动(21 文件)](https://github.com/VittorioCai/TencentDB-Agent-Memory/compare/0468a2a...c372d80) | 闸门以**上游最新代码**为基线单独重拆,证明装得进去 |
 >
-> **想自己复算**:克隆本分支后跑 `bash evaluation/deliver-check.sh` —— **不需要任何密钥**。
+> **想自己复算**:克隆本分支后跑 `bash evaluation/deliver-check.sh`。
+> **历史实验的复算不需要任何密钥**;线上环境检查另行报告,缺服务或缺凭据时不会通过,
+> 所以**整条命令的退出码正常就是非零** —— 结论看 `evaluation/delivery/<时间>/SUMMARY.md` 末尾那句,
+> 它把「离线复算」与「线上检查」分开判。
 >
 > ---
 

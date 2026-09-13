@@ -82,7 +82,8 @@ export function render(s, controls, manifest) {
     const bad = [...ctrl.changed, ...fid.changed, ...ctrl.errors, ...fid.errors];
     L.push(`**重放装置不可信**:${bad.length ? bad.join("、") + " 对不上当初的判定或以 ERROR 收场" : (ctrl.why ?? fid.why)}。下面的差值不成立。`, "");
   } else {
-    L.push("两组都全对 —— 装置不会凭空造出或抹掉 `used`,所以下面的差值可以读。", "");
+    L.push("两组都全对。这支持的是:**在这些对照记录上,重放逐事件复现一致** —— 装置没有在它们身上造出或抹掉 `used`。");
+  L.push("它不是一句普遍保证;换一批记录仍要重新验。有了这个前提,下面的差值才可以读。", "");
   }
   L.push("## 差值", "", "| 批 | 组 | 计入 | 重判前带 `used` | 重判后带 `used` | 重判后有任何笔记事件 |", "|---|---|---:|---:|---:|---:|");
   for (const [batch, arms] of Object.entries(s.byBatch).sort()) {
@@ -123,7 +124,9 @@ export function render(s, controls, manifest) {
   L.push("笔记内容进入了后续操作并被判决器记账;**不能**单凭 `used` 宣称任务成功由这条笔记造成 ——");
   L.push("行为差异与采用归因是两件事,报告分开陈述。", "");
   L.push("原始运行记录已入库(`evaluation/runner/runs/`),上面的 rows 由 `rejudge-pool.sh --from archive` 从入库副本重算,");
-  L.push("验收里有一步**实跑**这三份而不只重画表格;判别值明文只在 Core(§16),所以那一步必须线上。", "");
+  L.push("验收里有一步(`rejudge-execute`)**实跑**这三份而不只重画表格。判别值明文虽只在 Core(§16),");
+  L.push("但这些版本**已经烧毁**(明文已在提交树里),由 `build-burned-registry.mjs` 逐个用 `git grep` 证明后登记,");
+  L.push("`resolve-tokens.mjs` 因此可走离线路线 —— **干净克隆上不需要密钥也能重判**,封版那次已实跑验证。", "");
   L.push("## 这说明什么,不说明什么", "");
   L.push("- **说明**:此前「归因未闭合」是我们自己少收了证据,不是模型没用笔记。补上快照之后,");
   L.push("  「这次改动确实用了这条被取回的笔记」在这些运行上有了闭合的证据链。");

@@ -52,11 +52,16 @@ export function buildChain(runId, src = {}, opts = {}) {
   // ④ 采用
   const att = src.verdict?.attempts ?? [];
   if (att.length) push(4, `操作实际改了东西:${att.length} 次尝试,其中带判别值的 ${att.filter((a) => a.value).length} 次。`,
-    att.map((a) => ev(`${runDir(runId)}/verdict.json`, `attempts[].${a.kind}`, `${a.value} ok=${a.ok}`)));
+    // 批次四那时的 attempt 没有 `kind`(字段是 call_id / host / port),直接拼会印出
+    // `attempts[].undefined` —— 不影响计算,但看着像半成品(第十一轮复核指出)。按下标定位,
+    // 有 kind 才加上它;`ok` 未记时写「未记录」,不折成 false。
+    att.map((a, i) => ev(`${runDir(runId)}/verdict.json`, `attempts[${i}]${a.kind ? `.${a.kind}` : ""}`,
+      `${a.value ?? "(无判别值)"} ok=${a.ok ?? "未记录"}`)));
   else push(4, "", [], "verdict.json 里没有 attempts,说明没有可归因的改动");
 
   // ⑤ 独立验收
-  if (src.verdict?.verdict) push(5, `独立验收:${src.verdict.verdict}(判据版本 ${src.verdict.acceptance_version ?? "?"})。`,
+  // 判据版本缺失时原来印「判据版本 ?」,问号读起来像坏了 —— 早期批次的 verdict.json 本来就没有这个字段。
+  if (src.verdict?.verdict) push(5, `独立验收:${src.verdict.verdict}(${src.verdict.acceptance_version ? `判据版本 ${src.verdict.acceptance_version}` : "判据版本未记录 —— 该批次的 verdict.json 尚无此字段"})。`,
     [ev(`${runDir(runId)}/verdict.json`, "verdict / reason", `${src.verdict.verdict} — ${(src.verdict.reason ?? "").slice(0, 80)}`)]);
   else push(5, "", [], "没有 verdict.json,验收结果不可考");
 
