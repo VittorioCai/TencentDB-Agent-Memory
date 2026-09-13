@@ -157,19 +157,31 @@ and why — one report, with its cost written down):
   adding a tool rather than fixing one, judged by behaviour rather than by a
   marker — the reference test asserts zero bytes for an empty resource, the
   error envelope surfacing, and the request going to `files/download`, a
-  subpath the injected tool list never names. On this branch's samples the
-  no-note arm is 0/4, every run failing that one assertion, and the note arm
-  4/4. Said with it, not after it: every use event is `needs_review`, because
-  the consumers fetched the note by calling the skill bridge themselves rather
-  than through the credited fetch; the working copy also carried this
-  repository's own upstream PR write-up, which states in prose that
-  `files/download` returns raw bytes. Both arms had it in their copy, but they did
-  not read it equally often — four of four note runs and two of four no-note runs
-  did — so it is a shared alternative source whose effect on the gap between the
-  arms cannot be determined from these eight runs, in either direction; settling
-  that needs a separate batch with it excluded. And the first no-note batch of
-  sixteen was voided because the implementer had left the reference
-  implementation on disk, which the runner now checks for and would refuse.
+  subpath the injected tool list never names. Three batches were run under
+  conditions that differ, so the report keeps them apart and gives no pooled
+  figure; per-batch counts and pass rates are in that page rather than restated
+  here. In every batch the no-note arm fails the behaviour assertions and the
+  note arm passes.
+  Said with it, not after it: as the runs were recorded, not one use event
+  reached `used`. That was our own bookkeeping, not the model — this task's note
+  was never in the frozen asset-pool snapshot, because the snapshot is frozen
+  while the note is still `candidate` and the arm admits it afterwards, and
+  `provenance/build-events.mjs` writes no event at all for an asset the snapshot
+  does not hold. The other two loop tasks each carry their own snapshot; this one
+  had none. With that corrected and the runs re-judged, most counted note runs do
+  reach `used` and no no-note run produces a note event — `REJUDGE-POOL.md`, with
+  the criteria frozen beforehand in `rejudge-criteria.json` and two fidelity
+  controls reported before the result. The first batch cannot be re-judged: its
+  note was v1 and that value is burned, so a re-judge would read as a false
+  negative. `run-once.sh` now refuses to start when a token-bearing asset is
+  missing from the snapshot.
+  Two earlier explanations for the same gap were wrong and are kept in
+  `STATE.md` rather than removed: this repository's own upstream PR write-up
+  sitting in the working copy, excluded from the second batch onward, and the
+  attribution sink being unreachable, restored before the third. Both were real
+  problems; neither was what blocked `used`. The first no-note batch of sixteen
+  was voided because the implementer had left the reference implementation on
+  disk, which the runner now checks for and would refuse.
 - **The author dimension** (`author/README.md`): a context-based assessment
   read from the author's own records, cited and machine-checked, used by the
   gate for review priority only.

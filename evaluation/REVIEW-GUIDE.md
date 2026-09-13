@@ -6,7 +6,7 @@
 分支 `topic4-attribution-gate`;交付形式见 `evaluation/PR-DESCRIPTION.md`;状态与线上环境见 `evaluation/STATE.md`。
 
 **PR 正文一律按 `PR-DESCRIPTION.md` 原样提交,不加 AI 生成标记**(用户裁定 2026-09-12:这份工作是用户主导 + 多方复核,那行标记会让人低估实际投入;提到腾讯官方仓库的 PR 尤其不能带)。本文件与 `PR-DESCRIPTION.md` 里都没有这类行——曾出现在 fork PR #1 的线上正文里(建 PR 时被自动追加),已用 `gh pr edit --body-file` 覆盖;该 PR 随后按用户决定关闭,交付载体改回分支本身。四条上游 PR(#1358 / #1359 / #1360 / #1361)的正文均已核过,无该标记。
-原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)、`20260911T1*-devloop-*`(前两个闭环任务,23)与 `20260913T1*`(第三个闭环任务,24:8 次样本与 2 次事故运行全量,14 次作废运行只留判决与污染判定),每目录只少一个无脚本读取的
+原始运行记录在分支里:`evaluation/runner/runs/20260910T23*`(批次四,14)、`20260911T1*-devloop-*`(前两个闭环任务,23)与 `20260913T1*`(第三个闭环任务:前两批样本与事故运行全量,作废运行只留判决与污染判定;第三批的运行记录在 `/private/tmp/topic4-runs` 未入库),每目录只少一个无脚本读取的
 `capture-before.jsonl`(清单与哈希 `evaluation/gate/artifacts/run-records-committed-2026-09-12.json`);重判副本由 `deliver-check.sh` 按需重生成。
 
 **闸门装得进今天的产品**:分支 `gate-core-minimal`(`c372d80`)以上游 `feat/server_team@0468a2a` 为基线重拆,21 文件 `+4043/−34`,四处**文本合并**冲突全是 import 列表;`build:plugin` 通过、`npm test` 132 个全过;`build` 与 `typecheck:metadata` 红,但纯净上游同样红(`src/metadata` 子树 11 → 6、新增 0;全树 123 → 118、新增 2,那 2 条是同两个未定义名字换了错误码)。**部署后的行为兼容性尚未验证;它支持「具备移植可行性」,不支持「已达上游合入或生产条件」。** 比较基线钉在 `0468a2a...c372d80`。见 `evaluation/gate/PORT-TO-UPSTREAM.md`,原始输出在 `gate/artifacts/port-*`。
@@ -26,7 +26,7 @@
 | 生成报告登记核对 / 对照报告逐格 / 套件规模声明 | 73 份全部有归属;26 格一致;文档声明与实跑一致 |
 | 登记报告的执行核对 `--run-out` | 13 份逐份对上本轮的执行记录与自己的产物 |
 | 闭环展示 `chain-cli` | 3/3 条 case 成功,逐次记退出码 |
-| 第三任务样本污染批检 `contamination.mjs --batch` | 8 次样本全部明确判为干净 |
+| 第三任务样本污染批检 `contamination.mjs --batch` | 计入样本的运行全部明确判为干净;已判污染的逐条点名、不进扫描集(与报告同口径)|
 | 退出行 reparse `reparse-exit-status.mjs` | 与 `REPARSE-DIFF-2026-09-11-exitline-collect.md` diff 0 |
 | 两个 selfcheck 的【0】–【3】段 | 冻结起点、参考测试先失败后通过、套件不回归 |
 | demo 的 record 段(7 段中 5 段) | 读已提交记录 |
@@ -70,7 +70,7 @@
 | 二 检索与最小上下文 | 未另建检索;送达只经产品自己的 `skill_search`,注入块对新 agent 为空。**两层过滤分开展示**:准入由产品闸门做(与任务无关),任务相关性由模型检索时做 | `node evaluation/attribution/selection-cli.mjs` —— 一次真实运行:池中 7 项 → 闸门挡下 2 项(candidate / failed)→ 已准入 5 项 → 模型取回 1 项 → 进入上下文 2729 **字符**(未测量 token,没有分词器就不报)→ 够不够只引独立验收(PASS 6/6),不另下结论 |
 | 三 使用链路与可信归因 | recalled / injected / fetched / used / validated / corrected 六态;结果按调用不按运行;关系 cross_user 由服务端推导;只读受信行 | `evaluation/README.md`、`gate/README.md` "The rules"、`attribution/` | `node evaluation/attribution/calibrate-runs.mjs …`(命令在报告开头) |
 | 四 用户可感知回执 | 一资产一行一标记;来源与消费者同行;"相关测试 X 通过"措辞;低置信风险来自闸门 confidence | `receipt/README.md`、各运行 `receipt.txt` | `node evaluation/receipt/render-cli.mjs <run>/receipt.json` |
-| 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环:前两个任务无 / 有笔记各 2 次,第三个任务(新增功能、行为判定)无笔记 4 次 0/4、有笔记 4 次 4/4,同页写明使用判定全是 needs_review、副本里另有共同替代信息源、首批 16 次因环境污染整批作废(演示,非性能对照) | `runner/COMPARISON-2026-09-11-reparsed.md`、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
+| 五 效果评测与反事实 | 批次四 gate-off / gate-on 交错各 5 次;留一法 contributed;开发闭环:前两个任务无 / 有笔记各 2 次,第三个任务(新增功能、行为判定)跑了三批、条件不同不合并,逐批数字见该页(每批都是无笔记组不过、有笔记组过);采用归因见 `tasks/resource-download/REJUDGE-POOL.md` —— 按运行当时的记录 0 次 `used`,根因是本任务的笔记不在冻结池快照里,补上后重判多数给出 `used`、无笔记组仍 0 条笔记事件;首批 16 次因环境污染整批作废(演示,非性能对照) | `runner/COMPARISON-2026-09-11-reparsed.md`、`tasks/*/REPORT.md` | `bash evaluation/deliver-check.sh` |
 | 六 经验回流与候选 | 提取候选默认 candidate、私有;闸门规则 admit 需跨人 validated ≥ 1 且无 corrected;作者上下文评估只定复核优先级 | `tasks/exit-code-fix/REPORT.md` "闸门有没有动"、`gate-evaluations.jsonl`、`author/README.md` | `node evaluation/tasks/exit-code-fix/gate-evaluate.mjs --dry-run` |
 
 ## 导师意见 → 本分支(两条)
@@ -78,7 +78,7 @@
 | 条 | 对应 | 文件 |
 |---|---|---|
 | ① 置信度是入池 / 回池门禁,系统辅助人判断;离线 + 在线两类指标 | 闸门在 Core 写 status;confidence = 跨人结果中 validated 占比,带分母,无证据为 null;人可推翻、可撤回结果行;pending 资产带复核优先级排队 | `gate/README.md`、`MemoryCore/src/metadata/service/asset-gate.ts` |
-| ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移;第三任务换一类工作(新增功能)、换一份笔记、采用靠行为判定(`tasks/resource-download/REPORT.md`:0/4 对 4/4,使用判定全部 needs_review,副本里含本仓库自己的 PR 归档,作废批次与污染检查同页写明)。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
+| ② 人的因素:作者历史表现、泛化性、使用侧效果 | 作者:闸门信号里其他资产的跨人 validated / corrected 与 30 天内判错资产;`evaluation/author/` 从作者自己的记录做评估(逐条引用、程序核事实、能力只由核实结果推出、永不推出 high)。泛化:`distinct_tasks` / `distinct_consumers` 报告不设阈值;第二任务测同一笔记在另一文件上的迁移;第三任务换一类工作(新增功能)、换一份笔记、采用靠行为判定(`tasks/resource-download/REPORT.md`:三批分列不合并,作废批次与污染检查同页写明;采用归因的更正与两组保真对照在 `REJUDGE-POOL.md`)。使用侧:结果按调用绑定,收益经留一法 | `author/README.md`、`author/artifacts/assessment-*-exit-line.md`、`tasks/exit-line-collect/REPORT.md` |
 
 ## 离线 / 在线两类指标,对应到代码里的名字
 
