@@ -69,8 +69,7 @@ test("真文件:入库的 SEAL-CHECK.md 与从入库 rows.jsonl 重算的一致"
   assert.equal(md, readFileSync("evaluation/SEAL-CHECK.md", "utf8"));
 });
 
-test("实跑重判也属于干净克隆上按设计跑不了的那一类 —— 不能表现成无解释的失败", () => {
+test("实跑重判**不再**是干净克隆上跑不了的那一类 —— 判别值已烧毁并登记,离线可解析", () => {
   const md = render([row("suite")], OPTS);
-  assert.match(md, /`rejudge-execute`/);
-  assert.match(md, /判别值明文.*只在 Core|只在 Core/);
+  assert.ok(!/\| `rejudge-execute` \|/.test(md), "不该再列进「按设计不通过」那张表");
 });

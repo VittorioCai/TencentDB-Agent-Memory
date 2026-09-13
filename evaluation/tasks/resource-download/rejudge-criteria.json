@@ -73,6 +73,16 @@
         "③ 池快照闸门排在 run-once.sh 第 472 行,而 CodeBuddy 在 311 行就启动了 —— 只拦住后面的归因,模型那一趟已白烧。已前移到建消费者、切 proxy、开会话**之前**,并加执行测试:真跑一次,断言非零退出且 consumer.json / prepare.log / codebuddy-stdout.txt 一件都没生成。"
       ],
       "boundary_restated": "这份快照是**事后补录的资产索引**,不是当时冻结的历史池。它支持的是「笔记内容进入了后续操作并被记账」,**不能单凭 `used` 宣称任务成功由这条笔记造成**。"
+    },
+    {
+      "at": "2026-09-13T20:45:00Z",
+      "what": "第十轮第 ① 条我报早了 —— 上一个提交其实**一个运行记录都没归档**;并且我关于「v2 未烧毁」的判断从一开始就是错的。",
+      "archive": "`.gitignore:151` 整目录忽略 `evaluation/runner/runs/`,第二批当初是强制加进去的。我用 `git add -A`,第三批入库 0/48;那个提交加的 205 个文件全是 delivery 目录。已用 `git add -f` 真正归档:12 次运行、每次 48 个文件,与第二批一致。",
+      "burn": "归档把 v2 判别值带进提交树(judgement.md、capture.jsonl、used-events.jsonl 等每次 9 个文件含明文)。但**它早就烧了**:`bc7ef3a`(冻结第三批条件那个提交)上已有 60 个文件含该值,是 delivery 里 rows 的 `target_ref` 嵌着 `fetch-resource.bt-….test.mjs` 这个文件名带进去的。",
+      "my_method_error": "冻结文件里写「提交树里 0 个文件含 bt- 值,没被烧毁」,依据是 `git grep -lE ... -- evaluation` —— **没带修订号**,查的是工作区。带上 `HEAD` 再查是 153 个。以后核烧毁一律 `git grep <rev>`。",
+      "does_it_invalidate_batch_3": "不。工作副本是从 `start_commit 9e3752fe` 那棵树建的,该树上含该值的文件数为 **0**,值在 9/13 才产生。运行本身没有被污染。",
+      "registered": "已用 `build-burned-registry.mjs` 登记(它自己用 git grep 证明值确在提交树里,不在就拒登):新增 `skl-XAzqAgejM7O4@2`,其余条目未动。**按登记簿自己的规则,已登记即已烧毁,任何后续运行前必须先轮换。**",
+      "upside": "登记之后 `resolve-tokens` 的离线路线可解析 v2,实测 `TOKENS_OFFLINE=1` 重判产出与入库**逐字一致** —— `rejudge-execute` 因此从「干净克隆上跑不了」变成**跑得了**:评委不用任何密钥就能自己重算这些判定。判决器与封版页已按此改。"
     }
   ]
 }

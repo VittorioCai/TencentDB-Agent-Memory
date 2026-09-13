@@ -102,7 +102,8 @@ d="$(mddiff evaluation/tasks/resource-download/REPORT.md "$OUT/REPORT-resource-d
 row "devloop-report-3" "node evaluation/tasks/resource-download/report.mjs" "$e" "exit 0, diff 0 vs resource-download/REPORT.md" "$(grep -oE '计入样本 [0-9]+ 次' "$OUT/report-resource-download.txt" | head -1)" "$d"
 
 echo "[6c1] third task's re-judge actually re-executed from the archived evidence (not just re-rendered)"
-# 判别值明文只在 Core(§16),所以这一步**必须线上**:干净克隆上它按设计跑不了。
+# 判别值已烧毁并登记进 burned-tokens.json,resolve-tokens 走离线路线即可解析 ——
+# 所以这一步在**干净克隆上也跑得了**,评委不用任何密钥就能自己重算这些判定。
 re=0
 for spec in "baseline:recorded:rejudge-baseline-rows.jsonl" \
             "corrected:evaluation/tasks/resource-download/asset-pool-snapshot.json:rejudge-rows.jsonl"; do
@@ -120,7 +121,7 @@ rl=$(cat "$OUT"/rejudge-*.diff 2>/dev/null | grep -c '^[+-][^+-]' || true)
 rn=0; for f in rejudge-baseline-rows.jsonl rejudge-corrected-rows.jsonl rejudge-control-rows.jsonl; do [[ -s "$OUT/$f" ]] && rn=$((rn + 1)); done
 if (( rn < 3 )); then rnote="只产出 $rn/3 份 rows —— 重判要判别值明文,而它只在 Core(§16),这里解析不到,一次也没重判"
 else rnote="三份 rows 全部产出,差异行 $rl"; fi
-row "rejudge-execute" "rejudge-pool.sh --from archive ×3(基线/修正/第二任务对照)" "$re" "exit 0;三份 rows 从入库归档重跑,逐行与入库一致(需 Core 解析判别值,干净克隆上按设计跑不了)" "$rnote"
+row "rejudge-execute" "rejudge-pool.sh --from archive ×3(基线/修正/第二任务对照)" "$re" "exit 0;三份 rows 从入库归档重跑,逐行与入库一致(判别值已烧毁并登记,离线可解析)" "$rnote"
 
 echo "[6c2] third task's re-judge page reproduced (the pool-snapshot correction, before/after)"
 node evaluation/tasks/resource-download/rejudge-report.mjs --out="$OUT/REJUDGE-POOL-reproduced.md" > "$OUT/rejudge-pool.txt" 2>&1; e=$?

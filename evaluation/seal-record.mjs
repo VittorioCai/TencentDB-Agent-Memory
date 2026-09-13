@@ -15,7 +15,6 @@ export const LIVE_ONLY = {
   "conditions-check": "需要 Core + 作者密钥 + docker:Core 读取、容器镜像摘要、消费者记忆各行标 unreadable",
   "selfcheck": "第【4】段核笔记正文需要 Core;判别值已烧毁,按设计失败,形态由判决器核对",
   "selfcheck-exit-line-collect": "同上:笔记 v2 的值已烧毁",
-  "rejudge-execute": "重判要用判别值明文,而它只在 Core(§16):干净克隆上解析不到,一次也重判不了",
 };
 
 export function parseRows(text) {
