@@ -80,7 +80,22 @@ verify_ready() {
   # "Ready" must imply the pool cannot move during the run.
   [[ "$(core_extraction_state)" == false ]] \
     || { echo "  ${C_R}core auto-extraction is $(core_extraction_state), not off — the pool could change mid-run${C_0}"; bad=1; }
+  # The telemetry sink must be reachable, or the service-side bridge_call rows the
+  # attribution credits a fetch with are never written. 2026-09-13: thirty-six runs of the
+  # third task went out with no ClickHouse container — the 2026-09-11 switch record had
+  # said "needed before any run" and nothing here enforced it; every use event stopped at
+  # needs_review. Same treatment as the extraction switch: a hard precondition, not a note.
+  [[ "$(clickhouse_state)" == ok ]] \
+    || { echo "  ${C_R}clickhouse is $(clickhouse_state) — bridge_call rows would not be written and no fetch could be credited${C_0}"; bad=1; }
   return "$bad"
+}
+
+# ok | unreachable | disabled. Checked from the host on the published port (the proxy
+# reaches it by the docker alias; both must hold, and the config must have it enabled).
+CLICKHOUSE_PING_URL="${CLICKHOUSE_PING_URL:-http://127.0.0.1:8123/ping}"
+clickhouse_state() {
+  grep -A1 '^clickhouse:' "$CONFIG" 2>/dev/null | grep -q 'enabled: true' || { echo disabled; return; }
+  [[ "$(curl -sS -m 3 "$CLICKHOUSE_PING_URL" 2>/dev/null)" == "Ok." ]] && echo ok || echo unreachable
 }
 
 set_yaml_upstream() {  # $1 = url
@@ -217,6 +232,13 @@ PY
       false) echo "  core auto-extraction: OFF  (pool frozen for the comparison)" ;;
       true)  echo "  core auto-extraction: ON   ${C_Y}— the pool can change between runs${C_0}" ;;
       *)     echo "  core auto-extraction: ${C_Y}unknown (could not read $core_cfg)${C_0}" ;;
+    esac
+    # The telemetry sink: without it no bridge_call row is written and no fetch can be
+    # credited (2026-09-13, the third task's 36 runs). Recorded here, enforced in verify_ready.
+    case "$(clickhouse_state)" in
+      ok)          echo "  clickhouse:       reachable at $CLICKHOUSE_PING_URL  (bridge_call rows will be written)" ;;
+      unreachable) echo "  clickhouse:       ${C_R}UNREACHABLE at $CLICKHOUSE_PING_URL — bridge_call rows would be lost; no fetch could be credited${C_0}" ;;
+      *)           echo "  clickhouse:       ${C_Y}disabled in the proxy config — telemetry off${C_0}" ;;
     esac
     bash "$EVAL/eval-proxy.sh" status
     bash "$EVAL/eval-core.sh" status

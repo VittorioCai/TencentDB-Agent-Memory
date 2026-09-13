@@ -176,6 +176,12 @@ v1 判别值随之进入提交树即烧毁,已由 `build-burned-registry.mjs` �
 同轮按复核方意见把「抄不来」改成「未在注入的工具清单里直接给出」—— 源码与 PR 归档仍可能提供那条路径,原话说满了;
 四个源头(task.json、参考测试注释、PR-DESCRIPTION、STATE)逐处改,生成的报告重算。
 
+**ClickHouse 已恢复(2026-09-13 18:07Z,用户执行,§10 记录 `gate/artifacts/clickhouse-restore-20260913.json`,镜像摘要 `d73903d1…`)**:
+容器 `clickhouse`、别名 `clickhouse`、网络 `tdai-memory-stack`;proxy 重连后自建四张表,连通性检查 `clickhouse: ok`。
+原始启动命令(9/4)没有记录,本次按现行 proxy 配置反推,tag 未固定、以摘要为准。
+`prepare.sh` 从此把它当**硬前置**(与提取开关同等):`verify_ready` 在不可达或未启用时判未就绪;`--status` 显示 `clickhouse:` 一行。
+**尚未验证**:一次真实运行后 `tool-call-logs-all.jsonl` 里是否出现 `bridge_call` —— 由冒烟运行确认,冒烟不进样本。
+
 **第九轮复核(2026-09-13 晚)两条报告收尾 + 一条追查:**
 **① 主结果分了批,曝光统计还在合并** —— 已改:曝光表、条件说明、样本量全部按批输出,顶层不再给合计。
 **② 「读到了归档」证据不足** —— 复核方把那行特征文本只放进 `assistant` 消息,仍被记成「读到」(已复现)。

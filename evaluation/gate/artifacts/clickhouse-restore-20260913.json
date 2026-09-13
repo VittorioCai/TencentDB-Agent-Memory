@@ -1,0 +1,24 @@
+{
+  "schema": "live-state-record-v1",
+  "at": "2026-09-13T18:07:47.858989012Z",
+  "what": "恢复 ClickHouse 埋点落点(容器 clickhouse,网络别名 clickhouse),让 proxy 的 bridge_call / model_intent 行重新落盘",
+  "why": "第三任务两批共 36 次运行的服务端受信行为 0(采集端不在),归因停在 needs_review;9/11 22:45 的切换记录已写明「needed before any run」而未被当作前置检查。",
+  "by": {
+    "role": "用户执行(线上状态改动,CLAUDE.md §10);实施者只写本记录"
+  },
+  "how_reconstructed": "原始启动命令(9/4)没有留下记录,本次按现行 proxy 配置反推:docker run -d --name clickhouse --network tdai-memory-stack --network-alias clickhouse -p 8123:8123 -e CLICKHOUSE_PASSWORD=local clickhouse/clickhouse-server;随后 docker restart tdai-proxy",
+  "image": {
+    "ref": "clickhouse/clickhouse-server",
+    "digest": "sha256:d73903d1b61dfe825fc3810542f252966f33d3fd8efb3b3edcbbafb46b524b04",
+    "note": "tag 未固定(latest);摘要记在此,后续批次的 conditions 以摘要为准"
+  },
+  "verified": [
+    "docker inspect:网络 tdai-memory-stack,alias clickhouse",
+    "宿主机 curl 127.0.0.1:8123 SELECT 1 → 1",
+    "proxy 日志 18:07:48 clickhouse.init.telemetryTableReady / tableReady;connectivity.check clickhouse: ok (22ms)",
+    "SHOW TABLES FROM context_proxy → session_init_logs, tool_call_logs, usage_logs, usage_raw"
+  ],
+  "not_verified_yet": "一次真实运行后 tool-call-logs-all.jsonl 里是否出现 bridge_call 行 —— 由冒烟运行确认,不由本记录声称",
+  "restore_previous": "docker rm -f clickhouse(回到没有落点的状态);proxy 配置未改动,无需回滚",
+  "data": "库表由 proxy 自建,为空;9/11 之前的行早已导出入库,不依赖本容器"
+}
